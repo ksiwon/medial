@@ -3,6 +3,7 @@
 export type ScreenId =
   | 'home'
   | 'chat'
+  | 'analyzing'
   | 'photo'
   | 'decision'
   | 'emergency'
@@ -13,6 +14,9 @@ export type ScreenId =
 export type DialogueSpeaker = 'ai' | 'user';
 export type PhotoMode = 'wound' | 'medicine';
 export type DecisionOutcome = 'emergency' | 'healthCenter' | 'selfCare';
+export type ActionMode = 'chips' | 'mic' | 'camera' | 'listening' | 'echo' | 'finish';
+export type DoctorState = 'idle' | 'speaking' | 'listening' | 'thinking' | 'emergency';
+export type DR = 1 | 2 | 3 | 4;
 
 export interface DialogueTurn {
   id: string;
@@ -64,6 +68,7 @@ export interface CaseData {
   decisionRecommendation: string;
   decisionOutcome: DecisionOutcome;
   selfCareSteps?: SelfCareStep[];
+  warningSignals?: string[];
   reportData: {
     todaySummary: string[];
     medicationWarning?: string;
@@ -76,7 +81,6 @@ export interface CaseData {
     title: string;
     subtitle: string;
     urgent: boolean;
-    /** 이전 대화 기록 클릭 시 실행되는 팔로업 대화 */
     followUpDialogue: DialogueTurn[];
   }>;
 }
@@ -89,8 +93,18 @@ export interface ThemeCode {
   category: ThemeCategory;
   quote?: string;
   finding: string;
-  /** 출처 인터뷰 트리 이름 (이미지 제목과 매핑) */
   sourceTree?: string;
+  participantId?: string;
+  affinityCode?: string;
+  dr?: DR[];
+}
+
+export interface InsightQuote {
+  p: string;
+  quote: string;
+  affinityCode: string;
+  dr: DR[];
+  cluster: string;
 }
 
 export interface ScreenDescription {
@@ -98,7 +112,7 @@ export interface ScreenDescription {
   label: string;
   title: string;
   desc: string;
-  /** 이 화면과 관련된 인터뷰 연구 주제들 */
+  activeDRs: DR[];
   researchTopics?: string[];
   themeCodes: ThemeCode[];
   designIntent: Array<{ point: string; rationale: string }>;

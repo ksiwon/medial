@@ -41,14 +41,15 @@ const ScreenLabel = styled.span`
 const Spacer = styled.div`flex: 1;`;
 
 const SCREEN_LABELS: Record<ScreenId, string> = {
-  home: '홈',
-  chat: '아바타 대화',
-  photo: '사진 촬영',
-  decision: '판단 분기',
-  emergency: '응급 119',
+  home:         '홈',
+  chat:         '아바타 대화',
+  analyzing:    'AI 분석',
+  photo:        '멀티모달',
+  decision:     '판단 분기',
+  emergency:    '응급 119',
   healthCenter: '보건소 연결',
-  selfCare: '자가 치료',
-  report: '리포트',
+  selfCare:     '자가 치료',
+  report:       '리포트',
 };
 
 interface Props {

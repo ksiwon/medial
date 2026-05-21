@@ -17,13 +17,20 @@ export const color = {
     dark:  '#D4CBB8',
     mid:   '#E8DFD0',
     base:  '#F2EBE0',
-    light: '#F7F3EC',   // warm off-white — main bg
+    light: '#F7F3EC',
   },
   terra: {
     dark:  '#7A2618',
-    base:  '#B03020',   // warning red
+    base:  '#B03020',
     mid:   '#CC5040',
     pale:  '#EDD8D4',
+  },
+  amber: {
+    dark:  '#8C6120',
+    base:  '#B5853E',
+    mid:   '#D4A055',
+    pale:  '#FDF3D0',
+    dim:   '#FBE8B8',
   },
   ink: {
     900: '#0F1A12',
@@ -43,6 +50,7 @@ export const color = {
 
 export const font = {
   family: "'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif",
+  mono:   "'JetBrains Mono', 'Fira Code', 'Courier New', monospace",
   weight: {
     regular: 400,
     medium: 500,
@@ -77,14 +85,15 @@ export const space = {
   32: '32px',
 };
 
-// Deliberate small radii — avoids "pill" LLM aesthetic
 export const radius = {
-  sm:  '2px',
-  md:  '4px',
-  lg:  '6px',
-  xl:  '8px',
-  xxl: '12px',
-  round: '50%',
+  sm:       '2px',
+  md:       '4px',
+  lg:       '6px',
+  xl:       '8px',
+  xxl:      '12px',
+  portrait: '14px',
+  mic:      '18px',
+  round:    '50%',
 };
 
 export const border = {
@@ -92,4 +101,13 @@ export const border = {
   mid:    `1px solid rgba(54,99,72,0.24)`,
   strong: `1.5px solid rgba(54,99,72,0.38)`,
   rule:   `1px solid rgba(54,99,72,0.10)`,
+  amber:  `1.5px solid rgba(181,133,62,0.55)`,
+};
+
+export const shadow = {
+  cta:     '0 2px 6px rgba(0,0,0,0.14)',
+  terra:   '0 2px 6px rgba(176,48,32,0.20)',
+  waxSeal: '0 2px 6px rgba(197,86,61,0.18)',
+  card:    '0 1px 4px rgba(0,0,0,0.08)',
+  float:   '0 4px 16px rgba(0,0,0,0.10)',
 };

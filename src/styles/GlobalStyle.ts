@@ -2,6 +2,8 @@ import { createGlobalStyle } from 'styled-components';
 import { font, color } from './tokens';
 
 export const GlobalStyle = createGlobalStyle`
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+
   @font-face {
     font-family: 'Pretendard';
     font-weight: 400;
@@ -48,8 +50,12 @@ export const GlobalStyle = createGlobalStyle`
     background: none;
   }
 
-  input {
+  input, select {
     font-family: ${font.family};
+  }
+
+  .mono {
+    font-family: ${font.mono};
   }
 
   * {
@@ -57,7 +63,6 @@ export const GlobalStyle = createGlobalStyle`
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* 스크롤바 글로벌 */
   ::-webkit-scrollbar { width: 3px; height: 3px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(54,99,72,0.25); border-radius: 1px; }

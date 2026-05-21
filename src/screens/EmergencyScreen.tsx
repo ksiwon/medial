@@ -1,65 +1,71 @@
 // src/screens/EmergencyScreen.tsx
 import styled, { keyframes } from 'styled-components';
-import { color, font, radius, border } from '../styles/tokens';
+import { color, font, radius, border, shadow } from '../styles/tokens';
 import { PhoneIcon } from '../components/icons';
 import { useAppStore } from '../store/useAppStore';
+import VirtualDoctor from '../components/phone/VirtualDoctor';
 
 const pulse = keyframes`
-  0%   { transform: scale(0.95); opacity: 0.8; }
-  50%  { transform: scale(1.1);  opacity: 0.4; }
-  100% { transform: scale(0.95); opacity: 0.8; }
+  0%   { transform: scale(0.95); opacity: 0.7; }
+  50%  { transform: scale(1.18); opacity: 0.25; }
+  100% { transform: scale(0.95); opacity: 0.7; }
 `;
 
 const blink = keyframes`
   0%, 100% { opacity: 1; }
-  50%       { opacity: 0.4; }
+  50%       { opacity: 0.3; }
 `;
 
 const Screen = styled.div`
-  min-height: 100%;
+  height: 100%;
   background: ${color.emergency};
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
 `;
 
-const TopSection = styled.div`
+/* ── top content area ── */
+const ContentArea = styled.div`
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 24px 16px 18px;
-  gap: 12px;
-  flex-shrink: 0;
+  padding: 20px 16px 12px;
+  gap: 14px;
+  overflow-y: auto;
+  &::-webkit-scrollbar { display: none; }
 `;
 
 const IconRing = styled.div`
   position: relative;
-  width: 84px;
-  height: 84px;
+  width: 80px;
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 `;
 
-const PulseCircle = styled.div`
+const PulseRing = styled.div<{ $delay?: string }>`
   position: absolute;
-  width: 84px;
-  height: 84px;
+  inset: 0;
   border-radius: 50%;
-  background: rgba(255,255,255,0.15);
-  animation: ${pulse} 1.6s ease-in-out infinite;
+  background: rgba(255,255,255,0.12);
+  animation: ${pulse} 1.8s ease-in-out infinite;
+  animation-delay: ${({ $delay }) => $delay ?? '0s'};
 `;
 
 const PhoneCircle = styled.div`
-  width: 66px;
-  height: 66px;
+  width: 62px;
+  height: 62px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.18);
-  border: 2px solid rgba(255,255,255,0.45);
+  background: rgba(255,255,255,0.16);
+  border: 2px solid rgba(255,255,255,0.40);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1;
+  box-shadow: ${shadow.terra};
 `;
 
 const StatusRow = styled.div`
@@ -69,8 +75,8 @@ const StatusRow = styled.div`
 `;
 
 const BlinkDot = styled.div`
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: white;
   animation: ${blink} 1s ease-in-out infinite;
@@ -79,33 +85,36 @@ const BlinkDot = styled.div`
 const StatusText = styled.div`
   font-size: ${font.size.appMd};
   font-weight: ${font.weight.semiBold};
-  color: rgba(255,255,255,0.9);
+  color: rgba(255,255,255,0.88);
+  letter-spacing: 0.02em;
 `;
 
 const Title = styled.h2`
-  font-size: 20px;
+  font-size: 18px;
   font-weight: ${font.weight.bold};
   color: white;
   text-align: center;
-  line-height: 1.3;
+  line-height: 1.35;
+  margin: 0;
 `;
 
-/* 환자 정보 카드 */
+/* ── patient card ── */
 const PatientCard = styled.div`
-  margin: 0 14px;
-  padding: 14px;
-  background: rgba(255,255,255,0.12);
+  width: 100%;
+  padding: 13px 14px;
+  background: rgba(255,255,255,0.11);
   border: 1px solid rgba(255,255,255,0.22);
-  border-radius: ${radius.xl};
+  border-radius: ${radius.xxl};
+  backdrop-filter: blur(4px);
 `;
 
 const CardLabel = styled.div`
   font-size: 10px;
   font-weight: ${font.weight.bold};
-  color: rgba(255,255,255,0.55);
+  color: rgba(255,255,255,0.5);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  margin-bottom: 10px;
+  margin-bottom: 9px;
 `;
 
 const InfoRow = styled.div`
@@ -118,24 +127,25 @@ const InfoRow = styled.div`
 `;
 
 const InfoKey = styled.span`
-  font-size: ${font.size.appMd};
+  font-size: ${font.size.appSm};
   color: rgba(255,255,255,0.5);
 `;
 
 const InfoVal = styled.span`
-  font-size: ${font.size.appMd};
+  font-size: ${font.size.appSm};
   font-weight: ${font.weight.semiBold};
   color: white;
   text-align: right;
-  max-width: 60%;
+  max-width: 62%;
 `;
 
-const SympRow = styled.div`
-  margin: 10px 14px;
-  padding: 12px 14px;
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.18);
-  border-radius: ${radius.xl};
+/* ── symptom row ── */
+const SympCard = styled.div`
+  width: 100%;
+  padding: 11px 14px;
+  background: rgba(255,255,255,0.09);
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: ${radius.xxl};
 `;
 
 const SympLabel = styled.div`
@@ -144,7 +154,7 @@ const SympLabel = styled.div`
   color: rgba(255,255,255,0.5);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 `;
 
 const SympText = styled.div`
@@ -154,19 +164,42 @@ const SympText = styled.div`
   line-height: 1.5;
 `;
 
+/* ── back button ── */
 const BackBtn = styled.button`
-  margin: 14px 14px 20px;
-  padding: 11px;
-  border-radius: ${radius.lg};
-  border: 1px solid rgba(255,255,255,0.3);
+  width: 100%;
+  padding: 10px;
+  border-radius: ${radius.xl};
+  border: 1px solid rgba(255,255,255,0.25);
   background: transparent;
-  font-size: ${font.size.appMd};
+  font-size: ${font.size.appSm};
   font-weight: ${font.weight.medium};
-  color: rgba(255,255,255,0.7);
-  width: calc(100% - 28px);
-  transition: background 0.1s;
-
+  color: rgba(255,255,255,0.65);
+  transition: background 0.12s;
   &:active { background: rgba(255,255,255,0.08); }
+`;
+
+/* ── doctor panel (bottom) ── */
+const DoctorPanel = styled.div`
+  flex: 0 0 auto;
+  background: rgba(0,0,0,0.20);
+  border-top: 1px solid rgba(255,255,255,0.12);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 16px 6px;
+  gap: 12px;
+`;
+
+const DoctorSpeech = styled.div`
+  flex: 1;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 10px 10px 10px 2px;
+  margin-bottom: 20px;
+  font-size: ${font.size.appMd};
+  color: rgba(255,255,255,0.92);
+  line-height: 1.5;
 `;
 
 export default function EmergencyScreen() {
@@ -176,44 +209,54 @@ export default function EmergencyScreen() {
 
   return (
     <Screen>
-      <TopSection>
+      <ContentArea>
         <IconRing>
-          <PulseCircle />
-          <PhoneCircle><PhoneIcon size={30} color="white" /></PhoneCircle>
+          <PulseRing />
+          <PulseRing $delay="0.6s" />
+          <PhoneCircle><PhoneIcon size={28} color="white" /></PhoneCircle>
         </IconRing>
+
         <StatusRow>
           <BlinkDot />
           <StatusText>119에 연락 중...</StatusText>
         </StatusRow>
-        <Title>구급대원이 오고 있어요</Title>
-      </TopSection>
 
-      <PatientCard>
-        <CardLabel>구급대원에게 보여주세요</CardLabel>
-        <InfoRow>
-          <InfoKey>이름</InfoKey>
-          <InfoVal>{patient.name} ({patient.age}세 {patient.gender})</InfoVal>
-        </InfoRow>
-        <InfoRow>
-          <InfoKey>혈액형</InfoKey>
-          <InfoVal>{patient.bloodType}</InfoVal>
-        </InfoRow>
-        <InfoRow>
-          <InfoKey>기저질환</InfoKey>
-          <InfoVal>{patient.conditions.join(', ')}</InfoVal>
-        </InfoRow>
-        <InfoRow>
-          <InfoKey>알레르기</InfoKey>
-          <InfoVal>{patient.allergies.join(', ')}</InfoVal>
-        </InfoRow>
-      </PatientCard>
+        <Title>구급대원이{'\n'}오고 있어요</Title>
 
-      <SympRow>
-        <SympLabel>현재 증상</SympLabel>
-        <SympText>{caseData.reportData.todaySummary[0]}</SympText>
-      </SympRow>
+        <PatientCard>
+          <CardLabel>구급대원에게 보여주세요</CardLabel>
+          <InfoRow>
+            <InfoKey>이름</InfoKey>
+            <InfoVal>{patient.name} ({patient.age}세 {patient.gender})</InfoVal>
+          </InfoRow>
+          <InfoRow>
+            <InfoKey>혈액형</InfoKey>
+            <InfoVal>{patient.bloodType}</InfoVal>
+          </InfoRow>
+          <InfoRow>
+            <InfoKey>기저질환</InfoKey>
+            <InfoVal>{patient.conditions.join(', ')}</InfoVal>
+          </InfoRow>
+          <InfoRow>
+            <InfoKey>알레르기</InfoKey>
+            <InfoVal>{patient.allergies.join(', ')}</InfoVal>
+          </InfoRow>
+        </PatientCard>
 
-      <BackBtn onClick={() => setCurrentScreen('decision')}>← 돌아가기</BackBtn>
+        <SympCard>
+          <SympLabel>현재 증상</SympLabel>
+          <SympText>{caseData.reportData.todaySummary[0]}</SympText>
+        </SympCard>
+
+        <BackBtn onClick={() => setCurrentScreen('decision')}>← 판단으로 돌아가기</BackBtn>
+      </ContentArea>
+
+      <DoctorPanel>
+        <VirtualDoctor state="emergency" size={80} />
+        <DoctorSpeech>
+          걱정 마세요. 구급대원이 곧 도착합니다. 환자 정보를 화면에 띄워 두세요.
+        </DoctorSpeech>
+      </DoctorPanel>
     </Screen>
   );
 }

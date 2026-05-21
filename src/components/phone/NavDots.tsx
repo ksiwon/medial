@@ -9,6 +9,7 @@ import { ScreenId } from '../../types';
 const STEP_MAP: Record<ScreenId, number> = {
   home:          1,
   chat:          2,
+  analyzing:     3,
   photo:         3,
   decision:      4,
   emergency:     5,

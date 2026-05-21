@@ -1,201 +1,282 @@
 // src/components/layout/TweaksPanel.tsx
 import styled from 'styled-components';
-import { color, font, radius, border } from '../../styles/tokens';
+import { color, font, border } from '../../styles/tokens';
 import { useAppStore } from '../../store/useAppStore';
 import { cases } from '../../data/mockData';
+import { ScreenId } from '../../types';
 
-/* ── 패널 (라이트 테마) ─────────────────────────────── */
-const Panel = styled.aside`
-  width: 215px;
-  flex-shrink: 0;
+/* ── 스타일 ──────────────────────────────────── */
+const Panel = styled.div`
+  width: 200px;
   height: 100%;
   overflow-y: auto;
-  padding: 20px 14px 24px;
   background: #E0DAD0;
-  border-left: 1px solid rgba(0,0,0,0.07);
+  border-left: 1px solid rgba(0,0,0,0.10);
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  padding: 14px 12px 20px;
+  gap: 14px;
 
-  &::-webkit-scrollbar { width: 2px; }
-  &::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 1px; }
+  &::-webkit-scrollbar { width: 3px; }
+  &::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 1px; }
 `;
 
-const SectionTitle = styled.div`
-  font-size: 10px;
-  font-weight: ${font.weight.semiBold};
-  color: rgba(0,0,0,0.30);
+const Section = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+`;
+
+const SectionLabel = styled.div`
+  font-size: 9.5px;
+  font-weight: ${font.weight.bold};
+  color: rgba(0,0,0,0.36);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  margin-bottom: 8px;
+  font-family: ${font.mono};
+  margin-bottom: 2px;
 `;
 
+/* ── 케이스 버튼 ──────────────────────────────── */
 const CaseBtn = styled.button<{ $active: boolean }>`
   width: 100%;
-  padding: 9px 11px;
   text-align: left;
-  border-radius: ${radius.md};
-  border: 1px solid ${({ $active }) => $active ? color.sage[500] : 'rgba(0,0,0,0.09)'};
-  background: ${({ $active }) => $active ? 'rgba(54,99,72,0.10)' : 'rgba(255,255,255,0.55)'};
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: ${({ $active }) => $active ? color.sage[600] : 'rgba(0,0,0,0.06)'};
+  border: 1px solid ${({ $active }) => $active ? color.sage[500] : 'transparent'};
   font-size: 11px;
   font-weight: ${({ $active }) => $active ? font.weight.semiBold : font.weight.regular};
-  color: ${({ $active }) => $active ? color.sage[700] : 'rgba(0,0,0,0.50)'};
-  cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
-  line-height: 1.4;
-  margin-bottom: 5px;
-
-  &:hover {
-    background: rgba(54,99,72,0.06);
-    color: rgba(0,0,0,0.70);
-  }
+  color: ${({ $active }) => $active ? 'white' : color.ink[700]};
+  transition: all 0.15s;
+  &:hover { background: ${({ $active }) => $active ? color.sage[600] : 'rgba(0,0,0,0.10)'}; }
 `;
 
-const InfoCard = styled.div`
-  background: rgba(255,255,255,0.6);
-  border: 1px solid rgba(0,0,0,0.07);
-  border-radius: ${radius.md};
-  padding: 10px 11px;
-`;
-
-const InfoRow = styled.div`
+/* ── 환자 정보 ──────────────────────────────────── */
+const PatientCard = styled.div`
+  background: rgba(255,255,255,0.55);
+  border-radius: 6px;
+  padding: 9px 10px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 3px 0;
+  flex-direction: column;
+  gap: 3px;
 `;
 
-const InfoKey = styled.span`
-  font-size: 10px;
-  color: rgba(0,0,0,0.32);
-`;
-
-const InfoVal = styled.span`
-  font-size: 10px;
+const PName = styled.div`
+  font-size: 12px;
   font-weight: ${font.weight.semiBold};
-  color: rgba(0,0,0,0.65);
+  color: ${color.ink[900]};
 `;
 
+const PMeta = styled.div`
+  font-size: 10px;
+  color: ${color.ink[300]};
+  font-family: ${font.mono};
+`;
+
+/* ── 화면 점프 드롭다운 ──────────────────────── */
+const JumpSelect = styled.select`
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.14);
+  background: white;
+  font-size: 11px;
+  color: ${color.ink[700]};
+  cursor: pointer;
+  font-family: ${font.family};
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M 0 0 L 5 6 L 10 0' stroke='%237A9480' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+  &:focus { outline: 2px solid ${color.sage[400]}; }
+`;
+
+/* ── 토글 ──────────────────────────────────────── */
 const ToggleRow = styled.div`
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 6px 0;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-  &:last-child { border-bottom: none; }
+  justify-content: space-between;
+  padding: 5px 0;
 `;
 
-const ToggleLabel = styled.span`
+const ToggleLabel = styled.div`
   font-size: 11px;
-  color: rgba(0,0,0,0.50);
+  color: ${color.ink[700]};
 `;
 
-const Toggle = styled.button<{ $on: boolean }>`
-  width: 32px;
-  height: 18px;
+const ToggleTrack = styled.div<{ $on: boolean }>`
+  width: 30px;
+  height: 17px;
   border-radius: 9px;
-  background: ${({ $on }) => $on ? color.sage[600] : 'rgba(0,0,0,0.14)'};
+  background: ${({ $on }) => $on ? color.sage[500] : 'rgba(0,0,0,0.15)'};
   position: relative;
-  transition: background 0.2s;
-  border: none;
   cursor: pointer;
-
-  &::after {
-    content: '';
-    position: absolute;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: white;
-    top: 3px;
-    left: ${({ $on }) => $on ? '17px' : '3px'};
-    transition: left 0.2s;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-  }
+  transition: background 0.2s;
+  flex-shrink: 0;
 `;
 
-/* ── 컴포넌트 ──────────────────────────────────────────── */
+const ToggleThumb = styled.div<{ $on: boolean }>`
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: white;
+  position: absolute;
+  top: 2px;
+  left: ${({ $on }) => $on ? '15px' : '2px'};
+  transition: left 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+`;
+
+/* ── 글자 크기 슬라이더 ──────────────────────── */
+const ScaleOptions = styled.div`
+  display: flex;
+  gap: 3px;
+`;
+
+const ScaleBtn = styled.button<{ $active: boolean }>`
+  flex: 1;
+  padding: 5px 2px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: ${font.mono};
+  font-weight: ${({ $active }) => $active ? 700 : 400};
+  background: ${({ $active }) => $active ? color.sage[600] : 'rgba(0,0,0,0.07)'};
+  color: ${({ $active }) => $active ? 'white' : color.ink[500]};
+  border: 1px solid ${({ $active }) => $active ? color.sage[500] : 'transparent'};
+  transition: all 0.12s;
+`;
+
+/* ── 구분선 ──────────────────────────────────────── */
+const Divider = styled.div`
+  height: 1px;
+  background: rgba(0,0,0,0.10);
+`;
+
+/* ── 컴포넌트 ─────────────────────────────────────── */
+const SCREEN_OPTIONS: Array<{ id: ScreenId; label: string }> = [
+  { id: 'home',         label: '01 홈' },
+  { id: 'chat',         label: '02 아바타 대화' },
+  { id: 'analyzing',   label: '03 AI 분석 중' },
+  { id: 'photo',        label: '04 멀티모달 촬영' },
+  { id: 'decision',     label: '05 판단 분기' },
+  { id: 'emergency',    label: '06 응급 119' },
+  { id: 'healthCenter', label: '07 보건소 연결' },
+  { id: 'selfCare',     label: '08 자가 치료' },
+  { id: 'report',       label: '09 리포트' },
+];
+
+const SCALE_OPTIONS = [0.9, 1.0, 1.1, 1.2, 1.4];
+
+function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  return (
+    <ToggleTrack $on={on} onClick={onToggle} role="switch" aria-checked={on}>
+      <ToggleThumb $on={on} />
+    </ToggleTrack>
+  );
+}
+
 export default function TweaksPanel() {
   const {
-    currentCaseId,
-    setCurrentCase,
-    showFaceAnalysis,
-    showEmpathy,
-    showAiRecommendation,
-    toggleFaceAnalysis,
-    toggleEmpathy,
-    toggleAiRecommendation,
+    currentCaseId, currentScreen,
+    setCurrentCase, setCurrentScreen,
+    showFaceAnalysis, showEmpathy, showAiRecommendation,
+    toggleFaceAnalysis, toggleEmpathy, toggleAiRecommendation,
+    fontScale, setFontScale,
     getCurrentCase,
   } = useAppStore();
 
-  const patient = getCurrentCase().patient;
+  const caseData = getCurrentCase();
+  const { patient } = caseData;
 
   return (
     <Panel>
       {/* 케이스 선택 */}
-      <div>
-        <SectionTitle>케이스 선택</SectionTitle>
+      <Section>
+        <SectionLabel>시나리오</SectionLabel>
         {cases.map((c) => (
           <CaseBtn
             key={c.id}
-            $active={currentCaseId === c.id}
+            $active={c.id === currentCaseId}
             onClick={() => setCurrentCase(c.id)}
           >
             {c.label}
           </CaseBtn>
         ))}
-      </div>
+      </Section>
+
+      <Divider />
 
       {/* 환자 정보 */}
-      <div>
-        <SectionTitle>환자 정보</SectionTitle>
-        <InfoCard>
-          <InfoRow>
-            <InfoKey>이름</InfoKey>
-            <InfoVal>{patient.name}</InfoVal>
-          </InfoRow>
-          <InfoRow>
-            <InfoKey>나이</InfoKey>
-            <InfoVal>{patient.age}세 / {patient.gender}</InfoVal>
-          </InfoRow>
-          <InfoRow>
-            <InfoKey>상담 횟수</InfoKey>
-            <InfoVal>{patient.sessionCount}회</InfoVal>
-          </InfoRow>
-          <InfoRow>
-            <InfoKey>혈액형</InfoKey>
-            <InfoVal>{patient.bloodType}</InfoVal>
-          </InfoRow>
-        </InfoCard>
-      </div>
+      <Section>
+        <SectionLabel>현재 환자</SectionLabel>
+        <PatientCard>
+          <PName>{patient.name} 님</PName>
+          <PMeta>{patient.age}세 · {patient.gender} · {patient.bloodType}</PMeta>
+          <PMeta>{patient.sessionCount}회 상담</PMeta>
+        </PatientCard>
+      </Section>
+
+      <Divider />
+
+      {/* 화면 점프 */}
+      <Section>
+        <SectionLabel>화면 점프</SectionLabel>
+        <JumpSelect
+          value={currentScreen}
+          onChange={(e) => setCurrentScreen(e.target.value as ScreenId)}
+        >
+          {SCREEN_OPTIONS.map((o) => (
+            <option key={o.id} value={o.id}>{o.label}</option>
+          ))}
+        </JumpSelect>
+      </Section>
+
+      <Divider />
 
       {/* 표시 설정 */}
-      <div>
-        <SectionTitle>표시 설정</SectionTitle>
+      <Section>
+        <SectionLabel>표시 설정</SectionLabel>
         <ToggleRow>
           <ToggleLabel>표정 분석 배너</ToggleLabel>
-          <Toggle $on={showFaceAnalysis} onClick={toggleFaceAnalysis} />
+          <Toggle on={showFaceAnalysis} onToggle={toggleFaceAnalysis} />
         </ToggleRow>
         <ToggleRow>
-          <ToggleLabel>공감 문구</ToggleLabel>
-          <Toggle $on={showEmpathy} onClick={toggleEmpathy} />
+          <ToggleLabel>공감 멘트</ToggleLabel>
+          <Toggle on={showEmpathy} onToggle={toggleEmpathy} />
         </ToggleRow>
         <ToggleRow>
-          <ToggleLabel>AI 판단 권고</ToggleLabel>
-          <Toggle $on={showAiRecommendation} onClick={toggleAiRecommendation} />
+          <ToggleLabel>AI 권고</ToggleLabel>
+          <Toggle on={showAiRecommendation} onToggle={toggleAiRecommendation} />
         </ToggleRow>
-      </div>
+      </Section>
 
-      {/* 지역: 항상 농촌 */}
-      <div>
-        <SectionTitle>지역</SectionTitle>
-        <InfoCard>
-          <InfoRow>
-            <InfoKey>대상 지역</InfoKey>
-            <InfoVal style={{ color: color.sage[700] }}>농촌</InfoVal>
-          </InfoRow>
-        </InfoCard>
-      </div>
+      <Divider />
+
+      {/* 글자 크기 */}
+      <Section>
+        <SectionLabel>글자 크기</SectionLabel>
+        <ScaleOptions>
+          {SCALE_OPTIONS.map((s) => (
+            <ScaleBtn key={s} $active={fontScale === s} onClick={() => setFontScale(s)}>
+              {s}x
+            </ScaleBtn>
+          ))}
+        </ScaleOptions>
+      </Section>
+
+      <Divider />
+
+      {/* 지역 */}
+      <Section>
+        <SectionLabel>대상 지역</SectionLabel>
+        <PatientCard>
+          <PMeta>농촌 (시골 시니어)</PMeta>
+          <PMeta>IRB-2026-56 · N=11</PMeta>
+        </PatientCard>
+      </Section>
     </Panel>
   );
 }

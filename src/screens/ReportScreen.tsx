@@ -1,183 +1,204 @@
 // src/screens/ReportScreen.tsx
 import styled, { keyframes } from 'styled-components';
-import { color, font, radius, border } from '../styles/tokens';
-import { PrintIcon, ShareIcon, FileTextIcon, AlertIcon } from '../components/icons';
+import { color, font, radius, border, shadow } from '../styles/tokens';
+import { PrintIcon, ShareIcon, AlertIcon } from '../components/icons';
 import { useAppStore } from '../store/useAppStore';
 
-const slideIn = keyframes`
-  from { opacity: 0; transform: translateY(4px); }
+const slideUp = keyframes`
+  from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 `;
 
+/* ── 전체 레이아웃 ── */
 const Screen = styled.div`
-  min-height: 100%;
+  height: 100%;
   background: ${color.cream.light};
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 `;
 
-/* 리포트 헤더 — 의료 기록 스타일 */
-const ReportHeader = styled.div`
-  background: ${color.sage[800]};
-  padding: 13px 16px;
+/* ── 상단 헤더 바 ── */
+const TopBar = styled.div`
   flex-shrink: 0;
+  background: ${color.sage[800]};
+  padding: 12px 16px 10px;
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
+  justify-content: space-between;
 `;
 
-const ReportTitleRow = styled.div`
+const TopLeft = styled.div`
   display: flex;
-  align-items: center;
-  gap: 7px;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+const AppMark = styled.div`
+  font-size: 9px;
+  font-family: ${font.mono};
+  letter-spacing: 0.12em;
+  color: ${color.sage[400]};
+  text-transform: uppercase;
 `;
 
 const ReportTitle = styled.div`
-  font-size: ${font.size.appLg};
+  font-size: 16px;
   font-weight: ${font.weight.bold};
   color: white;
+  letter-spacing: -0.01em;
 `;
 
 const ReportMeta = styled.div`
   font-size: 10px;
-  color: rgba(255,255,255,0.45);
-  margin-top: 3px;
+  color: rgba(255,255,255,0.48);
+  margin-top: 1px;
 `;
 
-const ConfidentialBadge = styled.div`
-  padding: 3px 8px;
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: ${radius.md};
-  font-size: 10px;
-  color: rgba(255,255,255,0.45);
-  font-weight: ${font.weight.medium};
-  letter-spacing: 0.04em;
+const StatusBadge = styled.div`
+  padding: 3px 10px;
+  border: 1px solid rgba(255,255,255,0.20);
+  border-radius: ${radius.xl};
+  font-size: 9.5px;
+  font-family: ${font.mono};
+  color: rgba(255,255,255,0.42);
+  letter-spacing: 0.05em;
+  margin-top: 2px;
 `;
 
-/* 바디 */
+/* ── 스크롤 바디 ── */
 const Body = styled.div`
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 12px;
+  padding: 12px 12px 8px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  animation: ${slideUp} 0.3s ease;
   &::-webkit-scrollbar { width: 2px; }
+  &::-webkit-scrollbar-thumb { background: ${color.sage[200]}; border-radius: 2px; }
 `;
 
-/* 섹션 */
-const Section = styled.div`
+/* ── 섹션 카드 ── */
+const Card = styled.div`
   background: ${color.white};
   border: ${border.thin};
   border-radius: ${radius.xl};
   overflow: hidden;
-  animation: ${slideIn} 0.3s ease;
+  box-shadow: ${shadow.card};
 `;
 
-const SecHead = styled.div`
-  padding: 8px 13px;
+const CardHead = styled.div`
+  padding: 6px 14px;
   background: ${color.sage[50]};
-  border-bottom: ${border.thin};
+  border-bottom: ${border.rule};
   display: flex;
   align-items: center;
   gap: 6px;
 `;
 
-const SecLabel = styled.span`
-  font-size: 10px;
+const SectionLabel = styled.span`
+  font-size: 9.5px;
   font-weight: ${font.weight.bold};
-  color: ${color.sage[700]};
-  letter-spacing: 0.07em;
+  font-family: ${font.mono};
+  color: ${color.sage[600]};
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 `;
 
-const SecBody = styled.div`
-  padding: 2px 0;
-`;
-
-const DataRow = styled.div`
+/* ── key / value 행 ── */
+const Row = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 7px 13px;
+  padding: 7px 14px;
   border-bottom: ${border.rule};
-
+  gap: 8px;
   &:last-child { border-bottom: none; }
 `;
 
-const DataKey = styled.span`
+const RowKey = styled.span`
   font-size: ${font.size.appSm};
   color: ${color.ink[300]};
   flex-shrink: 0;
-  margin-right: 8px;
-  min-width: 72px;
+  min-width: 58px;
 `;
 
-const DataVal = styled.span`
+const RowVal = styled.span`
   font-size: ${font.size.appSm};
   font-weight: ${font.weight.medium};
   color: ${color.ink[700]};
   text-align: right;
   flex: 1;
+  word-break: keep-all;
 `;
 
-const SummaryRow = styled.div`
+/* ── 증상 bullet ── */
+const BulletRow = styled.div`
   font-size: ${font.size.appSm};
   color: ${color.ink[700]};
-  line-height: 1.55;
-  padding: 7px 13px;
+  line-height: 1.6;
+  padding: 7px 14px 7px 26px;
   border-bottom: ${border.rule};
-  display: flex;
-  gap: 7px;
-  align-items: flex-start;
-
+  position: relative;
+  word-break: keep-all;
+  overflow-wrap: break-word;
   &:last-child { border-bottom: none; }
-
   &::before {
-    content: '·';
+    content: '–';
     color: ${color.sage[400]};
-    flex-shrink: 0;
-    font-size: 14px;
-    line-height: 1.3;
+    font-size: 12px;
+    position: absolute;
+    left: 14px;
+    top: 8px;
   }
 `;
 
-/* 통증 바 */
-const PainRow = styled.div`
-  padding: 8px 13px 10px;
+/* ── 통증 바 ── */
+const PainBlock = styled.div`
+  padding: 10px 14px 12px;
   border-top: ${border.rule};
 `;
 
 const PainTopRow = styled.div`
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 7px;
+  align-items: baseline;
+  margin-bottom: 8px;
 `;
 
-const PainLabel = styled.span`
-  font-size: ${font.size.appXs};
+const PainLbl = styled.span`
+  font-size: 10px;
   color: ${color.ink[300]};
 `;
 
 const PainScore = styled.span`
-  font-size: 18px;
+  font-size: 20px;
   font-weight: ${font.weight.bold};
   color: ${color.terra.base};
+  line-height: 1;
+`;
+
+const PainSub = styled.span`
+  font-size: 11px;
+  font-weight: 400;
+  color: ${color.ink[300]};
 `;
 
 const PainTrack = styled.div`
-  height: 5px;
-  background: rgba(54,99,72,0.1);
+  height: 4px;
+  background: rgba(54,99,72,0.10);
   border-radius: 2px;
   overflow: hidden;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 `;
 
 const PainFill = styled.div<{ $level: number }>`
   height: 100%;
   width: ${({ $level }) => $level * 10}%;
-  background: ${({ $level }) => $level >= 8 ? color.emergency : $level >= 5 ? color.terra.base : color.sage[500]};
+  background: ${({ $level }) =>
+    $level >= 8 ? color.emergency : $level >= 5 ? color.terra.base : color.sage[500]};
   border-radius: 2px;
   transition: width 0.5s ease;
 `;
@@ -188,9 +209,13 @@ const PainNote = styled.div`
   font-style: italic;
 `;
 
-/* 약 경고 */
-const WarnRow = styled.div`
-  padding: 10px 13px;
+/* ── 투약 주의 카드 ── */
+const WarnCard = styled(Card)`
+  border-color: rgba(170,31,16,0.22);
+`;
+
+const WarnBody = styled.div`
+  padding: 10px 14px;
   display: flex;
   gap: 8px;
   align-items: flex-start;
@@ -199,156 +224,162 @@ const WarnRow = styled.div`
 const WarnText = styled.div`
   font-size: ${font.size.appSm};
   color: ${color.emergency};
-  line-height: 1.5;
+  line-height: 1.55;
 `;
 
-/* 하단 버튼 — 스크롤 시 화면 아래 고정 */
+/* ── 하단 CTA ── */
 const Footer = styled.div`
-  padding: 8px 12px 13px;
-  display: flex;
-  gap: 8px;
   flex-shrink: 0;
-  border-top: ${border.thin};
+  padding: 8px 12px 14px;
   background: ${color.white};
-  position: sticky;
-  bottom: 0;
-  z-index: 5;
+  border-top: ${border.rule};
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 `;
 
-const FootBtn = styled.button`
+const PrimaryRow = styled.div`
+  display: flex;
+  gap: 7px;
+`;
+
+const PrimaryBtn = styled.button`
   flex: 1;
-  padding: 10px 8px;
-  border-radius: ${radius.xl};
-  border: ${border.thin};
-  background: white;
+  padding: 11px 6px;
+  border-radius: ${radius.lg};
+  border: none;
+  background: ${color.sage[700]};
+  color: white;
   font-size: ${font.size.appSm};
-  font-weight: ${font.weight.medium};
-  color: ${color.ink[500]};
+  font-weight: ${font.weight.semiBold};
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 5px;
-  transition: background 0.1s;
-  &:active { background: ${color.cream.base}; }
+  box-shadow: ${shadow.cta};
+  transition: background 0.12s;
+  &:active { background: ${color.sage[800]}; }
 `;
 
-const HomeBtn = styled.button`
+const SecondaryBtn = styled.button`
   width: 100%;
-  padding: 9px;
-  border-radius: ${radius.lg};
+  padding: 8px;
+  border-radius: ${radius.md};
   border: ${border.thin};
   background: transparent;
-  font-size: ${font.size.appSm};
+  font-size: 11px;
   font-weight: ${font.weight.medium};
   color: ${color.ink[300]};
-  margin: 0 12px 4px;
-  width: calc(100% - 24px);
-  transition: background 0.1s;
+  transition: background 0.12s;
   &:active { background: ${color.cream.base}; }
 `;
 
 export default function ReportScreen() {
-  const { getCurrentCase, setCurrentScreen, setCurrentCase, currentCaseId } = useAppStore();
+  const { getCurrentCase, setCurrentCase, currentCaseId } = useAppStore();
   const caseData = getCurrentCase();
   const { patient, reportData } = caseData;
 
-  const today = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+  const today = new Date().toLocaleDateString('ko-KR', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
 
   return (
     <Screen>
-      <ReportHeader>
-        <div>
-          <ReportTitleRow>
-            <FileTextIcon size={15} color="white" />
-            <ReportTitle>MEDial 문진 리포트</ReportTitle>
-          </ReportTitleRow>
+      {/* 상단 헤더 */}
+      <TopBar>
+        <TopLeft>
+          <AppMark>MEDial · Report</AppMark>
+          <ReportTitle>문진 리포트</ReportTitle>
           <ReportMeta>{today} · {patient.name} 님</ReportMeta>
-        </div>
-        <ConfidentialBadge>비공개</ConfidentialBadge>
-      </ReportHeader>
+        </TopLeft>
+        <StatusBadge>비공개</StatusBadge>
+      </TopBar>
 
+      {/* 스크롤 바디 */}
       <Body>
         {/* 기본 정보 */}
-        <Section>
-          <SecHead><SecLabel>기본 정보</SecLabel></SecHead>
-          <SecBody>
-            <DataRow>
-              <DataKey>이름 / 나이</DataKey>
-              <DataVal>{patient.name} · {patient.age}세 {patient.gender}</DataVal>
-            </DataRow>
-            <DataRow>
-              <DataKey>혈액형</DataKey>
-              <DataVal>{patient.bloodType}</DataVal>
-            </DataRow>
-            <DataRow>
-              <DataKey>기저질환</DataKey>
-              <DataVal>{patient.conditions.join(', ')}</DataVal>
-            </DataRow>
-            <DataRow>
-              <DataKey>알레르기</DataKey>
-              <DataVal>{patient.allergies.join(', ')}</DataVal>
-            </DataRow>
-          </SecBody>
-        </Section>
+        <Card>
+          <CardHead><SectionLabel>기본 정보</SectionLabel></CardHead>
+          <Row>
+            <RowKey>이름 / 나이</RowKey>
+            <RowVal>{patient.name} · {patient.age}세 {patient.gender}</RowVal>
+          </Row>
+          <Row>
+            <RowKey>혈액형</RowKey>
+            <RowVal>{patient.bloodType}</RowVal>
+          </Row>
+          <Row>
+            <RowKey>기저질환</RowKey>
+            <RowVal>{patient.conditions.join(', ')}</RowVal>
+          </Row>
+          <Row>
+            <RowKey>알레르기</RowKey>
+            <RowVal>{patient.allergies.join(', ')}</RowVal>
+          </Row>
+        </Card>
 
         {/* 현재 투약 */}
-        <Section>
-          <SecHead><SecLabel>현재 투약</SecLabel></SecHead>
-          <SecBody>
-            {patient.medications.map((med, i) => (
-              <DataRow key={i}>
-                <DataKey>{med.name} {med.dose}</DataKey>
-                <DataVal>{med.schedule}</DataVal>
-              </DataRow>
-            ))}
-          </SecBody>
-        </Section>
+        <Card>
+          <CardHead><SectionLabel>현재 투약</SectionLabel></CardHead>
+          {patient.medications.map((med, i) => (
+            <Row key={i}>
+              <RowKey>{med.name} {med.dose}</RowKey>
+              <RowVal>{med.schedule}</RowVal>
+            </Row>
+          ))}
+        </Card>
 
         {/* 오늘 증상 */}
-        <Section>
-          <SecHead><SecLabel>오늘 증상 요약</SecLabel></SecHead>
-          <SecBody>
-            {reportData.todaySummary.map((line, i) => (
-              <SummaryRow key={i}>{line}</SummaryRow>
-            ))}
-            <PainRow>
-              <PainTopRow>
-                <PainLabel>통증 강도 (음성 + 표정 분석)</PainLabel>
-                <PainScore>{reportData.painLevel}<span style={{ fontSize: 11, fontWeight: 400, color: color.ink[300] }}>/10</span></PainScore>
-              </PainTopRow>
-              <PainTrack><PainFill $level={reportData.painLevel} /></PainTrack>
-              <PainNote>{reportData.analysisNote}</PainNote>
-            </PainRow>
-          </SecBody>
-        </Section>
+        <Card>
+          <CardHead><SectionLabel>오늘 증상 요약</SectionLabel></CardHead>
+          {reportData.todaySummary.map((line, i) => (
+            <BulletRow key={i}>{line}</BulletRow>
+          ))}
+          <PainBlock>
+            <PainTopRow>
+              <PainLbl>통증 강도 (음성·표정 분석)</PainLbl>
+              <PainScore>
+                {reportData.painLevel}
+                <PainSub> / 10</PainSub>
+              </PainScore>
+            </PainTopRow>
+            <PainTrack>
+              <PainFill $level={reportData.painLevel} />
+            </PainTrack>
+            <PainNote>{reportData.analysisNote}</PainNote>
+          </PainBlock>
+        </Card>
 
         {/* 투약 주의 */}
         {reportData.medicationWarning && (
-          <Section style={{ borderColor: 'rgba(170,31,16,0.2)' }}>
-            <SecHead style={{ background: color.emergencyDim, borderBottomColor: 'rgba(170,31,16,0.12)' }}>
-              <AlertIcon size={12} color={color.emergency} />
-              <SecLabel style={{ color: color.emergency }}>투약 주의</SecLabel>
-            </SecHead>
-            <WarnRow>
+          <WarnCard>
+            <CardHead style={{ background: color.emergencyDim, borderBottomColor: 'rgba(170,31,16,0.12)' }}>
+              <AlertIcon size={11} color={color.emergency} />
+              <SectionLabel style={{ color: color.emergency }}>투약 주의</SectionLabel>
+            </CardHead>
+            <WarnBody>
               <AlertIcon size={14} color={color.emergency} />
               <WarnText>{reportData.medicationWarning}</WarnText>
-            </WarnRow>
-          </Section>
+            </WarnBody>
+          </WarnCard>
         )}
       </Body>
 
-      <HomeBtn onClick={() => { setCurrentCase(currentCaseId); }}>
-        처음으로 돌아가기
-      </HomeBtn>
+      {/* CTA 버튼 */}
       <Footer>
-        <FootBtn>
-          <PrintIcon size={13} color={color.ink[300]} />
-          A4 인쇄
-        </FootBtn>
-        <FootBtn>
-          <ShareIcon size={13} color={color.ink[300]} />
-          카카오 전송
-        </FootBtn>
+        <PrimaryRow>
+          <PrimaryBtn>
+            <PrintIcon size={12} color="white" />
+            A4 인쇄
+          </PrimaryBtn>
+          <PrimaryBtn>
+            <ShareIcon size={12} color="white" />
+            카카오 전송
+          </PrimaryBtn>
+        </PrimaryRow>
+        <SecondaryBtn onClick={() => setCurrentCase(currentCaseId)}>
+          처음으로 돌아가기
+        </SecondaryBtn>
       </Footer>
     </Screen>
   );

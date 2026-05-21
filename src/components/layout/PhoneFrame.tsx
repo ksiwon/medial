@@ -6,21 +6,19 @@ import { useAppStore } from '../../store/useAppStore';
 import { ScreenId } from '../../types';
 
 const SCREEN_ORDER: ScreenId[] = [
-  'home', 'chat', 'photo', 'decision',
+  'home', 'chat', 'analyzing', 'photo', 'decision',
   'emergency', 'healthCenter', 'selfCare', 'report',
 ];
 
-/* ── 패널 (기기 + 네비 버튼 포함) */
 const Panel = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 20px 16px 24px;
+  gap: 10px;
+  padding: 20px 16px 20px;
   flex-shrink: 0;
 `;
 
-/* ── 폰 기기 외형 */
 const Device = styled.div`
   width: 320px;
   height: 640px;
@@ -37,7 +35,6 @@ const Device = styled.div`
   flex-direction: column;
 `;
 
-/* ── 상단 노치 */
 const Notch = styled.div`
   flex-shrink: 0;
   height: 28px;
@@ -56,7 +53,6 @@ const NotchPill = styled.div`
   border-radius: 6px;
 `;
 
-/* ── 콘텐츠 영역: 스크롤 허용 */
 const ScreenArea = styled.div`
   flex: 1;
   min-height: 0;
@@ -66,7 +62,6 @@ const ScreenArea = styled.div`
   position: relative;
   -webkit-overflow-scrolling: touch;
 
-  /* 스크롤바 */
   &::-webkit-scrollbar { width: 3px; }
   &::-webkit-scrollbar-track { background: transparent; }
   &::-webkit-scrollbar-thumb {
@@ -75,14 +70,14 @@ const ScreenArea = styled.div`
   }
 `;
 
-/* ── 홈 바 */
 const HomeBar = styled.div`
   flex-shrink: 0;
-  height: 22px;
+  height: 28px;
   background: #1C1C1E;
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: 8px;
   z-index: 10;
 `;
 
@@ -93,7 +88,20 @@ const HomeBarLine = styled.div`
   border-radius: 2px;
 `;
 
-/* ── 하단 네비 버튼 (밝은 배경 위) */
+const HomeButton = styled.button`
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s;
+  &:hover { background: rgba(255,255,255,0.18); }
+  &:active { background: rgba(255,255,255,0.25); }
+`;
+
 const NavRow = styled.div`
   display: flex;
   gap: 14px;
@@ -112,28 +120,25 @@ const NavBtn = styled.button<{ $disabled: boolean }>`
   opacity: ${({ $disabled }) => $disabled ? 0.22 : 1};
   cursor: ${({ $disabled }) => $disabled ? 'default' : 'pointer'};
   transition: background 0.12s;
-
-  &:hover:not([disabled]) {
-    background: rgba(0,0,0,0.12);
-  }
-  &:active {
-    background: rgba(0,0,0,0.16);
-  }
+  &:hover:not([disabled]) { background: rgba(0,0,0,0.12); }
+  &:active { background: rgba(0,0,0,0.16); }
 `;
 
 const ScreenLabel = styled.span`
   font-size: 11px;
   font-weight: ${font.weight.medium};
   color: rgba(0,0,0,0.38);
-  min-width: 82px;
+  min-width: 90px;
   text-align: center;
   letter-spacing: 0.03em;
+  font-family: ${font.mono};
 `;
 
 const SCREEN_LABELS: Record<ScreenId, string> = {
   home:         '홈',
   chat:         '아바타 대화',
-  photo:        '사진 촬영',
+  analyzing:    'AI 분석',
+  photo:        '멀티모달',
   decision:     '판단 분기',
   emergency:    '응급 119',
   healthCenter: '보건소 연결',
@@ -146,7 +151,7 @@ interface Props {
 }
 
 export default function PhoneFrame({ children }: Props) {
-  const { currentScreen, setCurrentScreen } = useAppStore();
+  const { currentScreen, setCurrentScreen, onHome } = useAppStore();
 
   const idx = SCREEN_ORDER.indexOf(currentScreen);
   const canPrev = idx > 0;
@@ -160,7 +165,11 @@ export default function PhoneFrame({ children }: Props) {
         </Notch>
         <ScreenArea>{children}</ScreenArea>
         <HomeBar>
-          <HomeBarLine />
+          <HomeButton onClick={onHome} title="홈으로">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <rect x="2" y="2" width="10" height="10" rx="2" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" />
+            </svg>
+          </HomeButton>
         </HomeBar>
       </Device>
 

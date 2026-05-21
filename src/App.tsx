@@ -1,4 +1,5 @@
 // src/App.tsx
+import { useEffect } from 'react';
 import styled from 'styled-components';
 import { GlobalStyle } from './styles/GlobalStyle';
 import TitleBar from './components/layout/TitleBar';
@@ -11,6 +12,7 @@ import { screenDescriptions } from './data/mockData';
 // Screens
 import HomeScreen from './screens/HomeScreen';
 import ChatScreen from './screens/ChatScreen';
+import AnalyzingScreen from './screens/AnalyzingScreen';
 import PhotoScreen from './screens/PhotoScreen';
 import DecisionScreen from './screens/DecisionScreen';
 import EmergencyScreen from './screens/EmergencyScreen';
@@ -38,21 +40,30 @@ const Main = styled.div`
 
 function renderScreen(screen: ScreenId) {
   switch (screen) {
-    case 'home': return <HomeScreen />;
-    case 'chat': return <ChatScreen />;
-    case 'photo': return <PhotoScreen />;
-    case 'decision': return <DecisionScreen />;
-    case 'emergency': return <EmergencyScreen />;
+    case 'home':         return <HomeScreen />;
+    case 'chat':         return <ChatScreen />;
+    case 'analyzing':    return <AnalyzingScreen />;
+    case 'photo':        return <PhotoScreen />;
+    case 'decision':     return <DecisionScreen />;
+    case 'emergency':    return <EmergencyScreen />;
     case 'healthCenter': return <HealthCenterScreen />;
-    case 'selfCare': return <SelfCareScreen />;
-    case 'report': return <ReportScreen />;
+    case 'selfCare':     return <SelfCareScreen />;
+    case 'report':       return <ReportScreen />;
   }
 }
 
 export default function App() {
-  const { currentScreen } = useAppStore();
+  const { currentScreen, fontScale } = useAppStore();
 
-  const descData = screenDescriptions.find((d) => d.screenId === currentScreen)!;
+  // 글자 크기 동적 적용
+  useEffect(() => {
+    document.documentElement.style.fontSize = `${15 * fontScale}px`;
+  }, [fontScale]);
+
+  // descData: analyzing은 임시로 chat 정보 사용
+  const descData =
+    screenDescriptions.find((d) => d.screenId === currentScreen) ??
+    screenDescriptions.find((d) => d.screenId === 'chat')!;
 
   return (
     <>

@@ -1,6 +1,8 @@
 // src/data/mockData.ts
 import { CaseData, ScreenDescription } from '../types';
 
+// warningSignals 추가 — SelfCareScreen 2단계 주의 신호
+
 // ══════════════════════════════════════════════════════════════════
 // CASE 1: 박순옥 — 두통·혈압약 → 보건소
 // ══════════════════════════════════════════════════════════════════
@@ -60,6 +62,12 @@ const case1: CaseData = {
   },
   decisionRecommendation: '두통과 어지러움이 함께 온 데다 최근 혈압약도 바뀌었어요. 오늘 보건소에 가보시는 게 좋겠어요.',
   decisionOutcome: 'healthCenter',
+  warningSignals: [
+    '두통이 30분 이상 지속될 때',
+    '눈이 갑자기 흐릿하게 보일 때',
+    '혈압이 160 이상으로 올라갈 때',
+    '어지러움이 너무 심해 걷기 힘들 때',
+  ],
   reportData: {
     todaySummary: [
       '혈압약(암로디핀) 변경 1주일 후 두통·어지러움 동시 발생',
@@ -198,6 +206,12 @@ const case2: CaseData = {
     { num: 2, iconSvg: 'compress', title: '깨끗한 거즈로 가볍게 눌러 주세요',   description: '깨끗한 거즈나 수건으로 상처를 살짝 눌러 지혈하세요. 문지르지 마세요.' },
     { num: 3, iconSvg: 'medicine', title: '소독 후 반창고를 붙여 주세요',        description: '소독약(클로르헥시딘 또는 포비돈)으로 소독하고 반창고로 덮어 주세요.' },
     { num: 4, iconSvg: 'check',    title: '매일 아침 상처를 확인하세요',         description: '당뇨가 있으시면 3일 이상 빨갛거나 부으면 바로 보건소에 가세요.' },
+  ],
+  warningSignals: [
+    '상처에서 고름이나 분비물이 나올 때',
+    '열이 38도 이상 날 때',
+    '상처 주변에 빨간 줄이 생길 때',
+    '3일 이상 붓기가 안 빠질 때',
   ],
   reportData: {
     todaySummary: [
@@ -370,6 +384,7 @@ export const screenDescriptions: ScreenDescription[] = [
     screenId: 'home',
     label: '홈 화면',
     title: '버튼 하나가 전부인 이유',
+    activeDRs: [1, 3],
     researchTopics: [
       'Cause of Withdrawal 3가지',
       'Overestimation of Digital Literacy among the Elderly',
@@ -431,6 +446,7 @@ export const screenDescriptions: ScreenDescription[] = [
   {
     screenId: 'chat',
     label: '아바타 대화',
+    activeDRs: [1, 4],
     title: '공감이 먼저, 전문성은 그다음',
     researchTopics: [
       'Healthcare decision-making patterns of senior patients',
@@ -494,6 +510,7 @@ export const screenDescriptions: ScreenDescription[] = [
   {
     screenId: 'photo',
     label: '사진으로 보여주기',
+    activeDRs: [2, 4],
     title: '보건소 선생님께 사진 보내듯이',
     researchTopics: [
       'Self-management as a substitute for inaccessible healthcare',
@@ -531,6 +548,7 @@ export const screenDescriptions: ScreenDescription[] = [
   {
     screenId: 'decision',
     label: '판단 분기',
+    activeDRs: [2, 3],
     title: 'AI가 먼저 판단을 제안한다',
     researchTopics: [
       'Self-management as a substitute for inaccessible healthcare',
@@ -586,6 +604,7 @@ export const screenDescriptions: ScreenDescription[] = [
   {
     screenId: 'emergency',
     label: '응급 연결',
+    activeDRs: [2],
     title: '응급 상황에서 UI는 방해가 된다',
     researchTopics: [
       'The collapse of trust in regional healthcare overriding physical barriers',
@@ -623,6 +642,7 @@ export const screenDescriptions: ScreenDescription[] = [
   {
     screenId: 'healthCenter',
     label: '보건소 연결',
+    activeDRs: [2, 3],
     title: '진료 전에 의사가 이미 알고 있다',
     researchTopics: [
       'Healthcare decision-making patterns of senior patients',
@@ -686,6 +706,7 @@ export const screenDescriptions: ScreenDescription[] = [
   {
     screenId: 'selfCare',
     label: '자가 치료 안내',
+    activeDRs: [2, 4],
     title: '구체적이고 단순하게, 단계별로',
     researchTopics: [
       'Self-management as a substitute for inaccessible healthcare',
@@ -732,6 +753,7 @@ export const screenDescriptions: ScreenDescription[] = [
   {
     screenId: 'report',
     label: '의사용 리포트',
+    activeDRs: [2, 3],
     title: '의사가 5초 안에 파악할 수 있어야 한다',
     researchTopics: [
       'Conclusion',
