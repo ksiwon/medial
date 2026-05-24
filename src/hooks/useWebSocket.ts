@@ -177,6 +177,14 @@ export function useWebSocket(): WsControls {
         if (msg.mode === 'triage') {
           useAppStore.setState({ escalationReason: msg.reason ?? null });
           store.logEvent('mode_switch', msg.reason ?? 'triage');
+        } else if (msg.mode === 'companion') {
+          // companion 복귀 시 이전 사이클 잔여물 정리:
+          // 옛 리포트가 남아 있으면 다음 triage 진입 직후 옛 시트가 다시 뜬다(버그).
+          useAppStore.setState({
+            liveReport: null,
+            escalationReason: null,
+            liveTurnCount: 0,
+          });
         }
         break;
 

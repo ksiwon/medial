@@ -26,21 +26,36 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const monitoringConsent = useAppStore((s) => s.monitoringConsent);
   // 동의(존엄·통제, Frontiers 2025)가 있을 때만 IoT 신호 수집/전송.
   const { injectAnomaly } = useVitalsSim(ws, wsConnected && monitoringConsent);
-  const startedRef = useRef(false);
+  // 이전 연결 상태를 기억해 false → true 전이마다 세션을 (재)시작한다.
+  // 발표 중 서버가 재시작되거나 와이파이가 잠시 끊겨도 자동 재연결 후 인사가 다시 나오도록.
+  const prevConnectedRef = useRef(false);
 
-  // 연결되면 companion 세션을 1회 자동 시작하고, 동네·보건소 소식을 시드 주입한다.
   useEffect(() => {
-    if (wsConnected && !startedRef.current) {
-      startedRef.current = true;
+    if (wsConnected && !prevConnectedRef.current) {
+      // 신규 연결(첫 진입 또는 재연결). 서버는 매 WS accept마다 새 Session을 만들므로
+      // start로 모드를 알려야 COMPANION_GREETING + TTS가 시작된다.
       ws.startSession('companion');
       const store = useAppStore.getState();
-      ws.setTtsSpeed(store.ttsSpeed);   // 어르신 선호 속도(느리게) 적용
-      for (const evt of SEED_EVENTS) {
-        const e = { ...evt, timestamp: Date.now() };
-        store.addEvent(e);       // 정보 탭 표시용
-        ws.sendEvent(e);         // 서버 큐 — 메디가 대화에 녹임
+      ws.setTtsSpeed(store.ttsSpeed); // 어르신 선호 속도 적용
+      // 시드 소식은 첫 진입에만 주입(재연결 시 중복 방지).
+      const alreadySeeded = store.healthContext.events.some((e) =>
+        SEED_EVENTS.some((s) => s.id === e.id),
+      );
+      if (!alreadySeeded) {
+        for (const evt of SEED_EVENTS) {
+          const e = { ...evt, timestamp: Date.now() };
+          store.addEvent(e);
+          ws.sendEvent(e);
+        }
+      } else {
+        // 이미 시드된 소식은 store에 있지만 서버 세션은 새로 만들어졌으므로
+        // 메디가 다시 언급할 수 있도록 서버에만 재전송.
+        for (const evt of store.healthContext.events) {
+          if (evt.injectToChat) ws.sendEvent(evt);
+        }
       }
     }
+    prevConnectedRef.current = wsConnected;
   }, [wsConnected, ws]);
 
   return <Ctx.Provider value={{ ws, injectAnomaly }}>{children}</Ctx.Provider>;

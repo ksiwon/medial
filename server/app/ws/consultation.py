@@ -155,6 +155,10 @@ def _ingest_clues(session: Session, clues: list[dict]) -> None:
     session.collected_symptoms = list(dict.fromkeys(session.collected_symptoms))
 
 
+# 거절 직후 재제안 쿨다운 (force escalation은 제외 — 응급/위기는 무조건 통과).
+TRIAGE_DECLINE_COOLDOWN_SEC = 5 * 60  # 5분
+
+
 async def _maybe_escalate(websocket: WebSocket, session: Session) -> None:
     """companion 모드에서만 평가. force → 즉시 triage 전환, suggest → 동의 요청."""
     if session.mode != "companion":
@@ -178,6 +182,10 @@ async def _maybe_escalate(websocket: WebSocket, session: Session) -> None:
             "reason": "; ".join(decision["reasons"])[:120],
         })
     elif level == "suggest" and not session.triage_suggested:
+        # 최근에 거절했다면 잠시 다시 묻지 않는다(거절-재제안 루프 방지).
+        import time as _t
+        if session.last_declined_at and _t.time() - session.last_declined_at < TRIAGE_DECLINE_COOLDOWN_SEC:
+            return
         session.triage_suggested = True
         await _send(websocket, {
             "type": "triage_suggested",
@@ -395,9 +403,14 @@ async def consultation_ws(websocket: WebSocket) -> None:
                 await _send(websocket, {"type": "mode_switch", "mode": "triage", "reason": "user_consent"})
 
             elif ctype == "decline_triage":
-                # 사용자가 거절 → companion 유지, 누적 신호 초기화로 재알림 방지
+                # 사용자가 거절 → companion 유지, 누적 신호 초기화로 재알림 방지.
+                # 단발 식사 플래그도 함께 비워 "방금 거절했는데 또 권한다" 어색함을 방지.
+                # 바이탈은 그대로 (상태이므로) — 단 5분 쿨다운으로 즉시 재제안은 막는다.
+                import time as _t
                 session.triage_suggested = False
+                session.last_declined_at = _t.time()
                 session.health_context["clues"] = []
+                session.health_context["meals"] = []
 
             elif ctype == "set_tts_speed":
                 # 어르신 음성 속도 조절 (느리게 선호, P4)

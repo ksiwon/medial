@@ -67,7 +67,7 @@ class Session:
     session_code: str = field(default_factory=lambda: f"PT-{uuid.uuid4().hex[:5].upper()}")
     started_at: float = field(default_factory=time.time)
     case_id: str = "free_input"
-    # 'triage'(상담/기존 라이브) | 'companion'(일상 말동무, MEDial 2.0)
+    # 'triage'(상담/기존 라이브) | 'companion'(일상 말동무, MEDial 3.0)
     mode: str = "triage"
     turn_count: int = 0           # 전체 AI 턴
     triage_turns: int = 0         # triage 모드 진입 후의 턴 (MAX_TURNS 게이팅·진행바)
@@ -75,6 +75,9 @@ class Session:
     collected_symptoms: list[str] = field(default_factory=list)
     health_context: dict = field(default_factory=empty_health_context)
     triage_suggested: bool = False
+    # 사용자가 마지막으로 상담 제안을 거절한 시각. 이 시각 이후 일정 시간 동안은
+    # 새 suggest를 띄우지 않아 "거절했는데 또 권한다" 어색함을 막는다(force는 별개).
+    last_declined_at: float = 0.0
     tts_speed: Optional[float] = None   # 어르신 음성 속도(느리게); None=설정 기본값
     audio_buffer: list[bytes] = field(default_factory=list)
     report: Optional[dict] = None
@@ -96,6 +99,7 @@ class Session:
         self.collected_symptoms.clear()
         self.health_context = empty_health_context()
         self.triage_suggested = False
+        self.last_declined_at = 0.0
         self.audio_buffer.clear()
         self.report = None
         self.finished = False

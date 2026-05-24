@@ -47,11 +47,17 @@ const Dismiss = styled.button`
 export default function CompanionEmergency() {
   const { ws } = useCompanion();
   const handleDismiss = () => {
+    // 서버 세션을 리셋한 후 즉시 companion 모드로 명시한다.
+    // session.reset()의 기본 mode는 'triage'라 setMode 없이는
+    // 다음 발화에서 클라(companion)와 서버(triage) 모드가 어긋난다.
     ws.reset();
+    ws.setMode('companion');
     const s = useAppStore.getState();
     s.setEmergencyActive(false);
     s.setChatMode('companion');
     s.setLiveDoctorState('idle');
+    // 이전 사이클의 상담 리포트 잔여 시트가 다시 뜨지 않도록 정리.
+    useAppStore.setState({ liveReport: null, escalationReason: null });
   };
 
   return (

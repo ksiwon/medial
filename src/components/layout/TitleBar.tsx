@@ -2,7 +2,7 @@
 import styled from 'styled-components';
 import { color, font } from '../../styles/tokens';
 import NavDots from '../phone/NavDots';
-import { ScreenId, AppMode, LiveScreenId } from '../../types';
+import { ScreenId, AppMode, LiveScreenId, CompanionTab } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 
 const Bar = styled.header`
@@ -66,6 +66,13 @@ const ModeBtn = styled.button<{ $active: boolean; $live?: boolean }>`
   color: ${({ $active }) => $active ? 'white' : 'rgba(255,255,255,0.35)'};
 `;
 
+const PresentationHint = styled.span`
+  font-size: 9.5px;
+  font-family: ${font.mono};
+  color: rgba(255,255,255,0.28);
+  letter-spacing: 0.06em;
+`;
+
 const MOCK_LABELS: Record<ScreenId, string> = {
   home:         '홈',
   chat:         '아바타 대화',
@@ -86,15 +93,21 @@ const LIVE_LABELS: Record<LiveScreenId, string> = {
   'live-complete':  '전달 완료',
 };
 
+const COMPANION_LABELS: Record<CompanionTab, string> = {
+  talk:   '소통',
+  health: '내 건강',
+  info:   '정보',
+};
+
 interface Props {
   currentScreen: ScreenId;
 }
 
 export default function TitleBar({ currentScreen }: Props) {
-  const { appMode, liveScreen, companionTab, setAppMode } = useAppStore();
+  const { appMode, liveScreen, companionTab, setAppMode, presentationMode } = useAppStore();
 
   const label = appMode === 'companion'
-    ? (companionTab === 'talk' ? '소통' : '정보')
+    ? COMPANION_LABELS[companionTab]
     : appMode === 'live'
       ? LIVE_LABELS[liveScreen]
       : MOCK_LABELS[currentScreen];
@@ -108,6 +121,10 @@ export default function TitleBar({ currentScreen }: Props) {
     }
   };
 
+  // 발표 모드는 companion(어르신용 제품) 화면을 깔끔히 보이게 하는 게 목적.
+  // Mock/Live(연구 아카이브)에선 모드 토글·점 네비를 항상 노출해 연구자가 편히 이동.
+  const showDev = !presentationMode || appMode !== 'companion';
+
   return (
     <Bar>
       <Logo>MEDial</Logo>
@@ -115,19 +132,23 @@ export default function TitleBar({ currentScreen }: Props) {
       <ScreenLabel>{label}</ScreenLabel>
       <Spacer />
 
-      <ModeToggle>
-        <ModeBtn $active={appMode === 'mock'} onClick={() => handleSwitch('mock')}>
-          Mock
-        </ModeBtn>
-        <ModeBtn $active={appMode === 'live'} $live onClick={() => handleSwitch('live')}>
-          Live
-        </ModeBtn>
-        <ModeBtn $active={appMode === 'companion'} onClick={() => handleSwitch('companion')}>
-          2.0
-        </ModeBtn>
-      </ModeToggle>
+      {showDev ? (
+        <ModeToggle>
+          <ModeBtn $active={appMode === 'mock'} onClick={() => handleSwitch('mock')}>
+            Mock
+          </ModeBtn>
+          <ModeBtn $active={appMode === 'live'} $live onClick={() => handleSwitch('live')}>
+            Live
+          </ModeBtn>
+          <ModeBtn $active={appMode === 'companion'} onClick={() => handleSwitch('companion')}>
+            3.0
+          </ModeBtn>
+        </ModeToggle>
+      ) : (
+        <PresentationHint>D · dev</PresentationHint>
+      )}
 
-      {appMode === 'mock' && <NavDots currentScreen={currentScreen} />}
+      {showDev && appMode === 'mock' && <NavDots currentScreen={currentScreen} />}
     </Bar>
   );
 }
