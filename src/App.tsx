@@ -28,7 +28,7 @@ import LiveEmergencyScreen from './screens/live/LiveEmergencyScreen';
 import LiveReportScreen from './screens/live/LiveReportScreen';
 import LiveCompleteScreen from './screens/live/LiveCompleteScreen';
 
-// Companion (MEDial 2.0)
+// Companion (MEDial 3.0)
 import CompanionShell from './screens/companion/CompanionShell';
 import { CompanionProvider } from './components/companion/CompanionContext';
 import HealthPanel from './components/companion/HealthPanel';
@@ -49,6 +49,40 @@ const Main = styled.div`
   min-height: 0;
   display: flex;
   overflow: hidden;
+`;
+
+// 발표 모드에서는 폰 목업이 가운데 정렬되어 화면이 깔끔.
+const CenterStage = styled.div`
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+`;
+
+// 발표 모드 토글 힌트 (우하단). 발표 중 본인만 보는 미세한 가이드.
+const PresentationToast = styled.div`
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 50;
+  font-size: 10.5px;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.06em;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.55);
+  color: rgba(255,255,255,0.78);
+  pointer-events: none;
+  opacity: 0;
+  animation: toastFade 2.6s ease forwards;
+  @keyframes toastFade {
+    0%   { opacity: 0; transform: translateY(6px); }
+    15%  { opacity: 1; transform: translateY(0); }
+    80%  { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-2px); }
+  }
 `;
 
 function renderMockScreen(screen: ScreenId) {
@@ -76,15 +110,35 @@ function renderLiveScreen(screen: LiveScreenId) {
 }
 
 export default function App() {
-  const { currentScreen, fontScale, appMode, liveScreen } = useAppStore();
+  const { currentScreen, fontScale, appMode, liveScreen, presentationMode, togglePresentationMode } = useAppStore();
 
   useEffect(() => {
     document.documentElement.style.fontSize = `${15 * fontScale}px`;
   }, [fontScale]);
 
+  // 'D' 키로 발표 모드 ↔ 연구자 뷰 토글. 입력 필드에 포커스되어 있을 땐 무시.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'd' && e.key !== 'D') return;
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      e.preventDefault();
+      togglePresentationMode();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [togglePresentationMode]);
+
   const descData =
     screenDescriptions.find((d) => d.screenId === currentScreen) ??
     screenDescriptions.find((d) => d.screenId === 'chat')!;
+
+  // 발표 모드 + companion 인 경우: 폰 목업만, 가운데 정렬.
+  // 연구자 모드 + companion: 폰 + 우측 HealthPanel + (옵션) TweaksPanel.
+  // dev 패널은 companion에선 presentation off일 때만, mock/live에선 항상.
+  const showTweaks = appMode !== 'companion' || !presentationMode;
 
   return (
     <>
@@ -94,8 +148,16 @@ export default function App() {
         <Main>
           {appMode === 'companion' ? (
             <CompanionProvider>
-              <PhoneFrame><CompanionShell /></PhoneFrame>
-              <HealthPanel />
+              {presentationMode ? (
+                <CenterStage>
+                  <PhoneFrame><CompanionShell /></PhoneFrame>
+                </CenterStage>
+              ) : (
+                <>
+                  <PhoneFrame><CompanionShell /></PhoneFrame>
+                  <HealthPanel />
+                </>
+              )}
             </CompanionProvider>
           ) : (
             <>
@@ -110,9 +172,13 @@ export default function App() {
             </>
           )}
 
-          {/* 개발/연구 컨트롤은 데모 화면을 어지럽히지 않도록 companion(제품)에선 숨김 */}
-          {appMode !== 'companion' && <TweaksPanel />}
+          {showTweaks && <TweaksPanel />}
         </Main>
+
+        {/* 발표 모드 진입/해제 시 잠깐 떠올라 사라지는 안내 (본인 확인용) */}
+        <PresentationToast key={presentationMode ? 'on' : 'off'}>
+          {presentationMode ? '발표 모드' : '연구자 모드'} · D로 전환
+        </PresentationToast>
       </Root>
     </>
   );
