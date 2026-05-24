@@ -136,7 +136,7 @@ interface VirtualDoctorProps {
   showHalo?: boolean;
 }
 
-export default function VirtualDoctor({ state, size = 64, showHalo = true }: VirtualDoctorProps) {
+function SvgDoctor({ state, size = 64, showHalo = true }: VirtualDoctorProps) {
   const [blinkType, setBlinkType] = useState<'normal' | 'double' | 'wide'>('normal');
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -383,5 +383,82 @@ export default function VirtualDoctor({ state, size = 64, showHalo = true }: Vir
         )}
       </DocSvg>
     </Wrapper>
+  );
+}
+
+/* ── 사실적 사진 포트레이트 아바타 (드롭인) ──────────────────────
+ * public/avatar/medi.png 가 있으면 원형 사진으로 렌더하고, 없으면(404)
+ * 위 SVG 아바타로 자동 폴백한다. 모든 기존 호출부가 그대로 동작한다.
+ * 상태별 링/글로우: speaking·listening 펄스, emergency 빨강, idle 은은.
+ */
+const PORTRAIT_SRC = '/avatar/medi.png';
+
+const ringPulse = keyframes`
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+`;
+
+const Frame = styled.div<{ $size: number }>`
+  position: relative;
+  width: ${({ $size }) => $size}px;
+  height: ${({ $size }) => $size}px;
+  flex-shrink: 0;
+  animation: ${float} 3.4s ease-in-out infinite;
+`;
+
+const Img = styled.img`
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+  /* 투명 PNG 뒤로 비치는 원형 배경 — 은은한 세이지 그라디언트로 입체감 */
+  background: radial-gradient(circle at 50% 38%, ${color.sage[50]} 0%, ${color.sage[100]} 55%, ${color.sage[200]} 100%);
+  position: relative;
+  z-index: 1;
+`;
+
+function ringColor(state: DoctorState): string {
+  if (state === 'emergency') return color.emergency;
+  if (state === 'listening') return color.amber.base;
+  if (state === 'speaking') return color.sage[500];
+  return color.sage[300];
+}
+
+const Ring = styled.div<{ $state: DoctorState }>`
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 2;
+  border: 3px solid ${({ $state }) => ringColor($state)};
+  box-shadow: 0 0 16px 1px ${({ $state }) => ringColor($state)}88;
+  opacity: ${({ $state }) => ($state === 'idle' || $state === 'thinking' ? 0.5 : 1)};
+  ${({ $state }) =>
+    ($state === 'speaking' || $state === 'listening') &&
+    css`animation: ${ringPulse} 1.1s ease-in-out infinite;`}
+  ${({ $state }) =>
+    $state === 'emergency' &&
+    css`animation: ${ringPulse} 0.7s ease-in-out infinite;`}
+`;
+
+export default function VirtualDoctor(props: VirtualDoctorProps) {
+  const [photoOk, setPhotoOk] = useState(true);
+  const size = props.size ?? 64;
+
+  // 사진이 없으면 SVG 아바타로 폴백.
+  if (!photoOk) return <SvgDoctor {...props} />;
+
+  return (
+    <Frame $size={size}>
+      <Img
+        src={PORTRAIT_SRC}
+        alt="AI 의료 도우미 메디"
+        draggable={false}
+        onError={() => setPhotoOk(false)}
+      />
+      <Ring $state={props.state} aria-hidden />
+    </Frame>
   );
 }

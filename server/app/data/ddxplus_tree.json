@@ -1,0 +1,75 @@
+{
+  "_comment": "Stub data — replace with output of scripts/build_ddxplus_tree.py before exhibition. This minimal subset lets the server boot and respond.",
+  "diseases": {
+    "URTI": {
+      "symptoms": {
+        "sore throat": 0.85,
+        "runny nose": 0.78,
+        "cough": 0.65,
+        "fever": 0.42,
+        "headache": 0.35
+      }
+    },
+    "Influenza": {
+      "symptoms": {
+        "fever": 0.92,
+        "muscle pain": 0.84,
+        "fatigue": 0.81,
+        "cough": 0.68,
+        "headache": 0.58
+      }
+    },
+    "Pneumonia": {
+      "symptoms": {
+        "cough": 0.91,
+        "fever": 0.84,
+        "shortness of breath": 0.76,
+        "chest pain": 0.52,
+        "fatigue": 0.49
+      }
+    },
+    "Stable angina": {
+      "symptoms": {
+        "chest pain": 0.94,
+        "shortness of breath": 0.62,
+        "pain radiating to left arm": 0.45,
+        "sweating": 0.32
+      }
+    },
+    "Possible NSTEMI / STEMI": {
+      "symptoms": {
+        "chest pain": 0.97,
+        "pain radiating to left arm": 0.71,
+        "sweating": 0.64,
+        "shortness of breath": 0.58,
+        "nausea": 0.38
+      }
+    },
+    "Panic attack": {
+      "symptoms": {
+        "palpitations": 0.88,
+        "shortness of breath": 0.72,
+        "chest pain": 0.46,
+        "dizziness": 0.55,
+        "fear": 0.81
+      }
+    }
+  },
+  "symptom_index": {
+    "sore throat": ["URTI"],
+    "runny nose": ["URTI"],
+    "cough": ["URTI", "Influenza", "Pneumonia"],
+    "fever": ["URTI", "Influenza", "Pneumonia"],
+    "headache": ["URTI", "Influenza"],
+    "muscle pain": ["Influenza"],
+    "fatigue": ["Influenza", "Pneumonia"],
+    "shortness of breath": ["Pneumonia", "Stable angina", "Possible NSTEMI / STEMI", "Panic attack"],
+    "chest pain": ["Pneumonia", "Stable angina", "Possible NSTEMI / STEMI", "Panic attack"],
+    "pain radiating to left arm": ["Stable angina", "Possible NSTEMI / STEMI"],
+    "sweating": ["Stable angina", "Possible NSTEMI / STEMI"],
+    "palpitations": ["Panic attack"],
+    "dizziness": ["Panic attack"],
+    "fear": ["Panic attack"],
+    "nausea": ["Possible NSTEMI / STEMI"]
+  }
+}

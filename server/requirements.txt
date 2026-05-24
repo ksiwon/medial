@@ -1,0 +1,39 @@
+# ─── Web framework ─────────────────────────────────────
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+python-multipart==0.0.12
+python-dotenv==1.0.1
+pydantic==2.9.2
+pydantic-settings==2.6.0
+websockets==13.1
+
+# ─── LLM (Gemini) ──────────────────────────────────────
+google-genai==0.5.0
+
+# ─── STT (Whisper) ─────────────────────────────────────
+# transformers + torch already pull CUDA build via PyPi index URL (see README)
+torch==2.4.1
+torchaudio==2.4.1
+transformers==4.46.0
+accelerate==1.1.0
+librosa==0.10.2.post1
+soundfile==0.12.1
+silero-vad==5.1
+
+# ─── TTS (OpenAI) ──────────────────────────────────────
+openai==1.54.4
+
+# ─── RAG ───────────────────────────────────────────────
+faiss-gpu==1.7.2 ; sys_platform != "win32"
+faiss-cpu==1.9.0 ; sys_platform == "win32"
+sentence-transformers==3.2.1
+datasets==3.1.0
+huggingface-hub==0.26.2
+tqdm==4.66.6
+numpy==1.26.4
+pandas==2.2.3
+
+# ─── Avatar (Wav2Lip — optional) ───────────────────────
+# Install separately if needed; see README "Avatar Setup"
+opencv-python-headless==4.10.0.84
+imageio-ffmpeg==0.5.1

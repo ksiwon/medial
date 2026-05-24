@@ -41,6 +41,9 @@ export const GlobalStyle = createGlobalStyle`
   body {
     min-height: 100vh;
     overflow: hidden;
+    /* 한국어 단어 중간 줄바꿈 방지 (가독성·노인 접근성) */
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
 
   button {
