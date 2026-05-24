@@ -162,8 +162,33 @@ export default function MyHealthTab() {
           <Card>
             <IconCircle><Glyph name="sleep" /></IconCircle>
             <CardBody><CLabel>어젯밤 수면</CLabel>
-              <CValue>7<CUnit>시간</CUnit> 20<CUnit>분</CUnit></CValue>
-              <Status $tone="ok">푹 주무셨어요</Status>
+              {(() => {
+                const h = v.sleepHours;
+                if (h == null) {
+                  return (
+                    <>
+                      <CValue>—</CValue>
+                      <Status $tone="info">수면 데이터를 받는 중이에요</Status>
+                    </>
+                  );
+                }
+                const hours = Math.floor(h);
+                const mins = Math.round((h - hours) * 60);
+                const ok = h >= 6 && h <= 9;
+                return (
+                  <>
+                    <CValue>
+                      {hours}<CUnit>시간</CUnit>
+                      {mins > 0 ? <> {mins}<CUnit>분</CUnit></> : null}
+                    </CValue>
+                    <Status $tone={ok ? 'ok' : 'warn'}>
+                      {ok
+                        ? (h >= 7 ? '푹 주무셨어요' : '잘 주무셨어요')
+                        : (h < 6 ? '잠이 조금 부족해요' : '오래 주무셨어요')}
+                    </Status>
+                  </>
+                );
+              })()}
             </CardBody>
           </Card>
         </>

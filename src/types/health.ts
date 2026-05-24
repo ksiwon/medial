@@ -11,6 +11,8 @@ export interface VitalReading {
   steps: number; // 당일 누적 걸음수
   distanceKm: number; // 당일 이동거리
   location?: { lat: number; lng: number; label?: string }; // GPS
+  /** 어젯밤 수면 시간(시간 단위, 소수). 손목밴드 수면 추적 결과를 가정. */
+  sleepHours?: number;
 }
 
 // ── 신호 2: 식사 촬영 분석 ───────────────────────────────

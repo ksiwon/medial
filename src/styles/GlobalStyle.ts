@@ -53,6 +53,22 @@ export const GlobalStyle = createGlobalStyle`
     background: none;
   }
 
+  /* WCAG 2.4.7 Focus Visible — 키보드 포커스 시 명확한 링.
+     마우스 클릭에는 보이지 않게(focus-visible only). 어르신 보조 기기 사용 고려. */
+  *:focus { outline: none; }
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [role="button"]:focus-visible,
+  [role="switch"]:focus-visible,
+  [role="tab"]:focus-visible {
+    outline: 3px solid ${color.sage[400]};
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
   input, select {
     font-family: ${font.family};
   }
@@ -64,6 +80,17 @@ export const GlobalStyle = createGlobalStyle`
   * {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* 사용자 'reduce motion' 환경설정 존중 (P7·WCAG SC 2.3.3).
+     상태 전달용 페이드는 살리되 무한 펄스·할로·waveBar의 강도는 낮춘다. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.06s !important;
+      scroll-behavior: auto !important;
+    }
   }
 
   ::-webkit-scrollbar { width: 3px; height: 3px; }

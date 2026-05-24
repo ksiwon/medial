@@ -19,6 +19,9 @@ function jitter(base: number, spread: number): number {
 export function useVitalsSim(ws: WsControls, active: boolean) {
   const stepsRef = useRef(800 + Math.floor(Math.random() * 400));
   const distRef = useRef(0.5 + Math.random() * 0.4);
+  // 어젯밤 수면은 세션 동안 변하지 않는 일일 합계 — 한 번 정해두고 유지.
+  // 5.5–8.0h 범위(농촌 고령자 수면 통계 — 평균 6.5–7.5h).
+  const sleepRef = useRef(Math.round((5.5 + Math.random() * 2.5) * 10) / 10);
 
   const emit = useCallback((reading: VitalReading) => {
     useAppStore.getState().addVital(reading);
@@ -35,6 +38,7 @@ export function useVitalsSim(ws: WsControls, active: boolean) {
       steps: stepsRef.current,
       distanceKm: Math.round(distRef.current * 10) / 10,
       location: NAMHAE,
+      sleepHours: sleepRef.current,
     };
   }, []);
 

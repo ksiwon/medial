@@ -284,7 +284,9 @@ export default function ConversationView() {
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const isTriage = chatMode === 'triage';
-  const canRecord = liveDoctorState === 'idle' && !isRecording;
+  // 서버가 끊겼을 때 마이크를 막아 사용자가 허공에 말하는 상황을 방지한다.
+  // 자동 재연결(3s)되면 자연스럽게 다시 사용 가능.
+  const canRecord = liveDoctorState === 'idle' && !isRecording && wsConnected;
   const isThinking = liveDoctorState === 'thinking';
   const isSpeaking = liveDoctorState === 'speaking';
 
@@ -324,7 +326,7 @@ export default function ConversationView() {
           </TextSizeBtn>
           {isTriage
             ? <TurnBadge>상담 {liveTurnCount}/{MAX_TURNS}회</TurnBadge>
-            : <TurnBadge>{wsConnected ? '연결됨' : '오프라인'}</TurnBadge>}
+            : <TurnBadge>{wsConnected ? '듣고 있어요' : '연결 중…'}</TurnBadge>}
         </TopRight>
       </TopBar>
       {isTriage && <ProgressWrap><ProgressFill $pct={pct} /></ProgressWrap>}
@@ -357,9 +359,14 @@ export default function ConversationView() {
           <Backdrop />
           <Sheet>
             <Handle />
-            <ConsentText>상담 내용이 정리되어 보건소 선생님께 전달됐어요. 오늘도 이야기 들려주셔서 고마워요.</ConsentText>
+            <ConsentText>
+              오늘 들려주신 이야기 잘 정리해서 <b>남해보건소 선생님</b>께 전해드렸어요.
+              걱정 마시고 편히 쉬세요.
+            </ConsentText>
             <ConsentRow>
-              <ConsentBtn $primary onClick={() => ws.setMode('companion')}>일상 대화로 돌아가기</ConsentBtn>
+              <ConsentBtn $primary onClick={() => ws.setMode('companion')}>
+                일상 대화로 돌아가기
+              </ConsentBtn>
             </ConsentRow>
           </Sheet>
         </>
@@ -392,20 +399,23 @@ export default function ConversationView() {
           )}
           <MicBtn
             $rec={isRecording}
-            $disabled={isThinking || isSpeaking}
+            $disabled={isThinking || isSpeaking || !wsConnected}
             onPointerDown={handlePressStart}
             onPointerUp={handlePressEnd}
             onPointerLeave={handlePressEnd}
             onContextMenu={(e) => e.preventDefault()}
             style={{ touchAction: 'none' }}
             aria-label="누른 채로 말하기"
+            aria-disabled={!canRecord}
           >
             <MicIcon size={26} color="white" />
           </MicBtn>
         </MicWrap>
 
         <MicHint>
-          {isRecording
+          {!wsConnected
+            ? '메디가 잠시 자리를 비웠어요 — 곧 돌아와요'
+            : isRecording
             ? '듣고 있어요 — 다시 누르면 보내드려요'
             : isThinking
             ? '메디가 생각하고 있어요...'
