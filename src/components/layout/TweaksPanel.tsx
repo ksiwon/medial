@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { color, font, border } from '../../styles/tokens';
 import { useAppStore } from '../../store/useAppStore';
 import { cases } from '../../data/mockData';
-import { ScreenId } from '../../types';
+import { ScreenId, LiveScreenId } from '../../types';
 
 /* ── 스타일 ──────────────────────────────────── */
 const Panel = styled.div`
@@ -178,6 +178,41 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   );
 }
 
+const WsInput = styled.input`
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 5px;
+  border: 1px solid rgba(0,0,0,0.14);
+  background: white;
+  font-size: 10px;
+  font-family: ${font.mono};
+  color: ${color.ink[700]};
+  &:focus { outline: 2px solid ${color.sage[400]}; }
+`;
+
+const StatusDot = styled.div<{ $ok: boolean }>`
+  width: 6px; height: 6px; border-radius: 50%;
+  background: ${({ $ok }) => $ok ? color.sage[500] : color.terra.mid};
+  flex-shrink: 0;
+`;
+const StatusRow = styled.div`
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10px; font-family: ${font.mono};
+  color: ${color.ink[300]};
+`;
+const LiveJumpBtn = styled.button<{ $active: boolean }>`
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: 5px;
+  background: ${({ $active }) => $active ? color.sage[600] : 'rgba(0,0,0,0.06)'};
+  color: ${({ $active }) => $active ? 'white' : color.ink[700]};
+  border: 1px solid ${({ $active }) => $active ? color.sage[500] : 'transparent'};
+  font-size: 10.5px;
+  font-weight: ${({ $active }) => $active ? 700 : 400};
+  transition: all 0.12s;
+`;
+
 export default function TweaksPanel() {
   const {
     currentCaseId, currentScreen,
@@ -186,13 +221,28 @@ export default function TweaksPanel() {
     toggleFaceAnalysis, toggleEmpathy, toggleAiRecommendation,
     fontScale, setFontScale,
     getCurrentCase,
+    appMode, wsUrl, setWsUrl, wsConnected,
+    liveScreen, setLiveScreen, resetLiveSession,
   } = useAppStore();
 
   const caseData = getCurrentCase();
   const { patient } = caseData;
 
+  const isCompanion = appMode === 'companion';
+
   return (
     <Panel>
+      {isCompanion && (
+        <Section>
+          <SectionLabel>MEDial 2.0</SectionLabel>
+          <PatientCard>
+            <PMeta>AI 동반 + 의료 커뮤니티</PMeta>
+            <PMeta>소통 · 정보 · IoT · 식사</PMeta>
+          </PatientCard>
+        </Section>
+      )}
+
+      {!isCompanion && <>
       {/* 케이스 선택 */}
       <Section>
         <SectionLabel>시나리오</SectionLabel>
@@ -254,6 +304,7 @@ export default function TweaksPanel() {
       </Section>
 
       <Divider />
+      </>}
 
       {/* 글자 크기 */}
       <Section>
@@ -277,6 +328,76 @@ export default function TweaksPanel() {
           <PMeta>IRB-2026-56 · N=11</PMeta>
         </PatientCard>
       </Section>
+
+      {isCompanion && (
+        <>
+          <Divider />
+          <Section>
+            <SectionLabel>서버 (2.0)</SectionLabel>
+            <StatusRow>
+              <StatusDot $ok={wsConnected} />
+              {wsConnected ? 'CONNECTED' : 'DISCONNECTED'}
+            </StatusRow>
+            <WsInput
+              value={wsUrl}
+              onChange={(e) => setWsUrl(e.target.value)}
+              placeholder="ws://localhost:8000/ws/consultation"
+              spellCheck={false}
+            />
+          </Section>
+        </>
+      )}
+
+      {appMode === 'live' && (
+        <>
+          <Divider />
+
+          {/* Live 서버 설정 */}
+          <Section>
+            <SectionLabel>서버 (Live)</SectionLabel>
+            <StatusRow>
+              <StatusDot $ok={wsConnected} />
+              {wsConnected ? 'CONNECTED' : 'DISCONNECTED'}
+            </StatusRow>
+            <WsInput
+              value={wsUrl}
+              onChange={(e) => setWsUrl(e.target.value)}
+              placeholder="ws://localhost:8000/ws/consultation"
+              spellCheck={false}
+            />
+          </Section>
+
+          <Divider />
+
+          {/* Live 화면 점프 */}
+          <Section>
+            <SectionLabel>화면 점프 (Live)</SectionLabel>
+            {(['live-idle','live-chat','live-emergency','live-report','live-complete'] as const).map((id, i) => (
+              <LiveJumpBtn
+                key={id}
+                $active={liveScreen === id}
+                onClick={() => setLiveScreen(id)}
+              >
+                {`0${i+1} ${['대기','문진 중','응급','리포트','완료'][i]}`}
+              </LiveJumpBtn>
+            ))}
+          </Section>
+
+          <Divider />
+
+          {/* 세션 초기화 */}
+          <Section>
+            <SectionLabel>연구자 제어</SectionLabel>
+            <CaseBtn
+              $active={false}
+              onClick={resetLiveSession}
+              style={{ color: color.terra.base, borderColor: 'rgba(176,48,32,0.3)' }}
+            >
+              세션 초기화
+            </CaseBtn>
+          </Section>
+        </>
+      )}
     </Panel>
   );
 }

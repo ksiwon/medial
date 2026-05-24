@@ -94,6 +94,30 @@ const Corner = styled.div<{ $pos: 'tl'|'tr'|'bl'|'br' }>`
   }}
 `;
 
+const BigImg = styled.img`
+  width: 168px;
+  height: 188px;
+  object-fit: cover;
+  object-position: center top;
+  border-radius: 12px 12px 0 0;
+  display: block;
+  background: radial-gradient(circle at 50% 32%, ${color.sage[50]} 0%, ${color.sage[100]} 60%, ${color.sage[200]} 100%);
+`;
+
+/** public/avatar/medi.png 가 있으면 사진, 없으면 기하 SVG로 폴백. */
+function BigDoctorPhoto() {
+  const [photoOk, setPhotoOk] = useState(true);
+  if (!photoOk) return <BigDoctorSvg />;
+  return (
+    <BigImg
+      src="/avatar/medi.png"
+      alt="AI 의료 도우미 메디"
+      draggable={false}
+      onError={() => setPhotoOk(false)}
+    />
+  );
+}
+
 function BigDoctorSvg() {
   const c = color;
   return (
@@ -517,7 +541,7 @@ export default function HomeScreen() {
             <Corner $pos="tr" />
             <Corner $pos="bl" />
             <Corner $pos="br" />
-            <BigDoctorSvg />
+            <BigDoctorPhoto />
             <NamePlate>
               <NameMain>MEDIAL · 닥터 메디</NameMain>
               <NameSub>전담의 {patient.sessionCount}회차</NameSub>

@@ -151,7 +151,7 @@ interface Props {
 }
 
 export default function PhoneFrame({ children }: Props) {
-  const { currentScreen, setCurrentScreen, onHome } = useAppStore();
+  const { currentScreen, setCurrentScreen, onHome, appMode } = useAppStore();
 
   const idx = SCREEN_ORDER.indexOf(currentScreen);
   const canPrev = idx > 0;
@@ -173,21 +173,23 @@ export default function PhoneFrame({ children }: Props) {
         </HomeBar>
       </Device>
 
-      <NavRow>
-        <NavBtn
-          $disabled={!canPrev}
-          onClick={() => canPrev && setCurrentScreen(SCREEN_ORDER[idx - 1])}
-        >
-          <ChevronLeftIcon size={15} color="rgba(0,0,0,0.5)" />
-        </NavBtn>
-        <ScreenLabel>{SCREEN_LABELS[currentScreen]}</ScreenLabel>
-        <NavBtn
-          $disabled={!canNext}
-          onClick={() => canNext && setCurrentScreen(SCREEN_ORDER[idx + 1])}
-        >
-          <ChevronRightIcon size={15} color="rgba(0,0,0,0.5)" />
-        </NavBtn>
-      </NavRow>
+      {appMode === 'mock' && (
+        <NavRow>
+          <NavBtn
+            $disabled={!canPrev}
+            onClick={() => canPrev && setCurrentScreen(SCREEN_ORDER[idx - 1])}
+          >
+            <ChevronLeftIcon size={15} color="rgba(0,0,0,0.5)" />
+          </NavBtn>
+          <ScreenLabel>{SCREEN_LABELS[currentScreen]}</ScreenLabel>
+          <NavBtn
+            $disabled={!canNext}
+            onClick={() => canNext && setCurrentScreen(SCREEN_ORDER[idx + 1])}
+          >
+            <ChevronRightIcon size={15} color="rgba(0,0,0,0.5)" />
+          </NavBtn>
+        </NavRow>
+      )}
     </Panel>
   );
 }
