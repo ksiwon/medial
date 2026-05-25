@@ -4,36 +4,13 @@ import styled from 'styled-components';
 import { GlobalStyle } from './styles/GlobalStyle';
 import TitleBar from './components/layout/TitleBar';
 import PhoneFrame from './components/layout/PhoneFrame';
-import DescPanel from './components/layout/DescPanel';
-import DashboardPanel from './components/layout/DashboardPanel';
 import TweaksPanel from './components/layout/TweaksPanel';
 import { useAppStore } from './store/useAppStore';
-import { screenDescriptions } from './data/mockData';
 
-// Mock screens
-import HomeScreen from './screens/HomeScreen';
-import ChatScreen from './screens/ChatScreen';
-import AnalyzingScreen from './screens/AnalyzingScreen';
-import PhotoScreen from './screens/PhotoScreen';
-import DecisionScreen from './screens/DecisionScreen';
-import EmergencyScreen from './screens/EmergencyScreen';
-import HealthCenterScreen from './screens/HealthCenterScreen';
-import SelfCareScreen from './screens/SelfCareScreen';
-import ReportScreen from './screens/ReportScreen';
-
-// Live screens
-import LiveIdleScreen from './screens/live/LiveIdleScreen';
-import LiveChatScreen from './screens/live/LiveChatScreen';
-import LiveEmergencyScreen from './screens/live/LiveEmergencyScreen';
-import LiveReportScreen from './screens/live/LiveReportScreen';
-import LiveCompleteScreen from './screens/live/LiveCompleteScreen';
-
-// Companion (MEDial 3.0)
+// Companion (MEDial 3.0) — 유일 제품. Mock/Live 아카이브는 제거됨(git 히스토리 참조).
 import CompanionShell from './screens/companion/CompanionShell';
 import { CompanionProvider } from './components/companion/CompanionContext';
 import HealthPanel from './components/companion/HealthPanel';
-
-import { ScreenId, LiveScreenId } from './types';
 
 const Root = styled.div`
   width: 100vw;
@@ -85,32 +62,8 @@ const PresentationToast = styled.div`
   }
 `;
 
-function renderMockScreen(screen: ScreenId) {
-  switch (screen) {
-    case 'home':         return <HomeScreen />;
-    case 'chat':         return <ChatScreen />;
-    case 'analyzing':    return <AnalyzingScreen />;
-    case 'photo':        return <PhotoScreen />;
-    case 'decision':     return <DecisionScreen />;
-    case 'emergency':    return <EmergencyScreen />;
-    case 'healthCenter': return <HealthCenterScreen />;
-    case 'selfCare':     return <SelfCareScreen />;
-    case 'report':       return <ReportScreen />;
-  }
-}
-
-function renderLiveScreen(screen: LiveScreenId) {
-  switch (screen) {
-    case 'live-idle':      return <LiveIdleScreen />;
-    case 'live-chat':      return <LiveChatScreen />;
-    case 'live-emergency': return <LiveEmergencyScreen />;
-    case 'live-report':    return <LiveReportScreen />;
-    case 'live-complete':  return <LiveCompleteScreen />;
-  }
-}
-
 export default function App() {
-  const { currentScreen, fontScale, appMode, liveScreen, presentationMode, togglePresentationMode } = useAppStore();
+  const { fontScale, presentationMode, togglePresentationMode } = useAppStore();
 
   useEffect(() => {
     document.documentElement.style.fontSize = `${15 * fontScale}px`;
@@ -131,48 +84,26 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [togglePresentationMode]);
 
-  const descData =
-    screenDescriptions.find((d) => d.screenId === currentScreen) ??
-    screenDescriptions.find((d) => d.screenId === 'chat')!;
-
-  // 발표 모드 + companion 인 경우: 폰 목업만, 가운데 정렬.
-  // 연구자 모드 + companion: 폰 + 우측 HealthPanel + (옵션) TweaksPanel.
-  // dev 패널은 companion에선 presentation off일 때만, mock/live에선 항상.
-  const showTweaks = appMode !== 'companion' || !presentationMode;
-
+  // 발표 모드: 폰 목업만 가운데 정렬. 연구자 모드: 폰 + 우측 HealthPanel + TweaksPanel.
   return (
     <>
       <GlobalStyle />
       <Root>
-        <TitleBar currentScreen={currentScreen} />
+        <TitleBar />
         <Main>
-          {appMode === 'companion' ? (
-            <CompanionProvider>
-              {presentationMode ? (
-                <CenterStage>
-                  <PhoneFrame><CompanionShell /></PhoneFrame>
-                </CenterStage>
-              ) : (
-                <>
-                  <PhoneFrame><CompanionShell /></PhoneFrame>
-                  <HealthPanel />
-                </>
-              )}
-            </CompanionProvider>
-          ) : (
-            <>
-              <PhoneFrame>
-                {appMode === 'live'
-                  ? renderLiveScreen(liveScreen)
-                  : renderMockScreen(currentScreen)}
-              </PhoneFrame>
-              {appMode === 'live'
-                ? <DashboardPanel />
-                : <DescPanel screen={descData} />}
-            </>
-          )}
-
-          {showTweaks && <TweaksPanel />}
+          <CompanionProvider>
+            {presentationMode ? (
+              <CenterStage>
+                <PhoneFrame><CompanionShell /></PhoneFrame>
+              </CenterStage>
+            ) : (
+              <>
+                <PhoneFrame><CompanionShell /></PhoneFrame>
+                <HealthPanel />
+                <TweaksPanel />
+              </>
+            )}
+          </CompanionProvider>
         </Main>
 
         {/* 발표 모드 진입/해제 시 잠깐 떠올라 사라지는 안내 (본인 확인용) */}

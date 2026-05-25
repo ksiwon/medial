@@ -1,14 +1,6 @@
 // src/components/layout/PhoneFrame.tsx
 import styled from 'styled-components';
-import { color, font, radius } from '../../styles/tokens';
-import { ChevronLeftIcon, ChevronRightIcon } from '../icons';
-import { useAppStore } from '../../store/useAppStore';
-import { ScreenId } from '../../types';
-
-const SCREEN_ORDER: ScreenId[] = [
-  'home', 'chat', 'analyzing', 'photo', 'decision',
-  'emergency', 'healthCenter', 'selfCare', 'report',
-];
+import { color } from '../../styles/tokens';
 
 const Panel = styled.div`
   display: flex;
@@ -82,81 +74,17 @@ const HomeBar = styled.div`
 `;
 
 const HomeBarLine = styled.div`
-  width: 80px;
-  height: 3px;
+  width: 120px;
+  height: 4px;
   background: rgba(255,255,255,0.22);
   border-radius: 2px;
 `;
-
-const HomeButton = styled.button`
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  background: rgba(255,255,255,0.10);
-  border: 1px solid rgba(255,255,255,0.18);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.12s;
-  &:hover { background: rgba(255,255,255,0.18); }
-  &:active { background: rgba(255,255,255,0.25); }
-`;
-
-const NavRow = styled.div`
-  display: flex;
-  gap: 14px;
-  align-items: center;
-`;
-
-const NavBtn = styled.button<{ $disabled: boolean }>`
-  width: 34px;
-  height: 34px;
-  border-radius: ${radius.lg};
-  background: rgba(0,0,0,0.07);
-  border: 1px solid rgba(0,0,0,0.10);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: ${({ $disabled }) => $disabled ? 0.22 : 1};
-  cursor: ${({ $disabled }) => $disabled ? 'default' : 'pointer'};
-  transition: background 0.12s;
-  &:hover:not([disabled]) { background: rgba(0,0,0,0.12); }
-  &:active { background: rgba(0,0,0,0.16); }
-`;
-
-const ScreenLabel = styled.span`
-  font-size: 11px;
-  font-weight: ${font.weight.medium};
-  color: rgba(0,0,0,0.38);
-  min-width: 90px;
-  text-align: center;
-  letter-spacing: 0.03em;
-  font-family: ${font.mono};
-`;
-
-const SCREEN_LABELS: Record<ScreenId, string> = {
-  home:         '홈',
-  chat:         '아바타 대화',
-  analyzing:    'AI 분석',
-  photo:        '멀티모달',
-  decision:     '판단 분기',
-  emergency:    '응급 119',
-  healthCenter: '보건소 연결',
-  selfCare:     '자가 치료',
-  report:       '리포트',
-};
 
 interface Props {
   children: React.ReactNode;
 }
 
 export default function PhoneFrame({ children }: Props) {
-  const { currentScreen, setCurrentScreen, onHome, appMode } = useAppStore();
-
-  const idx = SCREEN_ORDER.indexOf(currentScreen);
-  const canPrev = idx > 0;
-  const canNext = idx < SCREEN_ORDER.length - 1;
-
   return (
     <Panel>
       <Device>
@@ -165,31 +93,9 @@ export default function PhoneFrame({ children }: Props) {
         </Notch>
         <ScreenArea>{children}</ScreenArea>
         <HomeBar>
-          <HomeButton onClick={onHome} title="홈으로">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <rect x="2" y="2" width="10" height="10" rx="2" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" />
-            </svg>
-          </HomeButton>
+          <HomeBarLine />
         </HomeBar>
       </Device>
-
-      {appMode === 'mock' && (
-        <NavRow>
-          <NavBtn
-            $disabled={!canPrev}
-            onClick={() => canPrev && setCurrentScreen(SCREEN_ORDER[idx - 1])}
-          >
-            <ChevronLeftIcon size={15} color="rgba(0,0,0,0.5)" />
-          </NavBtn>
-          <ScreenLabel>{SCREEN_LABELS[currentScreen]}</ScreenLabel>
-          <NavBtn
-            $disabled={!canNext}
-            onClick={() => canNext && setCurrentScreen(SCREEN_ORDER[idx + 1])}
-          >
-            <ChevronRightIcon size={15} color="rgba(0,0,0,0.5)" />
-          </NavBtn>
-        </NavRow>
-      )}
     </Panel>
   );
 }

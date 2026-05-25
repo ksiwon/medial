@@ -1,8 +1,7 @@
 // src/store/useAppStore.ts
 import { create } from 'zustand';
-import { ScreenId, ActionMode, DoctorState, AppMode, LiveScreenId, LiveMessage, LiveReport, LiveSession, CompanionTab } from '../types';
+import { DoctorState, LiveMessage, LiveReport, CompanionTab } from '../types';
 import { ChatMode, HealthContext, VitalReading, MealRecord, CommunityEvent } from '../types/health';
-import { cases } from '../data/mockData';
 
 // localStorage 키 (브라우저에서 영속). 발표 중 매 새로고침 온보딩 재출현 방지 등.
 const LS_KEYS = {
@@ -28,45 +27,20 @@ function emptyHealthContext(): HealthContext {
   return { vitals: [], meals: [], clues: [], events: [], lastUpdated: Date.now() };
 }
 
-function makeSessionCode() {
-  return `PT-${Date.now().toString(36).toUpperCase().slice(-5)}`;
+export interface TelemetryEvent {
+  t: number;
+  kind: string;     // escalation_force | escalation_suggest | consent | meal | mode_switch | post | ...
+  detail?: string;
 }
 
 interface AppState {
-  // ── Mock mode ──────────────────────────────────────────
-  currentCaseId: string;
-  currentScreen: ScreenId;
-  prevConvIndex: number | null;
-  dialogueIndex: number;
-  actionMode: ActionMode;
-  doctorState: DoctorState;
-  showFaceAnalysis: boolean;
-  showEmpathy: boolean;
-  showAiRecommendation: boolean;
+  // ── 전역 (연구자 뷰 줌) ────────────────────────────────
   fontScale: number;
-  region: 'rural' | 'urban';
 
-  setCurrentCase: (caseId: string) => void;
-  setCurrentScreen: (screen: ScreenId) => void;
-  setPrevConvIndex: (index: number | null) => void;
-  setDialogueIndex: (index: number) => void;
-  incrementDialogueIndex: () => void;
-  resetDialogue: () => void;
-  startFromConversation: (index: number) => void;
-  setActionMode: (mode: ActionMode) => void;
-  setDoctorState: (state: DoctorState) => void;
-  toggleFaceAnalysis: () => void;
-  toggleEmpathy: () => void;
-  toggleAiRecommendation: () => void;
   setFontScale: (scale: number) => void;
-  setRegion: (region: 'rural' | 'urban') => void;
-  onHome: () => void;
-  onTriageSend: (action: 'emergency' | 'healthCenter' | 'selfCare' | 'dialogue') => void;
-  getCurrentCase: () => typeof cases[0];
 
-  // ── Live mode ──────────────────────────────────────────
-  appMode: AppMode;
-  liveScreen: LiveScreenId;
+  // ── WS · 대화 백본 (companion 소통/상담이 공유) ─────────
+  // 명칭은 과거 Live 엔진에서 유래했으나, 현재는 companion 대화의 실제 상태다.
   wsUrl: string;
   wsConnected: boolean;
   liveDoctorState: DoctorState;
@@ -75,12 +49,8 @@ interface AppState {
   liveReport: LiveReport | null;
   currentSTT: string;
   isRecording: boolean;
-  sessions: LiveSession[];           // accumulated for dashboard
-  selectedSessionCode: string | null;
   avatarMode: 'css' | 'video';       // css fallback vs Wav2Lip
 
-  setAppMode: (mode: AppMode) => void;
-  setLiveScreen: (screen: LiveScreenId) => void;
   setWsUrl: (url: string) => void;
   setWsConnected: (v: boolean) => void;
   setLiveDoctorState: (state: DoctorState) => void;
@@ -89,25 +59,23 @@ interface AppState {
   setLiveReport: (report: LiveReport) => void;
   setCurrentSTT: (text: string) => void;
   setIsRecording: (v: boolean) => void;
-  setSelectedSession: (code: string | null) => void;
   setAvatarMode: (mode: 'css' | 'video') => void;
   resetLiveSession: () => void;
-  commitSession: () => void;         // archive current session into sessions[]
 
-  // ── Companion mode (MEDial 2.0) ────────────────────────
-  companionTab: CompanionTab;        // 소통 / 정보
+  // ── Companion mode (MEDial 3.0) ────────────────────────
+  companionTab: CompanionTab;        // 소통 / 내 건강 / 정보
   chatMode: ChatMode;                // companion(일상) / triage(상담)
-  healthContext: HealthContext;      // 4종 신호 누적 (P3 오케스트레이터가 채움)
+  healthContext: HealthContext;      // 4종 신호 누적 (오케스트레이터가 채움)
   triageSuggested: boolean;          // 부드러운 상담 제안 진행 중 (동의 칩 노출)
   triageSuggestReason: string | null;
-  emergencyActive: boolean;          // 응급 감지 → 119 오버레이 (companion/live 공통)
+  emergencyActive: boolean;          // 응급 감지 → 119 오버레이
   companionTextScale: number;        // 어르신용 글자 크기 배율 (DR1)
   monitoringConsent: boolean;        // IoT/GPS 수집 동의 (존엄·통제, Frontiers 2025)
   onboardingSeen: boolean;           // 최초 1회 오리엔테이션 표시 여부 (DR1)
   ttsSpeed: number;                  // 메디 음성 속도 (느리게 선호, P4)
   escalationReason: string | null;   // 상담 전환 사유 (설명가능 escalation, AIES 2025)
   telemetry: TelemetryEvent[];       // 세션 이벤트 로그 (평가용, R6)
-  presentationMode: boolean;         // 발표/전시용 — dev 패널(우측 대시보드·상단 모드 토글) 숨김
+  presentationMode: boolean;         // 발표/전시용 — dev 패널 숨김
 
   setCompanionTab: (tab: CompanionTab) => void;
   setChatMode: (mode: ChatMode) => void;
@@ -129,69 +97,12 @@ interface AppState {
 
 const COMPANION_TEXT_SCALES = [1.0, 1.15, 1.3];
 
-export interface TelemetryEvent {
-  t: number;
-  kind: string;     // escalation_force | escalation_suggest | consent | meal | mode_switch | post | ...
-  detail?: string;
-}
-
-export const useAppStore = create<AppState>((set, get) => ({
-  // ── Mock defaults ──────────────────────────────────────
-  currentCaseId: 'case1',
-  currentScreen: 'home',
-  prevConvIndex: null,
-  dialogueIndex: 0,
-  actionMode: 'chips',
-  doctorState: 'idle',
-  showFaceAnalysis: true,
-  showEmpathy: true,
-  showAiRecommendation: true,
+export const useAppStore = create<AppState>((set) => ({
+  // ── 전역 ───────────────────────────────────────────────
   fontScale: 1.0,
-  region: 'rural',
-
-  setCurrentCase: (caseId) => {
-    set({ currentCaseId: caseId, currentScreen: 'home', prevConvIndex: null, dialogueIndex: 0, actionMode: 'chips', doctorState: 'idle' });
-  },
-  setCurrentScreen: (screen) => set({ currentScreen: screen }),
-  setPrevConvIndex: (index) => set({ prevConvIndex: index }),
-  setDialogueIndex: (index) => set({ dialogueIndex: index }),
-  incrementDialogueIndex: () => set((s) => ({ dialogueIndex: s.dialogueIndex + 1 })),
-  resetDialogue: () => set({ dialogueIndex: 0, prevConvIndex: null, actionMode: 'chips', doctorState: 'idle' }),
-
-  startFromConversation: (index) => {
-    set({ prevConvIndex: index, dialogueIndex: 0, currentScreen: 'chat', actionMode: 'chips', doctorState: 'speaking' });
-  },
-
-  setActionMode: (mode) => set({ actionMode: mode }),
-  setDoctorState: (state) => set({ doctorState: state }),
-
-  toggleFaceAnalysis: () => set((s) => ({ showFaceAnalysis: !s.showFaceAnalysis })),
-  toggleEmpathy: () => set((s) => ({ showEmpathy: !s.showEmpathy })),
-  toggleAiRecommendation: () => set((s) => ({ showAiRecommendation: !s.showAiRecommendation })),
   setFontScale: (scale) => set({ fontScale: scale }),
-  setRegion: (region) => set({ region }),
 
-  onHome: () => {
-    set({ currentScreen: 'home', dialogueIndex: 0, prevConvIndex: null, actionMode: 'chips', doctorState: 'idle' });
-  },
-
-  onTriageSend: (action) => {
-    if (action === 'dialogue') {
-      set({ currentScreen: 'chat', dialogueIndex: 0, prevConvIndex: null, actionMode: 'chips', doctorState: 'speaking' });
-    } else {
-      set({ currentScreen: action });
-    }
-  },
-
-  getCurrentCase: () => {
-    const { currentCaseId } = get();
-    return cases.find((c) => c.id === currentCaseId) ?? cases[0];
-  },
-
-  // ── Live defaults ──────────────────────────────────────
-  // MEDial 3.0: companion(동반+커뮤니티)이 제품. Mock/Live는 연구 아카이브.
-  appMode: 'companion',
-  liveScreen: 'live-idle',
+  // ── WS · 대화 백본 ─────────────────────────────────────
   wsUrl: 'ws://localhost:8000/ws/consultation',
   wsConnected: false,
   liveDoctorState: 'idle',
@@ -200,12 +111,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   liveReport: null,
   currentSTT: '',
   isRecording: false,
-  sessions: [],
-  selectedSessionCode: null,
   avatarMode: 'css',
 
-  setAppMode: (mode) => set({ appMode: mode }),
-  setLiveScreen: (screen) => set({ liveScreen: screen }),
   setWsUrl: (url) => set({ wsUrl: url }),
   setWsConnected: (v) => set({ wsConnected: v }),
   setLiveDoctorState: (state) => set({ liveDoctorState: state }),
@@ -214,11 +121,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   setLiveReport: (report) => set({ liveReport: report }),
   setCurrentSTT: (text) => set({ currentSTT: text }),
   setIsRecording: (v) => set({ isRecording: v }),
-  setSelectedSession: (code) => set({ selectedSessionCode: code }),
   setAvatarMode: (mode) => set({ avatarMode: mode }),
 
   resetLiveSession: () => set({
-    liveScreen: 'live-idle',
     liveDoctorState: 'idle',
     liveTurnCount: 0,
     liveMessages: [],
@@ -227,22 +132,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     isRecording: false,
     emergencyActive: false,
   }),
-
-  commitSession: () => {
-    const { liveMessages, liveReport } = get();
-    if (liveMessages.length === 0) return;
-    const code = makeSessionCode();
-    const session: LiveSession = {
-      sessionCode: code,
-      messages: liveMessages,
-      report: liveReport,
-      startedAt: liveMessages[0]?.timestamp ?? Date.now(),
-    };
-    set((s) => ({
-      sessions: [session, ...s.sessions],
-      selectedSessionCode: code,
-    }));
-  },
 
   // ── Companion defaults ─────────────────────────────────
   companionTab: 'talk',
@@ -258,8 +147,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   ttsSpeed: 0.85,
   escalationReason: null,
   telemetry: [],
-  // companion 모드 기본은 발표 모드(우측 dev 패널 + 상단 모드 토글 숨김).
-  // 연구자가 'D' 키로 토글하면 dev 뷰가 나타난다.
+  // 기본은 발표 모드(우측 dev 패널 숨김). 연구자가 'D' 키로 토글.
   presentationMode: readBool(LS_KEYS.presentation, true),
 
   setMonitoringConsent: (v) => set({ monitoringConsent: v }),
