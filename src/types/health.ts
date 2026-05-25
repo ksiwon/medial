@@ -1,7 +1,8 @@
 // src/types/health.ts
-// MEDial 2.0 — AI 동반 + 의료 커뮤니티 도메인 타입.
+// MEDial 3.0 — AI 동반 + 의료 커뮤니티 도메인 타입.
 // 4종 신호(IoT·식사·대화·커뮤니티)를 누적하는 HealthContext와
 // companion ↔ triage 전환(escalation) 모델을 정의한다.
+import escalationConfig from '../config/escalation.json';
 
 // ── 신호 1: IoT 바이탈 (시뮬레이션) ──────────────────────
 export interface VitalReading {
@@ -37,7 +38,7 @@ export interface MealRecord {
 //  - medication : CGA 상시복약(다약제) + MEDial 약물오남용 우려
 //  - mobility   : CGA 기능/ADL + CareCall '운동·외출' + IoT 걸음수/이동거리
 //  - social     : CGA 사회영역 + 대화형 에이전트 외로움 문헌
-// cognition(인지)은 일상 대화 기반 신뢰성·민감성 문제로 v2.0 범위에서 의도적 제외.
+// cognition(인지)은 일상 대화 기반 신뢰성·민감성 문제로 v3.0 범위에서 의도적 제외.
 export type ClueCategory =
   | 'symptom'
   | 'mood'
@@ -97,25 +98,10 @@ export interface EscalationDecision {
   reasons: string[]; // 발동 근거 (대시보드/로그용)
 }
 
-// ── Escalation 임계치 — 문헌 정착, 한 곳에서 튜닝 ─────────
-// 바이탈: NEWS2(RCP 2017)는 저혈압·서맥/빈맥(단일 항목 3점 → 긴급 검토)을,
-//        2017 ACC/AHA는 고혈압 위기(>180/>120)를 정의 — 상보적이라 결합한다.
-//        NEWS2는 고혈압을, ACC/AHA는 단발 저혈압을 다루지 않기 때문.
-// 누적: GDS-SF ≥2/5 고위험 기준(CareCall, 한국 농촌 고령자)을 정착점으로 suggest=2.
-// ※ 두 표준 모두 '가정 단발 측정 트리아지'용으로 검증된 것은 아님 — 연구 데모 휴리스틱.
-export const ESCALATION = {
-  vital: {
-    // forceHigh/Low → 즉시 상담/119, warnHigh/Low → 경계(+1점 누적)
-    systolic: { forceHigh: 180, warnHigh: 140, warnLow: 110, forceLow: 90 },
-    diastolic: { forceHigh: 120, warnHigh: 90 },
-    heartRate: { forceHigh: 130, warnHigh: 110, warnLow: 50, forceLow: 40 },
-  },
-  scores: {
-    clueSeverity1: 1, // 선별 양성 수준 소프트 신호
-    vitalWarn: 1, // 경계 바이탈
-    mealFlag: 1, // 식사 건강 플래그
-  },
-  perCategoryCap: 2, // 한 카테고리가 윈도우 내 기여할 수 있는 최대 점수(GDS-SF 다항목 정신 반영)
-  suggestThreshold: 2, // 누적 ≥2 → suggest (과민 시 3으로 상향). GDS-SF ≥2/5 정착.
-  windowMs: 1000 * 60 * 60 * 24, // 누적 평가 윈도우(24h)
-} as const;
+// ── Escalation 임계치 — 단일 소스(src/config/escalation.json) ─────────
+// 값은 프론트·서버가 공유하는 단일 JSON에서 온다. 튜닝은 그 파일 한 곳에서만.
+// (과거엔 여기와 orchestrator.py에 같은 값을 손으로 복제 — 드리프트=사고 위험으로 제거)
+// 바이탈: NEWS2(RCP 2017) 저혈압·서맥/빈맥 + 2017 ACC/AHA 고혈압 위기(>180/>120) 결합.
+// 누적: GDS-SF ≥2/5 (CareCall, 한국 농촌 고령자) 정착으로 suggest=2.
+// ※ '가정 단발 측정 트리아지'로 검증된 표준이 아닌 연구 데모 휴리스틱.
+export const ESCALATION = escalationConfig;
