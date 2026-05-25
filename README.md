@@ -51,10 +51,12 @@ npm run build        # 타입체크 + 프로덕션 빌드
 
 핵심 메커니즘 — **오케스트레이터**가 4종 신호(IoT 바이탈·식사 사진·대화 단서·커뮤니티
 공지)를 통합해, 임계치를 넘으면 companion → triage 전환을 판정합니다
-(`server/app/modules/orchestrator.py`, 임계치 미러: `src/types/health.ts`).
+(`server/app/modules/orchestrator.py`, 임계치 단일 소스: `src/config/escalation.json` —
+프론트·서버가 같은 파일을 읽어 드리프트를 방지). 안전장치로 LLM severity와 무관한
+독립 red-flag backstop과 RAG 근거 기반 불확실성 인계를 둠.
 
-> 연구 진화 아카이브로 상단 토글에 **Mock**(단발 문진 케이스 3종)·**Live**(초기 실시간 문진)도
-> 남아 있습니다. 현재 제품은 **2.0**(companion)입니다.
+> 초기 연구 아카이브(단발 문진 **Mock**·실시간 **Live** 화면)는 제품을 companion으로
+> 단일화하면서 제거했습니다 — 필요 시 git 히스토리(main)에서 복구할 수 있습니다.
 
 ---
 

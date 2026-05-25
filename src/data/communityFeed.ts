@@ -1,5 +1,5 @@
 // src/data/communityFeed.ts
-// MEDial 2.0 정보 탭 시드 데이터 (단일 사용자 AI 큐레이션 데모).
+// MEDial 3.0 정보 탭 시드 데이터 (단일 사용자 AI 큐레이션 데모).
 import { CommunityEvent } from '../types/health';
 
 // 동네·보건소 소식 시드. injectToChat=true 인 항목은 메디가 일상 대화에 자연스럽게 녹인다.

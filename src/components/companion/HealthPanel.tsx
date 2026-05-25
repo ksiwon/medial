@@ -142,7 +142,7 @@ export default function HealthPanel() {
   return (
     <Panel>
       <Header>
-        <HTitle>MEDial 2.0 · 어르신 건강 모니터</HTitle>
+        <HTitle>MEDial 3.0 · 어르신 건강 모니터</HTitle>
         <HSub>IoT 시뮬 · 오케스트레이터 상태</HSub>
       </Header>
 
