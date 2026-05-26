@@ -1,6 +1,6 @@
 // src/components/companion/CompanionEmergency.tsx
-// companion 모드 응급(119) 오버레이. live의 LiveEmergencyScreen과 달리 자체 WS를
-// 만들지 않고 CompanionContext의 단일 ws를 쓴다(이중 연결 방지).
+// companion 모드 응급(119) 오버레이. 자체 WS를 만들지 않고
+// CompanionContext의 단일 ws를 쓴다(이중 연결 방지).
 import styled, { keyframes } from 'styled-components';
 import { color, font } from '../../styles/tokens';
 import VirtualDoctor from '../phone/VirtualDoctor';

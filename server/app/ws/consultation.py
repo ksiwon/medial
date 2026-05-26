@@ -47,11 +47,37 @@ router = APIRouter()
 log = logging.getLogger(__name__)
 
 
+# 증상 키워드 '뒤'에 오면 부정/취소로 보는 표현(증상 없음/아님).
+# 키워드 자체에 든 '안'('안보여','말이 안나와')은 윈도우 밖이라 오인하지 않는다.
+# 미탐(응급 놓침)이 과탐보다 위험하므로 확실한 취소 표현만 보수적으로 제외한다.
+_NEGATION_CUES = ("없", "않", "아니", "괜찮", "안 아", "안아")
+
+
 def _detect_emergency(text: str, keywords: list[str]) -> bool:
+    """응급 키워드 1차 backstop (보조 안전망 — 실제 판정은 LLM+오케스트레이터).
+    ① 띄어쓰기 변이(STT)에 강하도록 공백 무시 매칭도 시도.
+    ② 키워드 직후에 명확한 부정/취소 표현이 오면 제외(예: '흉통 없어요')."""
     if not text:
         return False
-    lower = text.lower()
-    return any(k.lower() in lower for k in keywords)
+    lower = " ".join(text.lower().split())   # 다중 공백 정규화
+    compact = lower.replace(" ", "")          # 공백 무시 비교용
+    for k in keywords:
+        kl = k.lower().strip()
+        if not kl:
+            continue
+        kc = kl.replace(" ", "")
+        idx = lower.find(kl)
+        if idx != -1:
+            after = lower[idx + len(kl): idx + len(kl) + 6]
+        else:
+            idx = compact.find(kc)            # 띄어쓰기 달라도 매칭
+            if idx == -1:
+                continue
+            after = compact[idx + len(kc): idx + len(kc) + 5]
+        if any(cue in after for cue in _NEGATION_CUES):
+            continue                          # 부정/취소 → 응급 아님
+        return True
+    return False
 
 
 def _simple_symptom_extract(text: str) -> list[str]:
@@ -98,11 +124,20 @@ async def _run_llm_turn(session: Session, last_user_text: str, current_turn: int
     pubmed_hits = pubmed.search(last_user_text) if last_user_text else []
     pubmed_ctx = pubmed.format_context(pubmed_hits)
 
+    # B4: RAG 근거 유무를 모델에 신호로 전달 — 근거 없으면 단정 금지·불확실성 인정·인계.
+    evidence_status = (
+        "신뢰할 만한 의료 근거가 검색됨 — 위 CLINICAL CONTEXT 범위에서만 답하고 단정하지 말 것."
+        if pubmed_hits else
+        "이 발화에 대해 신뢰할 만한 의료 근거가 검색되지 않음 — 추측으로 단정하지 말고, "
+        "모르면 모른다고 인정하며 보건소 선생님 확인을 안내할 것."
+    )
+
     next_syms = ddx.next_symptoms(session.collected_symptoms)
     next_ctx = ddx.format_next_symptoms(next_syms)
 
     prompt = SYSTEM_PROMPT_TEMPLATE.format(
         pubmed_context=pubmed_ctx,
+        evidence_status=evidence_status,
         ddxplus_next_symptoms=next_ctx,
         conversation_history=session.conversation_for_prompt(),
         max_turns=settings.MAX_TURNS,

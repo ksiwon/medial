@@ -1,0 +1,16 @@
+{
+  "_doc": "MEDial escalation 임계치 — 단일 소스(Single Source of Truth). 프론트(src/types/health.ts)와 서버(server/app/modules/orchestrator.py)가 모두 이 파일을 읽는다. 값 변경은 반드시 여기 한 곳에서만. 근거: NEWS2(RCP 2017) + 2017 ACC/AHA(고혈압 위기) + GDS-SF(CareCall, 한국 농촌). ※ 가정 단발 측정 트리아지로 검증된 표준이 아닌 연구 데모 휴리스틱.",
+  "vital": {
+    "systolic":  { "forceHigh": 180, "warnHigh": 140, "warnLow": 110, "forceLow": 90 },
+    "diastolic": { "forceHigh": 120, "warnHigh": 90 },
+    "heartRate": { "forceHigh": 130, "warnHigh": 110, "warnLow": 50, "forceLow": 40 }
+  },
+  "scores": {
+    "clueSeverity1": 1,
+    "vitalWarn": 1,
+    "mealFlag": 1
+  },
+  "perCategoryCap": 2,
+  "suggestThreshold": 2,
+  "windowMs": 86400000
+}

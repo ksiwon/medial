@@ -1,6 +1,6 @@
 // src/hooks/useWebSocket.ts
 //
-// Wires the live UI to the FastAPI backend in /server.
+// Wires the companion UI to the FastAPI backend in /server.
 // Protocol — exhibition plan §3c:
 //
 //   Client → Server
@@ -32,7 +32,7 @@ export interface WsControls {
   reset: () => void;
   startRecording: () => Promise<void>;
   stopRecording: () => void;
-  // MEDial 2.0 — escalation 동의 + 신호 주입 + 모드 전환
+  // MEDial 3.0 — escalation 동의 + 신호 주입 + 모드 전환
   consentTriage: () => void;
   declineTriage: () => void;
   setMode: (mode: 'companion' | 'triage') => void;
@@ -112,7 +112,7 @@ export function useWebSocket(): WsControls {
 
     switch (msg.type) {
       case 'session_started':
-        // server confirms new session — clear local state but keep liveScreen
+        // server confirms new session — clear local STT, avatar starts speaking
         store.setCurrentSTT('');
         store.setLiveDoctorState('speaking');
         break;
@@ -157,16 +157,14 @@ export function useWebSocket(): WsControls {
 
       case 'report_ready':
         if (msg.report) {
+          // companion 상담(triage) 결과 — ConversationView가 liveReport 시트로 표시.
           store.setLiveReport(msg.report);
-          store.commitSession();
-          store.setLiveScreen('live-report');
         }
         break;
 
       case 'emergency':
-        store.setLiveScreen('live-emergency');
         store.setLiveDoctorState('emergency');
-        store.setEmergencyActive(true);   // companion 모드 오버레이 트리거
+        store.setEmergencyActive(true);   // 119 오버레이 트리거
         store.logEvent('emergency', '119');
         break;
 
@@ -204,13 +202,9 @@ export function useWebSocket(): WsControls {
     }
   }, [playNextAudio]);
 
-  // ── Connect / disconnect on mode + URL changes ──────
+  // ── Connect / disconnect on URL changes ─────────────
   const connect = useCallback(() => {
-    const { appMode, wsUrl, setWsConnected } = useAppStore.getState();
-    if (appMode !== 'live' && appMode !== 'companion') {
-      wsRef.current?.close();
-      return;
-    }
+    const { wsUrl, setWsConnected } = useAppStore.getState();
     if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN ||
                           wsRef.current.readyState === WebSocket.CONNECTING)) {
       return;
@@ -225,18 +219,15 @@ export function useWebSocket(): WsControls {
     ws.onerror = () => useAppStore.getState().setWsConnected(false);
     ws.onclose = () => {
       useAppStore.getState().setWsConnected(false);
-      // Auto-reconnect while still in a WS-backed mode (3s backoff)
-      const m = useAppStore.getState().appMode;
-      if (m === 'live' || m === 'companion') {
-        if (reconnectTimerRef.current) window.clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = window.setTimeout(connect, 3000);
-      }
+      // Auto-reconnect (3s backoff)
+      if (reconnectTimerRef.current) window.clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = window.setTimeout(connect, 3000);
     };
   }, [handleMessage]);
 
   useEffect(() => {
     const unsub = useAppStore.subscribe((state, prev) => {
-      if (state.appMode !== prev.appMode || state.wsUrl !== prev.wsUrl) {
+      if (state.wsUrl !== prev.wsUrl) {
         wsRef.current?.close();
         wsRef.current = null;
         connect();
@@ -307,7 +298,7 @@ export function useWebSocket(): WsControls {
     useAppStore.getState().setLiveDoctorState('thinking');
   }, [sendJson]);
 
-  // ── MEDial 2.0 controls ──────────────────────────────
+  // ── MEDial 3.0 controls ──────────────────────────────
   const consentTriage = useCallback(() => sendJson({ type: 'consent_triage' }), [sendJson]);
   const declineTriage = useCallback(() => sendJson({ type: 'decline_triage' }), [sendJson]);
   const setMode = useCallback((mode: 'companion' | 'triage') => sendJson({ type: 'set_mode', mode }), [sendJson]);

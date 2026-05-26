@@ -1,5 +1,5 @@
 // src/components/companion/ConversationView.tsx
-// MEDial 2.0 소통 탭의 채팅 뷰. companion(일상 말동무) ↔ triage(상담)을 모두 렌더한다.
+// MEDial 3.0 소통 탭의 채팅 뷰. companion(일상 말동무) ↔ triage(상담)을 모두 렌더한다.
 // 두 모드는 같은 transcript(liveMessages)를 공유하므로 escalation 시 대화가 이어진다.
 // WS 컨트롤은 CompanionShell이 1회 보유한 인스턴스를 props로 받는다.
 import { useRef, useEffect } from 'react';
@@ -271,8 +271,6 @@ export default function ConversationView() {
     liveTurnCount,
     currentSTT,
     isRecording,
-    commitSession,
-    setLiveScreen,
     wsConnected,
     triageSuggested,
     liveReport,
@@ -299,11 +297,8 @@ export default function ConversationView() {
   const handlePressEnd = () => { if (isRecording) ws.stopRecording(); };
 
   const handleFinish = () => {
+    // 서버가 상담을 정리해 report_ready로 리포트를 보내준다(ConversationView가 시트로 표시).
     ws.finishEarly();
-    if (!useAppStore.getState().wsConnected) {
-      commitSession();
-      setLiveScreen('live-report');
-    }
   };
 
   const lastAiMsg = [...liveMessages].reverse().find((m) => m.role === 'ai');

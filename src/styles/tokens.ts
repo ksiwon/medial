@@ -78,14 +78,15 @@ export const font = {
     semiBold: 600,
     bold: 700,
   },
+  // ⚠ 레거시 스케일 — v0.x 아카이브(Mock/Live·연구자 패널) 전용.
+  // 어르신 제품(companion) 화면은 절대 이걸 쓰지 않고 typeScale/ts()만 사용한다.
+  // (10px 토큰 appXs·label은 고령자 가독 기준 미달로 제거함)
   size: {
-    appXs:  '10px',
     appSm:  '11px',
     appMd:  '13px',
     appLg:  '16px',
     appXl:  '20px',
     appXxl: '24px',
-    label:  '10px',
     body:   '13px',
     title:  '20px',
   },
@@ -98,7 +99,7 @@ export const font = {
  * 근거: WCAG 본문 + 노인 가독(16pt+), 시야 30–50cm.
  */
 export const typeScale = {
-  caption:  15,
+  caption:  16,
   body:     17,
   bodyLg:   19,
   title:    24,
