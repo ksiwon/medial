@@ -78,7 +78,6 @@ class Session:
     # 사용자가 마지막으로 상담 제안을 거절한 시각. 이 시각 이후 일정 시간 동안은
     # 새 suggest를 띄우지 않아 "거절했는데 또 권한다" 어색함을 막는다(force는 별개).
     last_declined_at: float = 0.0
-    tts_speed: Optional[float] = None   # 어르신 음성 속도(느리게); None=설정 기본값
     audio_buffer: list[bytes] = field(default_factory=list)
     report: Optional[dict] = None
     finished: bool = False

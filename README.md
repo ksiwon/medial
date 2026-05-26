@@ -8,17 +8,24 @@
 ```
 ┌──────────────────────────┐  WebSocket   ┌──────────────────────────┐
 │  React Frontend (Vite)   │ ───────────► │  FastAPI Server (./server)│
-│  · 소통(AI 말동무)        │  STT/LLM/    │  Whisper · Gemini 3.5     │
-│  · 내 건강(나의 데이터)    │  TTS/오케스  │  OpenAI TTS · DDXPlus     │
-│  · 정보(소식·건강영상)     │ ◄─────────── │  PubMed FAISS · 오케스트레이터 │
-│  + 손목밴드(IoT, 전제)     │  report      │                          │
+│  · 소통(AI 말동무)        │  STT/LLM/    │  STT (모드별)             │
+│  · 내 건강(나의 데이터)    │  TTS/오케스  │  Gemini 3.5 · OpenAI TTS │
+│  · 정보(소식·건강영상)     │ ◄─────────── │  DDXPlus · PubMed FAISS  │
+│  + 손목밴드(IoT, 전제)     │  report      │  오케스트레이터            │
 └──────────────────────────┘              └──────────────────────────┘
 ```
 
 | | 경로 | 스택 |
 |---|---|---|
 | 프론트엔드 | `./` | React + Vite + TS + styled-components + Zustand |
-| 백엔드 | `./server/` | FastAPI + Whisper + Gemini + OpenAI TTS + FAISS |
+| 백엔드 | `./server/` | FastAPI + Gemini + OpenAI TTS + FAISS |
+
+**실행 환경 (`RUN_MODE`):**
+
+| `RUN_MODE` | STT | PubMed 인코더 | 시작 시간 | 요구 사양 |
+|---|---|---|---|---|
+| `notebook` (기본: 노트북) | OpenAI Whisper API | 스킵 | **~2 s** | CPU, OPENAI_API_KEY |
+| `gpu_server` (발표 서버) | 로컬 Whisper large-v3-turbo | MedCPT (~400 MB) | ~10 s | GPU, CUDA |
 
 설계 사양: [`docs/REDESIGN_MEDial_3.0.md`](docs/REDESIGN_MEDial_3.0.md) ·
 서버 GPU 구동: [`server/GPU_SETUP.md`](server/GPU_SETUP.md)
@@ -60,15 +67,16 @@ npm run build        # 타입체크 + 프로덕션 빌드
 
 ---
 
-## 전체 시스템 실행 (음성 루프 포함)
+## 서버 실행 — 노트북 모드 (CPU, 빠른 시작)
 
-음성(마이크→STT)은 Whisper로 GPU가 필요합니다. 자세한 절차는
-[`server/GPU_SETUP.md`](server/GPU_SETUP.md) 참고.
+GPU 없이 노트북에서 전체 음성 루프를 돌릴 수 있습니다.  
+STT를 OpenAI Whisper API로 처리하므로 로컬 모델 다운로드가 없고 시작이 ~2초입니다.
 
 ```bash
 cd server
-cp .env.example .env      # GOOGLE_API_KEY (Gemini) + OPENAI_API_KEY (TTS)
-python -m venv .venv && source .venv/bin/activate
+cp .env.example .env
+# .env 상단의 GOOGLE_API_KEY + OPENAI_API_KEY 채우기 (RUN_MODE=notebook 기본값)
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 python scripts/build_ddxplus_tree.py
 python -m app.main        # http://localhost:8000
@@ -78,8 +86,31 @@ python -m app.main        # http://localhost:8000
 npm run dev               # 다른 터미널 → http://localhost:5173 → 마이크 권한 허용
 ```
 
-`/api/health` 200이면 연결됨. **LLM=gemini-3.5-flash(thinking off), TTS=OpenAI,
-STT=서버 Whisper** 로 고정.
+`/api/health`에서 `"run_mode": "notebook"`, `"stt_model": "openai/whisper-1 (api)"` 확인.
+
+---
+
+## 서버 실행 — GPU 서버 모드 (발표 / 풀 스택)
+
+로컬 Whisper + PubMed MedCPT 인코더 풀 로드. GPU(CUDA) 필요.  
+자세한 절차: [`server/GPU_SETUP.md`](server/GPU_SETUP.md)
+
+```bash
+cd server
+cp .env.example .env
+# .env 상단 GOOGLE_API_KEY + OPENAI_API_KEY 채우고, RUN_MODE=gpu_server 로 변경
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python scripts/build_ddxplus_tree.py
+# (선택) python scripts/build_pubmed_index.py   ← PubMed FAISS 빌드 (~수 시간)
+python -m app.main        # http://localhost:8000
+```
+
+```bash
+npm run dev               # 다른 터미널
+```
+
+`/api/health`에서 `"run_mode": "gpu_server"`, `"stt_model": "openai/whisper-large-v3-turbo (cuda)"` 확인.
 
 ---
 
@@ -90,7 +121,8 @@ npm run build                              # 프론트 타입체크+빌드
 cd server && python tests/test_orchestration.py   # escalation 로직 14 케이스
 ```
 
-검증 완료: 빌드, 오케스트레이션 14/14, escalation WS E2E, 브라우저 전 페이지.
+검증 완료: 빌드, 오케스트레이션 14/14, escalation WS E2E, 브라우저 전 페이지,
+notebook 모드 서버 시작(~2 s) + `/api/health` + WS 핸드셰이크 + 빈 오디오 에러 처리 + BP 위기 에스컬레이션.  
 미검증(환경 제약): 실제 마이크 음성 루프·서버 VAD/barge-in·Wav2Lip 립싱크(GPU+마이크 필요).
 
 ---

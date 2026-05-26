@@ -24,11 +24,15 @@ log = logging.getLogger("medial")
 async def lifespan(app: FastAPI):
     s = get_settings()
     log.info("─" * 60)
-    log.info(f"MEDial server starting — LLM primary={s.LLM_PRIMARY_MODEL}")
-    log.info(f"STT={s.STT_MODEL_ID} on {s.STT_DEVICE}")
+    log.info(f"MEDial server starting — mode={s.RUN_MODE}  LLM={s.LLM_PRIMARY_MODEL}")
+    if s.is_notebook:
+        log.info(f"STT=openai/{s.STT_OPENAI_MODEL} (API)  — 로컬 Whisper 스킵")
+    else:
+        log.info(f"STT={s.STT_MODEL_ID} on {s.STT_DEVICE}")
     log.info(f"TTS={s.TTS_MODEL}/{s.TTS_VOICE}  Avatar={s.AVATAR_MODE}")
     log.info("─" * 60)
-    # Eager-load heavy modules at startup to fail fast.
+    # Eager-load modules at startup to fail fast.
+    # 노트북 모드: Whisper 로컬 모델 없음 → get_stt()가 가볍게 완료됨.
     try:
         from app.modules.stt import get_stt
         from app.modules.tts import get_tts
@@ -41,8 +45,7 @@ async def lifespan(app: FastAPI):
         get_tts()
         get_llm()
         get_avatar()
-        # Whisper is the heaviest — keep last so other modules still report
-        get_stt()
+        get_stt()   # notebook: OpenAI client init (~즉시) / gpu_server: Whisper 로드 (~7 s)
     except Exception as e:
         log.exception(f"Startup load failed (some modules unavailable): {e}")
     log.info("Server ready.")

@@ -8,7 +8,8 @@ pydantic-settings==2.6.0
 websockets==13.1
 
 # ─── LLM (Gemini) ──────────────────────────────────────
-google-genai==0.5.0
+# 0.5.0은 ThinkingConfig 없음 → 2.x로 업그레이드 필요
+google-genai>=2.0.0
 
 # ─── STT (Whisper) ─────────────────────────────────────
 # transformers + torch already pull CUDA build via PyPi index URL (see README)
@@ -20,8 +21,9 @@ librosa==0.10.2.post1
 soundfile==0.12.1
 silero-vad==5.1
 
-# ─── TTS (OpenAI) ──────────────────────────────────────
-openai==1.54.4
+# ─── TTS / STT API (OpenAI) ────────────────────────────
+# 1.54.4는 httpx>=0.28 과 충돌(proxies kwarg 제거됨) → 2.x로 업그레이드.
+openai>=2.0.0
 
 # ─── RAG ───────────────────────────────────────────────
 faiss-gpu==1.7.2 ; sys_platform != "win32"

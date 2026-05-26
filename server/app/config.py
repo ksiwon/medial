@@ -24,13 +24,22 @@ class Settings(BaseSettings):
     LLM_MAX_OUTPUT_TOKENS: int = 1024  # 리포트 JSON 트렁케이션 방지
     LLM_TEMPERATURE: float = 0.6
 
+    # ── 실행 환경 ───────────────────────────────────────
+    # "notebook"  : 로컬 CPU 노트북 — STT를 OpenAI API로 처리, 무거운 로컬 모델 스킵.
+    # "gpu_server": GPU 서버 — Whisper 로컬 추론, PubMed MedCPT 인코더 등 풀 로드.
+    RUN_MODE: str = "gpu_server"
+
     # ── STT ────────────────────────────────────────────
+    # [gpu_server] 로컬 Whisper
     STT_MODEL_ID: str = "openai/whisper-large-v3-turbo"
     STT_DEVICE: str = "cuda"
     STT_DTYPE: str = "float16"
+    STT_VAD_ENABLED: bool = True
+    # [notebook] OpenAI Whisper API
+    STT_OPENAI_MODEL: str = "whisper-1"
+    # 공통
     STT_LANGUAGE: str = "ko"
     STT_INITIAL_PROMPT: str = "의료 증상 상담."
-    STT_VAD_ENABLED: bool = True
 
     # ── TTS (OpenAI) ───────────────────────────────────
     OPENAI_API_KEY: str = ""
@@ -76,6 +85,10 @@ class Settings(BaseSettings):
     FFMPEG_BINARY: str = ""
 
     # ── helpers ────────────────────────────────────────
+    @property
+    def is_notebook(self) -> bool:
+        return self.RUN_MODE == "notebook"
+
     @property
     def cors_origin_list(self) -> List[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]

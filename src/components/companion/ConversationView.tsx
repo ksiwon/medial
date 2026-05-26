@@ -9,7 +9,6 @@ import { MicIcon } from '../icons';
 import VirtualDoctor from '../phone/VirtualDoctor';
 import { useAppStore } from '../../store/useAppStore';
 import { useCompanion } from './CompanionContext';
-import MealCapture from './MealCapture';
 
 const MAX_TURNS = 5;
 
@@ -164,28 +163,28 @@ const SttPreview = styled.div`
 
 const MicArea = styled.div`
   flex-shrink: 0;
-  padding: 12px 16px 16px;
+  padding: 6px 12px 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 9px;
+  gap: 5px;
   border-top: 1px solid ${color.cream.dark};
   background: ${color.cream.base};
 `;
 const MicWrap = styled.div`
-  position: relative; width: 72px; height: 72px;
+  position: relative; width: 52px; height: 52px;
   display: flex; align-items: center; justify-content: center;
 `;
 const Halo = styled.div<{ $delay: string; $rec: boolean }>`
-  position: absolute; width: 54px; height: 54px; border-radius: 50%;
+  position: absolute; width: 40px; height: 40px; border-radius: 50%;
   border: 1.5px solid ${({ $rec }) => ($rec ? color.terra.mid : color.sage[400])};
   animation: ${haloExpand} 1.8s ease-out infinite;
   animation-delay: ${({ $delay }) => $delay};
 `;
 const MicBtn = styled.button<{ $rec: boolean; $disabled: boolean }>`
-  width: 56px; height: 56px; border-radius: 50%;
+  width: 42px; height: 42px; border-radius: 50%;
   background: ${({ $rec }) => ($rec ? color.terra.base : color.sage[600])};
-  border: 2.5px solid ${({ $rec }) => ($rec ? color.terra.dark : color.sage[700])};
+  border: 2px solid ${({ $rec }) => ($rec ? color.terra.dark : color.sage[700])};
   display: flex; align-items: center; justify-content: center;
   z-index: 2;
   opacity: ${({ $disabled }) => ($disabled ? 0.45 : 1)};
@@ -193,7 +192,7 @@ const MicBtn = styled.button<{ $rec: boolean; $disabled: boolean }>`
   &:active { transform: scale(0.95); }
 `;
 const MicHint = styled.div`
-  font-size: ${ts(17)};
+  font-size: ${ts(14)};
   color: ${color.text.body};
   text-align: center;
 `;
@@ -292,9 +291,14 @@ export default function ConversationView() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [liveMessages, currentSTT]);
 
-  // 누르고 말하기(push-to-talk): 떼면 자동 전송 (CHI 2025 자연 턴테이킹 지향).
-  const handlePressStart = async () => { if (canRecord) await ws.startRecording(); };
-  const handlePressEnd = () => { if (isRecording) ws.stopRecording(); };
+  // 토글 방식: 한 번 누르면 녹음 시작, 다시 누르면 전송.
+  const handleToggleMic = async () => {
+    if (isRecording) {
+      ws.stopRecording();
+    } else if (canRecord) {
+      await ws.startRecording();
+    }
+  };
 
   const handleFinish = () => {
     // 서버가 상담을 정리해 report_ready로 리포트를 보내준다(ConversationView가 시트로 표시).
@@ -395,15 +399,11 @@ export default function ConversationView() {
           <MicBtn
             $rec={isRecording}
             $disabled={isThinking || isSpeaking || !wsConnected}
-            onPointerDown={handlePressStart}
-            onPointerUp={handlePressEnd}
-            onPointerLeave={handlePressEnd}
-            onContextMenu={(e) => e.preventDefault()}
-            style={{ touchAction: 'none' }}
-            aria-label="누른 채로 말하기"
+            onClick={handleToggleMic}
+            aria-label={isRecording ? '전송하기' : '말하기 시작'}
             aria-disabled={!canRecord}
           >
-            <MicIcon size={26} color="white" />
+            <MicIcon size={20} color="white" />
           </MicBtn>
         </MicWrap>
 
@@ -411,21 +411,20 @@ export default function ConversationView() {
           {!wsConnected
             ? '메디가 잠시 자리를 비웠어요 — 곧 돌아와요'
             : isRecording
-            ? '듣고 있어요 — 다시 누르면 보내드려요'
+            ? '듣고 있어요 — 다시 누르면 전송해요'
             : isThinking
             ? '메디가 생각하고 있어요...'
             : isSpeaking
             ? '메디가 이야기하고 있어요...'
             : isTriage
-            ? '마이크를 누른 채로 편하게 답해 주세요'
-            : '마이크를 누른 채로 말씀해 주세요'}
+            ? '버튼을 눌러 답하시고, 다 하셨으면 다시 눌러주세요'
+            : '버튼을 눌러 말씀하시고, 다 하셨으면 다시 눌러주세요'}
         </MicHint>
 
         {isTriage && liveTurnCount >= 2 && !isRecording && liveDoctorState === 'idle' && (
           <FinishBtn onClick={handleFinish}>지금 상담 정리하기</FinishBtn>
         )}
 
-        {!isTriage && !isRecording && <MealCapture />}
         <Disclaimer>참고용이에요 · 진단은 보건소 선생님이 하세요</Disclaimer>
       </MicArea>
     </Screen>

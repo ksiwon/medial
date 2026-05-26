@@ -30,6 +30,11 @@ class PubMedRAG:
 
     def _load(self) -> None:
         s = get_settings()
+        # 노트북 모드에서는 FAISS 인덱스와 MedCPT 인코더(~400 MB) 모두 스킵.
+        # 빈 컨텍스트를 반환하므로 LLM이 "의료 근거 없음" 모드로 동작한다.
+        if s.is_notebook:
+            log.info("Notebook mode: PubMed RAG skipped (MedCPT encoder not loaded).")
+            return
         idx_path = s.PUBMED_INDEX_PATH
         meta_path = s.PUBMED_METADATA_PATH
         if not os.path.exists(idx_path) or not os.path.exists(meta_path):

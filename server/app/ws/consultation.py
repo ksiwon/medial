@@ -208,7 +208,7 @@ async def _maybe_escalate(websocket: WebSocket, session: Session) -> None:
             "type": "llm_response", "text": transition,
             "turn": 0, "max_turns": get_settings().MAX_TURNS, "model": "system",
         })
-        await _speak(websocket, transition, session.tts_speed)
+        await _speak(websocket, transition)
         session.mode = "triage"
         session.triage_turns = 0
         session.triage_suggested = False
@@ -323,18 +323,17 @@ async def consultation_ws(websocket: WebSocket) -> None:
                     "model": "system",
                     "is_returning_visit": bool(previous),
                 })
-                await _speak(websocket, greeting, session.tts_speed)
+                await _speak(websocket, greeting)
 
             elif ctype == "reset":
                 session.reset()
                 await _send(websocket, {"type": "session_reset"})
 
             elif ctype == "end_turn":
-                # Decode buffered webm/opus → numpy → Whisper
+                # webm/opus 청크 → STT (RUN_MODE에 따라 로컬 Whisper 또는 OpenAI API)
                 audio_chunks = session.take_audio()
                 stt = get_stt()
-                pcm = stt.decode_webm_chunks(audio_chunks)
-                user_text = stt.transcribe(pcm) if pcm is not None else ""
+                user_text = await stt.transcribe_chunks(audio_chunks)
                 if not user_text:
                     await _send(websocket, {
                         "type": "error",
@@ -362,7 +361,7 @@ async def consultation_ws(websocket: WebSocket) -> None:
                         "turn": 0, "max_turns": settings.MAX_TURNS,
                         "model": model, "mode": "companion",
                     })
-                    await _speak(websocket, reply, session.tts_speed)
+                    await _speak(websocket, reply)
                     await _maybe_escalate(websocket, session)
                     continue
 
@@ -377,7 +376,7 @@ async def consultation_ws(websocket: WebSocket) -> None:
                     "max_turns": settings.MAX_TURNS,
                     "model": model,
                 })
-                await _speak(websocket, reply, session.tts_speed)
+                await _speak(websocket, reply)
 
                 # Max-turn → build & push report
                 if session.triage_turns >= settings.MAX_TURNS:
@@ -446,14 +445,6 @@ async def consultation_ws(websocket: WebSocket) -> None:
                 session.last_declined_at = _t.time()
                 session.health_context["clues"] = []
                 session.health_context["meals"] = []
-
-            elif ctype == "set_tts_speed":
-                # 어르신 음성 속도 조절 (느리게 선호, P4)
-                try:
-                    session.tts_speed = max(0.5, min(2.0, float(cmd.get("speed"))))
-                except (TypeError, ValueError):
-                    pass
-
             elif ctype == "set_mode":
                 # 상담 완료 후 일상 대화로 복귀 등 명시적 모드 전환
                 new_mode = cmd.get("mode")

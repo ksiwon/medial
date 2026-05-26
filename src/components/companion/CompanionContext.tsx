@@ -36,7 +36,6 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       // start로 모드를 알려야 COMPANION_GREETING + TTS가 시작된다.
       ws.startSession('companion');
       const store = useAppStore.getState();
-      ws.setTtsSpeed(store.ttsSpeed); // 어르신 선호 속도 적용
       // 시드 소식은 첫 진입에만 주입(재연결 시 중복 방지).
       const alreadySeeded = store.healthContext.events.some((e) =>
         SEED_EVENTS.some((s) => s.id === e.id),

@@ -36,7 +36,6 @@ export interface WsControls {
   consentTriage: () => void;
   declineTriage: () => void;
   setMode: (mode: 'companion' | 'triage') => void;
-  setTtsSpeed: (speed: number) => void;
   sendVital: (vital: object) => void;
   sendMeal: (meal: object) => void;
   sendEvent: (event: object) => void;
@@ -57,6 +56,7 @@ export function useWebSocket(): WsControls {
   const audioQueueRef = useRef<string[]>([]);
   const isPlayingRef = useRef(false);
   const reconnectTimerRef = useRef<number | null>(null);
+  const pendingChunksRef = useRef<Promise<void>[]>([]);
 
   // ── Outgoing helpers ─────────────────────────────────
   const sendJson = useCallback((data: object) => {
@@ -261,6 +261,7 @@ export function useWebSocket(): WsControls {
 
   const startRecording = useCallback(async () => {
     if (mediaRecorderRef.current?.state === 'recording') return;
+    pendingChunksRef.current = [];
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({
@@ -277,12 +278,14 @@ export function useWebSocket(): WsControls {
       : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
     const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
     recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) e.data.arrayBuffer().then(sendBinary);
+      if (e.data.size > 0) {
+        const promise = e.data.arrayBuffer().then((buf) => {
+          sendBinary(buf);
+        });
+        pendingChunksRef.current.push(promise);
+      }
     };
-    recorder.onstop = () => {
-      stream.getTracks().forEach((t) => t.stop());
-      mediaStreamRef.current = null;
-    };
+    // onstop 처리는 stopRecording() 에서 rec.onstop을 덮어써 수행한다.
     recorder.start(100);
     mediaRecorderRef.current = recorder;
     useAppStore.getState().setIsRecording(true);
@@ -291,18 +294,34 @@ export function useWebSocket(): WsControls {
 
   const stopRecording = useCallback(() => {
     const rec = mediaRecorderRef.current;
-    if (rec && rec.state !== 'inactive') rec.stop();
     mediaRecorderRef.current = null;
     useAppStore.getState().setIsRecording(false);
-    sendJson({ type: 'end_turn' });
     useAppStore.getState().setLiveDoctorState('thinking');
+    if (rec && rec.state !== 'inactive') {
+      // ondataavailable(마지막 청크) → onstop 순서가 보장된다.
+      // sendJson을 onstop 안에서 보내야 마지막 binary 청크가 서버에 먼저 도착한다.
+      // 동기적으로 보내면 end_turn이 먼저 도착해 다음 턴 버퍼를 오염시킨다.
+      rec.onstop = async () => {
+        const promises = pendingChunksRef.current;
+        pendingChunksRef.current = [];
+        await Promise.all(promises);
+        
+        mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+        mediaStreamRef.current = null;
+        sendJson({ type: 'end_turn' });
+      };
+      rec.stop();
+    } else {
+      mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+      mediaStreamRef.current = null;
+      sendJson({ type: 'end_turn' });
+    }
   }, [sendJson]);
 
   // ── MEDial 3.0 controls ──────────────────────────────
   const consentTriage = useCallback(() => sendJson({ type: 'consent_triage' }), [sendJson]);
   const declineTriage = useCallback(() => sendJson({ type: 'decline_triage' }), [sendJson]);
   const setMode = useCallback((mode: 'companion' | 'triage') => sendJson({ type: 'set_mode', mode }), [sendJson]);
-  const setTtsSpeed = useCallback((speed: number) => sendJson({ type: 'set_tts_speed', speed }), [sendJson]);
   const sendVital = useCallback((vital: object) => sendJson({ type: 'signal_vital', vital }), [sendJson]);
   const sendMeal = useCallback((meal: object) => sendJson({ type: 'signal_meal', meal }), [sendJson]);
   const sendEvent = useCallback((event: object) => sendJson({ type: 'signal_event', event }), [sendJson]);
@@ -311,9 +330,9 @@ export function useWebSocket(): WsControls {
   // 이를 의존성으로 쓰는 훅(useVitalsSim 등)에서 무한 리렌더가 발생한다.
   return useMemo(() => ({
     startSession, endTurn, finishEarly, reset, startRecording, stopRecording,
-    consentTriage, declineTriage, setMode, setTtsSpeed, sendVital, sendMeal, sendEvent,
+    consentTriage, declineTriage, setMode, sendVital, sendMeal, sendEvent,
   }), [
     startSession, endTurn, finishEarly, reset, startRecording, stopRecording,
-    consentTriage, declineTriage, setMode, setTtsSpeed, sendVital, sendMeal, sendEvent,
+    consentTriage, declineTriage, setMode, sendVital, sendMeal, sendEvent,
   ]);
 }

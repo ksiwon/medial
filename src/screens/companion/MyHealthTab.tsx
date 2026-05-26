@@ -111,12 +111,10 @@ function hrAlert(h?: number) {
 }
 
 export default function MyHealthTab() {
-  const { healthContext, monitoringConsent, setMonitoringConsent, ttsSpeed, setTtsSpeed, logEvent } = useAppStore();
+  const { healthContext, monitoringConsent, setMonitoringConsent, logEvent } = useAppStore();
   const { ws } = useCompanion();
   const v = healthContext.vitals[healthContext.vitals.length - 1];
   const meal = healthContext.meals[healthContext.meals.length - 1];
-
-  const chooseSpeed = (s: number) => { setTtsSpeed(s); ws.setTtsSpeed(s); };
 
   const toggleConsent = () => {
     const next = !monitoringConsent;
@@ -217,12 +215,6 @@ export default function MyHealthTab() {
           <span />
         </Toggle>
       </ConsentRow>
-
-      <SecTitle>메디 말 속도</SecTitle>
-      <Seg>
-        <SegBtn $on={ttsSpeed <= 0.85} onClick={() => chooseSpeed(0.8)}>천천히</SegBtn>
-        <SegBtn $on={ttsSpeed > 0.85} onClick={() => chooseSpeed(1.0)}>보통</SegBtn>
-      </Seg>
     </Wrap>
   );
 }

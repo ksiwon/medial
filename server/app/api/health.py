@@ -36,11 +36,16 @@ async def health() -> dict[str, Any]:
     ddx = get_ddxplus()
     broadcaster = get_broadcaster()
 
+    stt_label = (
+        f"openai/{s.STT_OPENAI_MODEL} (api)" if s.is_notebook
+        else f"{s.STT_MODEL_ID} ({s.STT_DEVICE})"
+    )
     return {
         "status": "ok",
+        "run_mode": s.RUN_MODE,
         "llm_primary": s.LLM_PRIMARY_MODEL,
         "llm_fallback": s.LLM_FALLBACK_MODEL,
-        "stt_model": s.STT_MODEL_ID,
+        "stt_model": stt_label,
         "tts_model": s.TTS_MODEL,
         "tts_voice": s.TTS_VOICE,
         "avatar_mode": s.AVATAR_MODE,

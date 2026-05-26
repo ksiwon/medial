@@ -72,7 +72,6 @@ interface AppState {
   companionTextScale: number;        // 어르신용 글자 크기 배율 (DR1)
   monitoringConsent: boolean;        // IoT/GPS 수집 동의 (존엄·통제, Frontiers 2025)
   onboardingSeen: boolean;           // 최초 1회 오리엔테이션 표시 여부 (DR1)
-  ttsSpeed: number;                  // 메디 음성 속도 (느리게 선호, P4)
   escalationReason: string | null;   // 상담 전환 사유 (설명가능 escalation, AIES 2025)
   telemetry: TelemetryEvent[];       // 세션 이벤트 로그 (평가용, R6)
   presentationMode: boolean;         // 발표/전시용 — dev 패널 숨김
@@ -84,7 +83,6 @@ interface AppState {
   setEmergencyActive: (v: boolean) => void;
   setMonitoringConsent: (v: boolean) => void;
   setOnboardingSeen: (v: boolean) => void;
-  setTtsSpeed: (v: number) => void;
   setPresentationMode: (v: boolean) => void;
   togglePresentationMode: () => void;
   logEvent: (kind: string, detail?: string) => void;
@@ -144,7 +142,6 @@ export const useAppStore = create<AppState>((set) => ({
   monitoringConsent: true,
   // 페이지 새로고침해도 온보딩 재출현 방지 (DR1: 최초 1회).
   onboardingSeen: readBool(LS_KEYS.onboarding, false),
-  ttsSpeed: 0.85,
   escalationReason: null,
   telemetry: [],
   // 기본은 발표 모드(우측 dev 패널 숨김). 연구자가 'D' 키로 토글.
@@ -155,7 +152,6 @@ export const useAppStore = create<AppState>((set) => ({
     writeBool(LS_KEYS.onboarding, v);
     set({ onboardingSeen: v });
   },
-  setTtsSpeed: (v) => set({ ttsSpeed: v }),
   setPresentationMode: (v) => {
     writeBool(LS_KEYS.presentation, v);
     set({ presentationMode: v });
