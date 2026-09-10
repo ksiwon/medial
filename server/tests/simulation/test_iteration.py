@@ -497,6 +497,35 @@ def test_the_model_description_never_carries_the_key():
     assert described["configured"] is True
 
 
+def test_each_provider_is_reachable_from_its_own_key_alone():
+    """A key on its own is enough to configure a client.
+
+    Google is the one that is easy to break: it has no request shape of its own
+    here, it is reached through its OpenAI-compatible endpoint. A refactor that
+    keys the request builder off `provider` instead of `wire` leaves
+    GOOGLE_API_KEY configured-looking and unusable.
+    """
+    cases = {
+        "ANTHROPIC_API_KEY": ("anthropic", "anthropic"),
+        "OPENAI_API_KEY": ("openai", "openai"),
+        "GOOGLE_API_KEY": ("google", "openai"),
+    }
+    for env_key, (provider, wire) in cases.items():
+        client = LlmClient.from_env({env_key: "k"})
+        assert client.provider == provider
+        assert client.wire == wire
+        assert client.model, "%s has no default model" % provider
+        assert client.base_url.startswith("https://")
+        assert client.available
+
+    # The alias people actually type.
+    assert LlmClient.from_env(
+        {"GOOGLE_API_KEY": "k", "MEDIAL_LLM_PROVIDER": "gemini"}).provider == "google"
+    # And a key for one provider does not configure another.
+    assert not LlmClient.from_env({"GOOGLE_API_KEY": "k",
+                                   "MEDIAL_LLM_PROVIDER": "openai"}).available
+
+
 # ============================================================ restart behaviour
 def test_a_restart_does_not_run_or_apply_a_generation_twice():
     """The loop is resumed from the database, not from memory."""

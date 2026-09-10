@@ -35,11 +35,27 @@ DEFAULT_TIMEOUT_S = 60.0
 DEFAULT_MAX_TOKENS = 2048
 
 #: Defaults only. Model ids move; ``MEDIAL_LLM_MODEL`` overrides this and the
-#: health endpoint reports whichever one is actually configured.
+#: health endpoint reports whichever one is actually configured. Checked against
+#: each provider's model list on 2026-09-11.
+#:
+#: The mid tier is the default on purpose. A generation asks for one review per
+#: actor (13) plus a synthesis and a proposal round, so a cycle is tens of calls,
+#: and the work is grounded extraction - read these events, grade these six
+#: dimensions, cite the event ids - rather than open-ended reasoning. The
+#: flagship tier (``gpt-6-astra``, ``claude-opus-5``) is a MEDIAL_LLM_MODEL away
+#: when a run needs it.
 DEFAULT_MODELS = {
     "anthropic": "claude-sonnet-5",
-    "openai": "gpt-4o-mini",
+    "openai": "gpt-5.6-terra",
+    "google": "gemini-3.8-flash",
 }
+
+#: Which wire format a provider speaks. Google is reached through its
+#: OpenAI-compatible endpoint, which accepts the same ``response_format``
+#: json_schema this client already sends, so no third request shape is needed.
+WIRE = {"anthropic": "anthropic", "openai": "openai", "google": "openai"}
+
+GOOGLE_OPENAI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai"
 
 
 class ModelNotConfigured(RuntimeError):
@@ -104,6 +120,7 @@ class LlmClient:
                  api_key: str | None = None, base_url: str | None = None,
                  timeout_s: float = DEFAULT_TIMEOUT_S, max_retries: int = 2) -> None:
         self.provider = provider or ""
+        self.wire = WIRE.get(self.provider, self.provider)
         self.model = model or ""
         self._api_key = api_key
         self.base_url = base_url or ""
@@ -118,11 +135,16 @@ class LlmClient:
         key = None
         base = env.get("MEDIAL_LLM_BASE_URL") or ""
 
+        if provider in ("gemini",):
+            provider = "google"
+
         if not provider:
             if env.get("ANTHROPIC_API_KEY"):
                 provider = "anthropic"
             elif env.get("OPENAI_API_KEY"):
                 provider = "openai"
+            elif env.get("GOOGLE_API_KEY"):
+                provider = "google"
 
         if provider == "anthropic":
             key = env.get("ANTHROPIC_API_KEY")
@@ -130,6 +152,9 @@ class LlmClient:
         elif provider == "openai":
             key = env.get("OPENAI_API_KEY")
             base = base or env.get("OPENAI_BASE_URL") or "https://api.openai.com/v1"
+        elif provider == "google":
+            key = env.get("GOOGLE_API_KEY")
+            base = base or GOOGLE_OPENAI_BASE
 
         model = (env.get("MEDIAL_LLM_MODEL")
                  or DEFAULT_MODELS.get(provider, ""))
@@ -152,8 +177,9 @@ class LlmClient:
             "note": ("키는 서버 환경변수에서만 읽고 응답·로그·문서에 포함하지 않는다. "
                      "키가 없으면 온라인 어댑터를 선택할 수 없고, 실패를 scripted 성공으로 "
                      "대체하지 않는다."),
-            "envKeys": ["ANTHROPIC_API_KEY", "OPENAI_API_KEY", "MEDIAL_LLM_PROVIDER",
-                        "MEDIAL_LLM_MODEL", "MEDIAL_LLM_BASE_URL"],
+            "envKeys": ["ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY",
+                        "MEDIAL_LLM_PROVIDER", "MEDIAL_LLM_MODEL",
+                        "MEDIAL_LLM_BASE_URL"],
         }
 
     # -- the call ---------------------------------------------------------
@@ -176,8 +202,8 @@ class LlmClient:
         if not self.available:
             raise ModelNotConfigured(
                 "온라인 어댑터를 선택했지만 모델 키·모델 id가 설정되지 않았다. "
-                "서버 환경변수(ANTHROPIC_API_KEY 또는 OPENAI_API_KEY, MEDIAL_LLM_MODEL)를 "
-                "설정하거나 rule/scripted 어댑터로 실행한다.")
+                "서버 환경변수(ANTHROPIC_API_KEY · OPENAI_API_KEY · GOOGLE_API_KEY 중 하나와 "
+                "MEDIAL_LLM_MODEL)를 설정하거나 rule/scripted 어댑터로 실행한다.")
 
         request_body = {"system": system, "payload": payload, "schema": schema_name}
         request_hash = content_hash(request_body)
@@ -218,7 +244,7 @@ class LlmClient:
         import httpx  # imported lazily: the offline path must not need it
 
         user = json.dumps(payload, ensure_ascii=False)
-        if self.provider == "anthropic":
+        if self.wire == "anthropic":
             body = {
                 "model": self.model,
                 "max_tokens": max_tokens,
@@ -246,7 +272,7 @@ class LlmClient:
                     return block.get("input"), usage
             return None, usage
 
-        if self.provider == "openai":
+        if self.wire == "openai":
             body = {
                 "model": self.model,
                 "messages": [{"role": "system", "content": system},

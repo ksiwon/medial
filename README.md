@@ -42,6 +42,11 @@ npm install
 기본 실행에는 필요 없습니다 — 규칙 어댑터는 모델을 한 번도 부르지 않습니다. 리뷰·개선을 실제
 모델로 돌릴 때만 필요하고, 키는 **`server/.env` 에 두며 서버 프로세스만 읽습니다**
 (`run.sh` 가 읽어서 넣어 줍니다). 양식은 `server/.env.example`.
+
+기본값은 `google` / `gemini-3.8-flash` 이고, `openai` 로 바꾸면 `gpt-5.6-terra` 입니다. 고르는
+기준과 상위 등급으로 올리는 법은 [DEVELOPMENT.md](DEVELOPMENT.md) 의 "모델 키는
+`server/.env` 에 있습니다".
+
 키가 없으면 온라인 어댑터를 고를 수 없고(session 생성 400), 호출이 실패해도 규칙 결과로
 대체하지 않습니다.
 

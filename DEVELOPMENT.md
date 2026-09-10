@@ -48,24 +48,43 @@ Ctrl+C 는 **이 스크립트가 띄운 것만** 정리합니다. 직접 띄우�
 ### 모델 키는 `server/.env` 에 있습니다
 
 키는 **서버 프로세스의 환경변수에서만** 읽습니다. 그 값을 담아 두는 곳이 `server/.env` 이고,
-git-ignored 이며 `run.sh` 가 서버를 띄우기 전에 읽어 넣습니다. 양식은 `server/.env.example`
-(값 없음)에 있습니다. 직접 띄울 때는:
+git-ignored 이며 `run.sh` 가 서버를 띄우기 전에 읽어 넣습니다. 양식은 `server/.env.example`.
+직접 띄울 때는 `set -a; . server/.env; set +a; python server/sim_main.py`.
 
-```bash
-set -a; . server/.env; set +a; python server/sim_main.py
-```
+**어느 모델을 쓰는가 (2026-09-11 기준).** 한 세대가 주민 12명 + 기관 담당자 리뷰 13건에 종합과
+개선 후보까지 요청하므로 한 cycle이 수십 번의 호출이고, 하는 일은 열린 추론이 아니라 **근거가
+정해진 추출**입니다 — 이 사건들을 읽고, 여섯 차원을 등급 매기고, 인용한 사건 id를 대라. 그래서
+기본값을 각 provider의 **중간 등급**으로 둡니다.
 
-| 변수 | 쓰임 |
+| provider | 기본 모델 | 키 | 비고 |
+|---|---|---|---|
+| `google` (기본) | `gemini-3.8-flash` | `GOOGLE_API_KEY` | OpenAI 호환 엔드포인트로 붙습니다 |
+| `openai` | `gpt-5.6-terra` | `OPENAI_API_KEY` | 지능과 비용의 균형 등급 |
+| `anthropic` | `claude-sonnet-5` | `ANTHROPIC_API_KEY` | 이 파일에는 키가 없습니다 |
+
+더 어려운 판단이 필요하면 `MEDIAL_LLM_MODEL` 로 `gpt-6-astra` · `claude-opus-5` ·
+`gemini-3.8-flash` 상위 등급을 지정합니다. **모델 id는 코드보다 자주 바뀌므로** 기본값은 기본값일
+뿐이고, health 응답은 실제로 설정된 id를 그대로 보고합니다.
+
+**Gemini는 새 provider 코드를 쓰지 않습니다.** Google이 OpenAI 호환 엔드포인트
+(`/v1beta/openai`)를 제공하고 거기서 `response_format: json_schema` 를 받으므로, 이미 있는
+OpenAI 요청 형태를 그대로 보냅니다. `provider` 는 표시용 이름이고 `wire` 가 요청 형태입니다 —
+둘을 다시 합치면 `GOOGLE_API_KEY` 가 **설정된 것처럼 보이면서 동작하지 않는** 상태가 되므로,
+`test_each_provider_is_reachable_from_its_own_key_alone` 이 그것을 고정합니다.
+
+| 그 밖의 변수 | 쓰임 |
 |---|---|
-| `OPENAI_API_KEY` | 온라인 어댑터가 바로 씁니다 (OpenAI 호환 chat completions) |
-| `ANTHROPIC_API_KEY` | 있으면 이쪽을 먼저 씁니다 (Anthropic Messages). 지금 파일에는 없습니다 |
-| `GOOGLE_API_KEY` | **지금 어댑터가 지원하지 않습니다.** 예전 데모에서 쓰던 키를 provider를 늘릴 때를 위해 보관만 합니다 |
-| `MEDIAL_LLM_PROVIDER` · `MEDIAL_LLM_MODEL` · `MEDIAL_LLM_BASE_URL` · `MEDIAL_LLM_TIMEOUT_S` | 온라인 어댑터 설정 (선택) |
-| `MEDIAL_SIM_PORT` · `MEDIAL_SIM_DB` · `MEDIAL_VILLAGE_PATH` · `MEDIAL_PERSONA_PATH` | 서버 설정 (선택) |
+| `MEDIAL_LLM_PROVIDER` | 비우면 있는 키로 정합니다 (anthropic → openai → google). `gemini` 는 `google` 의 별칭 |
+| `MEDIAL_LLM_MODEL` · `MEDIAL_LLM_BASE_URL` · `MEDIAL_LLM_TIMEOUT_S` | 온라인 어댑터 설정 |
+| `MEDIAL_SIM_PORT` · `MEDIAL_SIM_DB` · `MEDIAL_VILLAGE_PATH` · `MEDIAL_PERSONA_PATH` | 서버 설정 |
 
 키가 있어도 **rule 어댑터를 고르면 모델을 한 번도 부르지 않습니다.** 키가 없으면 온라인
 어댑터를 고를 수 없고(session 생성 400), 호출이 실패해도 규칙 결과로 대체하지 않습니다.
 응답·로그·문서·health 어디에도 키가 들어가지 않습니다.
+
+**온라인 호출은 아직 한 번도 하지 않았습니다.** 어댑터·스키마·호출 기록·실패 처리·예산 정지는
+오프라인 경계 테스트로만 확인했습니다. 위 모델 id는 각 provider의 모델 목록에서 확인한 것이지
+이 저장소에서 실행해 본 것이 아닙니다.
 
 원자료가 있을 때만:
 
