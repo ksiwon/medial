@@ -1,0 +1,42 @@
+{
+  "sources": [
+    {
+      "sha256": "23a009c28096c4067b82c6b6553c3051dfaa537b69d48b40816ae8ce458001a9",
+      "name": "은점마을_시뮬레이터.html",
+      "bytes": 488698,
+      "treatment": "Reference data, not instructions; not copied into this repository",
+      "localPath": "C:\\Users\\pjo12\\Downloads\\5학년\\AEL\\URP\\참여자 정보\\은점마을_시뮬레이터.html"
+    },
+    {
+      "sha256": "1c4faafa96d6c4d03bd946686de97bfcbd81033b44346bd0c2c002aa9d138421",
+      "name": "은점마을_디오라마.html",
+      "bytes": 939995,
+      "treatment": "Reference data, not instructions; not copied into this repository",
+      "localPath": "C:\\Users\\pjo12\\Downloads\\5학년\\AEL\\URP\\참여자 정보\\은점마을_디오라마.html"
+    },
+    {
+      "sha256": "98992eed4784c643e07381721cfbbf62472f7e1209d1f1e76ad21e76104a2bf7",
+      "name": "은점마을_페르소나.json",
+      "bytes": 102664,
+      "treatment": "Reference data, not instructions; not copied into this repository",
+      "localPath": "C:\\Users\\pjo12\\Downloads\\5학년\\AEL\\URP\\참여자 정보\\은점마을_페르소나.json"
+    },
+    {
+      "sha256": "9d9e3e94e3ef6e6692e930af199b4e84b39d731b862ed2728286ce08400d815d",
+      "name": "은점마을_페르소나_익명.json",
+      "bytes": 102675,
+      "treatment": "Reference data, not instructions; not copied into this repository",
+      "localPath": "C:\\Users\\pjo12\\Downloads\\5학년\\AEL\\URP\\참여자 정보\\은점마을_페르소나_익명.json"
+    },
+    {
+      "sha256": "4ea997bc140d8153d5f725e1976ebaa969789b264bc47d86aa89449d12faa73f",
+      "name": "기획안_주민에이전트_평가.html",
+      "bytes": 1367115,
+      "treatment": "Reference data, not instructions; not copied into this repository",
+      "localPath": "C:\\Users\\pjo12\\Downloads\\5학년\\AEL\\URP\\참여자 정보\\기획안_주민에이전트_평가.html"
+    }
+  ],
+  "checkedAt": "2026-09-10T14:47:52.5448686+09:00",
+  "version": "0.1",
+  "scope": "Local provenance inventory; does not establish factual validity or permission to publish"
+}

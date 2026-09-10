@@ -1,0 +1,24 @@
+# Everything the research simulator needs, and nothing else.
+#
+# server/requirements.txt is the companion demo's dependency set: Whisper, torch,
+# FAISS, Gemini, TTS. The simulator imports none of them, needs no GPU and reads
+# no API key, so installing that file to run this would be misleading about what
+# the tool actually depends on.
+#
+#   python -m pip install -r server/requirements-sim.txt
+#   python server/sim_main.py
+
+fastapi>=0.115
+uvicorn[standard]>=0.32
+pydantic>=2.9,<3
+
+# Optional, importer only: writes the source map raster into the git-ignored
+# registry. The server and the tests run without it.
+#   python -m pip install "pillow>=10"
+# pillow>=10
+
+# Optional, online review/improvement adapters only. Without it the whole loop
+# still runs on the rule adapters and no key is read; with it and a key in the
+# server environment, the LLM review/improvement roles can call a provider.
+#   python -m pip install "httpx>=0.27"
+# httpx>=0.27

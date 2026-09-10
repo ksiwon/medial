@@ -142,3 +142,17 @@ dist-ssr
 # Editor-specific files
 .DS_Store
 Thumbs.db
+
+# local research data (raw sources, runs, model responses) - never committed
+local-data/
+
+# local archive of pre-existing work kept outside the active build
+local-archive/
+
+# UI 스크린샷은 원자료 레지스트리로 찍혀서 주민의 일과·장소·이름이 그대로 담긴다.
+# local-data/ 를 제외하는 이유와 같으므로 저장소에 넣지 않는다.
+docs/research/screenshots/
+
+# Python bytecode
+__pycache__/
+*.py[cod]

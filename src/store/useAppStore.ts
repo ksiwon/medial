@@ -7,6 +7,7 @@ import { ChatMode, HealthContext, VitalReading, MealRecord, CommunityEvent } fro
 const LS_KEYS = {
   onboarding: 'medial:onboarding_seen',
   presentation: 'medial:presentation_mode',
+  textScale: 'medial:companion_text_scale',
 } as const;
 
 function readBool(key: string, fallback: boolean): boolean {
@@ -21,6 +22,17 @@ function readBool(key: string, fallback: boolean): boolean {
 function writeBool(key: string, v: boolean): void {
   if (typeof window === 'undefined') return;
   try { window.localStorage.setItem(key, v ? '1' : '0'); } catch { /* ignore */ }
+}
+function readScale(key: string, fallback: number): number {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const v = window.localStorage.getItem(key);
+    if (v === null) return fallback;
+    const n = parseFloat(v);
+    return COMPANION_TEXT_SCALES.includes(n) ? n : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function emptyHealthContext(): HealthContext {
@@ -138,7 +150,9 @@ export const useAppStore = create<AppState>((set) => ({
   triageSuggested: false,
   triageSuggestReason: null,
   emergencyActive: false,
-  companionTextScale: 1.0,
+  // 어르신 기본 가독성 — '큼'(1.15)부터 시작 (WCAG 16pt+ 가산).
+  // 사용자가 cycle로 바꾸면 localStorage에 영속화.
+  companionTextScale: readScale(LS_KEYS.textScale, 1.15),
   monitoringConsent: true,
   // 페이지 새로고침해도 온보딩 재출현 방지 (DR1: 최초 1회).
   onboardingSeen: readBool(LS_KEYS.onboarding, false),
@@ -170,7 +184,9 @@ export const useAppStore = create<AppState>((set) => ({
   setEmergencyActive: (v) => set({ emergencyActive: v }),
   cycleCompanionTextScale: () => set((s) => {
     const i = COMPANION_TEXT_SCALES.indexOf(s.companionTextScale);
-    return { companionTextScale: COMPANION_TEXT_SCALES[(i + 1) % COMPANION_TEXT_SCALES.length] };
+    const next = COMPANION_TEXT_SCALES[(i + 1) % COMPANION_TEXT_SCALES.length];
+    try { window.localStorage.setItem(LS_KEYS.textScale, String(next)); } catch { /* ignore */ }
+    return { companionTextScale: next };
   }),
   addVital: (v) => set((s) => ({ healthContext: { ...s.healthContext, vitals: [...s.healthContext.vitals, v].slice(-60), lastUpdated: Date.now() } })),
   addMeal: (m) => set((s) => ({ healthContext: { ...s.healthContext, meals: [...s.healthContext.meals, m], lastUpdated: Date.now() } })),

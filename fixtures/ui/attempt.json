@@ -1,0 +1,5489 @@
+{
+ "attempt": {
+  "id": "att-A-v1-97085304764f",
+  "parentId": null,
+  "parentSeq": null,
+  "lineage": "root",
+  "label": "A · 이장 우선 확인",
+  "policyId": "policy-A-v1",
+  "scenarioDeckId": "deck-p1-no-response-v1",
+  "personaRevisionId": "persona-synthetic-b7889f7457bde193",
+  "baselineRevisionId": "baseline-1666cf9ccb87e954",
+  "resourceRevisionId": "assumed-resources-v1",
+  "seed": 17,
+  "mode": "experiment",
+  "status": "completed",
+  "engineVersion": "medial-sim/0.2.0",
+  "adapter": "rule",
+  "createdAt": "2026-09-10T15:02:04+00:00",
+  "cursorSeq": 0,
+  "eventCount": 24,
+  "dataSource": "synthetic",
+  "inputHashes": {
+   "village": "1666cf9ccb87e954",
+   "policy": "da9c05f3f8c061f8",
+   "deck": "553907b4679a9aa1",
+   "resources": "fa080f60dffd5e61",
+   "persona": "persona-synthetic-b7889f7457bde193",
+   "personaSource": "synthetic"
+  }
+ },
+ "metrics": {
+  "requests": {
+   "raised": 1,
+   "resolved": 1,
+   "unresolved": 0,
+   "outcomes": [
+    "no_issue_found"
+   ],
+   "resolutionPaths": [
+    "neighbour_visit"
+   ]
+  },
+  "waitMs": {
+   "resolvedOnly": [
+    529740
+   ],
+   "meanMinutesResolvedOnly": 8.8,
+   "censoredCount": 0,
+   "note": "미해결 건은 평균에 넣지 않고 censored로 센다."
+  },
+  "contacts": {
+   "attempts": 1,
+   "byResult": {
+    "answered": 0,
+    "no_response": 1
+   },
+   "toSubject": 1,
+   "note": "무응답을 거절로 합치지 않는다."
+  },
+  "residentBurden": {
+   "P6": {
+    "addedTaskMinutes": 18.8,
+    "addedTravelMetres": 618.0,
+    "interruptions": 2,
+    "contactsReceived": 1,
+    "basis": "실현된 계획에서 baseline 대비 추가된 task 구간"
+   }
+  },
+  "neighbourMinutes": 18.8,
+  "institutionBurden": {
+   "staffCount": 1,
+   "shiftStartMs": 32400000,
+   "shiftEndMs": 64800000,
+   "staffMinutes": 0.0,
+   "preexistingBacklogMinutes": 20.0,
+   "queueWaitMinutes": 0.0,
+   "items": [
+    {
+     "kind": "queued_backlog",
+     "requestId": null,
+     "staffIndex": 0,
+     "startMs": 32400000,
+     "endMs": 33600000,
+     "requestedMs": 32400000,
+     "waitMs": 0
+    }
+   ],
+   "travelBasis": "visitTravelMinutes는 편도다. 방문 1건은 편도×2 + 체류를 쓴다.",
+   "note": "인계는 업무 이전이므로 받는 쪽 시간을 따로 센다. 실험 가정 기반."
+  },
+  "disclosure": {
+   "neighbour": {
+    "recipientCount": 1,
+    "fieldCount": 2
+   }
+  },
+  "transport": {
+   "needsRaised": 0,
+   "peopleAsked": 0,
+   "reservationsHeld": 0,
+   "ridesCompleted": 0,
+   "conflictsDetected": 0,
+   "conflictReasons": [],
+   "cancelled": 0,
+   "seatAssumption": "좌석 수는 원자료에 없다. ResourceRevision의 실험 가정값(3)이다.",
+   "note": "분모는 '이동이 필요했던 횟수'다. 요청·수락·실제 이용을 따로 센다. 도착은 이동 필요의 해결이며 진료 결과가 아니다."
+  },
+  "safety": {
+   "emergencyClassifications": 0,
+   "expected": 0,
+   "emergencyRuleOutClaims": 0,
+   "note": "무응답만으로는 응급 분류의 근거가 없다. 이 수치는 '응급이 아니라고 판정한 횟수'가 아니라 '응급을 시사하는 관측이 있었던 횟수'다."
+  },
+  "adapterFailures": 0,
+  "rejectedProposals": 0,
+  "decisionCount": 2,
+  "eventCount": 24,
+  "personaProvenance": {
+   "dataSource": "synthetic",
+   "revisionId": "persona-synthetic-b7889f7457bde193",
+   "personaCount": 12,
+   "sourceName": "personas.synthetic.json",
+   "jointInterview": [
+    "P10",
+    "P11"
+   ],
+   "noInterview": [
+    "P12"
+   ],
+   "note": "이름·인터뷰 인용·역할 프롬프트는 컴파일 결과에 담기지 않는다. 근거 카드는 원자료의 JSON pointer만 가리킨다."
+  }
+ },
+ "policy": {
+  "id": "policy-A-v1",
+  "parentId": null,
+  "coreItem": "응답이 없는 안부 확인을 누구의 시간으로 해결할 것인가",
+  "label": "A · 이장 우선 확인",
+  "changes": [],
+  "contactStrategy": "head_first",
+  "params": {
+   "retryCount": 0,
+   "retryIntervalMin": 40,
+   "quietWindowMin": 0,
+   "helperContactCap": 2,
+   "disclosure": "named",
+   "escalateToInstitutionAfterMin": null,
+   "allowHeadContact": true,
+   "rideCandidateOrder": "closest_first",
+   "maxRideDetourMin": 20
+  },
+  "assumptionRefs": [
+   "assumption-head-availability",
+   "assumption-phone-reachability"
+  ]
+ },
+ "logFingerprint": "1da9841776777774",
+ "timeline": {
+  "horizonMs": 72000000,
+  "actors": {
+   "P1": {
+    "id": "P1",
+    "displayName": "P1",
+    "isVillageHead": false,
+    "group": "solo",
+    "homeXY": [
+     300.0,
+     930.0
+    ],
+    "baseline": [
+     {
+      "startMs": 0,
+      "endMs": 32400000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P1",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       930.0
+      ]
+     },
+     {
+      "startMs": 32400000,
+      "endMs": 32677483,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P1",
+      "toPlace": "FARM",
+      "mode": "walk",
+      "metres": 323.7,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        930.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        170.0,
+        810.0
+       ],
+       [
+        90.0,
+        810.0
+       ]
+      ]
+     },
+     {
+      "startMs": 32677483,
+      "endMs": 43200000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "밭일",
+      "place": "FARM",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": true,
+      "riders": [],
+      "xy": [
+       90.0,
+       810.0
+      ]
+     },
+     {
+      "startMs": 43200000,
+      "endMs": 43477483,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "FARM",
+      "toPlace": "HOME:P1",
+      "mode": "walk",
+      "metres": 323.7,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        90.0,
+        810.0
+       ],
+       [
+        170.0,
+        810.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        930.0
+       ]
+      ]
+     },
+     {
+      "startMs": 43477483,
+      "endMs": 46800000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P1",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       930.0
+      ]
+     },
+     {
+      "startMs": 46800000,
+      "endMs": 47077483,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P1",
+      "toPlace": "FARM",
+      "mode": "walk",
+      "metres": 323.7,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        930.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        170.0,
+        810.0
+       ],
+       [
+        90.0,
+        810.0
+       ]
+      ]
+     },
+     {
+      "startMs": 47077483,
+      "endMs": 57600000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "밭일",
+      "place": "FARM",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": true,
+      "riders": [],
+      "xy": [
+       90.0,
+       810.0
+      ]
+     },
+     {
+      "startMs": 57600000,
+      "endMs": 57877483,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "FARM",
+      "toPlace": "HOME:P1",
+      "mode": "walk",
+      "metres": 323.7,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        90.0,
+        810.0
+       ],
+       [
+        170.0,
+        810.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        930.0
+       ]
+      ]
+     },
+     {
+      "startMs": 57877483,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P1",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       930.0
+      ]
+     }
+    ],
+    "realized": [
+     {
+      "startMs": 0,
+      "endMs": 32400000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P1",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       930.0
+      ]
+     },
+     {
+      "startMs": 32400000,
+      "endMs": 32677483,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P1",
+      "toPlace": "FARM",
+      "mode": "walk",
+      "metres": 323.7,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        930.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        170.0,
+        810.0
+       ],
+       [
+        90.0,
+        810.0
+       ]
+      ]
+     },
+     {
+      "startMs": 32677483,
+      "endMs": 43200000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "밭일",
+      "place": "FARM",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": true,
+      "riders": [],
+      "xy": [
+       90.0,
+       810.0
+      ]
+     },
+     {
+      "startMs": 43200000,
+      "endMs": 43477483,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "FARM",
+      "toPlace": "HOME:P1",
+      "mode": "walk",
+      "metres": 323.7,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        90.0,
+        810.0
+       ],
+       [
+        170.0,
+        810.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        930.0
+       ]
+      ]
+     },
+     {
+      "startMs": 43477483,
+      "endMs": 46800000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P1",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       930.0
+      ]
+     },
+     {
+      "startMs": 46800000,
+      "endMs": 47077483,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P1",
+      "toPlace": "FARM",
+      "mode": "walk",
+      "metres": 323.7,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        930.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        170.0,
+        810.0
+       ],
+       [
+        90.0,
+        810.0
+       ]
+      ]
+     },
+     {
+      "startMs": 47077483,
+      "endMs": 57600000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "밭일",
+      "place": "FARM",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": true,
+      "riders": [],
+      "xy": [
+       90.0,
+       810.0
+      ]
+     },
+     {
+      "startMs": 57600000,
+      "endMs": 57877483,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "FARM",
+      "toPlace": "HOME:P1",
+      "mode": "walk",
+      "metres": 323.7,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        90.0,
+        810.0
+       ],
+       [
+        170.0,
+        810.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        930.0
+       ]
+      ]
+     },
+     {
+      "startMs": 57877483,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P1",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       930.0
+      ]
+     }
+    ],
+    "planChanged": false,
+    "addedTaskMs": 0,
+    "contactsReceived": 0
+   },
+   "P2": {
+    "id": "P2",
+    "displayName": "P2",
+    "isVillageHead": false,
+    "group": "pair",
+    "homeXY": [
+     300.0,
+     570.0
+    ],
+    "baseline": [
+     {
+      "startMs": 0,
+      "endMs": 25200000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P2",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       570.0
+      ]
+     },
+     {
+      "startMs": 25200000,
+      "endMs": 27000000,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P2",
+      "toPlace": "TOWN",
+      "mode": "offmap",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        570.0
+       ],
+       [
+        300.0,
+        -70.0
+       ]
+      ]
+     },
+     {
+      "startMs": 27000000,
+      "endMs": 61200000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "읍내",
+      "place": "TOWN",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       -70.0
+      ]
+     },
+     {
+      "startMs": 61200000,
+      "endMs": 63000000,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "TOWN",
+      "toPlace": "HOME:P2",
+      "mode": "offmap",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        -70.0
+       ],
+       [
+        300.0,
+        570.0
+       ]
+      ]
+     },
+     {
+      "startMs": 63000000,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P2",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       570.0
+      ]
+     }
+    ],
+    "realized": [
+     {
+      "startMs": 0,
+      "endMs": 25200000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P2",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       570.0
+      ]
+     },
+     {
+      "startMs": 25200000,
+      "endMs": 27000000,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P2",
+      "toPlace": "TOWN",
+      "mode": "offmap",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        570.0
+       ],
+       [
+        300.0,
+        -70.0
+       ]
+      ]
+     },
+     {
+      "startMs": 27000000,
+      "endMs": 61200000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "읍내",
+      "place": "TOWN",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       -70.0
+      ]
+     },
+     {
+      "startMs": 61200000,
+      "endMs": 63000000,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "TOWN",
+      "toPlace": "HOME:P2",
+      "mode": "offmap",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        -70.0
+       ],
+       [
+        300.0,
+        570.0
+       ]
+      ]
+     },
+     {
+      "startMs": 63000000,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P2",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       570.0
+      ]
+     }
+    ],
+    "planChanged": false,
+    "addedTaskMs": 0,
+    "contactsReceived": 0
+   },
+   "P3": {
+    "id": "P3",
+    "displayName": "P3",
+    "isVillageHead": false,
+    "group": "solo",
+    "homeXY": [
+     300.0,
+     750.0
+    ],
+    "baseline": [
+     {
+      "startMs": 0,
+      "endMs": 32400000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P3",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       750.0
+      ]
+     },
+     {
+      "startMs": 32400000,
+      "endMs": 34200000,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P3",
+      "toPlace": "TOWN",
+      "mode": "offmap",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        750.0
+       ],
+       [
+        300.0,
+        -70.0
+       ]
+      ]
+     },
+     {
+      "startMs": 34200000,
+      "endMs": 48420000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "읍내",
+      "place": "TOWN",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       -70.0
+      ]
+     },
+     {
+      "startMs": 48420000,
+      "endMs": 50220000,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "TOWN",
+      "toPlace": "HOME:P3",
+      "mode": "offmap",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        -70.0
+       ],
+       [
+        300.0,
+        750.0
+       ]
+      ]
+     },
+     {
+      "startMs": 50220000,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P3",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       750.0
+      ]
+     }
+    ],
+    "realized": [
+     {
+      "startMs": 0,
+      "endMs": 32400000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P3",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       750.0
+      ]
+     },
+     {
+      "startMs": 32400000,
+      "endMs": 34200000,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P3",
+      "toPlace": "TOWN",
+      "mode": "offmap",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        750.0
+       ],
+       [
+        300.0,
+        -70.0
+       ]
+      ]
+     },
+     {
+      "startMs": 34200000,
+      "endMs": 48420000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "읍내",
+      "place": "TOWN",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       -70.0
+      ]
+     },
+     {
+      "startMs": 48420000,
+      "endMs": 50220000,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "TOWN",
+      "toPlace": "HOME:P3",
+      "mode": "offmap",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        -70.0
+       ],
+       [
+        300.0,
+        750.0
+       ]
+      ]
+     },
+     {
+      "startMs": 50220000,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P3",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       750.0
+      ]
+     }
+    ],
+    "planChanged": false,
+    "addedTaskMs": 0,
+    "contactsReceived": 0
+   },
+   "P4": {
+    "id": "P4",
+    "displayName": "P4",
+    "isVillageHead": false,
+    "group": "four",
+    "homeXY": [
+     300.0,
+     690.0
+    ],
+    "baseline": [
+     {
+      "startMs": 0,
+      "endMs": 28800000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P4",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       690.0
+      ]
+     },
+     {
+      "startMs": 28800000,
+      "endMs": 29035440,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P4",
+      "toPlace": "FOOD",
+      "mode": "walk",
+      "metres": 274.7,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        400.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 29035440,
+      "endMs": 61200000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "마을식품 근무",
+      "place": "FOOD",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       400.0,
+       450.0
+      ]
+     },
+     {
+      "startMs": 61200000,
+      "endMs": 61290000,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "FOOD",
+      "toPlace": "EXP",
+      "mode": "walk",
+      "metres": 49.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        400.0,
+        450.0
+       ],
+       [
+        450.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 61290000,
+      "endMs": 68400000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "어촌체험마을",
+      "place": "EXP",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       450.0,
+       450.0
+      ]
+     },
+     {
+      "startMs": 68400000,
+      "endMs": 68677483,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "EXP",
+      "toPlace": "HOME:P4",
+      "mode": "walk",
+      "metres": 323.7,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        450.0,
+        450.0
+       ],
+       [
+        400.0,
+        450.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ]
+      ]
+     },
+     {
+      "startMs": 68677483,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P4",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       690.0
+      ]
+     }
+    ],
+    "realized": [
+     {
+      "startMs": 0,
+      "endMs": 28800000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P4",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       690.0
+      ]
+     },
+     {
+      "startMs": 28800000,
+      "endMs": 29035440,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P4",
+      "toPlace": "FOOD",
+      "mode": "walk",
+      "metres": 274.7,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        400.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 29035440,
+      "endMs": 61200000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "마을식품 근무",
+      "place": "FOOD",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       400.0,
+       450.0
+      ]
+     },
+     {
+      "startMs": 61200000,
+      "endMs": 61290000,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "FOOD",
+      "toPlace": "EXP",
+      "mode": "walk",
+      "metres": 49.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        400.0,
+        450.0
+       ],
+       [
+        450.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 61290000,
+      "endMs": 68400000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "어촌체험마을",
+      "place": "EXP",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       450.0,
+       450.0
+      ]
+     },
+     {
+      "startMs": 68400000,
+      "endMs": 68677483,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "EXP",
+      "toPlace": "HOME:P4",
+      "mode": "walk",
+      "metres": 323.7,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        450.0,
+        450.0
+       ],
+       [
+        400.0,
+        450.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ]
+      ]
+     },
+     {
+      "startMs": 68677483,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P4",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       690.0
+      ]
+     }
+    ],
+    "planChanged": false,
+    "addedTaskMs": 0,
+    "contactsReceived": 0
+   },
+   "P5": {
+    "id": "P5",
+    "displayName": "P5",
+    "isVillageHead": false,
+    "group": "pair",
+    "homeXY": [
+     300.0,
+     510.0
+    ],
+    "baseline": [
+     {
+      "startMs": 0,
+      "endMs": 22500000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P5",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       510.0
+      ]
+     },
+     {
+      "startMs": 22500000,
+      "endMs": 23105417,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P5",
+      "toPlace": "PORT",
+      "mode": "walk",
+      "metres": 706.3,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        120.0,
+        990.0
+       ]
+      ]
+     },
+     {
+      "startMs": 23105417,
+      "endMs": 23700000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 23700000,
+      "endMs": 23917781,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "PORT",
+      "toPlace": "SEA",
+      "mode": "boat",
+      "metres": 363.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        120.0,
+        990.0
+       ],
+       [
+        470.0,
+        1110.0
+       ]
+      ]
+     },
+     {
+      "startMs": 23917781,
+      "endMs": 39300000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "조업",
+      "place": "SEA",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       470.0,
+       1110.0
+      ]
+     },
+     {
+      "startMs": 39300000,
+      "endMs": 39517781,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "SEA",
+      "toPlace": "PORT",
+      "mode": "boat",
+      "metres": 363.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        470.0,
+        1110.0
+       ],
+       [
+        120.0,
+        990.0
+       ]
+      ]
+     },
+     {
+      "startMs": 39517781,
+      "endMs": 41400000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 41400000,
+      "endMs": 42005417,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "PORT",
+      "toPlace": "HOME:P5",
+      "mode": "walk",
+      "metres": 706.3,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        120.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 42005417,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P5",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       510.0
+      ]
+     }
+    ],
+    "realized": [
+     {
+      "startMs": 0,
+      "endMs": 22500000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P5",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       510.0
+      ]
+     },
+     {
+      "startMs": 22500000,
+      "endMs": 23105417,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P5",
+      "toPlace": "PORT",
+      "mode": "walk",
+      "metres": 706.3,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        120.0,
+        990.0
+       ]
+      ]
+     },
+     {
+      "startMs": 23105417,
+      "endMs": 23700000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 23700000,
+      "endMs": 23917781,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "PORT",
+      "toPlace": "SEA",
+      "mode": "boat",
+      "metres": 363.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        120.0,
+        990.0
+       ],
+       [
+        470.0,
+        1110.0
+       ]
+      ]
+     },
+     {
+      "startMs": 23917781,
+      "endMs": 39300000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "조업",
+      "place": "SEA",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       470.0,
+       1110.0
+      ]
+     },
+     {
+      "startMs": 39300000,
+      "endMs": 39517781,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "SEA",
+      "toPlace": "PORT",
+      "mode": "boat",
+      "metres": 363.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        470.0,
+        1110.0
+       ],
+       [
+        120.0,
+        990.0
+       ]
+      ]
+     },
+     {
+      "startMs": 39517781,
+      "endMs": 41400000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 41400000,
+      "endMs": 42005417,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "PORT",
+      "toPlace": "HOME:P5",
+      "mode": "walk",
+      "metres": 706.3,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        120.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 42005417,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P5",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       510.0
+      ]
+     }
+    ],
+    "planChanged": false,
+    "addedTaskMs": 0,
+    "contactsReceived": 0
+   },
+   "P6": {
+    "id": "P6",
+    "displayName": "이장",
+    "isVillageHead": true,
+    "group": "four",
+    "homeXY": [
+     300.0,
+     330.0
+    ],
+    "baseline": [
+     {
+      "startMs": 0,
+      "endMs": 25200000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P6",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       330.0
+      ]
+     },
+     {
+      "startMs": 25200000,
+      "endMs": 25519526,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P6",
+      "toPlace": "HALL",
+      "mode": "walk",
+      "metres": 372.8,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        330.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        220.0,
+        630.0
+       ]
+      ]
+     },
+     {
+      "startMs": 25519526,
+      "endMs": 28800000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "마을회관",
+      "place": "HALL",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": true,
+      "riders": [],
+      "xy": [
+       220.0,
+       630.0
+      ]
+     },
+     {
+      "startMs": 28800000,
+      "endMs": 36000000,
+      "kind": "patrol",
+      "origin": "baseline",
+      "label": "마을 순찰",
+      "place": "PATROL",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": true,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        1170.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        90.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        300.0,
+        1170.0
+       ]
+      ]
+     },
+     {
+      "startMs": 36000000,
+      "endMs": 36319526,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HALL",
+      "toPlace": "HOME:P6",
+      "mode": "walk",
+      "metres": 372.8,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        220.0,
+        630.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        330.0
+       ]
+      ]
+     },
+     {
+      "startMs": 36319526,
+      "endMs": 42900000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P6",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       330.0
+      ]
+     },
+     {
+      "startMs": 42900000,
+      "endMs": 43387697,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P6",
+      "toPlace": "FOOD",
+      "mode": "walk",
+      "metres": 569.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        330.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        400.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 43387697,
+      "endMs": 46800000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "마을식품 근무",
+      "place": "FOOD",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       400.0,
+       450.0
+      ]
+     },
+     {
+      "startMs": 46800000,
+      "endMs": 57600000,
+      "kind": "patrol",
+      "origin": "baseline",
+      "label": "마을 순찰",
+      "place": "PATROL",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": true,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        1170.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        90.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        300.0,
+        1170.0
+       ]
+      ]
+     },
+     {
+      "startMs": 57600000,
+      "endMs": 58087697,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "FOOD",
+      "toPlace": "HOME:P6",
+      "mode": "walk",
+      "metres": 569.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        400.0,
+        450.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        330.0
+       ]
+      ]
+     },
+     {
+      "startMs": 58087697,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P6",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       330.0
+      ]
+     }
+    ],
+    "realized": [
+     {
+      "startMs": 0,
+      "endMs": 25200000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P6",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       330.0
+      ]
+     },
+     {
+      "startMs": 25200000,
+      "endMs": 25519526,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P6",
+      "toPlace": "HALL",
+      "mode": "walk",
+      "metres": 372.8,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        330.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        220.0,
+        630.0
+       ]
+      ]
+     },
+     {
+      "startMs": 25519526,
+      "endMs": 28800000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "마을회관",
+      "place": "HALL",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": true,
+      "riders": [],
+      "xy": [
+       220.0,
+       630.0
+      ]
+     },
+     {
+      "startMs": 28800000,
+      "endMs": 34200000,
+      "kind": "patrol",
+      "origin": "baseline",
+      "label": "마을 순찰",
+      "place": "PATROL",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": true,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        1170.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        90.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        300.0,
+        1170.0
+       ]
+      ]
+     },
+     {
+      "startMs": 34200000,
+      "endMs": 34452257,
+      "kind": "travel",
+      "origin": "task",
+      "label": "안부 확인 이동",
+      "place": null,
+      "fromPlace": "PATROL",
+      "toPlace": "HOME:P1",
+      "mode": "walk",
+      "metres": 294.3,
+      "requestId": "req-P1-1",
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        930.0
+       ]
+      ]
+     },
+     {
+      "startMs": 34452257,
+      "endMs": 34729740,
+      "kind": "travel",
+      "origin": "task",
+      "label": "안부 확인 이동",
+      "place": null,
+      "fromPlace": "HOME:P1",
+      "toPlace": "FARM",
+      "mode": "walk",
+      "metres": 323.7,
+      "requestId": "req-P1-1",
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        930.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        170.0,
+        810.0
+       ],
+       [
+        90.0,
+        810.0
+       ]
+      ]
+     },
+     {
+      "startMs": 34729740,
+      "endMs": 35029740,
+      "kind": "stay",
+      "origin": "task",
+      "label": "안부 확인",
+      "place": "FARM",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": "req-P1-1",
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       90.0,
+       810.0
+      ]
+     },
+     {
+      "startMs": 35029740,
+      "endMs": 35609931,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "일과 복귀",
+      "place": null,
+      "fromPlace": "FARM",
+      "toPlace": "HOME:P6",
+      "mode": "walk",
+      "metres": 676.9,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        90.0,
+        810.0
+       ],
+       [
+        170.0,
+        810.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        330.0
+       ]
+      ]
+     },
+     {
+      "startMs": 35609931,
+      "endMs": 36000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P6",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       330.0
+      ]
+     },
+     {
+      "startMs": 36000000,
+      "endMs": 36319526,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HALL",
+      "toPlace": "HOME:P6",
+      "mode": "walk",
+      "metres": 372.8,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        220.0,
+        630.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        330.0
+       ]
+      ]
+     },
+     {
+      "startMs": 36319526,
+      "endMs": 42900000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P6",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       330.0
+      ]
+     },
+     {
+      "startMs": 42900000,
+      "endMs": 43387697,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P6",
+      "toPlace": "FOOD",
+      "mode": "walk",
+      "metres": 569.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        330.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        400.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 43387697,
+      "endMs": 46800000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "마을식품 근무",
+      "place": "FOOD",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       400.0,
+       450.0
+      ]
+     },
+     {
+      "startMs": 46800000,
+      "endMs": 57600000,
+      "kind": "patrol",
+      "origin": "baseline",
+      "label": "마을 순찰",
+      "place": "PATROL",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": true,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        1170.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        90.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        300.0,
+        1170.0
+       ]
+      ]
+     },
+     {
+      "startMs": 57600000,
+      "endMs": 58087697,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "FOOD",
+      "toPlace": "HOME:P6",
+      "mode": "walk",
+      "metres": 569.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        400.0,
+        450.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        330.0
+       ]
+      ]
+     },
+     {
+      "startMs": 58087697,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P6",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       330.0
+      ]
+     }
+    ],
+    "planChanged": true,
+    "addedTaskMs": 1129740,
+    "contactsReceived": 1
+   },
+   "P7": {
+    "id": "P7",
+    "displayName": "P7",
+    "isVillageHead": false,
+    "group": "four",
+    "homeXY": [
+     300.0,
+     390.0
+    ],
+    "baseline": [
+     {
+      "startMs": 0,
+      "endMs": 19800000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P7",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       390.0
+      ]
+     },
+     {
+      "startMs": 19800000,
+      "endMs": 20405417,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P7",
+      "toPlace": "PORT",
+      "mode": "walk",
+      "metres": 706.3,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        120.0,
+        990.0
+       ]
+      ]
+     },
+     {
+      "startMs": 20405417,
+      "endMs": 21000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 21000000,
+      "endMs": 21217781,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "PORT",
+      "toPlace": "SEA",
+      "mode": "boat",
+      "metres": 363.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        120.0,
+        990.0
+       ],
+       [
+        470.0,
+        1110.0
+       ]
+      ]
+     },
+     {
+      "startMs": 21217781,
+      "endMs": 39000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "조업",
+      "place": "SEA",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       470.0,
+       1110.0
+      ]
+     },
+     {
+      "startMs": 39000000,
+      "endMs": 39217781,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "SEA",
+      "toPlace": "PORT",
+      "mode": "boat",
+      "metres": 363.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        470.0,
+        1110.0
+       ],
+       [
+        120.0,
+        990.0
+       ]
+      ]
+     },
+     {
+      "startMs": 39217781,
+      "endMs": 42720000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 42720000,
+      "endMs": 43409503,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "PORT",
+      "toPlace": "FOOD",
+      "mode": "walk",
+      "metres": 804.4,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        120.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        400.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 43409503,
+      "endMs": 46800000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "마을식품 근무",
+      "place": "FOOD",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       400.0,
+       450.0
+      ]
+     },
+     {
+      "startMs": 46800000,
+      "endMs": 47489503,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "FOOD",
+      "toPlace": "PORT",
+      "mode": "walk",
+      "metres": 804.4,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        400.0,
+        450.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        120.0,
+        990.0
+       ]
+      ]
+     },
+     {
+      "startMs": 47489503,
+      "endMs": 61200000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 61200000,
+      "endMs": 61931546,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "PORT",
+      "toPlace": "EXP",
+      "mode": "walk",
+      "metres": 853.5,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        120.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        400.0,
+        450.0
+       ],
+       [
+        450.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 61931546,
+      "endMs": 68400000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "어촌체험마을",
+      "place": "EXP",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       450.0,
+       450.0
+      ]
+     },
+     {
+      "startMs": 68400000,
+      "endMs": 68526129,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "EXP",
+      "toPlace": "HOME:P7",
+      "mode": "walk",
+      "metres": 147.1,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        450.0,
+        450.0
+       ],
+       [
+        400.0,
+        450.0
+       ],
+       [
+        300.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 68526129,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P7",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       390.0
+      ]
+     }
+    ],
+    "realized": [
+     {
+      "startMs": 0,
+      "endMs": 19800000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P7",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       390.0
+      ]
+     },
+     {
+      "startMs": 19800000,
+      "endMs": 20405417,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P7",
+      "toPlace": "PORT",
+      "mode": "walk",
+      "metres": 706.3,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        120.0,
+        990.0
+       ]
+      ]
+     },
+     {
+      "startMs": 20405417,
+      "endMs": 21000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 21000000,
+      "endMs": 21217781,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "PORT",
+      "toPlace": "SEA",
+      "mode": "boat",
+      "metres": 363.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        120.0,
+        990.0
+       ],
+       [
+        470.0,
+        1110.0
+       ]
+      ]
+     },
+     {
+      "startMs": 21217781,
+      "endMs": 39000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "조업",
+      "place": "SEA",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       470.0,
+       1110.0
+      ]
+     },
+     {
+      "startMs": 39000000,
+      "endMs": 39217781,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "SEA",
+      "toPlace": "PORT",
+      "mode": "boat",
+      "metres": 363.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        470.0,
+        1110.0
+       ],
+       [
+        120.0,
+        990.0
+       ]
+      ]
+     },
+     {
+      "startMs": 39217781,
+      "endMs": 42720000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 42720000,
+      "endMs": 43409503,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "PORT",
+      "toPlace": "FOOD",
+      "mode": "walk",
+      "metres": 804.4,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        120.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        400.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 43409503,
+      "endMs": 46800000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "마을식품 근무",
+      "place": "FOOD",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       400.0,
+       450.0
+      ]
+     },
+     {
+      "startMs": 46800000,
+      "endMs": 47489503,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "FOOD",
+      "toPlace": "PORT",
+      "mode": "walk",
+      "metres": 804.4,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        400.0,
+        450.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        120.0,
+        990.0
+       ]
+      ]
+     },
+     {
+      "startMs": 47489503,
+      "endMs": 61200000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 61200000,
+      "endMs": 61931546,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "PORT",
+      "toPlace": "EXP",
+      "mode": "walk",
+      "metres": 853.5,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        120.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        400.0,
+        450.0
+       ],
+       [
+        450.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 61931546,
+      "endMs": 68400000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "어촌체험마을",
+      "place": "EXP",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       450.0,
+       450.0
+      ]
+     },
+     {
+      "startMs": 68400000,
+      "endMs": 68526129,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "EXP",
+      "toPlace": "HOME:P7",
+      "mode": "walk",
+      "metres": 147.1,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        450.0,
+        450.0
+       ],
+       [
+        400.0,
+        450.0
+       ],
+       [
+        300.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 68526129,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P7",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       390.0
+      ]
+     }
+    ],
+    "planChanged": false,
+    "addedTaskMs": 0,
+    "contactsReceived": 0
+   },
+   "P8": {
+    "id": "P8",
+    "displayName": "P8",
+    "isVillageHead": false,
+    "group": "four",
+    "homeXY": [
+     300.0,
+     430.0
+    ],
+    "baseline": [
+     {
+      "startMs": 0,
+      "endMs": 19800000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P8",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       430.0
+      ]
+     },
+     {
+      "startMs": 19800000,
+      "endMs": 20405417,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P8",
+      "toPlace": "PORT",
+      "mode": "walk",
+      "metres": 706.3,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        120.0,
+        990.0
+       ]
+      ]
+     },
+     {
+      "startMs": 20405417,
+      "endMs": 21000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 21000000,
+      "endMs": 21217781,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "PORT",
+      "toPlace": "SEA",
+      "mode": "boat",
+      "metres": 363.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        120.0,
+        990.0
+       ],
+       [
+        470.0,
+        1110.0
+       ]
+      ]
+     },
+     {
+      "startMs": 21217781,
+      "endMs": 39000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "조업",
+      "place": "SEA",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       470.0,
+       1110.0
+      ]
+     },
+     {
+      "startMs": 39000000,
+      "endMs": 39217781,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "SEA",
+      "toPlace": "PORT",
+      "mode": "boat",
+      "metres": 363.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        470.0,
+        1110.0
+       ],
+       [
+        120.0,
+        990.0
+       ]
+      ]
+     },
+     {
+      "startMs": 39217781,
+      "endMs": 42720000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 42720000,
+      "endMs": 43409503,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "PORT",
+      "toPlace": "FOOD",
+      "mode": "walk",
+      "metres": 804.4,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        120.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        400.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 43409503,
+      "endMs": 46800000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "마을식품 근무",
+      "place": "FOOD",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       400.0,
+       450.0
+      ]
+     },
+     {
+      "startMs": 46800000,
+      "endMs": 47489503,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "FOOD",
+      "toPlace": "PORT",
+      "mode": "walk",
+      "metres": 804.4,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        400.0,
+        450.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        120.0,
+        990.0
+       ]
+      ]
+     },
+     {
+      "startMs": 47489503,
+      "endMs": 61200000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 61200000,
+      "endMs": 61931546,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "PORT",
+      "toPlace": "EXP",
+      "mode": "walk",
+      "metres": 853.5,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        120.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        400.0,
+        450.0
+       ],
+       [
+        450.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 61931546,
+      "endMs": 68400000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "어촌체험마을",
+      "place": "EXP",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       450.0,
+       450.0
+      ]
+     },
+     {
+      "startMs": 68400000,
+      "endMs": 68526129,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "EXP",
+      "toPlace": "HOME:P8",
+      "mode": "walk",
+      "metres": 147.1,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        450.0,
+        450.0
+       ],
+       [
+        400.0,
+        450.0
+       ],
+       [
+        300.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 68526129,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P8",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       430.0
+      ]
+     }
+    ],
+    "realized": [
+     {
+      "startMs": 0,
+      "endMs": 19800000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P8",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       430.0
+      ]
+     },
+     {
+      "startMs": 19800000,
+      "endMs": 20405417,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P8",
+      "toPlace": "PORT",
+      "mode": "walk",
+      "metres": 706.3,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        120.0,
+        990.0
+       ]
+      ]
+     },
+     {
+      "startMs": 20405417,
+      "endMs": 21000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 21000000,
+      "endMs": 21217781,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "PORT",
+      "toPlace": "SEA",
+      "mode": "boat",
+      "metres": 363.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        120.0,
+        990.0
+       ],
+       [
+        470.0,
+        1110.0
+       ]
+      ]
+     },
+     {
+      "startMs": 21217781,
+      "endMs": 39000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "조업",
+      "place": "SEA",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       470.0,
+       1110.0
+      ]
+     },
+     {
+      "startMs": 39000000,
+      "endMs": 39217781,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "SEA",
+      "toPlace": "PORT",
+      "mode": "boat",
+      "metres": 363.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        470.0,
+        1110.0
+       ],
+       [
+        120.0,
+        990.0
+       ]
+      ]
+     },
+     {
+      "startMs": 39217781,
+      "endMs": 42720000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 42720000,
+      "endMs": 43409503,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "PORT",
+      "toPlace": "FOOD",
+      "mode": "walk",
+      "metres": 804.4,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        120.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        400.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 43409503,
+      "endMs": 46800000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "마을식품 근무",
+      "place": "FOOD",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       400.0,
+       450.0
+      ]
+     },
+     {
+      "startMs": 46800000,
+      "endMs": 47489503,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "FOOD",
+      "toPlace": "PORT",
+      "mode": "walk",
+      "metres": 804.4,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        400.0,
+        450.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        120.0,
+        990.0
+       ]
+      ]
+     },
+     {
+      "startMs": 47489503,
+      "endMs": 61200000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 61200000,
+      "endMs": 61931546,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "PORT",
+      "toPlace": "EXP",
+      "mode": "walk",
+      "metres": 853.5,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        120.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        400.0,
+        450.0
+       ],
+       [
+        450.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 61931546,
+      "endMs": 68400000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "어촌체험마을",
+      "place": "EXP",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       450.0,
+       450.0
+      ]
+     },
+     {
+      "startMs": 68400000,
+      "endMs": 68526129,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "EXP",
+      "toPlace": "HOME:P8",
+      "mode": "walk",
+      "metres": 147.1,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        450.0,
+        450.0
+       ],
+       [
+        400.0,
+        450.0
+       ],
+       [
+        300.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 68526129,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P8",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       430.0
+      ]
+     }
+    ],
+    "planChanged": false,
+    "addedTaskMs": 0,
+    "contactsReceived": 0
+   },
+   "P9": {
+    "id": "P9",
+    "displayName": "P9",
+    "isVillageHead": false,
+    "group": "solo",
+    "homeXY": [
+     300.0,
+     1170.0
+    ],
+    "baseline": [
+     {
+      "startMs": 0,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P9",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       1170.0
+      ]
+     }
+    ],
+    "realized": [
+     {
+      "startMs": 0,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P9",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       1170.0
+      ]
+     }
+    ],
+    "planChanged": false,
+    "addedTaskMs": 0,
+    "contactsReceived": 0
+   },
+   "P10": {
+    "id": "P10",
+    "displayName": "P10",
+    "isVillageHead": false,
+    "group": "couple",
+    "homeXY": [
+     200.0,
+     90.0
+    ],
+    "baseline": [
+     {
+      "startMs": 0,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P10",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       200.0,
+       90.0
+      ]
+     }
+    ],
+    "realized": [
+     {
+      "startMs": 0,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P10",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       200.0,
+       90.0
+      ]
+     }
+    ],
+    "planChanged": false,
+    "addedTaskMs": 0,
+    "contactsReceived": 0
+   },
+   "P11": {
+    "id": "P11",
+    "displayName": "P11",
+    "isVillageHead": false,
+    "group": "couple",
+    "homeXY": [
+     200.0,
+     90.0
+    ],
+    "baseline": [
+     {
+      "startMs": 0,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P11",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       200.0,
+       90.0
+      ]
+     }
+    ],
+    "realized": [
+     {
+      "startMs": 0,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P11",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       200.0,
+       90.0
+      ]
+     }
+    ],
+    "planChanged": false,
+    "addedTaskMs": 0,
+    "contactsReceived": 0
+   },
+   "P12": {
+    "id": "P12",
+    "displayName": "P12",
+    "isVillageHead": false,
+    "group": "cousin",
+    "homeXY": [
+     300.0,
+     870.0
+    ],
+    "baseline": [
+     {
+      "startMs": 0,
+      "endMs": 29280000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P12",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       870.0
+      ]
+     },
+     {
+      "startMs": 29280000,
+      "endMs": 31080000,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P12",
+      "toPlace": "TOWN",
+      "mode": "offmap",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        870.0
+       ],
+       [
+        300.0,
+        -70.0
+       ]
+      ]
+     },
+     {
+      "startMs": 31080000,
+      "endMs": 64800000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "읍내",
+      "place": "TOWN",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       -70.0
+      ]
+     },
+     {
+      "startMs": 64800000,
+      "endMs": 66600000,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "TOWN",
+      "toPlace": "HOME:P12",
+      "mode": "offmap",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        -70.0
+       ],
+       [
+        300.0,
+        870.0
+       ]
+      ]
+     },
+     {
+      "startMs": 66600000,
+      "endMs": 67980000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P12",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       870.0
+      ]
+     },
+     {
+      "startMs": 67980000,
+      "endMs": 68669503,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P12",
+      "toPlace": "MIGA",
+      "mode": "walk",
+      "metres": 804.4,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        90.0
+       ],
+       [
+        200.0,
+        90.0
+       ]
+      ]
+     },
+     {
+      "startMs": 68669503,
+      "endMs": 75600000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "가게",
+      "place": "MIGA",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       200.0,
+       90.0
+      ]
+     },
+     {
+      "startMs": 75600000,
+      "endMs": 76289503,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "MIGA",
+      "toPlace": "HOME:P12",
+      "mode": "walk",
+      "metres": 804.4,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        200.0,
+        90.0
+       ],
+       [
+        300.0,
+        90.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
+       ]
+      ]
+     }
+    ],
+    "realized": [
+     {
+      "startMs": 0,
+      "endMs": 29280000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P12",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       870.0
+      ]
+     },
+     {
+      "startMs": 29280000,
+      "endMs": 31080000,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P12",
+      "toPlace": "TOWN",
+      "mode": "offmap",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        870.0
+       ],
+       [
+        300.0,
+        -70.0
+       ]
+      ]
+     },
+     {
+      "startMs": 31080000,
+      "endMs": 64800000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "읍내",
+      "place": "TOWN",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       -70.0
+      ]
+     },
+     {
+      "startMs": 64800000,
+      "endMs": 66600000,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "TOWN",
+      "toPlace": "HOME:P12",
+      "mode": "offmap",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        -70.0
+       ],
+       [
+        300.0,
+        870.0
+       ]
+      ]
+     },
+     {
+      "startMs": 66600000,
+      "endMs": 67980000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P12",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       870.0
+      ]
+     },
+     {
+      "startMs": 67980000,
+      "endMs": 68669503,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P12",
+      "toPlace": "MIGA",
+      "mode": "walk",
+      "metres": 804.4,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        90.0
+       ],
+       [
+        200.0,
+        90.0
+       ]
+      ]
+     },
+     {
+      "startMs": 68669503,
+      "endMs": 75600000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "가게",
+      "place": "MIGA",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       200.0,
+       90.0
+      ]
+     },
+     {
+      "startMs": 75600000,
+      "endMs": 76289503,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "MIGA",
+      "toPlace": "HOME:P12",
+      "mode": "walk",
+      "metres": 804.4,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        200.0,
+        90.0
+       ],
+       [
+        300.0,
+        90.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
+       ]
+      ]
+     }
+    ],
+    "planChanged": false,
+    "addedTaskMs": 0,
+    "contactsReceived": 0
+   }
+  },
+  "reservations": {
+   "seatsPerVehicle": 3,
+   "seatAssumption": "좌석 수는 원자료에 없다. ResourceRevision의 실험 가정값(3)이다.",
+   "reservations": [],
+   "activeCount": 0,
+   "cancelledCount": 0
+  }
+ },
+ "trace": [
+  {
+   "atMs": 34200000,
+   "decisionId": "dec-1",
+   "question": "응답이 없는 상태를 누가 어떻게 확인할 것인가",
+   "chosen": "P6",
+   "policyId": "policy-A-v1"
+  },
+  {
+   "atMs": 34452257,
+   "decisionId": "dec-2",
+   "question": "자택에 없을 때 확인을 계속할 것인가",
+   "chosen": "P6",
+   "policyId": "policy-A-v1"
+  }
+ ],
+ "decisions": [
+  {
+   "id": "dec-1",
+   "attemptId": "att-A-v1-97085304764f",
+   "simTimeMs": 34200000,
+   "policyId": "policy-A-v1",
+   "question": "응답이 없는 상태를 누가 어떻게 확인할 것인가",
+   "candidates": [
+    {
+     "actorId": "P1",
+     "included": false,
+     "reason": "확인 대상 본인"
+    },
+    {
+     "actorId": "P10",
+     "included": true,
+     "reason": "공개된 평소 일과상 이 시각 자택에 있다고 되어 있다. 이동 수단·접근 가능 여부는 확인 필요(unknown)"
+    },
+    {
+     "actorId": "P11",
+     "included": true,
+     "reason": "공개된 평소 일과상 이 시각 자택에 있다고 되어 있다. 이동 수단·접근 가능 여부는 확인 필요(unknown)"
+    },
+    {
+     "actorId": "P12",
+     "included": false,
+     "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
+    },
+    {
+     "actorId": "P2",
+     "included": false,
+     "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
+    },
+    {
+     "actorId": "P3",
+     "included": false,
+     "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
+    },
+    {
+     "actorId": "P4",
+     "included": false,
+     "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
+    },
+    {
+     "actorId": "P5",
+     "included": false,
+     "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
+    },
+    {
+     "actorId": "P6",
+     "included": true,
+     "reason": "이장 역할로 등록되어 있어 일과와 무관하게 후보로 남긴다. 실제로 갈 수 있는지는 본인 응답으로만 알 수 있다"
+    },
+    {
+     "actorId": "P7",
+     "included": false,
+     "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
+    },
+    {
+     "actorId": "P8",
+     "included": false,
+     "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
+    },
+    {
+     "actorId": "P9",
+     "included": true,
+     "reason": "공개된 평소 일과상 이 시각 자택에 있다고 되어 있다. 이동 수단·접근 가능 여부는 확인 필요(unknown)"
+    }
+   ],
+   "chosen": "P6",
+   "rationale": "이장은 이 마을에서 안부 확인을 실제로 해 온 사람이고, 확인만 요청하고 판단은 넘기지 않는다. 공개 일과로는 지금 갈 수 있는지 알 수 없으므로 요청을 보내고 본인의 응답을 기다린다.",
+   "knownFacts": [
+    "P1에게 1회 연락했고 응답이 없다",
+    "MEDial은 P1의 현재 위치를 알지 못한다"
+   ],
+   "observationIds": [
+    "obs-1"
+   ],
+   "excludedByPermission": []
+  },
+  {
+   "id": "dec-2",
+   "attemptId": "att-A-v1-97085304764f",
+   "simTimeMs": 34452257,
+   "policyId": "policy-A-v1",
+   "question": "자택에 없을 때 확인을 계속할 것인가",
+   "candidates": [
+    {
+     "actorId": "P6",
+     "included": true,
+     "reason": "이미 현장에 있고 본인이 확인처를 제안했다"
+    }
+   ],
+   "chosen": "P6",
+   "rationale": "자택에서 확인되지 않았다는 것도 위치와 상태 어느 쪽도 확정하지 않는다. 이장이 제안한 확인처(FARM)는 MEDial이 갖고 있지 않던 지역 지식이며 근거는 평소 일과에 대한 지역 지식이다.",
+   "knownFacts": [
+    "P1에게 1회 연락했고 응답이 없다",
+    "MEDial은 P1의 현재 위치를 알지 못한다"
+   ],
+   "observationIds": [
+    "obs-1",
+    "obs-3",
+    "obs-5"
+   ],
+   "excludedByPermission": []
+  }
+ ],
+ "reviews": [
+  {
+   "id": "rev-1",
+   "attemptId": "att-A-v1-97085304764f",
+   "actorId": "P1",
+   "source": "simulated",
+   "scope": "day_end_retrospective",
+   "experiencedEventIds": [
+    "ev-2",
+    "ev-4",
+    "ev-21",
+    "ev-23"
+   ],
+   "dimensions": [
+    {
+     "key": "resolution",
+     "assessment": "positive",
+     "reason": "이 사람이 관련된 확인이 종료되는 것을 경험했다"
+    },
+    {
+     "key": "time_respected",
+     "assessment": "unknown",
+     "reason": "이 시도에서 시간을 쓴 기록이 없다"
+    },
+    {
+     "key": "choice",
+     "assessment": "unknown",
+     "reason": "선택지가 주어지는 상황을 경험하지 않았다"
+    },
+    {
+     "key": "disclosure",
+     "assessment": "unknown",
+     "reason": "다른 사람 사정을 1건 전달받았다. 알고 싶었는지는 본인만 답할 수 있다"
+    }
+   ],
+   "assessment": "positive",
+   "comment": "규칙 기반 시뮬레이션 경험 평가이며 실제 주민 만족도가 아니다.",
+   "unknowns": [
+    "실제 본인 평가",
+    "실제 감정 반응"
+   ]
+  },
+  {
+   "id": "rev-10",
+   "attemptId": "att-A-v1-97085304764f",
+   "actorId": "P7",
+   "source": "simulated",
+   "scope": "day_end_retrospective",
+   "experiencedEventIds": [],
+   "dimensions": [],
+   "assessment": "unknown",
+   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
+   "unknowns": [
+    "경험 없음",
+    "실제 본인 평가"
+   ]
+  },
+  {
+   "id": "rev-11",
+   "attemptId": "att-A-v1-97085304764f",
+   "actorId": "P8",
+   "source": "simulated",
+   "scope": "day_end_retrospective",
+   "experiencedEventIds": [],
+   "dimensions": [],
+   "assessment": "unknown",
+   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
+   "unknowns": [
+    "경험 없음",
+    "실제 본인 평가"
+   ]
+  },
+  {
+   "id": "rev-12",
+   "attemptId": "att-A-v1-97085304764f",
+   "actorId": "P9",
+   "source": "simulated",
+   "scope": "day_end_retrospective",
+   "experiencedEventIds": [],
+   "dimensions": [],
+   "assessment": "unknown",
+   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
+   "unknowns": [
+    "경험 없음",
+    "실제 본인 평가"
+   ]
+  },
+  {
+   "id": "rev-13",
+   "attemptId": "att-A-v1-97085304764f",
+   "actorId": "HC_NURSE",
+   "source": "simulated",
+   "scope": "day_end_retrospective",
+   "experiencedEventIds": [],
+   "dimensions": [],
+   "assessment": "unknown",
+   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
+   "unknowns": [
+    "경험 없음",
+    "실제 본인 평가"
+   ]
+  },
+  {
+   "id": "rev-2",
+   "attemptId": "att-A-v1-97085304764f",
+   "actorId": "P10",
+   "source": "simulated",
+   "scope": "day_end_retrospective",
+   "experiencedEventIds": [],
+   "dimensions": [],
+   "assessment": "unknown",
+   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
+   "unknowns": [
+    "경험 없음",
+    "실제 본인 평가"
+   ]
+  },
+  {
+   "id": "rev-3",
+   "attemptId": "att-A-v1-97085304764f",
+   "actorId": "P11",
+   "source": "simulated",
+   "scope": "day_end_retrospective",
+   "experiencedEventIds": [],
+   "dimensions": [],
+   "assessment": "unknown",
+   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
+   "unknowns": [
+    "경험 없음",
+    "실제 본인 평가"
+   ]
+  },
+  {
+   "id": "rev-4",
+   "attemptId": "att-A-v1-97085304764f",
+   "actorId": "P12",
+   "source": "simulated",
+   "scope": "day_end_retrospective",
+   "experiencedEventIds": [],
+   "dimensions": [],
+   "assessment": "unknown",
+   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
+   "unknowns": [
+    "경험 없음",
+    "실제 본인 평가"
+   ]
+  },
+  {
+   "id": "rev-5",
+   "attemptId": "att-A-v1-97085304764f",
+   "actorId": "P2",
+   "source": "simulated",
+   "scope": "day_end_retrospective",
+   "experiencedEventIds": [],
+   "dimensions": [],
+   "assessment": "unknown",
+   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
+   "unknowns": [
+    "경험 없음",
+    "실제 본인 평가"
+   ]
+  },
+  {
+   "id": "rev-6",
+   "attemptId": "att-A-v1-97085304764f",
+   "actorId": "P3",
+   "source": "simulated",
+   "scope": "day_end_retrospective",
+   "experiencedEventIds": [],
+   "dimensions": [],
+   "assessment": "unknown",
+   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
+   "unknowns": [
+    "경험 없음",
+    "실제 본인 평가"
+   ]
+  },
+  {
+   "id": "rev-7",
+   "attemptId": "att-A-v1-97085304764f",
+   "actorId": "P4",
+   "source": "simulated",
+   "scope": "day_end_retrospective",
+   "experiencedEventIds": [],
+   "dimensions": [],
+   "assessment": "unknown",
+   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
+   "unknowns": [
+    "경험 없음",
+    "실제 본인 평가"
+   ]
+  },
+  {
+   "id": "rev-8",
+   "attemptId": "att-A-v1-97085304764f",
+   "actorId": "P5",
+   "source": "simulated",
+   "scope": "day_end_retrospective",
+   "experiencedEventIds": [],
+   "dimensions": [],
+   "assessment": "unknown",
+   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
+   "unknowns": [
+    "경험 없음",
+    "실제 본인 평가"
+   ]
+  },
+  {
+   "id": "rev-9",
+   "attemptId": "att-A-v1-97085304764f",
+   "actorId": "P6",
+   "source": "simulated",
+   "scope": "day_end_retrospective",
+   "experiencedEventIds": [
+    "ev-8",
+    "ev-9",
+    "ev-10",
+    "ev-11",
+    "ev-12",
+    "ev-13",
+    "ev-14",
+    "ev-15",
+    "ev-17",
+    "ev-18",
+    "ev-19",
+    "ev-20",
+    "ev-21",
+    "ev-22",
+    "ev-23"
+   ],
+   "dimensions": [
+    {
+     "key": "resolution",
+     "assessment": "positive",
+     "reason": "이 사람이 관련된 확인이 종료되는 것을 경험했다"
+    },
+    {
+     "key": "time_respected",
+     "assessment": "mixed",
+     "reason": "일과를 19분 중단하고 이동했다. 부담의 크기는 본인 확인이 필요하다"
+    },
+    {
+     "key": "choice",
+     "assessment": "positive",
+     "reason": "수락·거절·연기 중에서 고를 수 있는 요청을 받았다"
+    },
+    {
+     "key": "disclosure",
+     "assessment": "unknown",
+     "reason": "다른 사람 사정을 1건 전달받았다. 알고 싶었는지는 본인만 답할 수 있다"
+    }
+   ],
+   "assessment": "mixed",
+   "comment": "규칙 기반 시뮬레이션 경험 평가이며 실제 주민 만족도가 아니다.",
+   "unknowns": [
+    "실제 본인 평가",
+    "실제 감정 반응"
+   ]
+  }
+ ],
+ "deck": {
+  "id": "deck-p1-no-response-v1",
+  "label": "P1 09:30 안부 확인 무응답",
+  "classification": "source_adapted",
+  "assumptions": [
+   "09:30 정기 안부 문진이 발송된다는 것은 실험 가정이다. 실제 운영 시각이 아니다.",
+   "무응답은 응급상황이 아니다. 상태 악화 신호는 이 deck에 들어 있지 않다.",
+   "P1이 이 시각 밭에 있다는 것은 원본 일과에서 온 세계 사실이며, MEDial은 알 수 없다.",
+   "기관 가용성(근무시간·검토시간·대기열)은 실험 가정이며 남해군 실제 인력 통계가 아니다.",
+   "장소별 전화 응답 여부는 연구자 가정이다. 밭 미응답만 원본 사건에서 왔다."
+  ],
+  "horizonMs": 72000000,
+  "events": [
+   {
+    "id": "exo-checkin-1",
+    "simTimeMs": 34200000,
+    "type": "contact.attempted",
+    "subjectId": "P1",
+    "prohibitedInferences": [
+     "무응답을 의식 저하·낙상·응급으로 해석하지 말 것",
+     "무응답을 비협조나 거절로 기록하지 말 것"
+    ]
+   }
+  ],
+  "note": "hiddenTruth는 연구자 전용이며 API로 내보내지 않는다."
+ },
+ "resources": {
+  "id": "assumed-resources-v1",
+  "label": "연구용 보건소 자원 가정",
+  "staffCount": 1,
+  "shiftStartMs": 32400000,
+  "shiftEndMs": 64800000,
+  "reviewMinutes": 20,
+  "callMinutes": 5,
+  "visitTravelMinutes": 25,
+  "visitMinutes": 20,
+  "initialQueueDepth": 1,
+  "assumedVehicleSeats": 3,
+  "assumptions": [
+   "담당자 1명, 09:00-18:00 근무는 연구용 가정이다.",
+   "검토 20분·통화 5분·방문 왕복 25분은 연구용 가정이며 측정값이 아니다.",
+   "대기열에 이미 1건이 있다고 가정한다. 실제 접수량이 아니다.",
+   "보건소 좌표가 확인되지 않아 지도 밖 연계 기관 노드로 둔다."
+  ]
+ },
+ "lineageNote": "최초 실행."
+}

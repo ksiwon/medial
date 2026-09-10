@@ -1,0 +1,482 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MEDial minimum design contracts v0.1",
+  "description": "Design draft, not implemented runtime. Cross-reference, permissions and event payload invariants need engine validation.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "PolicyRevision"
+        },
+        "data": {
+          "$ref": "#/$defs/PolicyRevision"
+        }
+      },
+      "required": [
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "Attempt"
+        },
+        "data": {
+          "$ref": "#/$defs/Attempt"
+        }
+      },
+      "required": [
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "ActionProposal"
+        },
+        "data": {
+          "$ref": "#/$defs/ActionProposal"
+        }
+      },
+      "required": [
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "DomainEvent"
+        },
+        "data": {
+          "$ref": "#/$defs/DomainEvent"
+        }
+      },
+      "required": [
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "ExperienceReview"
+        },
+        "data": {
+          "$ref": "#/$defs/ExperienceReview"
+        }
+      },
+      "required": [
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "ScenarioDeck"
+        },
+        "data": {
+          "$ref": "#/$defs/ScenarioDeck"
+        }
+      },
+      "required": [
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    }
+  ],
+  "$defs": {
+    "PolicyRevision": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parentId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "coreItem": {
+          "type": "string",
+          "minLength": 1
+        },
+        "changes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "contactStrategy": {
+          "enum": [
+            "head_first",
+            "retry_then_clinic"
+          ]
+        },
+        "assumptionRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "id",
+        "parentId",
+        "coreItem",
+        "changes",
+        "contactStrategy",
+        "assumptionRefs"
+      ],
+      "additionalProperties": false
+    },
+    "Attempt": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parentId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "policyId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scenarioDeckId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "personaRevisionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "baselineRevisionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resourceRevisionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "mode": {
+          "enum": [
+            "source_replay",
+            "experiment"
+          ]
+        },
+        "status": {
+          "enum": [
+            "created",
+            "running",
+            "paused",
+            "completed",
+            "failed"
+          ]
+        },
+        "engineVersion": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "parentId",
+        "policyId",
+        "scenarioDeckId",
+        "personaRevisionId",
+        "baselineRevisionId",
+        "resourceRevisionId",
+        "seed",
+        "mode",
+        "status",
+        "engineVersion"
+      ],
+      "additionalProperties": false
+    },
+    "ActionProposal": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attemptId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actorId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "simTimeMs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "action": {
+          "enum": [
+            "contact",
+            "request_visit",
+            "accept",
+            "decline",
+            "defer",
+            "reserve",
+            "cancel",
+            "handoff"
+          ]
+        },
+        "targetActorId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "observationIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "evidenceRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "id",
+        "attemptId",
+        "actorId",
+        "simTimeMs",
+        "action",
+        "targetActorId",
+        "observationIds",
+        "evidenceRefs"
+      ],
+      "additionalProperties": false
+    },
+    "DomainEvent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attemptId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "simTimeMs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actorId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "causationId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "correlationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "visibility": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "committed": {
+          "const": true
+        },
+        "payload": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "attemptId",
+        "seq",
+        "simTimeMs",
+        "type",
+        "actorId",
+        "causationId",
+        "correlationId",
+        "visibility",
+        "committed",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    "ExperienceReview": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attemptId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actorId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "enum": [
+            "simulated",
+            "human",
+            "researcher"
+          ]
+        },
+        "experiencedEventIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "assessment": {
+          "enum": [
+            "positive",
+            "mixed",
+            "negative",
+            "unknown"
+          ]
+        },
+        "comment": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unknowns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "id",
+        "attemptId",
+        "actorId",
+        "source",
+        "experiencedEventIds",
+        "assessment",
+        "comment",
+        "unknowns"
+      ],
+      "additionalProperties": false
+    },
+    "ScenarioDeck": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "classification": {
+          "enum": [
+            "source_adapted",
+            "plausible_extension",
+            "stress_test"
+          ]
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "simTimeMs": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "subjectId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "initiallyVisibleTo": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "required": [
+              "id",
+              "simTimeMs",
+              "type",
+              "subjectId",
+              "initiallyVisibleTo"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "id",
+        "classification",
+        "assumptions",
+        "events"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

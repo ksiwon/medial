@@ -41,8 +41,8 @@ export default function CompanionOnboarding() {
       <VirtualDoctor state="speaking" size={84} showHalo={false} />
       <Title>저는 메디예요</Title>
       <Steps>
-        <Step><Num>1</Num><StepText>아래 <b>마이크 버튼을 누른 채로</b> 말씀하세요.</StepText></Step>
-        <Step><Num>2</Num><StepText>말이 끝나면 손을 <b>떼세요</b>. 그럼 제가 들어요.</StepText></Step>
+        <Step><Num>1</Num><StepText>아래 <b>마이크 버튼을 누르고</b> 말씀하세요.</StepText></Step>
+        <Step><Num>2</Num><StepText>다 말하셨으면 <b>버튼을 다시 한 번</b> 눌러 주세요.</StepText></Step>
         <Step><Num>3</Num><StepText>글씨가 작으면 위의 <b>‘가가’</b>로 키우세요.</StepText></Step>
       </Steps>
       <StartBtn onClick={() => useAppStore.getState().setOnboardingSeen(true)}>

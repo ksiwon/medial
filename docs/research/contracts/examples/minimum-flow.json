@@ -1,0 +1,134 @@
+[
+  {
+    "kind": "PolicyRevision",
+    "data": {
+      "id": "policy-A-v1",
+      "parentId": null,
+      "coreItem": "안부 확인 조율",
+      "changes": [],
+      "contactStrategy": "head_first",
+      "assumptionRefs": [
+        "assumption-role-availability"
+      ]
+    }
+  },
+  {
+    "kind": "PolicyRevision",
+    "data": {
+      "id": "policy-B-v1",
+      "parentId": "policy-A-v1",
+      "coreItem": "안부 확인 조율",
+      "changes": [
+        "미응답 연락 경로 변경"
+      ],
+      "contactStrategy": "retry_then_clinic",
+      "assumptionRefs": [
+        "assumption-role-availability"
+      ]
+    }
+  },
+  {
+    "kind": "ScenarioDeck",
+    "data": {
+      "id": "deck-no-response-v1",
+      "classification": "source_adapted",
+      "assumptions": [
+        "09:30 연락 시각과 대응 가능한 기관 자원은 실험 가정. 미응답은 응급상황 확정이 아님."
+      ],
+      "events": [
+        {
+          "id": "exogenous-1",
+          "simTimeMs": 34200000,
+          "type": "contact.no_response",
+          "subjectId": "P1",
+          "initiallyVisibleTo": [
+            "MEDial"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "kind": "Attempt",
+    "data": {
+      "id": "attempt-A",
+      "parentId": null,
+      "policyId": "policy-A-v1",
+      "scenarioDeckId": "deck-no-response-v1",
+      "personaRevisionId": "synthetic-personas-v1",
+      "baselineRevisionId": "synthetic-baseline-v1",
+      "resourceRevisionId": "assumed-resources-v1",
+      "seed": 17,
+      "mode": "experiment",
+      "status": "created",
+      "engineVersion": "not-implemented"
+    }
+  },
+  {
+    "kind": "Attempt",
+    "data": {
+      "id": "attempt-B",
+      "parentId": null,
+      "policyId": "policy-B-v1",
+      "scenarioDeckId": "deck-no-response-v1",
+      "personaRevisionId": "synthetic-personas-v1",
+      "baselineRevisionId": "synthetic-baseline-v1",
+      "resourceRevisionId": "assumed-resources-v1",
+      "seed": 17,
+      "mode": "experiment",
+      "status": "created",
+      "engineVersion": "not-implemented"
+    }
+  },
+  {
+    "kind": "ActionProposal",
+    "data": {
+      "id": "proposal-1",
+      "attemptId": "attempt-A",
+      "actorId": "MEDial",
+      "simTimeMs": 34200000,
+      "action": "contact",
+      "targetActorId": "P6",
+      "observationIds": [
+        "observation-no-response-1"
+      ],
+      "evidenceRefs": []
+    }
+  },
+  {
+    "kind": "DomainEvent",
+    "data": {
+      "id": "event-1",
+      "attemptId": "attempt-A",
+      "seq": 1,
+      "simTimeMs": 34200000,
+      "type": "contact.no_response",
+      "actorId": "P1",
+      "causationId": null,
+      "correlationId": "quest-1",
+      "visibility": [
+        "MEDial"
+      ],
+      "committed": true,
+      "payload": {
+        "scenarioEventId": "exogenous-1",
+        "clinicalState": "unknown"
+      }
+    }
+  },
+  {
+    "kind": "ExperienceReview",
+    "data": {
+      "id": "review-1",
+      "attemptId": "attempt-A",
+      "actorId": "P1",
+      "source": "simulated",
+      "experiencedEventIds": [],
+      "assessment": "unknown",
+      "comment": "경험한 후속 사건이 없어 평가하지 않음.",
+      "unknowns": [
+        "실제 주민 평가"
+      ]
+    }
+  }
+]

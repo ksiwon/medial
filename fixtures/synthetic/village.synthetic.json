@@ -1,0 +1,2469 @@
+{
+  "dataIssues": [
+    {
+      "action": "2026-09-10 두 문서의 방위 표현을 남북으로 정정했다. 거리 값은 원래 맞았으므로 바꾸지 않았다.",
+      "claim": "분석 문서(시골컨텍스트_논증.md, 연구_파이프라인.md)가 마을의 긴 축을 '동서 1.11 km'로 기술했다.",
+      "id": "DI-001",
+      "observed": "측정값은 남북이다. P9 자택→미가식당 방위 354.7도(북), 1064 m. 마을 분포는 동서 353 m · 남북 1059 m다. 원본 시뮬레이터 서술도 'P9는 마을 남쪽 끝', '읍내로 가는 길은 북쪽'이라 적어 측정값과 일치한다.",
+      "severity": "note",
+      "status": "resolved"
+    },
+    {
+      "action": "실험 baseline에는 overlay를 넣지 않는다. source-replay 모드에서만 재생한다.",
+      "claim": "원본 plan에는 이미 수행된 퀘스트 결과가 포함되어 있다.",
+      "id": "DI-002",
+      "observed": "12개 단계를 task overlay로 분리했다.",
+      "severity": "important",
+      "status": "open"
+    },
+    {
+      "action": "P7-P8 사이 소로 같은 실제 지름길이 필요하면 근거를 붙여 명시적 간선으로 추가한다.",
+      "claim": "원본 엔진은 직선거리가 짧고 도로 우회가 길면 도로 밖 지름길을 만든다(SHORTCUT_M/DETOUR_X).",
+      "id": "DI-003",
+      "observed": "이 규칙은 이식하지 않았다. 도로망에 없는 연결을 자동 생성하지 않는다.",
+      "severity": "important",
+      "status": "open"
+    },
+    {
+      "action": "지도 밖 이동시간은 가정으로 표시하고 결과 해석에서 분리한다.",
+      "claim": "읍내(TOWN) 왕복은 원본에서 경로 계산 없이 30분 고정값이다.",
+      "id": "DI-004",
+      "observed": "지도 밖 노드이며 측정된 이동시간이 아니다.",
+      "severity": "note",
+      "status": "open"
+    },
+    {
+      "action": "접근 마지막 구간은 도보 가정으로 처리한다.",
+      "claim": "모든 자택·시설이 도로 노드 위에 있다고 가정할 수 없다.",
+      "id": "DI-006",
+      "observed": "도로에서 5 px 이상 떨어진 지점: ['P12', 'P2', 'P3', 'P4', 'P5', 'P7', 'P8', 'SEA']",
+      "severity": "note",
+      "status": "open"
+    }
+  ],
+  "dataSource": "synthetic",
+  "geometry": {
+    "frame": {
+      "height": 1230.0,
+      "mPerPx": 0.981,
+      "width": 490.0
+    },
+    "northUpTransform": {
+      "confidence": "derived-from-source-statement",
+      "derivation": "원본이 북쪽=오른쪽(+x), 바다=아래(+y)라고 명시. 90도 반시계 회전하면 북쪽이 위, 바다가 동쪽이 된다. 읍내 진출로(TOWNEXIT)가 회전 후 북북서에 놓이는 것이 원본 서술('남해읍은 북서쪽')과 일치해 교차 확인됨.",
+      "formula": "x_up = y_src ; y_up = source_width - x_src"
+    },
+    "orientationChecks": {
+      "crossChecks": [
+        "원본 서술 '지도는 북쪽이 오른쪽, 바다가 아래입니다'에서 회전을 유도했다.",
+        "회전 후 읍내 진출로가 북북서(349도)에 놓여 원본 서술 '남해읍은 북서쪽'과 일치한다.",
+        "회전 후 은점항이 동쪽(79도)에 놓여 원본 서술 '바다가 아래'(회전 전 기준)와 일치한다.",
+        "원본 사건 서술 'P9는 마을 남쪽 끝에 산다'와 측정 방위(5도, 북)가 일치한다."
+      ],
+      "eastWestExtentM": 353,
+      "longAxis": "north-south",
+      "northSouthExtentM": 1059,
+      "pairs": {
+        "P9자택→마을회관": {
+          "bearingDeg": 351.6,
+          "compass": "북",
+          "metres": 536
+        },
+        "P9자택→미가식당": {
+          "bearingDeg": 354.7,
+          "compass": "북",
+          "metres": 1064
+        },
+        "마을회관→은점항": {
+          "bearingDeg": 195.5,
+          "compass": "남남서",
+          "metres": 367
+        },
+        "마을회관→읍내방향": {
+          "bearingDeg": 8.4,
+          "compass": "북",
+          "metres": 536
+        }
+      }
+    },
+    "sourceFrame": {
+      "height": 490.0,
+      "mPerPx": 0.981,
+      "northAxis": "+x",
+      "seaAxis": "+y",
+      "sourceQuote": "합성 데이터 (원본 서술 없음)",
+      "width": 1230.0
+    },
+    "viewBox": [
+      66.0,
+      66.0,
+      428.0,
+      1128.0
+    ]
+  },
+  "groups": {
+    "couple": {
+      "fg": "#FFFFFF",
+      "fill": "#4E6138",
+      "label": "합성 부부",
+      "note": "합성 데이터"
+    },
+    "cousin": {
+      "fg": "#FFFFFF",
+      "fill": "#9A7530",
+      "label": "합성 친척",
+      "note": "합성 데이터"
+    },
+    "four": {
+      "fg": "#FFFFFF",
+      "fill": "#23486B",
+      "label": "합성 4인",
+      "note": "합성 데이터"
+    },
+    "pair": {
+      "fg": "#FFFFFF",
+      "fill": "#8C4A3A",
+      "label": "합성 2인",
+      "note": "합성 데이터"
+    },
+    "solo": {
+      "fg": "#15222E",
+      "fill": "#FFFFFF",
+      "label": "합성 단독",
+      "note": "합성 데이터"
+    }
+  },
+  "homes": {
+    "P1": {
+      "anchor": {
+        "node": "300.0,930.0",
+        "offsetPx": 0.0
+      },
+      "provenance": "source",
+      "x": 300.0,
+      "y": 930.0
+    },
+    "P10": {
+      "anchor": {
+        "node": "200.0,90.0",
+        "offsetPx": 0.0
+      },
+      "provenance": "source",
+      "x": 200.0,
+      "y": 90.0
+    },
+    "P11": {
+      "anchor": {
+        "node": "200.0,90.0",
+        "offsetPx": 0.0
+      },
+      "provenance": "source",
+      "x": 200.0,
+      "y": 90.0
+    },
+    "P12": {
+      "anchor": {
+        "node": "300.0,810.0",
+        "offsetPx": 60.0
+      },
+      "provenance": "source",
+      "x": 300.0,
+      "y": 870.0
+    },
+    "P2": {
+      "anchor": {
+        "node": "300.0,630.0",
+        "offsetPx": 60.0
+      },
+      "provenance": "source",
+      "x": 300.0,
+      "y": 570.0
+    },
+    "P3": {
+      "anchor": {
+        "node": "300.0,810.0",
+        "offsetPx": 60.0
+      },
+      "provenance": "source",
+      "x": 300.0,
+      "y": 750.0
+    },
+    "P4": {
+      "anchor": {
+        "node": "300.0,630.0",
+        "offsetPx": 60.0
+      },
+      "provenance": "source",
+      "x": 300.0,
+      "y": 690.0
+    },
+    "P5": {
+      "anchor": {
+        "node": "300.0,450.0",
+        "offsetPx": 60.0
+      },
+      "provenance": "source",
+      "x": 300.0,
+      "y": 510.0
+    },
+    "P6": {
+      "anchor": {
+        "node": "300.0,330.0",
+        "offsetPx": 0.0
+      },
+      "provenance": "source",
+      "x": 300.0,
+      "y": 330.0
+    },
+    "P7": {
+      "anchor": {
+        "node": "300.0,450.0",
+        "offsetPx": 60.0
+      },
+      "provenance": "source",
+      "x": 300.0,
+      "y": 390.0
+    },
+    "P8": {
+      "anchor": {
+        "node": "300.0,450.0",
+        "offsetPx": 20.0
+      },
+      "provenance": "source",
+      "x": 300.0,
+      "y": 430.0
+    },
+    "P9": {
+      "anchor": {
+        "node": "300.0,1170.0",
+        "offsetPx": 0.0
+      },
+      "provenance": "source",
+      "x": 300.0,
+      "y": 1170.0
+    }
+  },
+  "namedRouteDistances": {
+    "FARM>P1": {
+      "deltaM": 0.0,
+      "graphM": 323.7,
+      "sourceM": 323.7
+    },
+    "HALL>P6": {
+      "deltaM": 0.0,
+      "graphM": 372.8,
+      "sourceM": 372.8
+    },
+    "MAIN": {
+      "deltaM": -0.0,
+      "graphM": 1059.5,
+      "sourceM": 1059.5
+    },
+    "P1>FARM": {
+      "deltaM": 0.0,
+      "graphM": 323.7,
+      "sourceM": 323.7
+    },
+    "P6>HALL": {
+      "deltaM": 0.0,
+      "graphM": 372.8,
+      "sourceM": 372.8
+    },
+    "SPUR_E": {
+      "deltaM": 0.0,
+      "graphM": 147.1,
+      "sourceM": 147.1
+    },
+    "SPUR_F": {
+      "deltaM": 0.0,
+      "graphM": 206.0,
+      "sourceM": 206.0
+    },
+    "SPUR_H": {
+      "deltaM": 0.0,
+      "graphM": 78.5,
+      "sourceM": 78.5
+    },
+    "SPUR_M": {
+      "deltaM": 0.0,
+      "graphM": 98.1,
+      "sourceM": 98.1
+    },
+    "SPUR_W": {
+      "deltaM": 0.0,
+      "graphM": 176.6,
+      "sourceM": 176.6
+    }
+  },
+  "patrol": [
+    [
+      300.0,
+      1170.0
+    ],
+    [
+      300.0,
+      990.0
+    ],
+    [
+      300.0,
+      810.0
+    ],
+    [
+      300.0,
+      630.0
+    ],
+    [
+      300.0,
+      450.0
+    ],
+    [
+      300.0,
+      270.0
+    ],
+    [
+      300.0,
+      90.0
+    ],
+    [
+      300.0,
+      270.0
+    ],
+    [
+      300.0,
+      450.0
+    ],
+    [
+      300.0,
+      630.0
+    ],
+    [
+      300.0,
+      810.0
+    ],
+    [
+      300.0,
+      990.0
+    ],
+    [
+      300.0,
+      1170.0
+    ]
+  ],
+  "places": {
+    "EXP": {
+      "anchor": {
+        "node": "450.0,450.0",
+        "offsetPx": 0.0
+      },
+      "id": "EXP",
+      "label": "합성 체험마을",
+      "provenance": "source",
+      "x": 450.0,
+      "y": 450.0
+    },
+    "FARM": {
+      "anchor": {
+        "node": "90.0,810.0",
+        "offsetPx": 0.0
+      },
+      "id": "FARM",
+      "label": "합성 밭",
+      "provenance": "source",
+      "x": 90.0,
+      "y": 810.0
+    },
+    "FOOD": {
+      "anchor": {
+        "node": "400.0,450.0",
+        "offsetPx": 0.0
+      },
+      "id": "FOOD",
+      "label": "합성 식품공장",
+      "provenance": "source",
+      "x": 400.0,
+      "y": 450.0
+    },
+    "HALL": {
+      "anchor": {
+        "node": "220.0,630.0",
+        "offsetPx": 0.0
+      },
+      "id": "HALL",
+      "label": "합성 마을회관",
+      "provenance": "source",
+      "x": 220.0,
+      "y": 630.0
+    },
+    "MIGA": {
+      "anchor": {
+        "node": "200.0,90.0",
+        "offsetPx": 0.0
+      },
+      "id": "MIGA",
+      "label": "합성 식당",
+      "provenance": "source",
+      "x": 200.0,
+      "y": 90.0
+    },
+    "PORT": {
+      "anchor": {
+        "node": "120.0,990.0",
+        "offsetPx": 0.0
+      },
+      "id": "PORT",
+      "label": "합성 항구",
+      "provenance": "source",
+      "x": 120.0,
+      "y": 990.0
+    },
+    "SEA": {
+      "anchor": {
+        "node": "300.0,1170.0",
+        "offsetPx": 180.28
+      },
+      "id": "SEA",
+      "label": "합성 조업 구역",
+      "offRoad": true,
+      "provenance": "source",
+      "x": 470.0,
+      "y": 1110.0
+    },
+    "TOWN": {
+      "anchor": {
+        "node": "300.0,90.0",
+        "offsetPx": 160.0
+      },
+      "id": "TOWN",
+      "label": "합성 읍내",
+      "offMap": true,
+      "provenance": "source",
+      "x": 300.0,
+      "y": -70.0
+    },
+    "TOWNEXIT": {
+      "anchor": {
+        "node": "300.0,90.0",
+        "offsetPx": 0.0
+      },
+      "id": "TOWNEXIT",
+      "label": "합성 읍내 방향",
+      "provenance": "source",
+      "x": 300.0,
+      "y": 90.0
+    }
+  },
+  "provenance": {
+    "generatedAt": "2026-09-10T07:07:36+00:00",
+    "importerVersion": "village-import/1.1.0",
+    "note": "합성 데이터입니다. 실제 주민·좌표·일과가 아닙니다. 테스트와 첫 실행 데모에만 사용합니다.",
+    "sources": [
+      {
+        "bytes": 0,
+        "name": "synthetic",
+        "sha256": "n/a"
+      }
+    ]
+  },
+  "residents": [
+    {
+      "age": 70,
+      "displayName": "P1",
+      "group": "solo",
+      "home": {
+        "anchor": {
+          "node": "300.0,930.0",
+          "offsetPx": 0.0
+        },
+        "provenance": "source",
+        "x": 300.0,
+        "y": 930.0
+      },
+      "id": "P1",
+      "isVillageHead": false,
+      "job": "합성 직업 A",
+      "pinnedAtHome": false,
+      "plan": {
+        "baseline": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 540.0,
+            "departMs": 32400000,
+            "fixedDurationMin": null,
+            "index": 1,
+            "provenance": "source-baseline",
+            "target": "FARM",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 720.0,
+            "departMs": 43200000,
+            "fixedDurationMin": null,
+            "index": 2,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 780.0,
+            "departMs": 46800000,
+            "fixedDurationMin": null,
+            "index": 3,
+            "provenance": "source-baseline",
+            "target": "FARM",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 960.0,
+            "departMs": 57600000,
+            "fixedDurationMin": null,
+            "index": 4,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          }
+        ],
+        "overlay": [],
+        "source": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "target": "HOME",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 540.0,
+            "departMs": 32400000,
+            "fixedDurationMin": null,
+            "index": 1,
+            "target": "FARM",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 720.0,
+            "departMs": 43200000,
+            "fixedDurationMin": null,
+            "index": 2,
+            "target": "HOME",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 780.0,
+            "departMs": 46800000,
+            "fixedDurationMin": null,
+            "index": 3,
+            "target": "FARM",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 960.0,
+            "departMs": 57600000,
+            "fixedDurationMin": null,
+            "index": 4,
+            "target": "HOME",
+            "targetKind": "place"
+          }
+        ]
+      }
+    },
+    {
+      "age": 65,
+      "displayName": "P2",
+      "group": "pair",
+      "home": {
+        "anchor": {
+          "node": "300.0,630.0",
+          "offsetPx": 60.0
+        },
+        "provenance": "source",
+        "x": 300.0,
+        "y": 570.0
+      },
+      "id": "P2",
+      "isVillageHead": false,
+      "job": "합성 직업 B",
+      "pinnedAtHome": false,
+      "plan": {
+        "baseline": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 420.0,
+            "departMs": 25200000,
+            "fixedDurationMin": null,
+            "index": 1,
+            "provenance": "source-baseline",
+            "target": "TOWN",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 1020.0,
+            "departMs": 61200000,
+            "fixedDurationMin": null,
+            "index": 2,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          }
+        ],
+        "overlay": [],
+        "source": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "target": "HOME",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 420.0,
+            "departMs": 25200000,
+            "fixedDurationMin": null,
+            "index": 1,
+            "target": "TOWN",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 1020.0,
+            "departMs": 61200000,
+            "fixedDurationMin": null,
+            "index": 2,
+            "target": "HOME",
+            "targetKind": "place"
+          }
+        ]
+      }
+    },
+    {
+      "age": 65,
+      "displayName": "P3",
+      "group": "solo",
+      "home": {
+        "anchor": {
+          "node": "300.0,810.0",
+          "offsetPx": 60.0
+        },
+        "provenance": "source",
+        "x": 300.0,
+        "y": 750.0
+      },
+      "id": "P3",
+      "isVillageHead": false,
+      "job": "합성 직업 C",
+      "pinnedAtHome": false,
+      "plan": {
+        "baseline": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 540.0,
+            "departMs": 32400000,
+            "fixedDurationMin": null,
+            "index": 1,
+            "provenance": "source-baseline",
+            "target": "TOWN",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": true,
+            "departMin": 807.0,
+            "departMs": 48420000,
+            "fixedDurationMin": null,
+            "index": 4,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeNote": "선행 경유가 제거되어 원본 시각을 그대로 쓸 수 없음. 경로에서 재계산 필요",
+            "timeProvenance": "computed"
+          }
+        ],
+        "overlay": [
+          {
+            "car": false,
+            "departMin": 780.0,
+            "departMs": 46800000,
+            "fixedDurationMin": 10,
+            "index": 2,
+            "provenance": "source-quest-outcome",
+            "quest": "Q2",
+            "reason": "의약품 전달을 위한 미가식당 경유(체류 10분)는 수락 결과",
+            "target": "MIGA",
+            "targetKind": "place"
+          },
+          {
+            "car": true,
+            "departMin": 793.0,
+            "departMs": 47580000,
+            "fixedDurationMin": null,
+            "index": 3,
+            "provenance": "source-quest-outcome",
+            "quest": "Q5",
+            "reason": "P9를 펜션에 내려주는 경유는 수락 결과",
+            "target": "P9",
+            "targetKind": "go_to_home_of"
+          }
+        ],
+        "source": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "target": "HOME",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 540.0,
+            "departMs": 32400000,
+            "fixedDurationMin": null,
+            "index": 1,
+            "target": "TOWN",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 780.0,
+            "departMs": 46800000,
+            "fixedDurationMin": 10,
+            "index": 2,
+            "target": "MIGA",
+            "targetKind": "place"
+          },
+          {
+            "car": true,
+            "departMin": 793.0,
+            "departMs": 47580000,
+            "fixedDurationMin": null,
+            "index": 3,
+            "target": "P9",
+            "targetKind": "go_to_home_of"
+          },
+          {
+            "car": true,
+            "departMin": 807.0,
+            "departMs": 48420000,
+            "fixedDurationMin": null,
+            "index": 4,
+            "target": "HOME",
+            "targetKind": "place"
+          }
+        ]
+      }
+    },
+    {
+      "age": 55,
+      "displayName": "P4",
+      "group": "four",
+      "home": {
+        "anchor": {
+          "node": "300.0,630.0",
+          "offsetPx": 60.0
+        },
+        "provenance": "source",
+        "x": 300.0,
+        "y": 690.0
+      },
+      "id": "P4",
+      "isVillageHead": false,
+      "job": "합성 직업 D",
+      "pinnedAtHome": false,
+      "plan": {
+        "baseline": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 480.0,
+            "departMs": 28800000,
+            "fixedDurationMin": null,
+            "index": 1,
+            "provenance": "source-baseline",
+            "target": "FOOD",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 1020.0,
+            "departMs": 61200000,
+            "fixedDurationMin": null,
+            "index": 2,
+            "provenance": "source-baseline",
+            "target": "EXP",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 1140.0,
+            "departMs": 68400000,
+            "fixedDurationMin": null,
+            "index": 3,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          }
+        ],
+        "overlay": [],
+        "source": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "target": "HOME",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 480.0,
+            "departMs": 28800000,
+            "fixedDurationMin": null,
+            "index": 1,
+            "target": "FOOD",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 1020.0,
+            "departMs": 61200000,
+            "fixedDurationMin": null,
+            "index": 2,
+            "target": "EXP",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 1140.0,
+            "departMs": 68400000,
+            "fixedDurationMin": null,
+            "index": 3,
+            "target": "HOME",
+            "targetKind": "place"
+          }
+        ]
+      }
+    },
+    {
+      "age": 68,
+      "displayName": "P5",
+      "group": "pair",
+      "home": {
+        "anchor": {
+          "node": "300.0,450.0",
+          "offsetPx": 60.0
+        },
+        "provenance": "source",
+        "x": 300.0,
+        "y": 510.0
+      },
+      "id": "P5",
+      "isVillageHead": false,
+      "job": "합성 직업 E",
+      "pinnedAtHome": false,
+      "plan": {
+        "baseline": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 375.0,
+            "departMs": 22500000,
+            "fixedDurationMin": null,
+            "index": 1,
+            "provenance": "source-baseline",
+            "target": "PORT",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 395.0,
+            "departMs": 23700000,
+            "fixedDurationMin": null,
+            "index": 2,
+            "provenance": "source-baseline",
+            "target": "SEA",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 655.0,
+            "departMs": 39300000,
+            "fixedDurationMin": null,
+            "index": 3,
+            "provenance": "source-baseline",
+            "target": "PORT",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 690.0,
+            "departMs": 41400000,
+            "fixedDurationMin": null,
+            "index": 4,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          }
+        ],
+        "overlay": [],
+        "source": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "target": "HOME",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 375.0,
+            "departMs": 22500000,
+            "fixedDurationMin": null,
+            "index": 1,
+            "target": "PORT",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 395.0,
+            "departMs": 23700000,
+            "fixedDurationMin": null,
+            "index": 2,
+            "target": "SEA",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 655.0,
+            "departMs": 39300000,
+            "fixedDurationMin": null,
+            "index": 3,
+            "target": "PORT",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 690.0,
+            "departMs": 41400000,
+            "fixedDurationMin": null,
+            "index": 4,
+            "target": "HOME",
+            "targetKind": "place"
+          }
+        ]
+      }
+    },
+    {
+      "age": 55,
+      "displayName": "이장",
+      "group": "four",
+      "home": {
+        "anchor": {
+          "node": "300.0,330.0",
+          "offsetPx": 0.0
+        },
+        "provenance": "source",
+        "x": 300.0,
+        "y": 330.0
+      },
+      "id": "P6",
+      "isVillageHead": true,
+      "job": "합성 이장",
+      "pinnedAtHome": false,
+      "plan": {
+        "baseline": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 420.0,
+            "departMs": 25200000,
+            "fixedDurationMin": null,
+            "index": 1,
+            "provenance": "source-baseline",
+            "target": "HALL",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 480.0,
+            "departMs": 28800000,
+            "fixedDurationMin": null,
+            "index": 2,
+            "provenance": "source-baseline",
+            "target": "PATROL",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 600.0,
+            "departMs": 36000000,
+            "fixedDurationMin": null,
+            "index": 3,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 715.0,
+            "departMs": 42900000,
+            "fixedDurationMin": null,
+            "index": 4,
+            "provenance": "source-baseline",
+            "target": "FOOD",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 780.0,
+            "departMs": 46800000,
+            "fixedDurationMin": null,
+            "index": 5,
+            "provenance": "source-baseline",
+            "target": "PATROL",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 960.0,
+            "departMs": 57600000,
+            "fixedDurationMin": null,
+            "index": 8,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeNote": "선행 경유가 제거되어 원본 시각을 그대로 쓸 수 없음. 경로에서 재계산 필요",
+            "timeProvenance": "computed"
+          }
+        ],
+        "overlay": [
+          {
+            "car": false,
+            "departMin": 918.3,
+            "departMs": 55098000,
+            "fixedDurationMin": null,
+            "index": 6,
+            "provenance": "source-quest-outcome",
+            "quest": "Q3",
+            "reason": "안부 확인을 위한 P1 자택 방문은 배정 결과",
+            "target": "P1",
+            "targetKind": "go_to_home_of"
+          },
+          {
+            "car": false,
+            "departMin": 932.3,
+            "departMs": 55938000,
+            "fixedDurationMin": null,
+            "index": 7,
+            "provenance": "source-quest-outcome",
+            "quest": "Q3",
+            "reason": "자택 부재 후 밭까지 확인한 이동은 배정 결과",
+            "target": "FARM",
+            "targetKind": "place"
+          }
+        ],
+        "source": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "target": "HOME",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 420.0,
+            "departMs": 25200000,
+            "fixedDurationMin": null,
+            "index": 1,
+            "target": "HALL",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 480.0,
+            "departMs": 28800000,
+            "fixedDurationMin": null,
+            "index": 2,
+            "target": "PATROL",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 600.0,
+            "departMs": 36000000,
+            "fixedDurationMin": null,
+            "index": 3,
+            "target": "HOME",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 715.0,
+            "departMs": 42900000,
+            "fixedDurationMin": null,
+            "index": 4,
+            "target": "FOOD",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 780.0,
+            "departMs": 46800000,
+            "fixedDurationMin": null,
+            "index": 5,
+            "target": "PATROL",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 918.3,
+            "departMs": 55098000,
+            "fixedDurationMin": null,
+            "index": 6,
+            "target": "P1",
+            "targetKind": "go_to_home_of"
+          },
+          {
+            "car": false,
+            "departMin": 932.3,
+            "departMs": 55938000,
+            "fixedDurationMin": null,
+            "index": 7,
+            "target": "FARM",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 960.0,
+            "departMs": 57600000,
+            "fixedDurationMin": null,
+            "index": 8,
+            "target": "HOME",
+            "targetKind": "place"
+          }
+        ]
+      }
+    },
+    {
+      "age": 58,
+      "displayName": "P7",
+      "group": "four",
+      "home": {
+        "anchor": {
+          "node": "300.0,450.0",
+          "offsetPx": 60.0
+        },
+        "provenance": "source",
+        "x": 300.0,
+        "y": 390.0
+      },
+      "id": "P7",
+      "isVillageHead": false,
+      "job": "합성 직업 F",
+      "pinnedAtHome": false,
+      "plan": {
+        "baseline": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 330.0,
+            "departMs": 19800000,
+            "fixedDurationMin": null,
+            "index": 1,
+            "provenance": "source-baseline",
+            "target": "PORT",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 350.0,
+            "departMs": 21000000,
+            "fixedDurationMin": null,
+            "index": 2,
+            "provenance": "source-baseline",
+            "target": "SEA",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 650.0,
+            "departMs": 39000000,
+            "fixedDurationMin": null,
+            "index": 3,
+            "provenance": "source-baseline",
+            "target": "PORT",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 712.0,
+            "departMs": 42720000,
+            "fixedDurationMin": null,
+            "index": 4,
+            "provenance": "source-baseline",
+            "target": "FOOD",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 780.0,
+            "departMs": 46800000,
+            "fixedDurationMin": null,
+            "index": 5,
+            "provenance": "source-baseline",
+            "target": "PORT",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 1020.0,
+            "departMs": 61200000,
+            "fixedDurationMin": null,
+            "index": 6,
+            "provenance": "source-baseline",
+            "target": "EXP",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 1140.0,
+            "departMs": 68400000,
+            "fixedDurationMin": null,
+            "index": 7,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          }
+        ],
+        "overlay": [
+          {
+            "car": false,
+            "departMin": 1230.5,
+            "departMs": 73830000,
+            "fixedDurationMin": null,
+            "index": 8,
+            "provenance": "source-quest-outcome",
+            "quest": "Q4",
+            "reason": "위급 상황 현장 대응은 배정 결과",
+            "target": "P8",
+            "targetKind": "go_to_home_of"
+          },
+          {
+            "car": false,
+            "departMin": 1271.0,
+            "departMs": 76260000,
+            "fixedDurationMin": null,
+            "index": 9,
+            "provenance": "source-quest-outcome",
+            "quest": "Q4",
+            "reason": "현장 대응 후 귀가",
+            "target": "HOME",
+            "targetKind": "place"
+          }
+        ],
+        "source": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "target": "HOME",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 330.0,
+            "departMs": 19800000,
+            "fixedDurationMin": null,
+            "index": 1,
+            "target": "PORT",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 350.0,
+            "departMs": 21000000,
+            "fixedDurationMin": null,
+            "index": 2,
+            "target": "SEA",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 650.0,
+            "departMs": 39000000,
+            "fixedDurationMin": null,
+            "index": 3,
+            "target": "PORT",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 712.0,
+            "departMs": 42720000,
+            "fixedDurationMin": null,
+            "index": 4,
+            "target": "FOOD",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 780.0,
+            "departMs": 46800000,
+            "fixedDurationMin": null,
+            "index": 5,
+            "target": "PORT",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 1020.0,
+            "departMs": 61200000,
+            "fixedDurationMin": null,
+            "index": 6,
+            "target": "EXP",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 1140.0,
+            "departMs": 68400000,
+            "fixedDurationMin": null,
+            "index": 7,
+            "target": "HOME",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 1230.5,
+            "departMs": 73830000,
+            "fixedDurationMin": null,
+            "index": 8,
+            "target": "P8",
+            "targetKind": "go_to_home_of"
+          },
+          {
+            "car": false,
+            "departMin": 1271.0,
+            "departMs": 76260000,
+            "fixedDurationMin": null,
+            "index": 9,
+            "target": "HOME",
+            "targetKind": "place"
+          }
+        ]
+      }
+    },
+    {
+      "age": 57,
+      "displayName": "P8",
+      "group": "four",
+      "home": {
+        "anchor": {
+          "node": "300.0,450.0",
+          "offsetPx": 20.0
+        },
+        "provenance": "source",
+        "x": 300.0,
+        "y": 430.0
+      },
+      "id": "P8",
+      "isVillageHead": false,
+      "job": "합성 직업 G",
+      "pinnedAtHome": false,
+      "plan": {
+        "baseline": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 330.0,
+            "departMs": 19800000,
+            "fixedDurationMin": null,
+            "index": 1,
+            "provenance": "source-baseline",
+            "target": "PORT",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 350.0,
+            "departMs": 21000000,
+            "fixedDurationMin": null,
+            "index": 2,
+            "provenance": "source-baseline",
+            "target": "SEA",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 650.0,
+            "departMs": 39000000,
+            "fixedDurationMin": null,
+            "index": 3,
+            "provenance": "source-baseline",
+            "target": "PORT",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 712.0,
+            "departMs": 42720000,
+            "fixedDurationMin": null,
+            "index": 4,
+            "provenance": "source-baseline",
+            "target": "FOOD",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 780.0,
+            "departMs": 46800000,
+            "fixedDurationMin": null,
+            "index": 5,
+            "provenance": "source-baseline",
+            "target": "PORT",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 1020.0,
+            "departMs": 61200000,
+            "fixedDurationMin": null,
+            "index": 6,
+            "provenance": "source-baseline",
+            "target": "EXP",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 1140.0,
+            "departMs": 68400000,
+            "fixedDurationMin": null,
+            "index": 7,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          }
+        ],
+        "overlay": [
+          {
+            "car": false,
+            "departMin": 1265.0,
+            "departMs": 75900000,
+            "fixedDurationMin": 5.5,
+            "index": 8,
+            "provenance": "source-quest-outcome",
+            "quest": "Q4",
+            "reason": "구급 이송은 사건 결과",
+            "target": "TOWN",
+            "targetKind": "place"
+          }
+        ],
+        "source": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "target": "HOME",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 330.0,
+            "departMs": 19800000,
+            "fixedDurationMin": null,
+            "index": 1,
+            "target": "PORT",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 350.0,
+            "departMs": 21000000,
+            "fixedDurationMin": null,
+            "index": 2,
+            "target": "SEA",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 650.0,
+            "departMs": 39000000,
+            "fixedDurationMin": null,
+            "index": 3,
+            "target": "PORT",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 712.0,
+            "departMs": 42720000,
+            "fixedDurationMin": null,
+            "index": 4,
+            "target": "FOOD",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 780.0,
+            "departMs": 46800000,
+            "fixedDurationMin": null,
+            "index": 5,
+            "target": "PORT",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 1020.0,
+            "departMs": 61200000,
+            "fixedDurationMin": null,
+            "index": 6,
+            "target": "EXP",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 1140.0,
+            "departMs": 68400000,
+            "fixedDurationMin": null,
+            "index": 7,
+            "target": "HOME",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 1265.0,
+            "departMs": 75900000,
+            "fixedDurationMin": 5.5,
+            "index": 8,
+            "target": "TOWN",
+            "targetKind": "place"
+          }
+        ]
+      }
+    },
+    {
+      "age": 58,
+      "displayName": "P9",
+      "group": "solo",
+      "home": {
+        "anchor": {
+          "node": "300.0,1170.0",
+          "offsetPx": 0.0
+        },
+        "provenance": "source",
+        "x": 300.0,
+        "y": 1170.0
+      },
+      "id": "P9",
+      "isVillageHead": false,
+      "job": "합성 직업 H",
+      "pinnedAtHome": false,
+      "plan": {
+        "baseline": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          }
+        ],
+        "overlay": [
+          {
+            "car": false,
+            "departMin": 485.5,
+            "departMs": 29130000,
+            "fixedDurationMin": null,
+            "index": 1,
+            "provenance": "source-quest-outcome",
+            "quest": "Q1",
+            "reason": "P12 차량 동승은 배정 결과",
+            "target": "P12",
+            "targetKind": "ride_with"
+          },
+          {
+            "car": false,
+            "departMin": 518.0,
+            "departMs": 31080000,
+            "fixedDurationMin": null,
+            "index": 2,
+            "provenance": "source-quest-outcome",
+            "quest": "Q1",
+            "reason": "읍내 진료 이동 자체가 조율 결과. 진료 필요는 issue로 분리",
+            "target": "TOWN",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 780.0,
+            "departMs": 46800000,
+            "fixedDurationMin": null,
+            "index": 3,
+            "provenance": "source-quest-outcome",
+            "quest": "Q5",
+            "reason": "P3 차량 동승은 배정 결과",
+            "target": "P3",
+            "targetKind": "ride_with"
+          },
+          {
+            "car": false,
+            "departMin": 805.0,
+            "departMs": 48300000,
+            "fixedDurationMin": null,
+            "index": 4,
+            "provenance": "source-quest-outcome",
+            "quest": "Q5",
+            "reason": "귀가는 동승 결과",
+            "target": "HOME",
+            "targetKind": "place"
+          }
+        ],
+        "source": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "target": "HOME",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 485.5,
+            "departMs": 29130000,
+            "fixedDurationMin": null,
+            "index": 1,
+            "target": "P12",
+            "targetKind": "ride_with"
+          },
+          {
+            "car": false,
+            "departMin": 518.0,
+            "departMs": 31080000,
+            "fixedDurationMin": null,
+            "index": 2,
+            "target": "TOWN",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 780.0,
+            "departMs": 46800000,
+            "fixedDurationMin": null,
+            "index": 3,
+            "target": "P3",
+            "targetKind": "ride_with"
+          },
+          {
+            "car": false,
+            "departMin": 805.0,
+            "departMs": 48300000,
+            "fixedDurationMin": null,
+            "index": 4,
+            "target": "HOME",
+            "targetKind": "place"
+          }
+        ]
+      }
+    },
+    {
+      "age": 74,
+      "displayName": "P10",
+      "group": "couple",
+      "home": {
+        "anchor": {
+          "node": "200.0,90.0",
+          "offsetPx": 0.0
+        },
+        "provenance": "source",
+        "x": 200.0,
+        "y": 90.0
+      },
+      "id": "P10",
+      "isVillageHead": false,
+      "job": "합성 식당",
+      "pinnedAtHome": true,
+      "plan": {
+        "baseline": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          }
+        ],
+        "overlay": [],
+        "source": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "target": "HOME",
+            "targetKind": "place"
+          }
+        ]
+      }
+    },
+    {
+      "age": 78,
+      "displayName": "P11",
+      "group": "couple",
+      "home": {
+        "anchor": {
+          "node": "200.0,90.0",
+          "offsetPx": 0.0
+        },
+        "provenance": "source",
+        "x": 200.0,
+        "y": 90.0
+      },
+      "id": "P11",
+      "isVillageHead": false,
+      "job": "합성 식당",
+      "pinnedAtHome": true,
+      "plan": {
+        "baseline": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          }
+        ],
+        "overlay": [],
+        "source": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "target": "HOME",
+            "targetKind": "place"
+          }
+        ]
+      }
+    },
+    {
+      "age": 62,
+      "displayName": "P12",
+      "group": "cousin",
+      "home": {
+        "anchor": {
+          "node": "300.0,810.0",
+          "offsetPx": 60.0
+        },
+        "provenance": "source",
+        "x": 300.0,
+        "y": 870.0
+      },
+      "id": "P12",
+      "isVillageHead": false,
+      "job": "합성 직업 I",
+      "pinnedAtHome": false,
+      "plan": {
+        "baseline": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 488.0,
+            "departMs": 29280000,
+            "fixedDurationMin": null,
+            "index": 2,
+            "provenance": "source-baseline",
+            "target": "TOWN",
+            "targetKind": "place",
+            "timeNote": "선행 경유가 제거되어 원본 시각을 그대로 쓸 수 없음. 경로에서 재계산 필요",
+            "timeProvenance": "computed"
+          },
+          {
+            "car": false,
+            "departMin": 1080.0,
+            "departMs": 64800000,
+            "fixedDurationMin": null,
+            "index": 3,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 1133.0,
+            "departMs": 67980000,
+            "fixedDurationMin": null,
+            "index": 4,
+            "provenance": "source-baseline",
+            "target": "MIGA",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          },
+          {
+            "car": false,
+            "departMin": 1260.0,
+            "departMs": 75600000,
+            "fixedDurationMin": null,
+            "index": 5,
+            "provenance": "source-baseline",
+            "target": "HOME",
+            "targetKind": "place",
+            "timeProvenance": "source"
+          }
+        ],
+        "overlay": [
+          {
+            "car": true,
+            "departMin": 480.0,
+            "departMs": 28800000,
+            "fixedDurationMin": null,
+            "index": 1,
+            "provenance": "source-quest-outcome",
+            "quest": "Q1",
+            "reason": "P9 픽업을 위한 552 m 역방향 우회는 수락 결과",
+            "target": "P9",
+            "targetKind": "go_to_home_of"
+          }
+        ],
+        "source": [
+          {
+            "car": false,
+            "departMin": 0.0,
+            "departMs": 0,
+            "fixedDurationMin": null,
+            "index": 0,
+            "target": "HOME",
+            "targetKind": "place"
+          },
+          {
+            "car": true,
+            "departMin": 480.0,
+            "departMs": 28800000,
+            "fixedDurationMin": null,
+            "index": 1,
+            "target": "P9",
+            "targetKind": "go_to_home_of"
+          },
+          {
+            "car": false,
+            "departMin": 488.0,
+            "departMs": 29280000,
+            "fixedDurationMin": null,
+            "index": 2,
+            "target": "TOWN",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 1080.0,
+            "departMs": 64800000,
+            "fixedDurationMin": null,
+            "index": 3,
+            "target": "HOME",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 1133.0,
+            "departMs": 67980000,
+            "fixedDurationMin": null,
+            "index": 4,
+            "target": "MIGA",
+            "targetKind": "place"
+          },
+          {
+            "car": false,
+            "departMin": 1260.0,
+            "departMs": 75600000,
+            "fixedDurationMin": null,
+            "index": 5,
+            "target": "HOME",
+            "targetKind": "place"
+          }
+        ]
+      }
+    }
+  ],
+  "roadGraph": {
+    "adjacency": {
+      "120.0,990.0": [
+        [
+          "180.0,990.0",
+          58.86
+        ]
+      ],
+      "170.0,810.0": [
+        [
+          "300.0,810.0",
+          127.53
+        ],
+        [
+          "90.0,810.0",
+          78.48
+        ]
+      ],
+      "180.0,990.0": [
+        [
+          "120.0,990.0",
+          58.86
+        ],
+        [
+          "300.0,990.0",
+          117.72
+        ]
+      ],
+      "200.0,90.0": [
+        [
+          "300.0,90.0",
+          98.1
+        ]
+      ],
+      "220.0,630.0": [
+        [
+          "300.0,630.0",
+          78.48
+        ]
+      ],
+      "300.0,1170.0": [
+        [
+          "300.0,990.0",
+          176.58
+        ]
+      ],
+      "300.0,270.0": [
+        [
+          "300.0,450.0",
+          176.58
+        ],
+        [
+          "300.0,90.0",
+          176.58
+        ]
+      ],
+      "300.0,330.0": [
+        [
+          "300.0,630.0",
+          294.3
+        ]
+      ],
+      "300.0,450.0": [
+        [
+          "300.0,270.0",
+          176.58
+        ],
+        [
+          "300.0,630.0",
+          176.58
+        ],
+        [
+          "400.0,450.0",
+          98.1
+        ]
+      ],
+      "300.0,630.0": [
+        [
+          "220.0,630.0",
+          78.48
+        ],
+        [
+          "300.0,330.0",
+          294.3
+        ],
+        [
+          "300.0,450.0",
+          176.58
+        ],
+        [
+          "300.0,810.0",
+          176.58
+        ]
+      ],
+      "300.0,810.0": [
+        [
+          "170.0,810.0",
+          127.53
+        ],
+        [
+          "300.0,630.0",
+          176.58
+        ],
+        [
+          "300.0,930.0",
+          117.72
+        ],
+        [
+          "300.0,990.0",
+          176.58
+        ]
+      ],
+      "300.0,90.0": [
+        [
+          "200.0,90.0",
+          98.1
+        ],
+        [
+          "300.0,270.0",
+          176.58
+        ]
+      ],
+      "300.0,930.0": [
+        [
+          "300.0,810.0",
+          117.72
+        ]
+      ],
+      "300.0,990.0": [
+        [
+          "180.0,990.0",
+          117.72
+        ],
+        [
+          "300.0,1170.0",
+          176.58
+        ],
+        [
+          "300.0,810.0",
+          176.58
+        ]
+      ],
+      "400.0,450.0": [
+        [
+          "300.0,450.0",
+          98.1
+        ],
+        [
+          "450.0,450.0",
+          49.05
+        ]
+      ],
+      "450.0,450.0": [
+        [
+          "400.0,450.0",
+          49.05
+        ]
+      ],
+      "90.0,810.0": [
+        [
+          "170.0,810.0",
+          78.48
+        ]
+      ]
+    },
+    "nodes": {
+      "120.0,990.0": [
+        120.0,
+        990.0
+      ],
+      "170.0,810.0": [
+        170.0,
+        810.0
+      ],
+      "180.0,990.0": [
+        180.0,
+        990.0
+      ],
+      "200.0,90.0": [
+        200.0,
+        90.0
+      ],
+      "220.0,630.0": [
+        220.0,
+        630.0
+      ],
+      "300.0,1170.0": [
+        300.0,
+        1170.0
+      ],
+      "300.0,270.0": [
+        300.0,
+        270.0
+      ],
+      "300.0,330.0": [
+        300.0,
+        330.0
+      ],
+      "300.0,450.0": [
+        300.0,
+        450.0
+      ],
+      "300.0,630.0": [
+        300.0,
+        630.0
+      ],
+      "300.0,810.0": [
+        300.0,
+        810.0
+      ],
+      "300.0,90.0": [
+        300.0,
+        90.0
+      ],
+      "300.0,930.0": [
+        300.0,
+        930.0
+      ],
+      "300.0,990.0": [
+        300.0,
+        990.0
+      ],
+      "400.0,450.0": [
+        400.0,
+        450.0
+      ],
+      "450.0,450.0": [
+        450.0,
+        450.0
+      ],
+      "90.0,810.0": [
+        90.0,
+        810.0
+      ]
+    }
+  },
+  "roadGraphComponents": [
+    17
+  ],
+  "roadGraphProvenance": {
+    "allEdgesFromSourcePolylines": true,
+    "edgeCount": 16,
+    "junctionNodeCount": 4,
+    "method": "간선은 한 원본 폴리라인 안의 연속 정점 쌍만 사용한다. 폴리라인 간 전환은 두 경로가 공유하는 정점에서만 일어난다."
+  },
+  "roads": {
+    "FARM>P1": [
+      [
+        90.0,
+        810.0
+      ],
+      [
+        170.0,
+        810.0
+      ],
+      [
+        300.0,
+        810.0
+      ],
+      [
+        300.0,
+        930.0
+      ]
+    ],
+    "HALL>P6": [
+      [
+        220.0,
+        630.0
+      ],
+      [
+        300.0,
+        630.0
+      ],
+      [
+        300.0,
+        330.0
+      ]
+    ],
+    "MAIN": [
+      [
+        300.0,
+        1170.0
+      ],
+      [
+        300.0,
+        990.0
+      ],
+      [
+        300.0,
+        810.0
+      ],
+      [
+        300.0,
+        630.0
+      ],
+      [
+        300.0,
+        450.0
+      ],
+      [
+        300.0,
+        270.0
+      ],
+      [
+        300.0,
+        90.0
+      ]
+    ],
+    "P1>FARM": [
+      [
+        300.0,
+        930.0
+      ],
+      [
+        300.0,
+        810.0
+      ],
+      [
+        170.0,
+        810.0
+      ],
+      [
+        90.0,
+        810.0
+      ]
+    ],
+    "P6>HALL": [
+      [
+        300.0,
+        330.0
+      ],
+      [
+        300.0,
+        630.0
+      ],
+      [
+        220.0,
+        630.0
+      ]
+    ],
+    "SPUR_E": [
+      [
+        300.0,
+        450.0
+      ],
+      [
+        400.0,
+        450.0
+      ],
+      [
+        450.0,
+        450.0
+      ]
+    ],
+    "SPUR_F": [
+      [
+        300.0,
+        810.0
+      ],
+      [
+        170.0,
+        810.0
+      ],
+      [
+        90.0,
+        810.0
+      ]
+    ],
+    "SPUR_H": [
+      [
+        300.0,
+        630.0
+      ],
+      [
+        220.0,
+        630.0
+      ]
+    ],
+    "SPUR_M": [
+      [
+        300.0,
+        90.0
+      ],
+      [
+        200.0,
+        90.0
+      ]
+    ],
+    "SPUR_W": [
+      [
+        300.0,
+        990.0
+      ],
+      [
+        180.0,
+        990.0
+      ],
+      [
+        120.0,
+        990.0
+      ]
+    ]
+  },
+  "schemaVersion": "village/2",
+  "sourceReplay": {
+    "ambulance": {},
+    "eventCount": 0,
+    "note": "합성 데이터에는 원본 재생 기록이 없습니다.",
+    "questColors": {},
+    "questOrder": []
+  },
+  "travel": {
+    "boatMPerMin": 100.0,
+    "driveMPerMin": 300.0,
+    "offMapTownMin": 30,
+    "offMapTownProvenance": "source-constant (경로 계산이 아닌 고정값)",
+    "provenance": "source-constants",
+    "walkMPerMin": 70.0
+  }
+}

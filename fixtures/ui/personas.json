@@ -1,0 +1,1368 @@
+{
+ "provenance": {
+  "dataSource": "synthetic",
+  "revisionId": "persona-synthetic-b7889f7457bde193",
+  "personaCount": 12,
+  "sourceName": "personas.synthetic.json",
+  "jointInterview": [
+   "P10",
+   "P11"
+  ],
+  "noInterview": [
+   "P12"
+  ],
+  "note": "이름·인터뷰 인용·역할 프롬프트는 컴파일 결과에 담기지 않는다. 근거 카드는 원자료의 JSON pointer만 가리킨다."
+ },
+ "profiles": [
+  {
+   "subjectId": "P1",
+   "revisionId": "persona-synthetic-b7889f7457bde193",
+   "displayName": "P1",
+   "ageBand": "70대",
+   "livesAlone": true,
+   "drivesSelf": null,
+   "hasVehicle": null,
+   "seatCapacity": null,
+   "closeContacts": [],
+   "groupLabel": "정기적 동행 없음",
+   "acceptanceConditions": [],
+   "declineConditions": [],
+   "unknowns": [
+    "거절 조건",
+    "수락 조건",
+    "실제 응답 의사",
+    "차량 좌석 수"
+   ],
+   "evidence": [
+    {
+     "id": "ev-P1-1",
+     "subjectId": "P1",
+     "kind": "fact",
+     "field": "interviewBasis",
+     "claim": "인터뷰 전사 1건이 있다",
+     "pointer": "/페르소나/0/근거",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P1-2",
+     "subjectId": "P1",
+     "kind": "fact",
+     "field": "livesAlone",
+     "claim": "혼자 산다고 기술되어 있다",
+     "pointer": "/페르소나/0/거주",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": "a7c8f231f053be40",
+     "note": null
+    },
+    {
+     "id": "ev-P1-3",
+     "subjectId": "P1",
+     "kind": "unknown",
+     "field": "drivesSelf",
+     "claim": "운전 여부를 확인할 기술이 없다. 운전 가능으로 가정하지 않는다",
+     "pointer": "/페르소나/0/시뮬레이터에서의 역할",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P1-4",
+     "subjectId": "P1",
+     "kind": "fact",
+     "field": "closeContacts",
+     "claim": "정기적으로 함께 다니는 이웃이 없다고 답했다",
+     "pointer": "/페르소나/0/관계/가까운 사람",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P1-5",
+     "subjectId": "P1",
+     "kind": "unknown",
+     "field": "acceptanceConditions",
+     "claim": "이 사람이 어떤 요청을 받아들이는지 원자료에서 확인되지 않는다",
+     "pointer": "/페르소나/0/시뮬레이터에서의 역할",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P1-6",
+     "subjectId": "P1",
+     "kind": "unknown",
+     "field": "seatCapacity",
+     "claim": "차량 좌석 수는 원자료에 없다. 동승 인원 제한은 실험 가정으로만 둘 수 있다",
+     "pointer": "/페르소나/0",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P1-7",
+     "subjectId": "P1",
+     "kind": "fact",
+     "field": "ageBand",
+     "claim": "나이대 70대",
+     "pointer": "/페르소나/0/나이",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    }
+   ],
+   "interviewBasis": "interview",
+   "speechSource": "rule"
+  },
+  {
+   "subjectId": "P2",
+   "revisionId": "persona-synthetic-b7889f7457bde193",
+   "displayName": "P2",
+   "ageBand": "60대",
+   "livesAlone": false,
+   "drivesSelf": true,
+   "hasVehicle": true,
+   "seatCapacity": null,
+   "closeContacts": [
+    "P5"
+   ],
+   "groupLabel": "2인 동행",
+   "acceptanceConditions": [],
+   "declineConditions": [],
+   "unknowns": [
+    "거절 조건",
+    "수락 조건",
+    "실제 응답 의사",
+    "차량 좌석 수"
+   ],
+   "evidence": [
+    {
+     "id": "ev-P2-1",
+     "subjectId": "P2",
+     "kind": "fact",
+     "field": "interviewBasis",
+     "claim": "인터뷰 전사 1건이 있다",
+     "pointer": "/페르소나/1/근거",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P2-2",
+     "subjectId": "P2",
+     "kind": "interpretation",
+     "field": "livesAlone",
+     "claim": "혼자 산다는 기술이 없어 동거인이 있는 것으로 읽었다",
+     "pointer": "/페르소나/1/거주",
+     "sourceKind": "interview",
+     "confidence": "medium",
+     "quoteHash": "dc9ae7c795ebb931",
+     "note": null
+    },
+    {
+     "id": "ev-P2-3",
+     "subjectId": "P2",
+     "kind": "interpretation",
+     "field": "drivesSelf",
+     "claim": "차로 이동하거나 다른 사람을 태운다는 기술에서 직접 운전한다고 읽었다",
+     "pointer": "/페르소나/1/시뮬레이터에서의 역할",
+     "sourceKind": "interview",
+     "confidence": "medium",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P2-4",
+     "subjectId": "P2",
+     "kind": "fact",
+     "field": "closeContacts",
+     "claim": "본인이 가깝다고 답한 사람: P5",
+     "pointer": "/페르소나/1/관계/가까운 사람",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P2-5",
+     "subjectId": "P2",
+     "kind": "unknown",
+     "field": "acceptanceConditions",
+     "claim": "이 사람이 어떤 요청을 받아들이는지 원자료에서 확인되지 않는다",
+     "pointer": "/페르소나/1/시뮬레이터에서의 역할",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P2-6",
+     "subjectId": "P2",
+     "kind": "unknown",
+     "field": "seatCapacity",
+     "claim": "차량 좌석 수는 원자료에 없다. 동승 인원 제한은 실험 가정으로만 둘 수 있다",
+     "pointer": "/페르소나/1",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P2-7",
+     "subjectId": "P2",
+     "kind": "fact",
+     "field": "ageBand",
+     "claim": "나이대 60대",
+     "pointer": "/페르소나/1/나이",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    }
+   ],
+   "interviewBasis": "interview",
+   "speechSource": "rule"
+  },
+  {
+   "subjectId": "P3",
+   "revisionId": "persona-synthetic-b7889f7457bde193",
+   "displayName": "P3",
+   "ageBand": "60대",
+   "livesAlone": true,
+   "drivesSelf": true,
+   "hasVehicle": true,
+   "seatCapacity": null,
+   "closeContacts": [],
+   "groupLabel": "정기적 동행 없음",
+   "acceptanceConditions": [],
+   "declineConditions": [],
+   "unknowns": [
+    "거절 조건",
+    "수락 조건",
+    "실제 응답 의사",
+    "차량 좌석 수"
+   ],
+   "evidence": [
+    {
+     "id": "ev-P3-1",
+     "subjectId": "P3",
+     "kind": "fact",
+     "field": "interviewBasis",
+     "claim": "인터뷰 전사 1건이 있다",
+     "pointer": "/페르소나/2/근거",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P3-2",
+     "subjectId": "P3",
+     "kind": "fact",
+     "field": "livesAlone",
+     "claim": "혼자 산다고 기술되어 있다",
+     "pointer": "/페르소나/2/거주",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": "a7c8f231f053be40",
+     "note": null
+    },
+    {
+     "id": "ev-P3-3",
+     "subjectId": "P3",
+     "kind": "interpretation",
+     "field": "drivesSelf",
+     "claim": "차로 이동하거나 다른 사람을 태운다는 기술에서 직접 운전한다고 읽었다",
+     "pointer": "/페르소나/2/시뮬레이터에서의 역할",
+     "sourceKind": "interview",
+     "confidence": "medium",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P3-4",
+     "subjectId": "P3",
+     "kind": "fact",
+     "field": "closeContacts",
+     "claim": "정기적으로 함께 다니는 이웃이 없다고 답했다",
+     "pointer": "/페르소나/2/관계/가까운 사람",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P3-5",
+     "subjectId": "P3",
+     "kind": "unknown",
+     "field": "acceptanceConditions",
+     "claim": "이 사람이 어떤 요청을 받아들이는지 원자료에서 확인되지 않는다",
+     "pointer": "/페르소나/2/시뮬레이터에서의 역할",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P3-6",
+     "subjectId": "P3",
+     "kind": "unknown",
+     "field": "seatCapacity",
+     "claim": "차량 좌석 수는 원자료에 없다. 동승 인원 제한은 실험 가정으로만 둘 수 있다",
+     "pointer": "/페르소나/2",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P3-7",
+     "subjectId": "P3",
+     "kind": "fact",
+     "field": "ageBand",
+     "claim": "나이대 60대",
+     "pointer": "/페르소나/2/나이",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    }
+   ],
+   "interviewBasis": "interview",
+   "speechSource": "rule"
+  },
+  {
+   "subjectId": "P4",
+   "revisionId": "persona-synthetic-b7889f7457bde193",
+   "displayName": "P4",
+   "ageBand": "70대",
+   "livesAlone": false,
+   "drivesSelf": null,
+   "hasVehicle": null,
+   "seatCapacity": null,
+   "closeContacts": [
+    "P6",
+    "P7",
+    "P8"
+   ],
+   "groupLabel": "4인 동행",
+   "acceptanceConditions": [],
+   "declineConditions": [],
+   "unknowns": [
+    "거절 조건",
+    "수락 조건",
+    "실제 응답 의사",
+    "차량 좌석 수"
+   ],
+   "evidence": [
+    {
+     "id": "ev-P4-1",
+     "subjectId": "P4",
+     "kind": "fact",
+     "field": "interviewBasis",
+     "claim": "인터뷰 전사 1건이 있다",
+     "pointer": "/페르소나/3/근거",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P4-2",
+     "subjectId": "P4",
+     "kind": "interpretation",
+     "field": "livesAlone",
+     "claim": "혼자 산다는 기술이 없어 동거인이 있는 것으로 읽었다",
+     "pointer": "/페르소나/3/거주",
+     "sourceKind": "interview",
+     "confidence": "medium",
+     "quoteHash": "dc9ae7c795ebb931",
+     "note": null
+    },
+    {
+     "id": "ev-P4-3",
+     "subjectId": "P4",
+     "kind": "unknown",
+     "field": "drivesSelf",
+     "claim": "운전 여부를 확인할 기술이 없다. 운전 가능으로 가정하지 않는다",
+     "pointer": "/페르소나/3/시뮬레이터에서의 역할",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P4-4",
+     "subjectId": "P4",
+     "kind": "fact",
+     "field": "closeContacts",
+     "claim": "본인이 가깝다고 답한 사람: P6, P7, P8",
+     "pointer": "/페르소나/3/관계/가까운 사람",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P4-5",
+     "subjectId": "P4",
+     "kind": "unknown",
+     "field": "acceptanceConditions",
+     "claim": "이 사람이 어떤 요청을 받아들이는지 원자료에서 확인되지 않는다",
+     "pointer": "/페르소나/3/시뮬레이터에서의 역할",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P4-6",
+     "subjectId": "P4",
+     "kind": "unknown",
+     "field": "seatCapacity",
+     "claim": "차량 좌석 수는 원자료에 없다. 동승 인원 제한은 실험 가정으로만 둘 수 있다",
+     "pointer": "/페르소나/3",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P4-7",
+     "subjectId": "P4",
+     "kind": "fact",
+     "field": "ageBand",
+     "claim": "나이대 70대",
+     "pointer": "/페르소나/3/나이",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    }
+   ],
+   "interviewBasis": "interview",
+   "speechSource": "rule"
+  },
+  {
+   "subjectId": "P5",
+   "revisionId": "persona-synthetic-b7889f7457bde193",
+   "displayName": "P5",
+   "ageBand": "60대",
+   "livesAlone": false,
+   "drivesSelf": null,
+   "hasVehicle": null,
+   "seatCapacity": null,
+   "closeContacts": [
+    "P2"
+   ],
+   "groupLabel": "2인 동행",
+   "acceptanceConditions": [],
+   "declineConditions": [],
+   "unknowns": [
+    "거절 조건",
+    "수락 조건",
+    "실제 응답 의사",
+    "차량 좌석 수"
+   ],
+   "evidence": [
+    {
+     "id": "ev-P5-1",
+     "subjectId": "P5",
+     "kind": "fact",
+     "field": "interviewBasis",
+     "claim": "인터뷰 전사 1건이 있다",
+     "pointer": "/페르소나/4/근거",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P5-2",
+     "subjectId": "P5",
+     "kind": "interpretation",
+     "field": "livesAlone",
+     "claim": "혼자 산다는 기술이 없어 동거인이 있는 것으로 읽었다",
+     "pointer": "/페르소나/4/거주",
+     "sourceKind": "interview",
+     "confidence": "medium",
+     "quoteHash": "dc9ae7c795ebb931",
+     "note": null
+    },
+    {
+     "id": "ev-P5-3",
+     "subjectId": "P5",
+     "kind": "unknown",
+     "field": "drivesSelf",
+     "claim": "운전 여부를 확인할 기술이 없다. 운전 가능으로 가정하지 않는다",
+     "pointer": "/페르소나/4/시뮬레이터에서의 역할",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P5-4",
+     "subjectId": "P5",
+     "kind": "fact",
+     "field": "closeContacts",
+     "claim": "본인이 가깝다고 답한 사람: P2",
+     "pointer": "/페르소나/4/관계/가까운 사람",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P5-5",
+     "subjectId": "P5",
+     "kind": "unknown",
+     "field": "acceptanceConditions",
+     "claim": "이 사람이 어떤 요청을 받아들이는지 원자료에서 확인되지 않는다",
+     "pointer": "/페르소나/4/시뮬레이터에서의 역할",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P5-6",
+     "subjectId": "P5",
+     "kind": "unknown",
+     "field": "seatCapacity",
+     "claim": "차량 좌석 수는 원자료에 없다. 동승 인원 제한은 실험 가정으로만 둘 수 있다",
+     "pointer": "/페르소나/4",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P5-7",
+     "subjectId": "P5",
+     "kind": "fact",
+     "field": "ageBand",
+     "claim": "나이대 60대",
+     "pointer": "/페르소나/4/나이",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    }
+   ],
+   "interviewBasis": "interview",
+   "speechSource": "rule"
+  },
+  {
+   "subjectId": "P6",
+   "revisionId": "persona-synthetic-b7889f7457bde193",
+   "displayName": "P6",
+   "ageBand": "60대",
+   "livesAlone": false,
+   "drivesSelf": null,
+   "hasVehicle": null,
+   "seatCapacity": null,
+   "closeContacts": [
+    "P4",
+    "P7",
+    "P8",
+    "P12"
+   ],
+   "groupLabel": "4인 동행",
+   "acceptanceConditions": [
+    "마을 일로 요청받으면 순찰·회관 일정 뒤에 처리한다"
+   ],
+   "declineConditions": [],
+   "unknowns": [
+    "거절 조건",
+    "실제 응답 의사",
+    "차량 좌석 수"
+   ],
+   "evidence": [
+    {
+     "id": "ev-P6-1",
+     "subjectId": "P6",
+     "kind": "fact",
+     "field": "interviewBasis",
+     "claim": "인터뷰 전사 1건이 있다",
+     "pointer": "/페르소나/5/근거",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P6-2",
+     "subjectId": "P6",
+     "kind": "interpretation",
+     "field": "livesAlone",
+     "claim": "혼자 산다는 기술이 없어 동거인이 있는 것으로 읽었다",
+     "pointer": "/페르소나/5/거주",
+     "sourceKind": "interview",
+     "confidence": "medium",
+     "quoteHash": "4bcea1e61f95a4d7",
+     "note": null
+    },
+    {
+     "id": "ev-P6-3",
+     "subjectId": "P6",
+     "kind": "unknown",
+     "field": "drivesSelf",
+     "claim": "운전 여부를 확인할 기술이 없다. 운전 가능으로 가정하지 않는다",
+     "pointer": "/페르소나/5/시뮬레이터에서의 역할",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P6-4",
+     "subjectId": "P6",
+     "kind": "fact",
+     "field": "closeContacts",
+     "claim": "본인이 가깝다고 답한 사람: P4, P7, P8, P12",
+     "pointer": "/페르소나/5/관계/가까운 사람",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P6-5",
+     "subjectId": "P6",
+     "kind": "interpretation",
+     "field": "acceptanceConditions",
+     "claim": "마을 일과 봉사를 많이 한다는 기술을 수락 조건으로 읽었다",
+     "pointer": "/페르소나/5/관계/설명",
+     "sourceKind": "interview",
+     "confidence": "medium",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P6-6",
+     "subjectId": "P6",
+     "kind": "unknown",
+     "field": "seatCapacity",
+     "claim": "차량 좌석 수는 원자료에 없다. 동승 인원 제한은 실험 가정으로만 둘 수 있다",
+     "pointer": "/페르소나/5",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P6-7",
+     "subjectId": "P6",
+     "kind": "fact",
+     "field": "ageBand",
+     "claim": "나이대 60대",
+     "pointer": "/페르소나/5/나이",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    }
+   ],
+   "interviewBasis": "interview",
+   "speechSource": "rule"
+  },
+  {
+   "subjectId": "P7",
+   "revisionId": "persona-synthetic-b7889f7457bde193",
+   "displayName": "P7",
+   "ageBand": "70대",
+   "livesAlone": true,
+   "drivesSelf": null,
+   "hasVehicle": null,
+   "seatCapacity": null,
+   "closeContacts": [
+    "P6",
+    "P8"
+   ],
+   "groupLabel": "4인 동행",
+   "acceptanceConditions": [],
+   "declineConditions": [],
+   "unknowns": [
+    "거절 조건",
+    "수락 조건",
+    "실제 응답 의사",
+    "차량 좌석 수"
+   ],
+   "evidence": [
+    {
+     "id": "ev-P7-1",
+     "subjectId": "P7",
+     "kind": "fact",
+     "field": "interviewBasis",
+     "claim": "인터뷰 전사 1건이 있다",
+     "pointer": "/페르소나/6/근거",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P7-2",
+     "subjectId": "P7",
+     "kind": "fact",
+     "field": "livesAlone",
+     "claim": "혼자 산다고 기술되어 있다",
+     "pointer": "/페르소나/6/거주",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": "65f0818c264a14f7",
+     "note": null
+    },
+    {
+     "id": "ev-P7-3",
+     "subjectId": "P7",
+     "kind": "unknown",
+     "field": "drivesSelf",
+     "claim": "운전 여부를 확인할 기술이 없다. 운전 가능으로 가정하지 않는다",
+     "pointer": "/페르소나/6/시뮬레이터에서의 역할",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P7-4",
+     "subjectId": "P7",
+     "kind": "fact",
+     "field": "closeContacts",
+     "claim": "본인이 가깝다고 답한 사람: P6, P8",
+     "pointer": "/페르소나/6/관계/가까운 사람",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P7-5",
+     "subjectId": "P7",
+     "kind": "unknown",
+     "field": "acceptanceConditions",
+     "claim": "이 사람이 어떤 요청을 받아들이는지 원자료에서 확인되지 않는다",
+     "pointer": "/페르소나/6/시뮬레이터에서의 역할",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P7-6",
+     "subjectId": "P7",
+     "kind": "unknown",
+     "field": "seatCapacity",
+     "claim": "차량 좌석 수는 원자료에 없다. 동승 인원 제한은 실험 가정으로만 둘 수 있다",
+     "pointer": "/페르소나/6",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P7-7",
+     "subjectId": "P7",
+     "kind": "fact",
+     "field": "ageBand",
+     "claim": "나이대 70대",
+     "pointer": "/페르소나/6/나이",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    }
+   ],
+   "interviewBasis": "interview",
+   "speechSource": "rule"
+  },
+  {
+   "subjectId": "P8",
+   "revisionId": "persona-synthetic-b7889f7457bde193",
+   "displayName": "P8",
+   "ageBand": "70대",
+   "livesAlone": true,
+   "drivesSelf": null,
+   "hasVehicle": null,
+   "seatCapacity": null,
+   "closeContacts": [
+    "P6",
+    "P7"
+   ],
+   "groupLabel": "4인 동행",
+   "acceptanceConditions": [],
+   "declineConditions": [],
+   "unknowns": [
+    "거절 조건",
+    "수락 조건",
+    "실제 응답 의사",
+    "차량 좌석 수"
+   ],
+   "evidence": [
+    {
+     "id": "ev-P8-1",
+     "subjectId": "P8",
+     "kind": "fact",
+     "field": "interviewBasis",
+     "claim": "인터뷰 전사 1건이 있다",
+     "pointer": "/페르소나/7/근거",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P8-2",
+     "subjectId": "P8",
+     "kind": "fact",
+     "field": "livesAlone",
+     "claim": "혼자 산다고 기술되어 있다",
+     "pointer": "/페르소나/7/거주",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": "65f0818c264a14f7",
+     "note": null
+    },
+    {
+     "id": "ev-P8-3",
+     "subjectId": "P8",
+     "kind": "unknown",
+     "field": "drivesSelf",
+     "claim": "운전 여부를 확인할 기술이 없다. 운전 가능으로 가정하지 않는다",
+     "pointer": "/페르소나/7/시뮬레이터에서의 역할",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P8-4",
+     "subjectId": "P8",
+     "kind": "fact",
+     "field": "closeContacts",
+     "claim": "본인이 가깝다고 답한 사람: P6, P7",
+     "pointer": "/페르소나/7/관계/가까운 사람",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P8-5",
+     "subjectId": "P8",
+     "kind": "unknown",
+     "field": "acceptanceConditions",
+     "claim": "이 사람이 어떤 요청을 받아들이는지 원자료에서 확인되지 않는다",
+     "pointer": "/페르소나/7/시뮬레이터에서의 역할",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P8-6",
+     "subjectId": "P8",
+     "kind": "unknown",
+     "field": "seatCapacity",
+     "claim": "차량 좌석 수는 원자료에 없다. 동승 인원 제한은 실험 가정으로만 둘 수 있다",
+     "pointer": "/페르소나/7",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P8-7",
+     "subjectId": "P8",
+     "kind": "fact",
+     "field": "ageBand",
+     "claim": "나이대 70대",
+     "pointer": "/페르소나/7/나이",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    }
+   ],
+   "interviewBasis": "interview",
+   "speechSource": "rule"
+  },
+  {
+   "subjectId": "P9",
+   "revisionId": "persona-synthetic-b7889f7457bde193",
+   "displayName": "P9",
+   "ageBand": "60대",
+   "livesAlone": false,
+   "drivesSelf": false,
+   "hasVehicle": null,
+   "seatCapacity": null,
+   "closeContacts": [],
+   "groupLabel": "정기적 동행 없음",
+   "acceptanceConditions": [],
+   "declineConditions": [],
+   "unknowns": [
+    "거절 조건",
+    "수락 조건",
+    "실제 응답 의사",
+    "차량 좌석 수"
+   ],
+   "evidence": [
+    {
+     "id": "ev-P9-1",
+     "subjectId": "P9",
+     "kind": "fact",
+     "field": "interviewBasis",
+     "claim": "인터뷰 전사 1건이 있다",
+     "pointer": "/페르소나/8/근거",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P9-2",
+     "subjectId": "P9",
+     "kind": "interpretation",
+     "field": "livesAlone",
+     "claim": "혼자 산다는 기술이 없어 동거인이 있는 것으로 읽었다",
+     "pointer": "/페르소나/8/거주",
+     "sourceKind": "interview",
+     "confidence": "medium",
+     "quoteHash": "193516df9d3ca911",
+     "note": null
+    },
+    {
+     "id": "ev-P9-3",
+     "subjectId": "P9",
+     "kind": "fact",
+     "field": "drivesSelf",
+     "claim": "스스로 운전하지 않는다고 기술되어 있다",
+     "pointer": "/페르소나/8/시뮬레이터에서의 역할",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P9-4",
+     "subjectId": "P9",
+     "kind": "fact",
+     "field": "closeContacts",
+     "claim": "정기적으로 함께 다니는 이웃이 없다고 답했다",
+     "pointer": "/페르소나/8/관계/가까운 사람",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P9-5",
+     "subjectId": "P9",
+     "kind": "unknown",
+     "field": "acceptanceConditions",
+     "claim": "이 사람이 어떤 요청을 받아들이는지 원자료에서 확인되지 않는다",
+     "pointer": "/페르소나/8/시뮬레이터에서의 역할",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P9-6",
+     "subjectId": "P9",
+     "kind": "unknown",
+     "field": "seatCapacity",
+     "claim": "차량 좌석 수는 원자료에 없다. 동승 인원 제한은 실험 가정으로만 둘 수 있다",
+     "pointer": "/페르소나/8",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P9-7",
+     "subjectId": "P9",
+     "kind": "fact",
+     "field": "ageBand",
+     "claim": "나이대 60대",
+     "pointer": "/페르소나/8/나이",
+     "sourceKind": "interview",
+     "confidence": "high",
+     "quoteHash": null,
+     "note": null
+    }
+   ],
+   "interviewBasis": "interview",
+   "speechSource": "rule"
+  },
+  {
+   "subjectId": "P10",
+   "revisionId": "persona-synthetic-b7889f7457bde193",
+   "displayName": "P10",
+   "ageBand": "60대",
+   "livesAlone": false,
+   "drivesSelf": null,
+   "hasVehicle": null,
+   "seatCapacity": null,
+   "closeContacts": [
+    "P11"
+   ],
+   "groupLabel": "부부 · 합성식당",
+   "acceptanceConditions": [],
+   "declineConditions": [
+    "영업 중 가게를 비울 수 없다"
+   ],
+   "unknowns": [
+    "수락 조건",
+    "실제 응답 의사",
+    "차량 좌석 수"
+   ],
+   "evidence": [
+    {
+     "id": "ev-P10-1",
+     "subjectId": "P10",
+     "kind": "fact",
+     "field": "interviewBasis",
+     "claim": "합동 인터뷰 전사 1건(2인)에서 왔다. 두 사람의 발언이 한 전사에 섞여 있다",
+     "pointer": "/페르소나/9/근거",
+     "sourceKind": "joint_interview",
+     "confidence": "medium",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P10-2",
+     "subjectId": "P10",
+     "kind": "interpretation",
+     "field": "livesAlone",
+     "claim": "혼자 산다는 기술이 없어 동거인이 있는 것으로 읽었다",
+     "pointer": "/페르소나/9/거주",
+     "sourceKind": "joint_interview",
+     "confidence": "medium",
+     "quoteHash": "dc9ae7c795ebb931",
+     "note": null
+    },
+    {
+     "id": "ev-P10-3",
+     "subjectId": "P10",
+     "kind": "unknown",
+     "field": "drivesSelf",
+     "claim": "운전 여부를 확인할 기술이 없다. 운전 가능으로 가정하지 않는다",
+     "pointer": "/페르소나/9/시뮬레이터에서의 역할",
+     "sourceKind": "joint_interview",
+     "confidence": "medium",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P10-4",
+     "subjectId": "P10",
+     "kind": "fact",
+     "field": "closeContacts",
+     "claim": "본인이 가깝다고 답한 사람: P11",
+     "pointer": "/페르소나/9/관계/가까운 사람",
+     "sourceKind": "joint_interview",
+     "confidence": "medium",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P10-5",
+     "subjectId": "P10",
+     "kind": "fact",
+     "field": "declineConditions",
+     "claim": "가게를 보고 있어 자리를 뜰 수 없다고 기술되어 있다",
+     "pointer": "/페르소나/9/시뮬레이터에서의 역할",
+     "sourceKind": "joint_interview",
+     "confidence": "medium",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P10-6",
+     "subjectId": "P10",
+     "kind": "unknown",
+     "field": "acceptanceConditions",
+     "claim": "이 사람이 어떤 요청을 받아들이는지 원자료에서 확인되지 않는다",
+     "pointer": "/페르소나/9/시뮬레이터에서의 역할",
+     "sourceKind": "joint_interview",
+     "confidence": "medium",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P10-7",
+     "subjectId": "P10",
+     "kind": "unknown",
+     "field": "seatCapacity",
+     "claim": "차량 좌석 수는 원자료에 없다. 동승 인원 제한은 실험 가정으로만 둘 수 있다",
+     "pointer": "/페르소나/9",
+     "sourceKind": "joint_interview",
+     "confidence": "medium",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P10-8",
+     "subjectId": "P10",
+     "kind": "fact",
+     "field": "ageBand",
+     "claim": "나이대 60대",
+     "pointer": "/페르소나/9/나이",
+     "sourceKind": "joint_interview",
+     "confidence": "medium",
+     "quoteHash": null,
+     "note": null
+    }
+   ],
+   "interviewBasis": "joint_interview",
+   "speechSource": "rule"
+  },
+  {
+   "subjectId": "P11",
+   "revisionId": "persona-synthetic-b7889f7457bde193",
+   "displayName": "P11",
+   "ageBand": "70대",
+   "livesAlone": false,
+   "drivesSelf": null,
+   "hasVehicle": null,
+   "seatCapacity": null,
+   "closeContacts": [
+    "P10"
+   ],
+   "groupLabel": "부부 · 합성식당",
+   "acceptanceConditions": [],
+   "declineConditions": [
+    "영업 중 가게를 비울 수 없다"
+   ],
+   "unknowns": [
+    "수락 조건",
+    "실제 응답 의사",
+    "차량 좌석 수"
+   ],
+   "evidence": [
+    {
+     "id": "ev-P11-1",
+     "subjectId": "P11",
+     "kind": "fact",
+     "field": "interviewBasis",
+     "claim": "합동 인터뷰 전사 1건(2인)에서 왔다. 두 사람의 발언이 한 전사에 섞여 있다",
+     "pointer": "/페르소나/10/근거",
+     "sourceKind": "joint_interview",
+     "confidence": "medium",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P11-2",
+     "subjectId": "P11",
+     "kind": "interpretation",
+     "field": "livesAlone",
+     "claim": "혼자 산다는 기술이 없어 동거인이 있는 것으로 읽었다",
+     "pointer": "/페르소나/10/거주",
+     "sourceKind": "joint_interview",
+     "confidence": "medium",
+     "quoteHash": "dc9ae7c795ebb931",
+     "note": null
+    },
+    {
+     "id": "ev-P11-3",
+     "subjectId": "P11",
+     "kind": "unknown",
+     "field": "drivesSelf",
+     "claim": "운전 여부를 확인할 기술이 없다. 운전 가능으로 가정하지 않는다",
+     "pointer": "/페르소나/10/시뮬레이터에서의 역할",
+     "sourceKind": "joint_interview",
+     "confidence": "medium",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P11-4",
+     "subjectId": "P11",
+     "kind": "fact",
+     "field": "closeContacts",
+     "claim": "본인이 가깝다고 답한 사람: P10",
+     "pointer": "/페르소나/10/관계/가까운 사람",
+     "sourceKind": "joint_interview",
+     "confidence": "medium",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P11-5",
+     "subjectId": "P11",
+     "kind": "fact",
+     "field": "declineConditions",
+     "claim": "가게를 보고 있어 자리를 뜰 수 없다고 기술되어 있다",
+     "pointer": "/페르소나/10/시뮬레이터에서의 역할",
+     "sourceKind": "joint_interview",
+     "confidence": "medium",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P11-6",
+     "subjectId": "P11",
+     "kind": "unknown",
+     "field": "acceptanceConditions",
+     "claim": "이 사람이 어떤 요청을 받아들이는지 원자료에서 확인되지 않는다",
+     "pointer": "/페르소나/10/시뮬레이터에서의 역할",
+     "sourceKind": "joint_interview",
+     "confidence": "medium",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P11-7",
+     "subjectId": "P11",
+     "kind": "unknown",
+     "field": "seatCapacity",
+     "claim": "차량 좌석 수는 원자료에 없다. 동승 인원 제한은 실험 가정으로만 둘 수 있다",
+     "pointer": "/페르소나/10",
+     "sourceKind": "joint_interview",
+     "confidence": "medium",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P11-8",
+     "subjectId": "P11",
+     "kind": "fact",
+     "field": "ageBand",
+     "claim": "나이대 70대",
+     "pointer": "/페르소나/10/나이",
+     "sourceKind": "joint_interview",
+     "confidence": "medium",
+     "quoteHash": null,
+     "note": null
+    }
+   ],
+   "interviewBasis": "joint_interview",
+   "speechSource": "rule"
+  },
+  {
+   "subjectId": "P12",
+   "revisionId": "persona-synthetic-b7889f7457bde193",
+   "displayName": "P12",
+   "ageBand": "60대",
+   "livesAlone": true,
+   "drivesSelf": true,
+   "hasVehicle": true,
+   "seatCapacity": null,
+   "closeContacts": [
+    "P6"
+   ],
+   "groupLabel": "이장의 사촌",
+   "acceptanceConditions": [
+    "가까운 친척의 부탁이면 경로 효율과 무관하게 간다"
+   ],
+   "declineConditions": [],
+   "unknowns": [
+    "거절 조건",
+    "본인 확인(인터뷰 없음)",
+    "실제 응답 의사",
+    "차량 좌석 수"
+   ],
+   "evidence": [
+    {
+     "id": "ev-P12-1",
+     "subjectId": "P12",
+     "kind": "fact",
+     "field": "interviewBasis",
+     "claim": "인터뷰가 없다. 연구자 구술과 시뮬레이터 데이터로만 채워졌다",
+     "pointer": "/페르소나/11/근거",
+     "sourceKind": "none",
+     "confidence": "low",
+     "quoteHash": null,
+     "note": "P12는 다른 11명보다 근거 밀도가 낮다"
+    },
+    {
+     "id": "ev-P12-2",
+     "subjectId": "P12",
+     "kind": "fact",
+     "field": "livesAlone",
+     "claim": "혼자 산다고 기술되어 있다",
+     "pointer": "/페르소나/11/거주",
+     "sourceKind": "none",
+     "confidence": "low",
+     "quoteHash": "65f0818c264a14f7",
+     "note": null
+    },
+    {
+     "id": "ev-P12-3",
+     "subjectId": "P12",
+     "kind": "interpretation",
+     "field": "drivesSelf",
+     "claim": "차로 이동하거나 다른 사람을 태운다는 기술에서 직접 운전한다고 읽었다",
+     "pointer": "/페르소나/11/시뮬레이터에서의 역할",
+     "sourceKind": "none",
+     "confidence": "low",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P12-4",
+     "subjectId": "P12",
+     "kind": "fact",
+     "field": "closeContacts",
+     "claim": "본인이 가깝다고 답한 사람: P6",
+     "pointer": "/페르소나/11/관계/가까운 사람",
+     "sourceKind": "none",
+     "confidence": "low",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P12-5",
+     "subjectId": "P12",
+     "kind": "interpretation",
+     "field": "acceptanceConditions",
+     "claim": "친척의 부탁이면 우회해서라도 간다는 기술을 수락 조건으로 읽었다",
+     "pointer": "/페르소나/11/시뮬레이터에서의 역할",
+     "sourceKind": "none",
+     "confidence": "low",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P12-6",
+     "subjectId": "P12",
+     "kind": "unknown",
+     "field": "seatCapacity",
+     "claim": "차량 좌석 수는 원자료에 없다. 동승 인원 제한은 실험 가정으로만 둘 수 있다",
+     "pointer": "/페르소나/11",
+     "sourceKind": "none",
+     "confidence": "low",
+     "quoteHash": null,
+     "note": null
+    },
+    {
+     "id": "ev-P12-7",
+     "subjectId": "P12",
+     "kind": "fact",
+     "field": "ageBand",
+     "claim": "나이대 60대",
+     "pointer": "/페르소나/11/나이",
+     "sourceKind": "none",
+     "confidence": "low",
+     "quoteHash": null,
+     "note": null
+    }
+   ],
+   "interviewBasis": "none",
+   "speechSource": "rule"
+  }
+ ]
+}
