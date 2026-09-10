@@ -24,20 +24,48 @@ MEDial은 완성된 의료 서비스를 평가하는 도구가 아니라, core i
 
 ## 실행 방법
 
+처음 한 번:
+
 ```bash
 python -m pip install -r server/requirements-sim.txt
+npm install
 ```
+
+그다음부터:
 
 ```bash
-python server/sim_main.py
+./run.sh
 ```
+
+서버(8010)와 개발 서버(5173)를 띄우고 <http://localhost:5173> 을 엽니다. 이미 떠 있는 쪽은
+그대로 쓰므로 두 번 실행해도 세션이 두 벌 생기지 않고, `./run.sh --stop` 으로 내립니다.
+Ctrl+C 는 **이 스크립트가 띄운 것만** 정리합니다. 직접 띄우려면 `python server/sim_main.py` 와
+`npm run dev` 를 각각 실행하면 됩니다.
+
+기본 실행에 API 키·GPU·모델 호출이 없습니다. 원자료가 없으면 합성 마을·합성 페르소나로 돌고,
+화면 상단 배지가 어느 쪽인지 항상 표시합니다.
+
+### 모델 키는 `server/.env` 에 있습니다
+
+키는 **서버 프로세스의 환경변수에서만** 읽습니다. 그 값을 담아 두는 곳이 `server/.env` 이고,
+git-ignored 이며 `run.sh` 가 서버를 띄우기 전에 읽어 넣습니다. 양식은 `server/.env.example`
+(값 없음)에 있습니다. 직접 띄울 때는:
 
 ```bash
-npm install && npm run dev
+set -a; . server/.env; set +a; python server/sim_main.py
 ```
 
-<http://localhost:5173>. API 키·GPU·모델 호출이 없습니다. 원자료가 없으면 합성 마을·합성
-페르소나로 돌고, 화면 상단 배지가 어느 쪽인지 항상 표시합니다.
+| 변수 | 쓰임 |
+|---|---|
+| `OPENAI_API_KEY` | 온라인 어댑터가 바로 씁니다 (OpenAI 호환 chat completions) |
+| `ANTHROPIC_API_KEY` | 있으면 이쪽을 먼저 씁니다 (Anthropic Messages). 지금 파일에는 없습니다 |
+| `GOOGLE_API_KEY` | **지금 어댑터가 지원하지 않습니다.** 예전 데모에서 쓰던 키를 provider를 늘릴 때를 위해 보관만 합니다 |
+| `MEDIAL_LLM_PROVIDER` · `MEDIAL_LLM_MODEL` · `MEDIAL_LLM_BASE_URL` · `MEDIAL_LLM_TIMEOUT_S` | 온라인 어댑터 설정 (선택) |
+| `MEDIAL_SIM_PORT` · `MEDIAL_SIM_DB` · `MEDIAL_VILLAGE_PATH` · `MEDIAL_PERSONA_PATH` | 서버 설정 (선택) |
+
+키가 있어도 **rule 어댑터를 고르면 모델을 한 번도 부르지 않습니다.** 키가 없으면 온라인
+어댑터를 고를 수 없고(session 생성 400), 호출이 실패해도 규칙 결과로 대체하지 않습니다.
+응답·로그·문서·health 어디에도 키가 들어가지 않습니다.
 
 원자료가 있을 때만:
 
@@ -299,7 +327,8 @@ npm run build                                     # tsc + vite, 통과
 
 전부 합성 픽스처를 씁니다. 원자료가 있을 때만 도는 대조 테스트는 없으면 조용히 통과합니다.
 
-빌드 산출물에 레거시 companion 청크(74 kB)가 더 이상 생성되지 않습니다.
+빌드 산출물은 시뮬레이터 한 덩어리입니다. 라우터와 lazy 분할은 companion 데모를 함께
+담고 있을 때만 필요했으므로 같이 없앴습니다.
 
 ### 브라우저에서 확인한 것 (원자료 레지스트리, 실서버)
 - 원본 지도 그림 위에 도로·집·건물·밭·항구와 주민 얼굴이 표시됨
@@ -758,9 +787,13 @@ P10·P11이 표식 두 개로 남는 것, OSM 크레딧, 사람 패널의 정직
   확인하지 못한 가정을 함께 적습니다.
 - 남은 작업은 [07_BACKLOG.md](docs/research/07_BACKLOG.md).
 - 원자료는 저장소에 들어오지 않습니다. `local-data/` 와 `local-archive/` 는 git-ignored입니다.
-- 기존 companion 데모는 삭제하지 않고 활성 빌드 밖으로 옮겼습니다
-  ([docs/archive/COMPANION_3.0.md](docs/archive/COMPANION_3.0.md)). 미커밋 사용자 변경 2건의
-  사본·diff·해시는 `local-archive/companion/` 에 있습니다.
+- **기존 companion 데모는 저장소에서 제거했습니다** (2026-09-11, 사용자 요청). 음성·triage·
+  RAG·아바타 서버(`server/app/{api,modules,prompts,session,ws}`, `main.py`, `config.py`),
+  프런트(`src/{App.tsx,components,screens,store,styles,hooks,config,data,types}`),
+  `requirements.txt`, `GPU_SETUP.md`, Pretendard 폰트와 아바타 이미지, 관련 문서가 대상입니다.
+  전부 커밋 `dafb5e6` 에 들어 있으므로 `git show dafb5e6:<경로>` 로 되살릴 수 있습니다.
+  `.env` 도 그 데모용 설정(STT·TTS·RAG·wav2lip)이었고, **`GOOGLE_API_KEY` 와
+  `OPENAI_API_KEY` 값만 남기고** 나머지는 지웠습니다.
 
 ## 읽는 순서
 

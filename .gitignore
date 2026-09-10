@@ -146,8 +146,11 @@ Thumbs.db
 # local research data (raw sources, runs, model responses) - never committed
 local-data/
 
-# local archive of pre-existing work kept outside the active build
+# 실행 DB 백업 등, 저장소 밖에 두는 로컬 보관본
 local-archive/
+
+# run.sh 가 남기는 서버·개발 서버 로그
+.run/
 
 # UI 스크린샷은 원자료 레지스트리로 찍혀서 주민의 일과·장소·이름이 그대로 담긴다.
 # local-data/ 를 제외하는 이유와 같으므로 저장소에 넣지 않는다.

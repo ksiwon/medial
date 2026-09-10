@@ -1,9 +1,7 @@
 # Everything the research simulator needs, and nothing else.
 #
-# server/requirements.txt is the companion demo's dependency set: Whisper, torch,
-# FAISS, Gemini, TTS. The simulator imports none of them, needs no GPU and reads
-# no API key, so installing that file to run this would be misleading about what
-# the tool actually depends on.
+# No GPU, no local model, no API key. Running the whole loop with the rule
+# adapters needs exactly this file.
 #
 #   python -m pip install -r server/requirements-sim.txt
 #   python server/sim_main.py

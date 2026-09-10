@@ -22,7 +22,15 @@ export const colour = {
   unknown: '#8B96A1',
 } as const;
 
+/** One font stack, and it is the platform's own.
+ *
+ *  This used to start with 'Pretendard', whose @font-face lived only in the
+ *  removed companion stylesheet - so it never loaded here and every screenshot
+ *  in the docs is already the system font. Naming a font the build does not
+ *  ship is a promise the page cannot keep. */
 export const font = {
+  family:
+    'system-ui, -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", Roboto, sans-serif',
   page: '24px',
   section: '18px',
   brand: '18px',

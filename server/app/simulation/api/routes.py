@@ -1,8 +1,8 @@
 """HTTP surface for the research simulator.
 
-This app is separate from the existing companion server on purpose: none of the
-voice, triage, RAG or GPU paths are imported here, and this module starts with
-no API key and no model.
+This module starts with no API key and no model: the default adapters are rules,
+and an online adapter can only be chosen when the server process was given a key
+(see server/.env.example).
 """
 from __future__ import annotations
 

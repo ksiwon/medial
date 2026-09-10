@@ -20,22 +20,30 @@
 
 ## 실행
 
+처음 한 번:
+
 ```bash
 python -m pip install -r server/requirements-sim.txt
+npm install
 ```
+
+그다음부터는 한 줄입니다. 서버(8010)와 개발 서버(5173)를 띄우고 브라우저를 엽니다:
 
 ```bash
-python server/sim_main.py
+./run.sh
 ```
 
-```bash
-npm install && npm run dev
-```
+이미 떠 있으면 그대로 쓰고, `./run.sh --stop` 으로 내립니다. 직접 띄우려면
+`python server/sim_main.py` 와 `npm run dev` 를 각각 실행하면 됩니다.
+프론트의 `/api/sim` 요청은 `127.0.0.1:8010` 으로 프록시됩니다.
 
-<http://localhost:5173> 을 엽니다. 프론트의 `/api/sim` 요청은 `127.0.0.1:8010` 으로 프록시됩니다.
+### 모델 키
 
-`server/requirements.txt` 는 아래 "아카이브"의 컴패니언 데모용이고, Whisper·torch·FAISS·Gemini를
-받습니다. 시뮬레이터는 그중 아무것도 import 하지 않으므로 `requirements-sim.txt` 만 있으면 됩니다.
+기본 실행에는 필요 없습니다 — 규칙 어댑터는 모델을 한 번도 부르지 않습니다. 리뷰·개선을 실제
+모델로 돌릴 때만 필요하고, 키는 **`server/.env` 에 두며 서버 프로세스만 읽습니다**
+(`run.sh` 가 읽어서 넣어 줍니다). 양식은 `server/.env.example`.
+키가 없으면 온라인 어댑터를 고를 수 없고(session 생성 400), 호출이 실패해도 규칙 결과로
+대체하지 않습니다.
 
 ### 원자료 없이 실행
 
@@ -58,12 +66,10 @@ cd scripts && python -m import_village
 ## 검증
 
 ```bash
-python -m pytest server/tests/simulation -q
+npm run build && npm test && python -m pytest server/tests/simulation -q
 ```
 
-```bash
-npm run build
-```
+기준선: build 통과 · vitest 41 · pytest 151. 숫자가 줄면 회귀입니다.
 
 ## 저장소 구조
 
@@ -71,23 +77,8 @@ npm run build
 |---|---|
 | `server/app/simulation/` | 사건 엔진 · 관측 경계 · 정책 · 기관 · 동승 · 페르소나 컴파일러 · SQLite |
 | `server/tests/simulation/` | 회귀 테스트 (전부 합성 픽스처 사용) |
-| `src/features/simulation/` | 지도 · MEDial 패널 · 재생 · 정책 편집기 · 비교 · 발견 |
+| `src/features/simulation/` | 세 화면 · 지도 · 재생 · 정책 편집기 · 비교 · 현장 검토 |
 | `scripts/import_village/` | 원자료 → 정규화 레지스트리 (출처 검증 포함) |
 | `docs/research/` | 연구 문서 · 데이터 계약 · 설계 결정 기록 |
 | `local-data/` | 원자료에서 파생된 레지스트리와 실행 기록. **커밋하지 않습니다** |
-| `local-archive/` | 기존 작업 보관본. **커밋하지 않습니다** |
-
-## 아카이브 — MEDial 3.0 컴패니언 데모
-
-이 저장소의 이전 방향이었던 음성 AI 말동무 데모는 **보관 상태**입니다. 소스를 지우거나 되돌리지
-않았고, 기본 빌드에만 포함되지 않습니다.
-
-```bash
-VITE_INCLUDE_COMPANION=1 npm run dev
-```
-
-`#/companion` 에서 열립니다. 그쪽 서버는 `server/app/main.py` 이며 API 키와 GPU 설정이 필요합니다
-— 문서는 [docs/archive/COMPANION_3.0.md](docs/archive/COMPANION_3.0.md).
-
-미커밋 상태였던 `CompanionOnboarding.tsx` 와 `useAppStore.ts` 는 손대지 않았습니다. 사본·diff·해시가
-`local-archive/companion/` 에 있습니다.
+| `local-archive/` | 실행 DB 백업. **커밋하지 않습니다** |

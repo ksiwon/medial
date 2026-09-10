@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// The research simulator server (server/sim_main.py) is separate from the
-// companion server; proxying /api/sim keeps the browser on one origin.
+// The simulator's API lives in its own process (server/sim_main.py); proxying
+// /api/sim keeps the browser on a single origin.
 export default defineConfig({
   plugins: [react()],
   server: {

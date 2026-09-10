@@ -12,13 +12,17 @@
     <style>
       /* The default 8px body margin turned every full-height screen into a
          1448px-wide document at 1440, which is a horizontal scrollbar on the
-         default view. Reset it once, here, so both routes get it. */
+         default view. */
       html,
       body {
         margin: 0;
         padding: 0;
       }
       body {
+        /* Same stack as the app root, so any text outside it - an error boundary,
+           a bare fallback - is not rendered in the browser's serif default. */
+        font-family: system-ui, -apple-system, 'Segoe UI', 'Malgun Gothic',
+          'Apple SD Gothic Neo', Roboto, sans-serif;
         background: #f7f8fa;
         -webkit-font-smoothing: antialiased;
       }

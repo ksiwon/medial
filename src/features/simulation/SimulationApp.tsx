@@ -44,7 +44,7 @@ const Root = styled.div`
   flex-direction: column;
   background: ${colour.app};
   color: ${colour.text};
-  font-family: 'Pretendard', system-ui, -apple-system, sans-serif;
+  font-family: ${font.family};
   font-size: ${font.body};
   overflow: hidden;
 `;

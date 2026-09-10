@@ -12,10 +12,6 @@ import type {
   VillagePayload,
 } from './api/types';
 
-// Deliberately a separate store from src/store/useAppStore.ts: that one holds
-// companion/voice/triage UI state, and mixing simulation facts into it would put
-// two different sources of truth in one place.
-//
 // The replay cursor is a *sequence number*, not a time. Those were treated as
 // interchangeable before, so stepping onto the first of ten events sharing a
 // timestamp displayed all ten. ``cursorSeq`` is what the server stores and what
