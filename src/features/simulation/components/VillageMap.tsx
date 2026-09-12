@@ -17,8 +17,8 @@ import { ActivityIcon, FaceChip, FaceMark, VehicleMark } from './Marks';
 
 // The real map of 은점마을: the source raster, north up, flat, at the source's
 // own proportions. Nothing here invents terrain, and nothing stretches the
-// 1.15 km north-south strip sideways to fill the panel - the empty margins are
-// the shape of the place.
+// 1.15 km north-south strip sideways. Default cover crops to fill the column;
+// All explicitly fits the whole village, preserving geographic proportions.
 //
 // Three rules from doc 15 section 5 shape the drawing:
 //
@@ -58,16 +58,14 @@ function projector(view: View, box: { width: number; height: number }) {
 }
 
 /** Marker geometry, in screen pixels, exactly as doc 15 section 5 specifies. */
-const FACE_D = 22;
+const FACE_D = 24;
 const FACE_R = FACE_D / 2;
-const HIT_R = 16; // 32 px hit area
-const LABEL_PX = 13;
 
 const Frame = styled.div`
   position: relative;
   flex: 1;
   min-height: 0;
-  background: #eff1f3;
+  background: #f8f7f4;
   border-bottom: 1px solid ${colour.border};
   overflow: hidden;
   touch-action: none;
@@ -88,8 +86,9 @@ const Corner = styled.div`
 
 const Tools = styled(Corner)`
   right: 12px;
-  bottom: 12px;
-  background: rgba(255, 255, 255, 0.92);
+  bottom: 34px;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.96);
   border: 1px solid ${colour.border};
   border-radius: ${radius.control};
   padding: 3px;
@@ -102,7 +101,7 @@ const ToolButton = styled.button`
   font-family: inherit;
   font-size: ${font.small};
   min-width: 28px;
-  height: 26px;
+  height: 32px;
   padding: 0 7px;
   border-radius: 4px;
   cursor: pointer;
@@ -158,8 +157,9 @@ const Popover = styled.div<{ $left: number; $top: number; $below: boolean }>`
   position: absolute;
   left: ${(p) => p.$left}px;
   top: ${(p) => p.$top}px;
-  transform: translate(-50%, ${(p) => (p.$below ? '16px' : 'calc(-100% - 16px)')});
-  width: 262px;
+
+  width: 250px;
+  max-width: calc(100% - 16px);
   background: ${colour.surface};
   border: 1px solid ${colour.border};
   border-radius: ${radius.panel};
@@ -168,31 +168,20 @@ const Popover = styled.div<{ $left: number; $top: number; $below: boolean }>`
   overflow: hidden;
 `;
 
-const PopHead = styled.div`
-  padding: 8px 12px;
-  border-bottom: 1px solid ${colour.border};
-  font-size: ${font.small};
-  color: ${colour.secondary};
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-`;
-
 /** The people in this group, as a single horizontal strip. Long groups scroll
  *  sideways inside the card rather than turning it into twelve profiles. */
 const PopPeople = styled.div`
   display: flex;
   gap: 4px;
   overflow-x: auto;
-  padding: 8px 10px;
+  padding: 8px 34px 8px 10px;
   border-bottom: 1px solid ${colour.border};
 `;
 
 const PersonPick = styled.button<{ $active: boolean }>`
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   flex: none;
   border: 1px solid ${(p) => (p.$active ? colour.primary : 'transparent')};
   background: ${(p) => (p.$active ? colour.selected : 'transparent')};
@@ -208,8 +197,12 @@ const PersonPick = styled.button<{ $active: boolean }>`
 `;
 
 const PopBody = styled.div`
-  padding: 10px 12px 12px;
-  font-size: ${font.body};
+  padding: 8px 12px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: ${font.small};
   line-height: 1.5;
   color: ${colour.text};
 `;
@@ -223,12 +216,14 @@ const Quote = styled.div`
 `;
 
 const MoreButton = styled.button`
-  margin-top: 10px;
-  width: 100%;
+  margin: 0;
+  flex: none;
+  white-space: nowrap;
   border: 1px solid ${colour.border};
   background: ${colour.surface};
   border-radius: ${radius.control};
-  min-height: 34px;
+  min-height: 26px;
+  padding: 2px 6px;
   font-family: inherit;
   font-size: ${font.small};
   cursor: pointer;
@@ -340,6 +335,7 @@ export default function VillageMap({
   const [vx, vy, vw, vh] = village.geometry.viewBox;
   const home: View = useMemo(() => ({ x: vx, y: vy, w: vw, h: vh }), [vx, vy, vw, vh]);
   const [view, setView] = useState<View>(home);
+  const [fitMode, setFitMode] = useState<'fill' | 'all' | null>('fill');
   const [box, setBox] = useState({ width: 1, height: 1 });
   const [hovered, setHovered] = useState<string | null>(null);
   /** The card Escape just closed. The marker keeps focus and often the pointer
@@ -347,10 +343,14 @@ export default function VillageMap({
    *  the same tick and Escape appears to do nothing. */
   const [dismissed, setDismissed] = useState<string | null>(null);
   const [mapBroken, setMapBroken] = useState(false);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const popRef = useRef<HTMLDivElement | null>(null);
+  const [popSize, setPopSize] = useState({ width: 250, height: 138 });
+  useEffect(() => () => { if (hoverTimer.current) clearTimeout(hoverTimer.current); }, []);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const drag = useRef<{ px: number; py: number; view: View } | null>(null);
 
-  useEffect(() => setView(home), [home]);
+  useEffect(() => { setMapBroken(false); setFitMode('fill'); }, [home]);
 
   useEffect(() => {
     const node = frameRef.current;
@@ -362,15 +362,36 @@ export default function VillageMap({
     return () => observer.disconnect();
   }, []);
 
+  // Cover the map column without deforming geography; All is an explicit fit.
+  const fillView = useMemo(() => {
+    const raster = village.mapImage;
+    const m = raster?.northUpMatrix;
+    const corners = raster && m ? [[0,0],[raster.sourceWidthPx,0],[0,raster.sourceHeightPx],[raster.sourceWidthPx,raster.sourceHeightPx]]
+      .map(([x,y]) => [m[0]*x+m[2]*y+m[4], m[1]*x+m[3]*y+m[5]]) : null;
+    const x = corners ? Math.min(...corners.map(p => p[0])) : home.x;
+    const y = corners ? Math.min(...corners.map(p => p[1])) : home.y;
+    const w = corners ? Math.max(...corners.map(p => p[0])) - x : home.w;
+    const h = corners ? Math.max(...corners.map(p => p[1])) - y : home.h;
+    const scale = Math.max(box.width / w, box.height / h);
+    const width = box.width / scale, height = box.height / scale;
+    return { x: x + (w-width)/2, y: y + (h-height)/2, w: width, h: height };
+  }, [home, village.mapImage, box]);
+  useEffect(() => {
+    if (box.width > 1 && box.height > 1 && fitMode) setView(fitMode === 'fill' ? fillView : home);
+  }, [fillView, home, box, fitMode]);
+
   const project = useMemo(() => projector(view, box), [view, box]);
 
   const onWheel = useCallback(
-    (event: React.WheelEvent) => {
+    (event: WheelEvent) => {
+      if ((event.target as Element).closest('[data-overlay]')) return;
+      event.preventDefault();
+      setFitMode(null);
       const node = frameRef.current;
       if (!node) return;
       const rect = node.getBoundingClientRect();
       const anchor = project.toSvg(event.clientX - rect.left, event.clientY - rect.top);
-      const factor = event.deltaY > 0 ? 1.15 : 1 / 1.15;
+      const factor = Math.exp(Math.max(-120, Math.min(120, event.deltaY)) * 0.0015);
       setView((current) => {
         const w = Math.min(home.w * 1.2, Math.max(home.w / 24, current.w * factor));
         const ratio = w / current.w;
@@ -385,6 +406,12 @@ export default function VillageMap({
     [home.w, project],
   );
 
+  useEffect(() => {
+    const node = frameRef.current;
+    node?.addEventListener('wheel', onWheel, { passive: false });
+    return () => node?.removeEventListener('wheel', onWheel);
+  }, [onWheel]);
+
   const onPointerDown = (event: React.PointerEvent) => {
     if ((event.target as HTMLElement).closest('g[data-marker]')) return;
     // Panning captures the pointer on the frame, and a captured pointer
@@ -392,6 +419,9 @@ export default function VillageMap({
     // the frame - the popover's 더 알아보기, the zoom controls - never
     // produced a click at all. Overlays opt out of the drag entirely.
     if ((event.target as HTMLElement).closest('[data-overlay]')) return;
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    setHovered(null); onSelectCluster(null, null);
+    setFitMode(null);
     drag.current = { px: event.clientX, py: event.clientY, view };
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
   };
@@ -424,7 +454,7 @@ export default function VillageMap({
       const point = project.toScreen(cluster.x, cluster.y);
       return { key: cluster.key, left: point.left, top: point.top };
     });
-    return spreadOverlaps(marks, FACE_D + 10);
+    return spreadOverlaps(marks, FACE_D + 22);
   }, [clusters, project]);
 
   const anchors = useMemo(() => {
@@ -438,16 +468,29 @@ export default function VillageMap({
   const openKey = selectedCluster ?? hovered;
   const active =
     openKey && openKey !== dismissed ? (clusters.find((c) => c.key === openKey) ?? null) : null;
-  const pinned = active != null && active.key === selectedCluster;
   const activeAt = active ? (layout.get(active.key) ?? anchors.get(active.key)!) : null;
-  const below = activeAt ? activeAt.top < 190 : false;
+  const below = activeAt ? activeAt.top < popSize.height + 24 : false;
   const clampedLeft = activeAt
-    ? Math.min(Math.max(activeAt.left, 137), Math.max(137, box.width - 137))
-    : 0;
+    ? Math.max(8, Math.min(activeAt.left - popSize.width / 2, box.width - popSize.width - 8)) : 0;
+  const popTop = activeAt ? Math.max(8, Math.min(
+    below ? activeAt.top + 26 : activeAt.top - popSize.height - 26,
+    box.height - popSize.height - 8)) : 0;
+  useEffect(() => {
+    const node = popRef.current;
+    if (!node) return;
+    const observer = new ResizeObserver(() => setPopSize({width: node.offsetWidth, height: node.offsetHeight}));
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [active?.key]);
 
   /** Leaving a marker, or moving to another one, forgets an Escape: the key
    *  hides the card that is open, it does not make a marker permanently mute. */
   const onHover = (key: string | null) => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    if (key === null) {
+      hoverTimer.current = setTimeout(() => setHovered(null), 260);
+      return;
+    }
     setHovered(key);
     // Functional, because Escape focuses the marker in the same batch: the
     // focus handler lands here while `dismissed` still reads as its old value,
@@ -463,6 +506,7 @@ export default function VillageMap({
     if (!openKey) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
+      if (hoverTimer.current) clearTimeout(hoverTimer.current);
       setDismissed(openKey);
       if (selectedCluster) onSelectCluster(null, null);
       // Focus goes back to the marker the card belonged to, not to the body.
@@ -488,7 +532,6 @@ export default function VillageMap({
     <>
       <Frame
         ref={frameRef}
-        onWheel={onWheel}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
@@ -498,7 +541,7 @@ export default function VillageMap({
           viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}
           preserveAspectRatio="xMidYMid meet"
         >
-          <rect x={vx - vw} y={vy - vh} width={vw * 3} height={vh * 3} fill="#eff1f3" />
+          <rect x={vx - vw} y={vy - vh} width={vw * 3} height={vh * 3} fill="#f8f7f4" />
 
           {/* The source's own map. Research material, fetched from the local API
               and never bundled. Desaturated so the people on top of it are the
@@ -511,8 +554,8 @@ export default function VillageMap({
               width={mapImage!.sourceWidthPx}
               height={mapImage!.sourceHeightPx}
               transform={`matrix(${mapImage!.northUpMatrix.join(' ')})`}
-              opacity={medial ? 0.24 : 0.72}
-              style={{ filter: 'saturate(0.55)' }}
+              opacity={medial ? 0.72 : 1}
+              style={{ filter: 'saturate(0.92)' }}
               onError={() => setMapBroken(true)}
               preserveAspectRatio="none"
             />
@@ -647,37 +690,40 @@ export default function VillageMap({
         </Credit>
 
         <Tools data-overlay>
-          <ToolButton onClick={() => setView((v) => zoomBy(v, 1 / 1.3, home))} title="확대">
+          <ToolButton onClick={() => { setFitMode(null); setView((v) => zoomBy(v, 1 / 1.2, home)); }} title="확대">
             ＋
           </ToolButton>
-          <ToolButton onClick={() => setView((v) => zoomBy(v, 1.3, home))} title="축소">
+          <ToolButton onClick={() => { setFitMode(null); setView((v) => zoomBy(v, 1.2, home)); }} title="축소">
             －
           </ToolButton>
-          <ToolButton onClick={() => setView(home)}>전체</ToolButton>
+          <ToolButton onClick={() => setFitMode(fitMode === 'all' ? 'fill' : 'all')}
+            title={fitMode === 'all' ? '지도 칸 채우기' : '마을 전체 보기'}>{fitMode === 'all' ? '채움' : '전체'}</ToolButton>
         </Tools>
 
         {active && activeAt && (
           <Popover
+            ref={popRef}
             data-overlay
             $left={clampedLeft}
-            $top={activeAt.top}
+            $top={popTop}
             $below={below}
             role="dialog"
-            aria-label={`${active.members.length}명`}
-            onMouseEnter={() => setHovered(active.key)}
-            onMouseLeave={() => setHovered(null)}
+            aria-label={`${placeName(active, village)} · ${active.members.length}명`}
+            onMouseEnter={() => onHover(active.key)}
+            onMouseLeave={() => onHover(null)}
+            onFocus={() => onHover(active.key)}
+            onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) onHover(null); }}
           >
-            <PopHead>
-              <span>{placeName(active, village)}</span>
-              <span>{pinned ? 'Esc 닫기' : '누르면 고정'}</span>
-            </PopHead>
-
-            {active.members.length > 1 && (
+            <ToolButton aria-label="팝오버 닫기"
+              style={{position:'absolute',right:8,top:10,height:24,minWidth:20,padding:0}}
+              onClick={() => { setDismissed(active.key); onSelectCluster(null, null); setHovered(null); }}>×</ToolButton>
+            {active.members.length > 0 && (
               <PopPeople>
                 {active.members.map((member) => (
                   <PersonPick
                     key={member.id}
                     $active={member.id === selectedMember?.id}
+                    aria-pressed={member.id === selectedMember?.id}
                     onClick={() => onSelectCluster(active.key, member.id)}
                   >
                     <FaceChip id={member.id} size={26} isVillageHead={member.isVillageHead} />
@@ -689,13 +735,11 @@ export default function VillageMap({
 
             {selectedMember && (
               <PopBody>
-                <strong>
-                  {selectedMember.isVillageHead ? '이장' : selectedMember.displayName}
-                </strong>{' '}
-                · {selectedMember.activity}
-                {selectedMember.ridingWith && ` (${selectedMember.ridingWith}의 차에 동승)`}
-                {quote && <Quote>“{quote}”</Quote>}
-                <MoreButton onClick={() => onOpenDetail(selectedMember.id)}>더 알아보기</MoreButton>
+                <span>{selectedMember.activity}
+                  {selectedMember.ridingWith && ' · 차량 동승'}
+                  {quote && <Quote>“{quote}”</Quote>}
+                </span>
+                <MoreButton onClick={() => { onOpenDetail(selectedMember.id); setDismissed(active.key); onSelectCluster(null, null); }}>더 알아보기 ↗</MoreButton>
               </PopBody>
             )}
           </Popover>
@@ -846,7 +890,7 @@ function ClusterMark({
       aria-label={`${lead.displayName} ${lead.activity}${
         cluster.members.length > 1 ? ` 외 ${cluster.members.length - 1}명` : ''
       }`}
-      style={{ cursor: 'pointer', outline: 'none', opacity: dim ? 0.35 : 1 }}
+      style={{ cursor: 'pointer', outline: 'none', opacity: dim && !selected && !hovered ? 0.85 : 1 }}
       onClick={onSelect}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -876,8 +920,11 @@ function ClusterMark({
         </>
       )}
 
-      {/* 32 px hit area: the faces are small on a 1.15 km strip. */}
-      <circle cx={x} cy={y} r={HIT_R * k} fill="transparent" />
+      <rect x={x - (faces.length > 1 ? 28 : 16) * k} y={y - 16*k}
+        width={(faces.length > 1 ? 56 : 53)*k} height={32*k} rx={16*k}
+        fill={selected || hovered ? '#edf5ec' : '#fffffff5'}
+        stroke={selected || hovered ? '#8eaf98' : '#d6e1d3'} strokeWidth={1.2*k}
+        style={{filter:'drop-shadow(0 1px 2px #304c3926)'}} />
 
       {driver && (
         <g transform={`translate(${x} ${y + (FACE_R + 16) * k}) scale(${k})`}>
@@ -931,22 +978,13 @@ function ClusterMark({
         </g>
       )}
 
-      {/* P-number at 13 px, with a halo so it survives the raster underneath. */}
-      <text
-        x={x}
-        y={y + r + LABEL_PX * k}
-        fontSize={LABEL_PX * k}
-        textAnchor="middle"
-        fill={colour.text}
-        stroke="#ffffff"
-        strokeWidth={3 * k}
-        paintOrder="stroke"
-        fontWeight={selected || hovered ? 700 : 500}
-        style={{ pointerEvents: 'none' }}
-      >
+      {cluster.members.length === 1 && <text
+        x={x + 17*k} y={y + 3.5*k} fontSize={10*k}
+        textAnchor="start" fill="#496054"
+        fontWeight={selected || hovered ? 650 : 500}
+        style={{pointerEvents:'none'}}>
         {lead.isVillageHead ? '이장' : lead.id}
-        {cluster.members.length > 1 ? ` 외 ${cluster.members.length - 1}` : ''}
-      </text>
+      </text>}
 
       {medial && (
         <text

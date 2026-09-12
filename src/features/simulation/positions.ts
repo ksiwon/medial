@@ -367,7 +367,7 @@ export function spreadOverlaps<T extends { key: string; left: number; top: numbe
       if (!hit) break;
       // Walk outward along the line away from the mark we collided with.
       const dx = left - hit.left;
-      const dy = top - hit.top;
+      const dy = top - hit.top || (dx === 0 ? 1 : 0);
       const length = Math.hypot(dx, dy) || 1;
       left = hit.left + (dx / length) * minGap;
       top = hit.top + (dy / length) * minGap;

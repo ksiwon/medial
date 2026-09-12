@@ -1,3 +1,4 @@
+import { useId } from 'react';
 // Small drawn faces, and a vehicle mark that is its own object.
 //
 // The faces exist so twelve people are telling apart at a glance without reading
@@ -9,34 +10,6 @@
 // The vehicle is drawn separately from the person rather than as an icon on top
 // of them, because "who is driving" and "who is riding" are different facts and
 // the seat marks have to be able to show both.
-
-const SKIN = ['#F0D3B4', '#E4BD98', '#D5A67F', '#C79067'];
-const HAIR = ['#3A3A3A', '#6B5A46', '#9A9A9A', '#D8D8D8', '#54402C'];
-
-function hash(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i += 1) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return h;
-}
-
-export interface FaceTraits {
-  skin: string;
-  hair: string;
-  hairStyle: 0 | 1 | 2 | 3;
-  glasses: boolean;
-  beard: boolean;
-}
-
-export function traitsFor(id: string): FaceTraits {
-  const h = hash(id);
-  return {
-    skin: SKIN[h % SKIN.length],
-    hair: HAIR[(h >> 3) % HAIR.length],
-    hairStyle: ((h >> 6) % 4) as 0 | 1 | 2 | 3,
-    glasses: ((h >> 9) & 1) === 1,
-    beard: ((h >> 11) & 1) === 1,
-  };
-}
 
 /**
  * One face, drawn in a 20x20 box centred on (0,0) at scale 1.
@@ -53,83 +26,33 @@ export function FaceMark({
   isVillageHead?: boolean;
   ring?: string | null;
 }) {
-  const t = traitsFor(id);
-  const eyeY = -r * 0.12;
-  const eyeX = r * 0.34;
+  // Original HTML portrait palette and silhouette; symbolic, not a real likeness.
+  const clip = useId();
+  const n = Number(id.replace(/\D/g, '')) || 6;
+  const bg = ['#dce8e3', '#e5e1ed', '#f0e1cb', '#dae4ed'][n % 4];
+  const shirt = ['#557f79', '#7b7895', '#b38b57', '#63819b'][n % 4];
+  const hair = ['#726b63', '#c3bbb0', '#584f48'][n % 3];
   return (
     <g>
-      <circle cx={0} cy={0} r={r} fill={t.skin} stroke="#4A4034" strokeWidth={r * 0.11} />
-      {/* hair: four silhouettes, enough to separate twelve people together with
-          the beard/glasses flags */}
-      {t.hairStyle === 0 && (
-        <path
-          d={`M ${-r} 0 A ${r} ${r} 0 0 1 ${r} 0 L ${r * 0.78} ${-r * 0.24} A ${r * 0.8} ${r * 0.7} 0 0 0 ${-r * 0.78} ${-r * 0.24} Z`}
-          fill={t.hair}
-        />
-      )}
-      {t.hairStyle === 1 && (
-        <path d={`M ${-r} ${-r * 0.15} A ${r} ${r} 0 0 1 ${r} ${-r * 0.15} Z`} fill={t.hair} />
-      )}
-      {t.hairStyle === 2 && (
-        <>
-          <path d={`M ${-r} ${-r * 0.1} A ${r} ${r} 0 0 1 ${r} ${-r * 0.1} Z`} fill={t.hair} />
-          <rect x={-r} y={-r * 0.16} width={r * 0.42} height={r * 0.9} rx={r * 0.2} fill={t.hair} />
-          <rect
-            x={r * 0.58}
-            y={-r * 0.16}
-            width={r * 0.42}
-            height={r * 0.9}
-            rx={r * 0.2}
-            fill={t.hair}
-          />
-        </>
-      )}
-      {t.hairStyle === 3 && (
-        <path
-          d={`M ${-r * 0.85} ${-r * 0.45} Q 0 ${-r * 1.15} ${r * 0.85} ${-r * 0.45} Q 0 ${-r * 0.72} ${-r * 0.85} ${-r * 0.45} Z`}
-          fill={t.hair}
-        />
-      )}
-      <circle cx={-eyeX} cy={eyeY} r={Math.max(0.6, r * 0.11)} fill="#2A2320" />
-      <circle cx={eyeX} cy={eyeY} r={Math.max(0.6, r * 0.11)} fill="#2A2320" />
-      {t.glasses && (
-        <g stroke="#37556B" strokeWidth={r * 0.09} fill="none">
-          <circle cx={-eyeX} cy={eyeY} r={r * 0.26} />
-          <circle cx={eyeX} cy={eyeY} r={r * 0.26} />
-          <line x1={-eyeX + r * 0.26} y1={eyeY} x2={eyeX - r * 0.26} y2={eyeY} />
+      <circle r={r + r * .16} fill="#ffffff" stroke={ring ?? '#cedbd1'} strokeWidth={r * .12} />
+      <g transform={`scale(${r / 20}) translate(-20 -20)`}>
+        <defs><clipPath id={clip}><circle cx="20" cy="20" r="20" /></clipPath></defs>
+        <g clipPath={`url(#${clip})`}>
+          <rect width="40" height="40" fill={bg} />
+          <path d="M8 40 Q9 27 20 27 Q32 27 33 40" fill={shirt} />
+          <ellipse cx="20" cy="19" rx="10" ry="12" fill="#d9b899" />
+          <path d="M10 19 Q7 4 20 5 Q33 5 30 20 L27 12 Q18 15 12 11Z" fill={hair} />
+          <circle cx="16" cy="20" r="1" fill="#343831" />
+          <circle cx="24" cy="20" r="1" fill="#343831" />
+          <path d="M17 26 Q20 28 23 25" fill="none" stroke="#9d7260" />
+          {n % 2 === 1 && <path d="M11 18 H18 V23 H12Z M22 18 H29 V23 H22Z M18 20 H22" fill="none" stroke="#65706d" />}
+          {isVillageHead && <path d="M10 11 Q20 3 30 11" fill="none" stroke="#6b7970" strokeWidth="2" />}
         </g>
-      )}
-      {t.beard ? (
-        <path
-          d={`M ${-r * 0.5} ${r * 0.24} Q 0 ${r * 0.92} ${r * 0.5} ${r * 0.24}`}
-          fill={t.hair}
-          opacity={0.85}
-        />
-      ) : (
-        <path
-          d={`M ${-r * 0.3} ${r * 0.36} Q 0 ${r * 0.6} ${r * 0.3} ${r * 0.36}`}
-          stroke="#7A5C48"
-          strokeWidth={r * 0.11}
-          fill="none"
-          strokeLinecap="round"
-        />
-      )}
-      {isVillageHead && (
-        // The village head is the same person as resident P6; the band marks the
-        // role he also holds, not a different actor.
-        <path
-          d={`M ${-r * 0.95} ${-r * 0.62} L ${r * 0.95} ${-r * 0.62} L ${r * 0.72} ${-r * 0.95} L ${-r * 0.72} ${-r * 0.95} Z`}
-          fill="#23486B"
-          stroke="#16304A"
-          strokeWidth={r * 0.07}
-        />
-      )}
-      {ring && <circle cx={0} cy={0} r={r + r * 0.34} fill="none" stroke={ring} strokeWidth={r * 0.26} />}
+      </g>
     </g>
   );
 }
 
-/** The same face for HTML contexts (popover rows, lists). */
 export function FaceChip({
   id,
   size = 20,
