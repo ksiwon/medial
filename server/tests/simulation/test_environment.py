@@ -103,7 +103,7 @@ def test_the_environment_is_part_of_the_attempt_inputs():
     resources = RESOURCE_SETS["assumed-resources-v1"]
 
     base = build_attempt("att-1", "x", policy, deck, resources, village)
-    assert base.environmentRevisionId == "env-v2"
+    assert base.environmentRevisionId == "env-v3"
     assert "environment" in base.inputHashes
 
     louder = ENV_V1.model_copy(deep=True)
@@ -117,7 +117,7 @@ def test_the_environment_is_part_of_the_attempt_inputs():
 
 def test_the_environment_is_declared_not_editable():
     assert EnvironmentRevision.EDITABLE_BY_CHANGE_SET is False
-    assert get_environment().id == "env-v2"
+    assert get_environment().id == "env-v3"
     assert get_environment(LEGACY_ENVIRONMENT_ID).id == "env-v1"
 
 

@@ -242,6 +242,9 @@ function refusalCell(facts: VersionFacts) {
 /** Which day each side ran on. Same seed, same day; a different label here is
  *  a different input, not a policy effect, and the callout above says so. */
 function dayCell(facts: VersionFacts) {
+  // No attempt yet is "not collected", like every other row. Attempts that
+  // exist but carry no day were stored before days were drawn.
+  if (facts.attemptCount === 0) return <span style={{ color: colour.unknown }}>미수집</span>;
   if (facts.days.length === 0) {
     return <span style={{ color: colour.unknown }}>하루 기록 없음 (예전 실행)</span>;
   }

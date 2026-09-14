@@ -2,7 +2,7 @@
  "events": [
   {
    "id": "ev-1",
-   "attemptId": "att-C-v1-b287ca0e3deb",
+   "attemptId": "att-C-v1-2a7470326624",
    "seq": 1,
    "simTimeMs": 0,
    "type": "world.day_started",
@@ -20,7 +20,7 @@
   },
   {
    "id": "ev-2",
-   "attemptId": "att-C-v1-b287ca0e3deb",
+   "attemptId": "att-C-v1-2a7470326624",
    "seq": 2,
    "simTimeMs": 34200000,
    "type": "contact.attempted",
@@ -47,7 +47,7 @@
   },
   {
    "id": "ev-3",
-   "attemptId": "att-C-v1-b287ca0e3deb",
+   "attemptId": "att-C-v1-2a7470326624",
    "seq": 3,
    "simTimeMs": 34200000,
    "type": "world.reachability_resolved",
@@ -70,7 +70,7 @@
   },
   {
    "id": "ev-4",
-   "attemptId": "att-C-v1-b287ca0e3deb",
+   "attemptId": "att-C-v1-2a7470326624",
    "seq": 4,
    "simTimeMs": 34200000,
    "type": "contact.no_response",
@@ -91,7 +91,7 @@
   },
   {
    "id": "ev-5",
-   "attemptId": "att-C-v1-b287ca0e3deb",
+   "attemptId": "att-C-v1-2a7470326624",
    "seq": 5,
    "simTimeMs": 34200000,
    "type": "medial.classified",
@@ -114,7 +114,7 @@
   },
   {
    "id": "ev-6",
-   "attemptId": "att-C-v1-b287ca0e3deb",
+   "attemptId": "att-C-v1-2a7470326624",
    "seq": 6,
    "simTimeMs": 34200000,
    "type": "request.raised",
@@ -134,7 +134,7 @@
   },
   {
    "id": "ev-7",
-   "attemptId": "att-C-v1-b287ca0e3deb",
+   "attemptId": "att-C-v1-2a7470326624",
    "seq": 7,
    "simTimeMs": 34200000,
    "type": "medial.decided",
@@ -163,12 +163,22 @@
       "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
      },
      {
+      "actorId": "P2",
+      "included": false,
+      "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
+     },
+     {
       "actorId": "P3",
       "included": false,
       "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
      },
      {
       "actorId": "P4",
+      "included": false,
+      "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
+     },
+     {
+      "actorId": "P5",
       "included": false,
       "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
      },
@@ -187,7 +197,7 @@
   },
   {
    "id": "ev-8",
-   "attemptId": "att-C-v1-b287ca0e3deb",
+   "attemptId": "att-C-v1-2a7470326624",
    "seq": 8,
    "simTimeMs": 34200000,
    "type": "request.offered",
@@ -218,7 +228,7 @@
   },
   {
    "id": "ev-9",
-   "attemptId": "att-C-v1-b287ca0e3deb",
+   "attemptId": "att-C-v1-2a7470326624",
    "seq": 9,
    "simTimeMs": 34200000,
    "type": "request.declined",
@@ -243,7 +253,7 @@
   },
   {
    "id": "ev-10",
-   "attemptId": "att-C-v1-b287ca0e3deb",
+   "attemptId": "att-C-v1-2a7470326624",
    "seq": 10,
    "simTimeMs": 34200000,
    "type": "request.offered",
@@ -274,7 +284,7 @@
   },
   {
    "id": "ev-11",
-   "attemptId": "att-C-v1-b287ca0e3deb",
+   "attemptId": "att-C-v1-2a7470326624",
    "seq": 11,
    "simTimeMs": 34200000,
    "type": "request.declined",
@@ -299,7 +309,7 @@
   },
   {
    "id": "ev-12",
-   "attemptId": "att-C-v1-b287ca0e3deb",
+   "attemptId": "att-C-v1-2a7470326624",
    "seq": 12,
    "simTimeMs": 34200000,
    "type": "request.offered",
@@ -308,12 +318,12 @@
    "correlationId": "req-P1-1",
    "visibility": [
     "MEDial",
-    "P2"
+    "P9"
    ],
    "committed": true,
    "payload": {
     "requestId": "req-P1-1",
-    "toActorId": "P2",
+    "toActorId": "P9",
     "need": "welfare_check",
     "subjectId": "P1",
     "disclosure": {
@@ -330,16 +340,16 @@
   },
   {
    "id": "ev-13",
-   "attemptId": "att-C-v1-b287ca0e3deb",
+   "attemptId": "att-C-v1-2a7470326624",
    "seq": 13,
    "simTimeMs": 34200000,
    "type": "request.accepted",
-   "actorId": "P2",
+   "actorId": "P9",
    "causationId": null,
    "correlationId": "req-P1-1",
    "visibility": [
     "MEDial",
-    "P2"
+    "P9"
    ],
    "committed": true,
    "payload": {
@@ -348,7 +358,7 @@
      "rule": null,
      "reason": "지금 하던 일을 잠시 놓고 다녀올 수 있다.",
      "activity": "자택",
-     "place": "HOME:P2"
+     "place": "HOME:P9"
     },
     "utterance": "가 보겠습니다.",
     "evidenceRefs": []
@@ -356,41 +366,41 @@
   },
   {
    "id": "ev-14",
-   "attemptId": "att-C-v1-b287ca0e3deb",
+   "attemptId": "att-C-v1-2a7470326624",
    "seq": 14,
    "simTimeMs": 34200000,
    "type": "plan.modified",
-   "actorId": "P2",
+   "actorId": "P9",
    "causationId": null,
    "correlationId": "req-P1-1",
    "visibility": [
     "MEDial",
-    "P2",
+    "P9",
     "RESEARCHER"
    ],
    "committed": true,
    "payload": {
-    "actorId": "P2",
+    "actorId": "P9",
     "change": "안부 확인 요청 수락",
     "insertedSegments": [
      {
       "startMs": 34200000,
-      "endMs": 34452257,
+      "endMs": 34603611,
       "kind": "travel",
       "origin": "task",
       "label": "안부 확인 이동",
       "place": null,
-      "fromPlace": "HOME:P2",
+      "fromPlace": "HOME:P9",
       "toPlace": "HOME:P1",
       "mode": "walk",
-      "metres": 294.3,
+      "metres": 470.9,
       "requestId": "req-P1-1",
       "interruptible": false,
       "riders": []
      },
      {
-      "startMs": 34452257,
-      "endMs": 34752257,
+      "startMs": 34603611,
+      "endMs": 34903611,
       "kind": "stay",
       "origin": "task",
       "label": "안부 확인",
@@ -406,27 +416,27 @@
     ],
     "resumeSegments": [
      {
-      "startMs": 34752257,
-      "endMs": 35004514,
+      "startMs": 34903611,
+      "endMs": 35307222,
       "kind": "travel",
       "origin": "baseline",
       "label": "일과 복귀",
       "place": null,
       "fromPlace": "HOME:P1",
-      "toPlace": "HOME:P2",
+      "toPlace": "HOME:P9",
       "mode": "walk",
-      "metres": 294.3,
+      "metres": 470.9,
       "requestId": null,
       "interruptible": false,
       "riders": []
      },
      {
-      "startMs": 35004514,
+      "startMs": 35307222,
       "endMs": 72000000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
-      "place": "HOME:P2",
+      "place": "HOME:P9",
       "fromPlace": null,
       "toPlace": null,
       "mode": "stay",
@@ -440,16 +450,16 @@
   },
   {
    "id": "ev-15",
-   "attemptId": "att-C-v1-b287ca0e3deb",
+   "attemptId": "att-C-v1-2a7470326624",
    "seq": 15,
    "simTimeMs": 34200000,
    "type": "task.started",
-   "actorId": "P2",
+   "actorId": "P9",
    "causationId": null,
    "correlationId": "req-P1-1",
    "visibility": [
     "MEDial",
-    "P2"
+    "P9"
    ],
    "committed": true,
    "payload": {
@@ -458,40 +468,40 @@
   },
   {
    "id": "ev-16",
-   "attemptId": "att-C-v1-b287ca0e3deb",
+   "attemptId": "att-C-v1-2a7470326624",
    "seq": 16,
    "simTimeMs": 34200000,
    "type": "task.travel_started",
-   "actorId": "P2",
+   "actorId": "P9",
    "causationId": null,
    "correlationId": "req-P1-1",
    "visibility": [
     "MEDial",
-    "P2"
+    "P9"
    ],
    "committed": true,
    "payload": {
     "requestId": "req-P1-1",
-    "from": "HOME:P2",
+    "from": "HOME:P9",
     "to": "HOME:P1",
     "mode": "walk",
-    "distanceM": 294.3,
-    "durationMs": 252257,
+    "distanceM": 470.9,
+    "durationMs": 403611,
     "distanceBasis": "road-graph-shortest-path"
    }
   },
   {
    "id": "ev-17",
-   "attemptId": "att-C-v1-b287ca0e3deb",
+   "attemptId": "att-C-v1-2a7470326624",
    "seq": 17,
-   "simTimeMs": 34452257,
+   "simTimeMs": 34603611,
    "type": "task.travel_arrived",
-   "actorId": "P2",
+   "actorId": "P9",
    "causationId": null,
    "correlationId": "req-P1-1",
    "visibility": [
     "MEDial",
-    "P2"
+    "P9"
    ],
    "committed": true,
    "payload": {
@@ -501,16 +511,16 @@
   },
   {
    "id": "ev-18",
-   "attemptId": "att-C-v1-b287ca0e3deb",
+   "attemptId": "att-C-v1-2a7470326624",
    "seq": 18,
-   "simTimeMs": 34452257,
+   "simTimeMs": 34603611,
    "type": "task.check_performed",
-   "actorId": "P2",
+   "actorId": "P9",
    "causationId": null,
    "correlationId": "req-P1-1",
    "visibility": [
     "MEDial",
-    "P2"
+    "P9"
    ],
    "committed": true,
    "payload": {
@@ -523,9 +533,9 @@
   },
   {
    "id": "ev-19",
-   "attemptId": "att-C-v1-b287ca0e3deb",
+   "attemptId": "att-C-v1-2a7470326624",
    "seq": 19,
-   "simTimeMs": 34452257,
+   "simTimeMs": 34603611,
    "type": "need.unresolved",
    "actorId": "MEDial",
    "causationId": null,
@@ -543,7 +553,7 @@
   },
   {
    "id": "ev-20",
-   "attemptId": "att-C-v1-b287ca0e3deb",
+   "attemptId": "att-C-v1-2a7470326624",
    "seq": 20,
    "simTimeMs": 72000000,
    "type": "attempt.completed",

@@ -183,7 +183,7 @@ def test_a_run_records_which_day_it_happened_on():
     created = svc.create_attempt("policy-A-v1", "deck-p1-no-response-v1",
                                  "assumed-resources-v1")
     attempt = created["attempt"]
-    assert attempt["environmentRevisionId"] == "env-v2"
+    assert attempt["environmentRevisionId"] == "env-v3"
     assert attempt["dayRealizationId"]
     assert attempt["inputHashes"]["day"] == attempt["dayRealizationId"]
 
@@ -206,3 +206,26 @@ def test_a_different_seed_is_reported_as_a_different_input():
     b = svc.create_attempt("policy-A-v1", "deck-p1-no-response-v1",
                            "assumed-resources-v1", seed=18)["attempt"]
     assert a["inputHashes"]["day"] != b["inputHashes"]["day"]
+
+
+def test_the_default_day_is_the_same_day_again_give_or_take_minutes():
+    """The premise: a village day repeats. What varies is *when*, not *whether*.
+
+    v2's 0.15 chance of dropping an outing made almost every real-village run a
+    ``plausible_extension`` day, so the exception had become the default.
+    """
+    from app.simulation.environment import ENV_V2, get_environment
+    default = get_environment()
+    assert default.variation.skipOutingProbability == 0.0
+    assert default.variation.repeatOutingProbability == 0.0
+    assert 0 < default.variation.departJitterMin <= 15
+    # The version that can drop an outing is still there, by name.
+    assert ENV_V2.variation.skipOutingProbability > 0
+
+    svc = _service()
+    for seed in range(5):
+        day = svc.create_attempt("policy-A-v1", "deck-p1-no-response-v1",
+                                 "assumed-resources-v1", seed=seed)["metrics"]["dayRealization"]
+        assert day["classification"] in ("source_baseline", "source_jittered")
+        assert not [c for r in day["residents"] for c in r["changes"]
+                    if c["kind"] in ("skip_outing", "repeat_outing")]

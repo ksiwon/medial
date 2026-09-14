@@ -1,6 +1,6 @@
 {
  "session": {
-  "id": "iter-65e66db12997",
+  "id": "iter-83bc1f0b718d",
   "label": "화면 테스트용 반복",
   "coreItem": "누구의 시간으로 해결할 것인가",
   "briefRevision": "brief-2644fbc3",
@@ -94,8 +94,8 @@
   "currentGenerationIndex": 0,
   "callsUsed": 0,
   "tokensUsed": 0,
-  "createdAt": "2026-09-14T15:11:08+00:00",
-  "updatedAt": "2026-09-14T15:11:08+00:00"
+  "createdAt": "2026-09-14T15:26:33+00:00",
+  "updatedAt": "2026-09-14T15:26:33+00:00"
  },
  "adapterMode": "rule",
  "stopReasonText": "검증된 Change Set 초안이 있다. 연구자가 확정하기 전에는 실행하지 않는다.",
@@ -110,34 +110,34 @@
  },
  "generations": [
   {
-   "id": "gen-6db12997-0",
-   "sessionId": "iter-65e66db12997",
+   "id": "gen-1f0b718d-0",
+   "sessionId": "iter-83bc1f0b718d",
    "index": 0,
    "parentGenerationId": null,
    "policyRevisionId": "policy-IT-v0",
    "label": "v0 · v0 · 초기 운영안 (조율 절차 미정)",
    "attemptIds": [
-    "att-IT-v0-626c502ffeb6"
+    "att-IT-v0-07e6f4faf156"
    ],
    "reviewIds": [
-    "rev-gen-6db12997-0-502ffeb6-HC_NURSE",
-    "rev-gen-6db12997-0-502ffeb6-P1",
-    "rev-gen-6db12997-0-502ffeb6-P10",
-    "rev-gen-6db12997-0-502ffeb6-P11",
-    "rev-gen-6db12997-0-502ffeb6-P12",
-    "rev-gen-6db12997-0-502ffeb6-P2",
-    "rev-gen-6db12997-0-502ffeb6-P3",
-    "rev-gen-6db12997-0-502ffeb6-P4",
-    "rev-gen-6db12997-0-502ffeb6-P5",
-    "rev-gen-6db12997-0-502ffeb6-P6",
-    "rev-gen-6db12997-0-502ffeb6-P7",
-    "rev-gen-6db12997-0-502ffeb6-P8",
-    "rev-gen-6db12997-0-502ffeb6-P9"
+    "rev-gen-1f0b718d-0-f4faf156-HC_NURSE",
+    "rev-gen-1f0b718d-0-f4faf156-P1",
+    "rev-gen-1f0b718d-0-f4faf156-P10",
+    "rev-gen-1f0b718d-0-f4faf156-P11",
+    "rev-gen-1f0b718d-0-f4faf156-P12",
+    "rev-gen-1f0b718d-0-f4faf156-P2",
+    "rev-gen-1f0b718d-0-f4faf156-P3",
+    "rev-gen-1f0b718d-0-f4faf156-P4",
+    "rev-gen-1f0b718d-0-f4faf156-P5",
+    "rev-gen-1f0b718d-0-f4faf156-P6",
+    "rev-gen-1f0b718d-0-f4faf156-P7",
+    "rev-gen-1f0b718d-0-f4faf156-P8",
+    "rev-gen-1f0b718d-0-f4faf156-P9"
    ],
-   "synthesisId": "syn-gen-6db12997-0",
+   "synthesisId": "syn-gen-1f0b718d-0",
    "changeSetIds": [
-    "change-gen-6db12997-0-1",
-    "change-gen-6db12997-0-unsupported-2"
+    "change-gen-1f0b718d-0-1",
+    "change-gen-1f0b718d-0-unsupported-2"
    ],
    "comparisonId": null,
    "outcome": "proposed",
@@ -148,14 +148,14 @@
     "vector": {
      "engineFaults": 0.0,
      "unresolvedRequests": 0.0,
-     "meanWaitMinutes": 6.3,
-     "neighbourMinutes": 16.3,
+     "meanWaitMinutes": 8.8,
+     "neighbourMinutes": 18.8,
      "institutionStaffMinutes": 0.0,
      "disclosureFieldCount": 2.0,
      "transportConflicts": 0.0
     },
     "objective": {
-     "att-IT-v0-626c502ffeb6": {
+     "att-IT-v0-07e6f4faf156": {
       "deckId": "deck-p1-no-response-v1",
       "requests": {
        "raised": 1,
@@ -170,9 +170,9 @@
       },
       "waitMs": {
        "resolvedOnly": [
-        378386
+        529740
        ],
-       "meanMinutesResolvedOnly": 6.3,
+       "meanMinutesResolvedOnly": 8.8,
        "censoredCount": 0,
        "note": "미해결 건은 평균에 넣지 않고 censored로 센다."
       },
@@ -185,7 +185,7 @@
        "toSubject": 1,
        "note": "무응답을 거절로 합치지 않는다."
       },
-      "neighbourMinutes": 16.3,
+      "neighbourMinutes": 18.8,
       "institutionBurden": {
        "staffCount": 1,
        "shiftStartMs": 32400000,
@@ -226,14 +226,411 @@
       },
       "residentBurden": {
        "P6": {
-        "addedTaskMinutes": 16.3,
-        "addedTravelMetres": 441.5,
+        "addedTaskMinutes": 18.8,
+        "addedTravelMetres": 618.0,
         "interruptions": 2,
         "contactsReceived": 1,
         "askedByMedial": 1,
         "askedByNeighbour": 0,
         "basis": "실현된 계획에서 baseline 대비 추가된 task 구간"
        }
+      },
+      "handovers": {
+       "count": 0,
+       "rows": [],
+       "peopleAskedByMedial": [
+        "P6"
+       ],
+       "peopleAskedByNeighbour": [],
+       "note": "MEDial은 자기가 부탁한 사람이 수락했다고만 안다. 이웃끼리 넘긴 것과 실제로 간 사람은 연구자 전용 기록이다."
+      },
+      "refusals": {
+       "count": 0,
+       "byRule": {},
+       "rows": [],
+       "note": "거절과 미룸을 합산 점수로 만들지 않는다. 규칙 하나가 걸린 것이 곧 사유다."
+      },
+      "dayRealization": {
+       "id": "day-58d7f0c850257455",
+       "seed": 17,
+       "villageContentHash": "1666cf9ccb87e954",
+       "environmentRevisionId": "env-v3",
+       "classification": "source_jittered",
+       "residents": [
+        {
+         "actorId": "P1",
+         "steps": [],
+         "changes": [
+          {
+           "index": 1,
+           "kind": "jitter",
+           "target": "FARM",
+           "beforeMs": 32400000,
+           "afterMs": 32035863,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 2,
+           "kind": "jitter",
+           "target": "HOME",
+           "beforeMs": 43200000,
+           "afterMs": 43054991,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 3,
+           "kind": "jitter",
+           "target": "FARM",
+           "beforeMs": 46800000,
+           "afterMs": 46900128,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 4,
+           "kind": "jitter",
+           "target": "HOME",
+           "beforeMs": 57600000,
+           "afterMs": 57279809,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          }
+         ],
+         "excludedReason": null
+        },
+        {
+         "actorId": "P2",
+         "steps": [],
+         "changes": [
+          {
+           "index": 1,
+           "kind": "jitter",
+           "target": "TOWN",
+           "beforeMs": 25200000,
+           "afterMs": 24727251,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 2,
+           "kind": "jitter",
+           "target": "HOME",
+           "beforeMs": 61200000,
+           "afterMs": 61022097,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          }
+         ],
+         "excludedReason": null
+        },
+        {
+         "actorId": "P3",
+         "steps": [],
+         "changes": [
+          {
+           "index": 1,
+           "kind": "jitter",
+           "target": "TOWN",
+           "beforeMs": 32400000,
+           "afterMs": 32462827,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          }
+         ],
+         "excludedReason": null
+        },
+        {
+         "actorId": "P4",
+         "steps": [],
+         "changes": [
+          {
+           "index": 1,
+           "kind": "jitter",
+           "target": "FOOD",
+           "beforeMs": 28800000,
+           "afterMs": 28716653,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 2,
+           "kind": "jitter",
+           "target": "EXP",
+           "beforeMs": 61200000,
+           "afterMs": 60929032,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 3,
+           "kind": "jitter",
+           "target": "HOME",
+           "beforeMs": 68400000,
+           "afterMs": 68514436,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          }
+         ],
+         "excludedReason": null
+        },
+        {
+         "actorId": "P5",
+         "steps": [],
+         "changes": [
+          {
+           "index": 1,
+           "kind": "jitter",
+           "target": "PORT",
+           "beforeMs": 22500000,
+           "afterMs": 22024046,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 2,
+           "kind": "jitter",
+           "target": "SEA",
+           "beforeMs": 23700000,
+           "afterMs": 23379681,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 3,
+           "kind": "jitter",
+           "target": "PORT",
+           "beforeMs": 39300000,
+           "afterMs": 39370822,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 4,
+           "kind": "jitter",
+           "target": "HOME",
+           "beforeMs": 41400000,
+           "afterMs": 41829727,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          }
+         ],
+         "excludedReason": null
+        },
+        {
+         "actorId": "P6",
+         "steps": [],
+         "changes": [
+          {
+           "index": 1,
+           "kind": "jitter",
+           "target": "HALL",
+           "beforeMs": 25200000,
+           "afterMs": 25513877,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 2,
+           "kind": "jitter",
+           "target": "PATROL",
+           "beforeMs": 28800000,
+           "afterMs": 28872895,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 3,
+           "kind": "jitter",
+           "target": "HOME",
+           "beforeMs": 36000000,
+           "afterMs": 36126854,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 4,
+           "kind": "jitter",
+           "target": "FOOD",
+           "beforeMs": 42900000,
+           "afterMs": 42604097,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 5,
+           "kind": "jitter",
+           "target": "PATROL",
+           "beforeMs": 46800000,
+           "afterMs": 47024146,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          }
+         ],
+         "excludedReason": null
+        },
+        {
+         "actorId": "P7",
+         "steps": [],
+         "changes": [
+          {
+           "index": 1,
+           "kind": "jitter",
+           "target": "PORT",
+           "beforeMs": 19800000,
+           "afterMs": 19583758,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 2,
+           "kind": "jitter",
+           "target": "SEA",
+           "beforeMs": 21000000,
+           "afterMs": 20427154,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 3,
+           "kind": "jitter",
+           "target": "PORT",
+           "beforeMs": 39000000,
+           "afterMs": 39478785,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 4,
+           "kind": "jitter",
+           "target": "FOOD",
+           "beforeMs": 42720000,
+           "afterMs": 43065339,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 5,
+           "kind": "jitter",
+           "target": "PORT",
+           "beforeMs": 46800000,
+           "afterMs": 46512794,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 6,
+           "kind": "jitter",
+           "target": "EXP",
+           "beforeMs": 61200000,
+           "afterMs": 61385062,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 7,
+           "kind": "jitter",
+           "target": "HOME",
+           "beforeMs": 68400000,
+           "afterMs": 68636918,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          }
+         ],
+         "excludedReason": null
+        },
+        {
+         "actorId": "P8",
+         "steps": [],
+         "changes": [
+          {
+           "index": 1,
+           "kind": "jitter",
+           "target": "PORT",
+           "beforeMs": 19800000,
+           "afterMs": 20201952,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 2,
+           "kind": "clamp",
+           "target": "SEA",
+           "beforeMs": 21000000,
+           "afterMs": 20807369,
+           "note": "이동에 걸리는 시간을 지키도록 되돌렸다. 한 사람이 동시에 두 곳에 있을 수는 없고, 순서는 원본이 고정한 구조다."
+          },
+          {
+           "index": 3,
+           "kind": "jitter",
+           "target": "PORT",
+           "beforeMs": 39000000,
+           "afterMs": 39011793,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 4,
+           "kind": "jitter",
+           "target": "FOOD",
+           "beforeMs": 42720000,
+           "afterMs": 42550658,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 5,
+           "kind": "jitter",
+           "target": "PORT",
+           "beforeMs": 46800000,
+           "afterMs": 47203940,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 6,
+           "kind": "jitter",
+           "target": "EXP",
+           "beforeMs": 61200000,
+           "afterMs": 61747529,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 7,
+           "kind": "jitter",
+           "target": "HOME",
+           "beforeMs": 68400000,
+           "afterMs": 68109450,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          }
+         ],
+         "excludedReason": null
+        },
+        {
+         "actorId": "P9",
+         "steps": [],
+         "changes": [],
+         "excludedReason": "원자료에 하루 일과가 한 단계뿐이라 흔들 근거가 없다. 변이를 주면 관측이 아니라 창작이 된다."
+        },
+        {
+         "actorId": "P10",
+         "steps": [],
+         "changes": [],
+         "excludedReason": "원자료에 하루 일과가 한 단계뿐이라 흔들 근거가 없다. 변이를 주면 관측이 아니라 창작이 된다."
+        },
+        {
+         "actorId": "P11",
+         "steps": [],
+         "changes": [],
+         "excludedReason": "원자료에 하루 일과가 한 단계뿐이라 흔들 근거가 없다. 변이를 주면 관측이 아니라 창작이 된다."
+        },
+        {
+         "actorId": "P12",
+         "steps": [],
+         "changes": [
+          {
+           "index": 2,
+           "kind": "jitter",
+           "target": "HOME",
+           "beforeMs": 64800000,
+           "afterMs": 64998522,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 3,
+           "kind": "jitter",
+           "target": "MIGA",
+           "beforeMs": 67980000,
+           "afterMs": 68542313,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 4,
+           "kind": "clamp",
+           "target": "HOME",
+           "beforeMs": 75600000,
+           "afterMs": 71940000,
+           "note": "이동에 걸리는 시간을 지키도록 되돌렸다. 한 사람이 동시에 두 곳에 있을 수는 없고, 순서는 원본이 고정한 구조다."
+          }
+         ],
+         "excludedReason": null
+        }
+       ],
+       "assumptions": [
+        "시골 마을의 하루는 매일 같은 일과의 반복이라고 본다. 바뀌는 것은 나가는 시각뿐이며 ±10분 안에서만 흔든다. 외출을 거르거나 더하는 일은 기본 하루에 넣지 않는다.",
+        "외출이 빠진 하루를 보려면 env-v2를 이름으로 골라야 하고, 그 실행은 다른 입력으로 표시된다."
+       ]
       }
      }
     },
@@ -248,13 +645,13 @@
     },
     "note": "모의 리뷰 집계와 로그 기반 지표를 함께 두되 하나의 만족도 점수로 합치지 않는다."
    },
-   "createdAt": "2026-09-14T15:11:08+00:00",
+   "createdAt": "2026-09-14T15:26:33+00:00",
    "reviews": [
     {
-     "id": "rev-gen-6db12997-0-502ffeb6-HC_NURSE",
-     "sessionId": "iter-65e66db12997",
+     "id": "rev-gen-1f0b718d-0-f4faf156-HC_NURSE",
+     "sessionId": "iter-83bc1f0b718d",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-626c502ffeb6",
+     "attemptId": "att-IT-v0-07e6f4faf156",
      "actorId": "HC_NURSE",
      "actorRole": "health_staff",
      "policyRevisionId": "policy-IT-v0",
@@ -322,14 +719,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T15:11:08+00:00",
+     "createdAt": "2026-09-14T15:26:33+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-6db12997-0-502ffeb6-P1",
-     "sessionId": "iter-65e66db12997",
+     "id": "rev-gen-1f0b718d-0-f4faf156-P1",
+     "sessionId": "iter-83bc1f0b718d",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-626c502ffeb6",
+     "attemptId": "att-IT-v0-07e6f4faf156",
      "actorId": "P1",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -411,14 +808,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T15:11:08+00:00",
+     "createdAt": "2026-09-14T15:26:33+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-6db12997-0-502ffeb6-P10",
-     "sessionId": "iter-65e66db12997",
+     "id": "rev-gen-1f0b718d-0-f4faf156-P10",
+     "sessionId": "iter-83bc1f0b718d",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-626c502ffeb6",
+     "attemptId": "att-IT-v0-07e6f4faf156",
      "actorId": "P10",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -486,14 +883,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T15:11:08+00:00",
+     "createdAt": "2026-09-14T15:26:33+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-6db12997-0-502ffeb6-P11",
-     "sessionId": "iter-65e66db12997",
+     "id": "rev-gen-1f0b718d-0-f4faf156-P11",
+     "sessionId": "iter-83bc1f0b718d",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-626c502ffeb6",
+     "attemptId": "att-IT-v0-07e6f4faf156",
      "actorId": "P11",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -561,14 +958,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T15:11:08+00:00",
+     "createdAt": "2026-09-14T15:26:33+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-6db12997-0-502ffeb6-P12",
-     "sessionId": "iter-65e66db12997",
+     "id": "rev-gen-1f0b718d-0-f4faf156-P12",
+     "sessionId": "iter-83bc1f0b718d",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-626c502ffeb6",
+     "attemptId": "att-IT-v0-07e6f4faf156",
      "actorId": "P12",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -636,14 +1033,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T15:11:08+00:00",
+     "createdAt": "2026-09-14T15:26:33+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-6db12997-0-502ffeb6-P2",
-     "sessionId": "iter-65e66db12997",
+     "id": "rev-gen-1f0b718d-0-f4faf156-P2",
+     "sessionId": "iter-83bc1f0b718d",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-626c502ffeb6",
+     "attemptId": "att-IT-v0-07e6f4faf156",
      "actorId": "P2",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -711,14 +1108,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T15:11:08+00:00",
+     "createdAt": "2026-09-14T15:26:33+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-6db12997-0-502ffeb6-P3",
-     "sessionId": "iter-65e66db12997",
+     "id": "rev-gen-1f0b718d-0-f4faf156-P3",
+     "sessionId": "iter-83bc1f0b718d",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-626c502ffeb6",
+     "attemptId": "att-IT-v0-07e6f4faf156",
      "actorId": "P3",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -786,14 +1183,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T15:11:08+00:00",
+     "createdAt": "2026-09-14T15:26:33+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-6db12997-0-502ffeb6-P4",
-     "sessionId": "iter-65e66db12997",
+     "id": "rev-gen-1f0b718d-0-f4faf156-P4",
+     "sessionId": "iter-83bc1f0b718d",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-626c502ffeb6",
+     "attemptId": "att-IT-v0-07e6f4faf156",
      "actorId": "P4",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -861,14 +1258,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T15:11:08+00:00",
+     "createdAt": "2026-09-14T15:26:33+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-6db12997-0-502ffeb6-P5",
-     "sessionId": "iter-65e66db12997",
+     "id": "rev-gen-1f0b718d-0-f4faf156-P5",
+     "sessionId": "iter-83bc1f0b718d",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-626c502ffeb6",
+     "attemptId": "att-IT-v0-07e6f4faf156",
      "actorId": "P5",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -936,14 +1333,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T15:11:08+00:00",
+     "createdAt": "2026-09-14T15:26:33+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-6db12997-0-502ffeb6-P6",
-     "sessionId": "iter-65e66db12997",
+     "id": "rev-gen-1f0b718d-0-f4faf156-P6",
+     "sessionId": "iter-83bc1f0b718d",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-626c502ffeb6",
+     "attemptId": "att-IT-v0-07e6f4faf156",
      "actorId": "P6",
      "actorRole": "village_head",
      "policyRevisionId": "policy-IT-v0",
@@ -975,7 +1372,7 @@
       {
        "dimension": "time_labour",
        "assessment": "mixed",
-       "reason": "하던 일을 멈추고 16분을 썼다. 감당은 했지만 시간이 들었다.",
+       "reason": "하던 일을 멈추고 19분을 썼다. 감당은 했지만 시간이 들었다.",
        "eventRefs": [
         "ev-10",
         "ev-11",
@@ -1036,14 +1433,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T15:11:08+00:00",
+     "createdAt": "2026-09-14T15:26:33+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-6db12997-0-502ffeb6-P7",
-     "sessionId": "iter-65e66db12997",
+     "id": "rev-gen-1f0b718d-0-f4faf156-P7",
+     "sessionId": "iter-83bc1f0b718d",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-626c502ffeb6",
+     "attemptId": "att-IT-v0-07e6f4faf156",
      "actorId": "P7",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -1111,14 +1508,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T15:11:08+00:00",
+     "createdAt": "2026-09-14T15:26:33+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-6db12997-0-502ffeb6-P8",
-     "sessionId": "iter-65e66db12997",
+     "id": "rev-gen-1f0b718d-0-f4faf156-P8",
+     "sessionId": "iter-83bc1f0b718d",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-626c502ffeb6",
+     "attemptId": "att-IT-v0-07e6f4faf156",
      "actorId": "P8",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -1186,14 +1583,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T15:11:08+00:00",
+     "createdAt": "2026-09-14T15:26:33+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-6db12997-0-502ffeb6-P9",
-     "sessionId": "iter-65e66db12997",
+     "id": "rev-gen-1f0b718d-0-f4faf156-P9",
+     "sessionId": "iter-83bc1f0b718d",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-626c502ffeb6",
+     "attemptId": "att-IT-v0-07e6f4faf156",
      "actorId": "P9",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -1261,40 +1658,40 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T15:11:08+00:00",
+     "createdAt": "2026-09-14T15:26:33+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     }
    ],
    "synthesis": {
-    "id": "syn-gen-6db12997-0",
-    "sessionId": "iter-65e66db12997",
+    "id": "syn-gen-1f0b718d-0",
+    "sessionId": "iter-83bc1f0b718d",
     "generationIndex": 0,
     "attemptIds": [
-     "att-IT-v0-626c502ffeb6"
+     "att-IT-v0-07e6f4faf156"
     ],
     "reviewIds": [
-     "rev-gen-6db12997-0-502ffeb6-HC_NURSE",
-     "rev-gen-6db12997-0-502ffeb6-P1",
-     "rev-gen-6db12997-0-502ffeb6-P10",
-     "rev-gen-6db12997-0-502ffeb6-P11",
-     "rev-gen-6db12997-0-502ffeb6-P12",
-     "rev-gen-6db12997-0-502ffeb6-P2",
-     "rev-gen-6db12997-0-502ffeb6-P3",
-     "rev-gen-6db12997-0-502ffeb6-P4",
-     "rev-gen-6db12997-0-502ffeb6-P5",
-     "rev-gen-6db12997-0-502ffeb6-P6",
-     "rev-gen-6db12997-0-502ffeb6-P7",
-     "rev-gen-6db12997-0-502ffeb6-P8",
-     "rev-gen-6db12997-0-502ffeb6-P9"
+     "rev-gen-1f0b718d-0-f4faf156-HC_NURSE",
+     "rev-gen-1f0b718d-0-f4faf156-P1",
+     "rev-gen-1f0b718d-0-f4faf156-P10",
+     "rev-gen-1f0b718d-0-f4faf156-P11",
+     "rev-gen-1f0b718d-0-f4faf156-P12",
+     "rev-gen-1f0b718d-0-f4faf156-P2",
+     "rev-gen-1f0b718d-0-f4faf156-P3",
+     "rev-gen-1f0b718d-0-f4faf156-P4",
+     "rev-gen-1f0b718d-0-f4faf156-P5",
+     "rev-gen-1f0b718d-0-f4faf156-P6",
+     "rev-gen-1f0b718d-0-f4faf156-P7",
+     "rev-gen-1f0b718d-0-f4faf156-P8",
+     "rev-gen-1f0b718d-0-f4faf156-P9"
     ],
     "adapter": "rule",
     "issueGroups": [
      {
-      "id": "iss-b12997-0-time_labour",
+      "id": "iss-0b718d-0-time_labour",
       "title": "특정인에게 몰린 시간과 이동 (1명)",
       "dimension": "time_labour",
       "reviewItemRefs": [
-       "rev-gen-6db12997-0-502ffeb6-P6#1"
+       "rev-gen-1f0b718d-0-f4faf156-P6#1"
       ],
       "eventRefs": [
        "ev-10",
@@ -1325,11 +1722,11 @@
       ]
      },
      {
-      "id": "iss-b12997-0-understandability",
+      "id": "iss-0b718d-0-understandability",
       "title": "당사자에게 돌아가지 않은 설명 (1명)",
       "dimension": "understandability",
       "reviewItemRefs": [
-       "rev-gen-6db12997-0-502ffeb6-P6#4"
+       "rev-gen-1f0b718d-0-f4faf156-P6#4"
       ],
       "eventRefs": [
        "ev-8"
@@ -1354,11 +1751,11 @@
       ]
      },
      {
-      "id": "iss-b12997-0-reuse_condition",
+      "id": "iss-0b718d-0-reuse_condition",
       "title": "다음 이용 조건이 확인되지 않음 (1명)",
       "dimension": "reuse_condition",
       "reviewItemRefs": [
-       "rev-gen-6db12997-0-502ffeb6-P6#5"
+       "rev-gen-1f0b718d-0-f4faf156-P6#5"
       ],
       "eventRefs": [
        "ev-10",
@@ -1383,13 +1780,13 @@
      }
     ],
     "minorityConcernIds": [
-     "iss-b12997-0-time_labour",
-     "iss-b12997-0-understandability",
-     "iss-b12997-0-reuse_condition"
+     "iss-0b718d-0-time_labour",
+     "iss-0b718d-0-understandability",
+     "iss-0b718d-0-reuse_condition"
     ],
     "conflicts": [],
     "objectiveMetrics": {
-     "att-IT-v0-626c502ffeb6": {
+     "att-IT-v0-07e6f4faf156": {
       "deckId": "deck-p1-no-response-v1",
       "requests": {
        "raised": 1,
@@ -1404,9 +1801,9 @@
       },
       "waitMs": {
        "resolvedOnly": [
-        378386
+        529740
        ],
-       "meanMinutesResolvedOnly": 6.3,
+       "meanMinutesResolvedOnly": 8.8,
        "censoredCount": 0,
        "note": "미해결 건은 평균에 넣지 않고 censored로 센다."
       },
@@ -1419,7 +1816,7 @@
        "toSubject": 1,
        "note": "무응답을 거절로 합치지 않는다."
       },
-      "neighbourMinutes": 16.3,
+      "neighbourMinutes": 18.8,
       "institutionBurden": {
        "staffCount": 1,
        "shiftStartMs": 32400000,
@@ -1460,14 +1857,411 @@
       },
       "residentBurden": {
        "P6": {
-        "addedTaskMinutes": 16.3,
-        "addedTravelMetres": 441.5,
+        "addedTaskMinutes": 18.8,
+        "addedTravelMetres": 618.0,
         "interruptions": 2,
         "contactsReceived": 1,
         "askedByMedial": 1,
         "askedByNeighbour": 0,
         "basis": "실현된 계획에서 baseline 대비 추가된 task 구간"
        }
+      },
+      "handovers": {
+       "count": 0,
+       "rows": [],
+       "peopleAskedByMedial": [
+        "P6"
+       ],
+       "peopleAskedByNeighbour": [],
+       "note": "MEDial은 자기가 부탁한 사람이 수락했다고만 안다. 이웃끼리 넘긴 것과 실제로 간 사람은 연구자 전용 기록이다."
+      },
+      "refusals": {
+       "count": 0,
+       "byRule": {},
+       "rows": [],
+       "note": "거절과 미룸을 합산 점수로 만들지 않는다. 규칙 하나가 걸린 것이 곧 사유다."
+      },
+      "dayRealization": {
+       "id": "day-58d7f0c850257455",
+       "seed": 17,
+       "villageContentHash": "1666cf9ccb87e954",
+       "environmentRevisionId": "env-v3",
+       "classification": "source_jittered",
+       "residents": [
+        {
+         "actorId": "P1",
+         "steps": [],
+         "changes": [
+          {
+           "index": 1,
+           "kind": "jitter",
+           "target": "FARM",
+           "beforeMs": 32400000,
+           "afterMs": 32035863,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 2,
+           "kind": "jitter",
+           "target": "HOME",
+           "beforeMs": 43200000,
+           "afterMs": 43054991,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 3,
+           "kind": "jitter",
+           "target": "FARM",
+           "beforeMs": 46800000,
+           "afterMs": 46900128,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 4,
+           "kind": "jitter",
+           "target": "HOME",
+           "beforeMs": 57600000,
+           "afterMs": 57279809,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          }
+         ],
+         "excludedReason": null
+        },
+        {
+         "actorId": "P2",
+         "steps": [],
+         "changes": [
+          {
+           "index": 1,
+           "kind": "jitter",
+           "target": "TOWN",
+           "beforeMs": 25200000,
+           "afterMs": 24727251,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 2,
+           "kind": "jitter",
+           "target": "HOME",
+           "beforeMs": 61200000,
+           "afterMs": 61022097,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          }
+         ],
+         "excludedReason": null
+        },
+        {
+         "actorId": "P3",
+         "steps": [],
+         "changes": [
+          {
+           "index": 1,
+           "kind": "jitter",
+           "target": "TOWN",
+           "beforeMs": 32400000,
+           "afterMs": 32462827,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          }
+         ],
+         "excludedReason": null
+        },
+        {
+         "actorId": "P4",
+         "steps": [],
+         "changes": [
+          {
+           "index": 1,
+           "kind": "jitter",
+           "target": "FOOD",
+           "beforeMs": 28800000,
+           "afterMs": 28716653,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 2,
+           "kind": "jitter",
+           "target": "EXP",
+           "beforeMs": 61200000,
+           "afterMs": 60929032,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 3,
+           "kind": "jitter",
+           "target": "HOME",
+           "beforeMs": 68400000,
+           "afterMs": 68514436,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          }
+         ],
+         "excludedReason": null
+        },
+        {
+         "actorId": "P5",
+         "steps": [],
+         "changes": [
+          {
+           "index": 1,
+           "kind": "jitter",
+           "target": "PORT",
+           "beforeMs": 22500000,
+           "afterMs": 22024046,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 2,
+           "kind": "jitter",
+           "target": "SEA",
+           "beforeMs": 23700000,
+           "afterMs": 23379681,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 3,
+           "kind": "jitter",
+           "target": "PORT",
+           "beforeMs": 39300000,
+           "afterMs": 39370822,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 4,
+           "kind": "jitter",
+           "target": "HOME",
+           "beforeMs": 41400000,
+           "afterMs": 41829727,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          }
+         ],
+         "excludedReason": null
+        },
+        {
+         "actorId": "P6",
+         "steps": [],
+         "changes": [
+          {
+           "index": 1,
+           "kind": "jitter",
+           "target": "HALL",
+           "beforeMs": 25200000,
+           "afterMs": 25513877,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 2,
+           "kind": "jitter",
+           "target": "PATROL",
+           "beforeMs": 28800000,
+           "afterMs": 28872895,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 3,
+           "kind": "jitter",
+           "target": "HOME",
+           "beforeMs": 36000000,
+           "afterMs": 36126854,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 4,
+           "kind": "jitter",
+           "target": "FOOD",
+           "beforeMs": 42900000,
+           "afterMs": 42604097,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 5,
+           "kind": "jitter",
+           "target": "PATROL",
+           "beforeMs": 46800000,
+           "afterMs": 47024146,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          }
+         ],
+         "excludedReason": null
+        },
+        {
+         "actorId": "P7",
+         "steps": [],
+         "changes": [
+          {
+           "index": 1,
+           "kind": "jitter",
+           "target": "PORT",
+           "beforeMs": 19800000,
+           "afterMs": 19583758,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 2,
+           "kind": "jitter",
+           "target": "SEA",
+           "beforeMs": 21000000,
+           "afterMs": 20427154,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 3,
+           "kind": "jitter",
+           "target": "PORT",
+           "beforeMs": 39000000,
+           "afterMs": 39478785,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 4,
+           "kind": "jitter",
+           "target": "FOOD",
+           "beforeMs": 42720000,
+           "afterMs": 43065339,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 5,
+           "kind": "jitter",
+           "target": "PORT",
+           "beforeMs": 46800000,
+           "afterMs": 46512794,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 6,
+           "kind": "jitter",
+           "target": "EXP",
+           "beforeMs": 61200000,
+           "afterMs": 61385062,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 7,
+           "kind": "jitter",
+           "target": "HOME",
+           "beforeMs": 68400000,
+           "afterMs": 68636918,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          }
+         ],
+         "excludedReason": null
+        },
+        {
+         "actorId": "P8",
+         "steps": [],
+         "changes": [
+          {
+           "index": 1,
+           "kind": "jitter",
+           "target": "PORT",
+           "beforeMs": 19800000,
+           "afterMs": 20201952,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 2,
+           "kind": "clamp",
+           "target": "SEA",
+           "beforeMs": 21000000,
+           "afterMs": 20807369,
+           "note": "이동에 걸리는 시간을 지키도록 되돌렸다. 한 사람이 동시에 두 곳에 있을 수는 없고, 순서는 원본이 고정한 구조다."
+          },
+          {
+           "index": 3,
+           "kind": "jitter",
+           "target": "PORT",
+           "beforeMs": 39000000,
+           "afterMs": 39011793,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 4,
+           "kind": "jitter",
+           "target": "FOOD",
+           "beforeMs": 42720000,
+           "afterMs": 42550658,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 5,
+           "kind": "jitter",
+           "target": "PORT",
+           "beforeMs": 46800000,
+           "afterMs": 47203940,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 6,
+           "kind": "jitter",
+           "target": "EXP",
+           "beforeMs": 61200000,
+           "afterMs": 61747529,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 7,
+           "kind": "jitter",
+           "target": "HOME",
+           "beforeMs": 68400000,
+           "afterMs": 68109450,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          }
+         ],
+         "excludedReason": null
+        },
+        {
+         "actorId": "P9",
+         "steps": [],
+         "changes": [],
+         "excludedReason": "원자료에 하루 일과가 한 단계뿐이라 흔들 근거가 없다. 변이를 주면 관측이 아니라 창작이 된다."
+        },
+        {
+         "actorId": "P10",
+         "steps": [],
+         "changes": [],
+         "excludedReason": "원자료에 하루 일과가 한 단계뿐이라 흔들 근거가 없다. 변이를 주면 관측이 아니라 창작이 된다."
+        },
+        {
+         "actorId": "P11",
+         "steps": [],
+         "changes": [],
+         "excludedReason": "원자료에 하루 일과가 한 단계뿐이라 흔들 근거가 없다. 변이를 주면 관측이 아니라 창작이 된다."
+        },
+        {
+         "actorId": "P12",
+         "steps": [],
+         "changes": [
+          {
+           "index": 2,
+           "kind": "jitter",
+           "target": "HOME",
+           "beforeMs": 64800000,
+           "afterMs": 64998522,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 3,
+           "kind": "jitter",
+           "target": "MIGA",
+           "beforeMs": 67980000,
+           "afterMs": 68542313,
+           "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+          },
+          {
+           "index": 4,
+           "kind": "clamp",
+           "target": "HOME",
+           "beforeMs": 75600000,
+           "afterMs": 71940000,
+           "note": "이동에 걸리는 시간을 지키도록 되돌렸다. 한 사람이 동시에 두 곳에 있을 수는 없고, 순서는 원본이 고정한 구조다."
+          }
+         ],
+         "excludedReason": null
+        }
+       ],
+       "assumptions": [
+        "시골 마을의 하루는 매일 같은 일과의 반복이라고 본다. 바뀌는 것은 나가는 시각뿐이며 ±10분 안에서만 흔든다. 외출을 거르거나 더하는 일은 기본 하루에 넣지 않는다.",
+        "외출이 빠진 하루를 보려면 env-v2를 이름으로 골라야 하고, 그 실행은 다른 입력으로 표시된다."
+       ]
       }
      }
     },
@@ -1490,21 +2284,21 @@
      "어떻게 마무리됐는지 한 번만 알려 줬으면 한다."
     ],
     "model": null,
-    "createdAt": "2026-09-14T15:11:08+00:00",
+    "createdAt": "2026-09-14T15:26:33+00:00",
     "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
    },
    "changeSets": [
     {
-     "id": "change-gen-6db12997-0-1",
-     "sessionId": "iter-65e66db12997",
+     "id": "change-gen-1f0b718d-0-1",
+     "sessionId": "iter-83bc1f0b718d",
      "generationIndex": 0,
      "baseRevisionId": "policy-IT-v0",
      "label": "본인에게 다시 연락한 뒤 해결되지 않으면 기관에 인계한다.",
      "reviewItemRefs": [
-      "rev-gen-6db12997-0-502ffeb6-P6#1"
+      "rev-gen-1f0b718d-0-f4faf156-P6#1"
      ],
      "issueRefs": [
-      "iss-b12997-0-time_labour"
+      "iss-0b718d-0-time_labour"
      ],
      "eventRefs": [
       "ev-10",
@@ -1576,20 +2370,20 @@
      "resultingAttemptId": null,
      "adapter": "rule",
      "model": null,
-     "createdAt": "2026-09-14T15:11:08+00:00",
+     "createdAt": "2026-09-14T15:26:33+00:00",
      "changeHash": "bba88ef4e8234e5b5d2fabeb00b0727c"
     },
     {
-     "id": "change-gen-6db12997-0-unsupported-2",
-     "sessionId": "iter-65e66db12997",
+     "id": "change-gen-1f0b718d-0-unsupported-2",
+     "sessionId": "iter-83bc1f0b718d",
      "generationIndex": 0,
      "baseRevisionId": "policy-IT-v0",
      "label": "종료 결과 통지",
      "reviewItemRefs": [
-      "rev-gen-6db12997-0-502ffeb6-P6#4"
+      "rev-gen-1f0b718d-0-f4faf156-P6#4"
      ],
      "issueRefs": [
-      "iss-b12997-0-understandability"
+      "iss-0b718d-0-understandability"
      ],
      "eventRefs": [
       "ev-8"
@@ -1635,7 +2429,7 @@
      "resultingAttemptId": null,
      "adapter": "rule",
      "model": null,
-     "createdAt": "2026-09-14T15:11:08+00:00",
+     "createdAt": "2026-09-14T15:26:33+00:00",
      "changeHash": ""
     }
    ],

@@ -298,6 +298,19 @@ def test_objective_metrics_stay_beside_the_reviews_not_inside_them():
             "개인 리뷰가 전체 집계 지표를 근거로 삼으면 안 된다")
 
 
+def test_a_version_carries_its_day_refusals_and_hand_offs_for_the_table():
+    """The comparison screen reads the generation's objective, not the attempt.
+    Left out, the table said 하루 기록 없음 for a run made a minute earlier."""
+    service = iteration()
+    session = run_session(service, development_decks=[P1_DECK], max_generations=1)
+    root = service.detail(session.id)["generations"][0]
+    for row in root["metrics"]["objective"].values():
+        assert row["dayRealization"]["classification"]
+        assert all(r["steps"] == [] for r in row["dayRealization"]["residents"]), (
+            "the step lists are on the attempt already")
+        assert "count" in row["refusals"] and "count" in row["handovers"]
+
+
 # ============================================== what a Change Set may never touch
 def change_set(binding: ExecutionBinding, *, field: str = "retry",
                quest_id: str = "quest:no-response-welfare-check") -> ChangeSet:

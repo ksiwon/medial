@@ -202,15 +202,55 @@ ENV_V2_FIXED = ENV_V2.model_copy(deep=True, update={
 })
 ENV_V2_FIXED.variation.enabled = False
 
+#: v3 differs from v2 in the variation only: a village day is the same day
+#: again, give or take a few minutes.
+#:
+#: v2 dropped an outing with probability 0.15 per outing, and on the real
+#: village that produced a "plausible_extension" day on almost every run - the
+#: exception became the default. The premise the researcher stated is the other
+#: way round: the routine repeats, and what varies is when people leave, not
+#: whether. So the drop and repeat probabilities are zero here and the jitter is
+#: ten minutes. A run that wants a day with an outing missing asks for v2 by
+#: name and is reported as a different input.
+ENV_V3 = ENV_V2.model_copy(deep=True, update={
+    "id": "env-v3",
+    "label": "원본 도입 조건 (v3) · 같은 일과, 시각만 조금 다름",
+})
+ENV_V3.variation = RoutineVariation(
+    enabled=True,
+    departJitterMin=10,
+    skipOutingProbability=0.0,
+    repeatOutingProbability=0.0,
+    excludeSingleStepResidents=True,
+    assumptions=[
+        "시골 마을의 하루는 매일 같은 일과의 반복이라고 본다. 바뀌는 것은 나가는 시각뿐이며 "
+        "±10분 안에서만 흔든다. 외출을 거르거나 더하는 일은 기본 하루에 넣지 않는다.",
+        "외출이 빠진 하루를 보려면 env-v2를 이름으로 골라야 하고, 그 실행은 다른 입력으로 표시된다.",
+    ],
+)
+ENV_V3.assumptions = [
+    *ENV_V2.assumptions,
+    "v2 대비 유일한 차이는 일과 변이다. 외출 생략 확률 0.15가 실제 마을에서 거의 매번 "
+    "'외출 하나가 다른 하루'를 만들어, 예외가 기본이 되어 있었다.",
+]
+
+ENV_V3_FIXED = ENV_V3.model_copy(deep=True, update={
+    "id": "env-v3-fixed",
+    "label": "원본 도입 조건 (v3) · 일과 변이 없음",
+})
+ENV_V3_FIXED.variation.enabled = False
+
 ENVIRONMENTS: dict[str, EnvironmentRevision] = {
     ENV_V1.id: ENV_V1,
     ENV_V1_FIXED.id: ENV_V1_FIXED,
     ENV_V2.id: ENV_V2,
     ENV_V2_FIXED.id: ENV_V2_FIXED,
+    ENV_V3.id: ENV_V3,
+    ENV_V3_FIXED.id: ENV_V3_FIXED,
 }
-DEFAULT_ENVIRONMENT_ID = ENV_V2.id
+DEFAULT_ENVIRONMENT_ID = ENV_V3.id
 #: What a deterministic scenario test should ask for by name.
-FIXED_ENVIRONMENT_ID = ENV_V2_FIXED.id
+FIXED_ENVIRONMENT_ID = ENV_V3_FIXED.id
 #: The revision every attempt stored before availability became data ran on.
 LEGACY_ENVIRONMENT_ID = ENV_V1.id
 LEGACY_FIXED_ENVIRONMENT_ID = ENV_V1_FIXED.id

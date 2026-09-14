@@ -479,6 +479,12 @@ class IterationEngine:
                 "disclosure": row["metrics"]["disclosure"],
                 "transport": row["metrics"].get("transport", {}),
                 "residentBurden": row["metrics"]["residentBurden"],
+                # Who handed work on, who refused and why, and which day it
+                # was. Read by the comparison table; absent on attempts stored
+                # before they were computed, and left absent rather than faked.
+                "handovers": row["metrics"].get("handovers"),
+                "refusals": row["metrics"].get("refusals"),
+                "dayRealization": _day_without_steps(row["metrics"].get("dayRealization")),
             }
         vector = combine_vectors(vectors)
         return {
@@ -555,6 +561,18 @@ _RUNNABLE = frozenset({
     SessionStatus.proposing_changes, SessionStatus.validating_changes,
     SessionStatus.executing_revision,
 })
+
+
+def _day_without_steps(day: dict[str, Any] | None) -> dict[str, Any] | None:
+    """The realized day minus each person's full step list.
+
+    The screen needs the label and the per-person edits, which is a few lines.
+    The steps are the whole baseline again for twelve people, per attempt, per
+    generation, and the attempt record already holds them.
+    """
+    if day is None:
+        return None
+    return {**day, "residents": [{**r, "steps": []} for r in day.get("residents", [])]}
 
 
 def _review_counts(reviews: list[AgentReview]) -> dict[str, int]:

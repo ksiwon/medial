@@ -1,6 +1,6 @@
 {
  "attempt": {
-  "id": "att-A-v1-a4de8f2cecad",
+  "id": "att-A-v1-1cf183387c86",
   "parentId": null,
   "parentSeq": null,
   "lineage": "root",
@@ -15,8 +15,8 @@
   "status": "completed",
   "engineVersion": "medial-sim/0.2.0",
   "adapter": "rule",
-  "environmentRevisionId": "env-v2",
-  "dayRealizationId": "day-e30fca7257388553",
+  "environmentRevisionId": "env-v3",
+  "dayRealizationId": "day-58d7f0c850257455",
   "modelPolicy": {
    "modelId": "none",
    "temperature": 0.0,
@@ -25,7 +25,7 @@
    "mode": "off"
   },
   "relationRevisionId": "rel-v1",
-  "createdAt": "2026-09-14T15:11:07+00:00",
+  "createdAt": "2026-09-14T15:26:33+00:00",
   "cursorSeq": 0,
   "eventCount": 24,
   "dataSource": "synthetic",
@@ -34,8 +34,8 @@
    "policy": "03629affb95da9bf",
    "deck": "553907b4679a9aa1",
    "resources": "fa080f60dffd5e61",
-   "environment": "9c9646b396329549",
-   "day": "day-e30fca7257388553",
+   "environment": "93fe4eaa98c3eed7",
+   "day": "day-58d7f0c850257455",
    "modelPolicy": "97d384f1a98978bf",
    "relations": "62ade898153f86df",
    "persona": "persona-synthetic-b7889f7457bde193",
@@ -56,9 +56,9 @@
   },
   "waitMs": {
    "resolvedOnly": [
-    378386
+    529740
    ],
-   "meanMinutesResolvedOnly": 6.3,
+   "meanMinutesResolvedOnly": 8.8,
    "censoredCount": 0,
    "note": "미해결 건은 평균에 넣지 않고 censored로 센다."
   },
@@ -73,8 +73,8 @@
   },
   "residentBurden": {
    "P6": {
-    "addedTaskMinutes": 16.3,
-    "addedTravelMetres": 441.5,
+    "addedTaskMinutes": 18.8,
+    "addedTravelMetres": 618.0,
     "interruptions": 2,
     "contactsReceived": 1,
     "askedByMedial": 1,
@@ -82,7 +82,7 @@
     "basis": "실현된 계획에서 baseline 대비 추가된 task 구간"
    }
   },
-  "neighbourMinutes": 16.3,
+  "neighbourMinutes": 18.8,
   "institutionBurden": {
    "staffCount": 1,
    "shiftStartMs": 32400000,
@@ -161,11 +161,11 @@
    "note": "이름·인터뷰 인용·역할 프롬프트는 컴파일 결과에 담기지 않는다. 근거 카드는 원자료의 JSON pointer만 가리킨다."
   },
   "dayRealization": {
-   "id": "day-e30fca7257388553",
+   "id": "day-58d7f0c850257455",
    "seed": 17,
    "villageContentHash": "1666cf9ccb87e954",
-   "environmentRevisionId": "env-v2",
-   "classification": "plausible_extension",
+   "environmentRevisionId": "env-v3",
+   "classification": "source_jittered",
    "residents": [
     {
      "actorId": "P1",
@@ -183,8 +183,8 @@
       },
       {
        "car": false,
-       "departMin": 550.08215,
-       "departMs": 33004929,
+       "departMin": 533.93105,
+       "departMs": 32035863,
        "fixedDurationMin": null,
        "index": 1,
        "provenance": "source-baseline",
@@ -194,8 +194,8 @@
       },
       {
        "car": false,
-       "departMin": 733.3243333333334,
-       "departMs": 43999460,
+       "departMin": 717.5831833333333,
+       "departMs": 43054991,
        "fixedDurationMin": null,
        "index": 2,
        "provenance": "source-baseline",
@@ -205,8 +205,8 @@
       },
       {
        "car": false,
-       "departMin": 768.93105,
-       "departMs": 46135863,
+       "departMin": 781.6688,
+       "departMs": 46900128,
        "fixedDurationMin": null,
        "index": 3,
        "provenance": "source-baseline",
@@ -216,8 +216,8 @@
       },
       {
        "car": false,
-       "departMin": 974.7561666666667,
-       "departMs": 58485370,
+       "departMin": 954.6634833333334,
+       "departMs": 57279809,
        "fixedDurationMin": null,
        "index": 4,
        "provenance": "source-baseline",
@@ -232,32 +232,32 @@
        "kind": "jitter",
        "target": "FARM",
        "beforeMs": 32400000,
-       "afterMs": 33004929,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 32035863,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 2,
        "kind": "jitter",
        "target": "HOME",
        "beforeMs": 43200000,
-       "afterMs": 43999460,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 43054991,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 3,
        "kind": "jitter",
        "target": "FARM",
        "beforeMs": 46800000,
-       "afterMs": 46135863,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 46900128,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 4,
        "kind": "jitter",
        "target": "HOME",
        "beforeMs": 57600000,
-       "afterMs": 58485370,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 57279809,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       }
      ],
      "excludedReason": null
@@ -275,16 +275,46 @@
        "target": "HOME",
        "targetKind": "place",
        "timeProvenance": "source"
+      },
+      {
+       "car": false,
+       "departMin": 412.12085,
+       "departMs": 24727251,
+       "fixedDurationMin": null,
+       "index": 1,
+       "provenance": "source-baseline",
+       "target": "TOWN",
+       "targetKind": "place",
+       "timeProvenance": "source"
+      },
+      {
+       "car": false,
+       "departMin": 1017.03495,
+       "departMs": 61022097,
+       "fixedDurationMin": null,
+       "index": 2,
+       "provenance": "source-baseline",
+       "target": "HOME",
+       "targetKind": "place",
+       "timeProvenance": "source"
       }
      ],
      "changes": [
       {
        "index": 1,
-       "kind": "skip_outing",
+       "kind": "jitter",
        "target": "TOWN",
        "beforeMs": 25200000,
-       "afterMs": null,
-       "note": "그날 이 외출을 하지 않았다고 가정했다. 외출을 거르는 빈도는 원자료에 없으며 연구자 설정 확률(0.15)에서 뽑았다."
+       "afterMs": 24727251,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+      },
+      {
+       "index": 2,
+       "kind": "jitter",
+       "target": "HOME",
+       "beforeMs": 61200000,
+       "afterMs": 61022097,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       }
      ],
      "excludedReason": null
@@ -305,8 +335,8 @@
       },
       {
        "car": false,
-       "departMin": 536.0471166666666,
-       "departMs": 32162827,
+       "departMin": 541.0471166666666,
+       "departMs": 32462827,
        "fixedDurationMin": null,
        "index": 1,
        "provenance": "source-baseline",
@@ -333,8 +363,8 @@
        "kind": "jitter",
        "target": "TOWN",
        "beforeMs": 32400000,
-       "afterMs": 32162827,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 32462827,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       }
      ],
      "excludedReason": null
@@ -355,8 +385,8 @@
       },
       {
        "car": false,
-       "departMin": 489.939,
-       "departMs": 29396340,
+       "departMin": 478.61088333333333,
+       "departMs": 28716653,
        "fixedDurationMin": null,
        "index": 1,
        "provenance": "source-baseline",
@@ -366,8 +396,8 @@
       },
       {
        "car": false,
-       "departMin": 1016.9072666666667,
-       "departMs": 61014436,
+       "departMin": 1015.4838666666667,
+       "departMs": 60929032,
        "fixedDurationMin": null,
        "index": 2,
        "provenance": "source-baseline",
@@ -377,8 +407,8 @@
       },
       {
        "car": false,
-       "departMin": 1128.4792166666666,
-       "departMs": 67708753,
+       "departMin": 1141.9072666666666,
+       "departMs": 68514436,
        "fixedDurationMin": null,
        "index": 3,
        "provenance": "source-baseline",
@@ -393,24 +423,24 @@
        "kind": "jitter",
        "target": "FOOD",
        "beforeMs": 28800000,
-       "afterMs": 29396340,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 28716653,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 2,
        "kind": "jitter",
        "target": "EXP",
        "beforeMs": 61200000,
-       "afterMs": 61014436,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 60929032,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 3,
        "kind": "jitter",
        "target": "HOME",
        "beforeMs": 68400000,
-       "afterMs": 67708753,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 68514436,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       }
      ],
      "excludedReason": null
@@ -428,16 +458,84 @@
        "target": "HOME",
        "targetKind": "place",
        "timeProvenance": "source"
+      },
+      {
+       "car": false,
+       "departMin": 367.0674333333333,
+       "departMs": 22024046,
+       "fixedDurationMin": null,
+       "index": 1,
+       "provenance": "source-baseline",
+       "target": "PORT",
+       "targetKind": "place",
+       "timeProvenance": "source"
+      },
+      {
+       "car": false,
+       "departMin": 389.66135,
+       "departMs": 23379681,
+       "fixedDurationMin": null,
+       "index": 2,
+       "provenance": "source-baseline",
+       "target": "SEA",
+       "targetKind": "place",
+       "timeProvenance": "source"
+      },
+      {
+       "car": false,
+       "departMin": 656.1803666666667,
+       "departMs": 39370822,
+       "fixedDurationMin": null,
+       "index": 3,
+       "provenance": "source-baseline",
+       "target": "PORT",
+       "targetKind": "place",
+       "timeProvenance": "source"
+      },
+      {
+       "car": false,
+       "departMin": 697.1621166666666,
+       "departMs": 41829727,
+       "fixedDurationMin": null,
+       "index": 4,
+       "provenance": "source-baseline",
+       "target": "HOME",
+       "targetKind": "place",
+       "timeProvenance": "source"
       }
      ],
      "changes": [
       {
        "index": 1,
-       "kind": "skip_outing",
-       "target": "PORT → SEA → PORT",
+       "kind": "jitter",
+       "target": "PORT",
        "beforeMs": 22500000,
-       "afterMs": null,
-       "note": "그날 이 외출을 하지 않았다고 가정했다. 외출을 거르는 빈도는 원자료에 없으며 연구자 설정 확률(0.15)에서 뽑았다."
+       "afterMs": 22024046,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+      },
+      {
+       "index": 2,
+       "kind": "jitter",
+       "target": "SEA",
+       "beforeMs": 23700000,
+       "afterMs": 23379681,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+      },
+      {
+       "index": 3,
+       "kind": "jitter",
+       "target": "PORT",
+       "beforeMs": 39300000,
+       "afterMs": 39370822,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
+      },
+      {
+       "index": 4,
+       "kind": "jitter",
+       "target": "HOME",
+       "beforeMs": 41400000,
+       "afterMs": 41829727,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       }
      ],
      "excludedReason": null
@@ -458,8 +556,8 @@
       },
       {
        "car": false,
-       "departMin": 416.2149166666667,
-       "departMs": 24972895,
+       "departMin": 425.23128333333335,
+       "departMs": 25513877,
        "fixedDurationMin": null,
        "index": 1,
        "provenance": "source-baseline",
@@ -469,8 +567,8 @@
       },
       {
        "car": false,
-       "departMin": 477.11423333333335,
-       "departMs": 28626854,
+       "departMin": 481.2149166666667,
+       "departMs": 28872895,
        "fixedDurationMin": null,
        "index": 2,
        "provenance": "source-baseline",
@@ -480,8 +578,8 @@
       },
       {
        "car": false,
-       "departMin": 590.0682833333333,
-       "departMs": 35404097,
+       "departMin": 602.1142333333333,
+       "departMs": 36126854,
        "fixedDurationMin": null,
        "index": 3,
        "provenance": "source-baseline",
@@ -491,8 +589,8 @@
       },
       {
        "car": false,
-       "departMin": 713.7357666666667,
-       "departMs": 42824146,
+       "departMin": 710.0682833333333,
+       "departMs": 42604097,
        "fixedDurationMin": null,
        "index": 4,
        "provenance": "source-baseline",
@@ -502,8 +600,8 @@
       },
       {
        "car": false,
-       "departMin": 765.6096833333334,
-       "departMs": 45936581,
+       "departMin": 783.7357666666667,
+       "departMs": 47024146,
        "fixedDurationMin": null,
        "index": 5,
        "provenance": "source-baseline",
@@ -530,40 +628,40 @@
        "kind": "jitter",
        "target": "HALL",
        "beforeMs": 25200000,
-       "afterMs": 24972895,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 25513877,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 2,
        "kind": "jitter",
        "target": "PATROL",
        "beforeMs": 28800000,
-       "afterMs": 28626854,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 28872895,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 3,
        "kind": "jitter",
        "target": "HOME",
        "beforeMs": 36000000,
-       "afterMs": 35404097,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 36126854,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 4,
        "kind": "jitter",
        "target": "FOOD",
        "beforeMs": 42900000,
-       "afterMs": 42824146,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 42604097,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 5,
        "kind": "jitter",
        "target": "PATROL",
        "beforeMs": 46800000,
-       "afterMs": 45936581,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 47024146,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       }
      ],
      "excludedReason": null
@@ -584,8 +682,8 @@
       },
       {
        "car": false,
-       "departMin": 338.29775,
-       "departMs": 20297865,
+       "departMin": 326.39596666666665,
+       "departMs": 19583758,
        "fixedDurationMin": null,
        "index": 1,
        "provenance": "source-baseline",
@@ -595,8 +693,8 @@
       },
       {
        "car": false,
-       "departMin": 348.38803333333334,
-       "departMs": 20903282,
+       "departMin": 340.45256666666666,
+       "departMs": 20427154,
        "fixedDurationMin": null,
        "index": 2,
        "provenance": "source-baseline",
@@ -606,8 +704,8 @@
       },
       {
        "car": false,
-       "departMin": 635.4525666666667,
-       "departMs": 38127154,
+       "departMin": 657.97975,
+       "departMs": 39478785,
        "fixedDurationMin": null,
        "index": 3,
        "provenance": "source-baseline",
@@ -617,8 +715,8 @@
       },
       {
        "car": false,
-       "departMin": 720.5126333333334,
-       "departMs": 43230758,
+       "departMin": 717.75565,
+       "departMs": 43065339,
        "fixedDurationMin": null,
        "index": 4,
        "provenance": "source-baseline",
@@ -628,8 +726,8 @@
       },
       {
        "car": false,
-       "departMin": 786.0746166666667,
-       "departMs": 47164477,
+       "departMin": 775.2132333333333,
+       "departMs": 46512794,
        "fixedDurationMin": null,
        "index": 5,
        "provenance": "source-baseline",
@@ -639,8 +737,8 @@
       },
       {
        "car": false,
-       "departMin": 1022.97975,
-       "departMs": 61378785,
+       "departMin": 1023.0843666666667,
+       "departMs": 61385062,
        "fixedDurationMin": null,
        "index": 6,
        "provenance": "source-baseline",
@@ -650,8 +748,8 @@
       },
       {
        "car": false,
-       "departMin": 1140.75565,
-       "departMs": 68445339,
+       "departMin": 1143.9486333333334,
+       "departMs": 68636918,
        "fixedDurationMin": null,
        "index": 7,
        "provenance": "source-baseline",
@@ -666,56 +764,56 @@
        "kind": "jitter",
        "target": "PORT",
        "beforeMs": 19800000,
-       "afterMs": 20297865,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 19583758,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 2,
-       "kind": "clamp",
+       "kind": "jitter",
        "target": "SEA",
        "beforeMs": 21000000,
-       "afterMs": 20903282,
-       "note": "이동에 걸리는 시간을 지키도록 되돌렸다. 한 사람이 동시에 두 곳에 있을 수는 없고, 순서는 원본이 고정한 구조다."
+       "afterMs": 20427154,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 3,
        "kind": "jitter",
        "target": "PORT",
        "beforeMs": 39000000,
-       "afterMs": 38127154,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 39478785,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 4,
        "kind": "jitter",
        "target": "FOOD",
        "beforeMs": 42720000,
-       "afterMs": 43230758,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 43065339,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 5,
        "kind": "jitter",
        "target": "PORT",
        "beforeMs": 46800000,
-       "afterMs": 47164477,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 46512794,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 6,
        "kind": "jitter",
        "target": "EXP",
        "beforeMs": 61200000,
-       "afterMs": 61378785,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 61385062,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 7,
        "kind": "jitter",
        "target": "HOME",
        "beforeMs": 68400000,
-       "afterMs": 68445339,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 68636918,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       }
      ],
      "excludedReason": null
@@ -736,8 +834,8 @@
       },
       {
        "car": false,
-       "departMin": 315.3232,
-       "departMs": 18919392,
+       "departMin": 336.6992,
+       "departMs": 20201952,
        "fixedDurationMin": null,
        "index": 1,
        "provenance": "source-baseline",
@@ -747,8 +845,8 @@
       },
       {
        "car": false,
-       "departMin": 345.19655,
-       "departMs": 20711793,
+       "departMin": 346.78948333333335,
+       "departMs": 20807369,
        "fixedDurationMin": null,
        "index": 2,
        "provenance": "source-baseline",
@@ -758,8 +856,8 @@
       },
       {
        "car": false,
-       "departMin": 642.1776333333333,
-       "departMs": 38530658,
+       "departMin": 650.19655,
+       "departMs": 39011793,
        "fixedDurationMin": null,
        "index": 3,
        "provenance": "source-baseline",
@@ -769,8 +867,8 @@
       },
       {
        "car": false,
-       "departMin": 713.7323333333334,
-       "departMs": 42823940,
+       "departMin": 709.1776333333333,
+       "departMs": 42550658,
        "fixedDurationMin": null,
        "index": 4,
        "provenance": "source-baseline",
@@ -780,8 +878,8 @@
       },
       {
        "car": false,
-       "departMin": 784.1254833333334,
-       "departMs": 47047529,
+       "departMin": 786.7323333333334,
+       "departMs": 47203940,
        "fixedDurationMin": null,
        "index": 5,
        "provenance": "source-baseline",
@@ -791,8 +889,8 @@
       },
       {
        "car": false,
-       "departMin": 1029.53795,
-       "departMs": 61772277,
+       "departMin": 1029.1254833333332,
+       "departMs": 61747529,
        "fixedDurationMin": null,
        "index": 6,
        "provenance": "source-baseline",
@@ -802,8 +900,8 @@
       },
       {
        "car": false,
-       "departMin": 1130.1575,
-       "departMs": 67809450,
+       "departMin": 1135.1575,
+       "departMs": 68109450,
        "fixedDurationMin": null,
        "index": 7,
        "provenance": "source-baseline",
@@ -818,56 +916,56 @@
        "kind": "jitter",
        "target": "PORT",
        "beforeMs": 19800000,
-       "afterMs": 18919392,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 20201952,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 2,
-       "kind": "jitter",
+       "kind": "clamp",
        "target": "SEA",
        "beforeMs": 21000000,
-       "afterMs": 20711793,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 20807369,
+       "note": "이동에 걸리는 시간을 지키도록 되돌렸다. 한 사람이 동시에 두 곳에 있을 수는 없고, 순서는 원본이 고정한 구조다."
       },
       {
        "index": 3,
        "kind": "jitter",
        "target": "PORT",
        "beforeMs": 39000000,
-       "afterMs": 38530658,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 39011793,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 4,
        "kind": "jitter",
        "target": "FOOD",
        "beforeMs": 42720000,
-       "afterMs": 42823940,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 42550658,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 5,
        "kind": "jitter",
        "target": "PORT",
        "beforeMs": 46800000,
-       "afterMs": 47047529,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 47203940,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 6,
        "kind": "jitter",
        "target": "EXP",
        "beforeMs": 61200000,
-       "afterMs": 61772277,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 61747529,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 7,
        "kind": "jitter",
        "target": "HOME",
        "beforeMs": 68400000,
-       "afterMs": 67809450,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 68109450,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       }
      ],
      "excludedReason": null
@@ -954,8 +1052,8 @@
       },
       {
        "car": false,
-       "departMin": 1078.3087,
-       "departMs": 64698522,
+       "departMin": 1083.3087,
+       "departMs": 64998522,
        "fixedDurationMin": null,
        "index": 3,
        "provenance": "source-baseline",
@@ -965,8 +1063,8 @@
       },
       {
        "car": false,
-       "departMin": 1137.3718833333332,
-       "departMs": 68242313,
+       "departMin": 1142.3718833333332,
+       "departMs": 68542313,
        "fixedDurationMin": null,
        "index": 4,
        "provenance": "source-baseline",
@@ -992,16 +1090,16 @@
        "kind": "jitter",
        "target": "HOME",
        "beforeMs": 64800000,
-       "afterMs": 64698522,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 64998522,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 3,
        "kind": "jitter",
        "target": "MIGA",
        "beforeMs": 67980000,
-       "afterMs": 68242313,
-       "note": "원본 시각은 하루치 기록이므로 ±15분 안에서 흔들었다."
+       "afterMs": 68542313,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       },
       {
        "index": 4,
@@ -1016,10 +1114,8 @@
     }
    ],
    "assumptions": [
-    "원본의 출발 시각은 하루치 기록이므로 정확한 법칙으로 다루지 않는다. ±15분 지터는 그 기록의 정확도에 대한 불확실성이지 주민이 변덕스럽다는 주장이 아니다.",
-    "외출을 건너뛰는 빈도는 원자료에 없다. 0.15는 연구자 설정이며 그 결과로 만들어진 하루는 plausible_extension으로 표시한다.",
-    "새 목적지는 생성하지 않는다. 반복 외출은 본인 baseline에 이미 있는 장소로만 간다.",
-    "baseline이 한 단계뿐인 주민(P9·P10·P11)은 변이 대상에서 제외한다. 원자료에 일과 기록이 없어 흔들면 창작이 된다."
+    "시골 마을의 하루는 매일 같은 일과의 반복이라고 본다. 바뀌는 것은 나가는 시각뿐이며 ±10분 안에서만 흔든다. 외출을 거르거나 더하는 일은 기본 하루에 넣지 않는다.",
+    "외출이 빠진 하루를 보려면 env-v2를 이름으로 골라야 하고, 그 실행은 다른 입력으로 표시된다."
    ]
   },
   "modelCalls": {
@@ -1059,7 +1155,7 @@
    "assumption-phone-reachability"
   ]
  },
- "logFingerprint": "46b8972843da9df1",
+ "logFingerprint": "d21b03de60a52dc4",
  "timeline": {
   "horizonMs": 72000000,
   "actors": {
@@ -1075,7 +1171,7 @@
     "baseline": [
      {
       "startMs": 0,
-      "endMs": 33004929,
+      "endMs": 32035863,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -1093,8 +1189,8 @@
       ]
      },
      {
-      "startMs": 33004929,
-      "endMs": 33282412,
+      "startMs": 32035863,
+      "endMs": 32313346,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -1126,8 +1222,8 @@
       ]
      },
      {
-      "startMs": 33282412,
-      "endMs": 43999460,
+      "startMs": 32313346,
+      "endMs": 43054991,
       "kind": "stay",
       "origin": "baseline",
       "label": "밭일",
@@ -1145,8 +1241,8 @@
       ]
      },
      {
-      "startMs": 43999460,
-      "endMs": 44276943,
+      "startMs": 43054991,
+      "endMs": 43332474,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -1178,8 +1274,8 @@
       ]
      },
      {
-      "startMs": 44276943,
-      "endMs": 46135863,
+      "startMs": 43332474,
+      "endMs": 46900128,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -1197,8 +1293,8 @@
       ]
      },
      {
-      "startMs": 46135863,
-      "endMs": 46413346,
+      "startMs": 46900128,
+      "endMs": 47177611,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -1230,8 +1326,8 @@
       ]
      },
      {
-      "startMs": 46413346,
-      "endMs": 58485370,
+      "startMs": 47177611,
+      "endMs": 57279809,
       "kind": "stay",
       "origin": "baseline",
       "label": "밭일",
@@ -1249,8 +1345,8 @@
       ]
      },
      {
-      "startMs": 58485370,
-      "endMs": 58762853,
+      "startMs": 57279809,
+      "endMs": 57557292,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -1282,7 +1378,7 @@
       ]
      },
      {
-      "startMs": 58762853,
+      "startMs": 57557292,
       "endMs": 72000000,
       "kind": "stay",
       "origin": "baseline",
@@ -1304,7 +1400,7 @@
     "realized": [
      {
       "startMs": 0,
-      "endMs": 33004929,
+      "endMs": 32035863,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -1322,8 +1418,8 @@
       ]
      },
      {
-      "startMs": 33004929,
-      "endMs": 33282412,
+      "startMs": 32035863,
+      "endMs": 32313346,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -1355,8 +1451,8 @@
       ]
      },
      {
-      "startMs": 33282412,
-      "endMs": 43999460,
+      "startMs": 32313346,
+      "endMs": 43054991,
       "kind": "stay",
       "origin": "baseline",
       "label": "밭일",
@@ -1374,8 +1470,8 @@
       ]
      },
      {
-      "startMs": 43999460,
-      "endMs": 44276943,
+      "startMs": 43054991,
+      "endMs": 43332474,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -1407,8 +1503,8 @@
       ]
      },
      {
-      "startMs": 44276943,
-      "endMs": 46135863,
+      "startMs": 43332474,
+      "endMs": 46900128,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -1426,8 +1522,8 @@
       ]
      },
      {
-      "startMs": 46135863,
-      "endMs": 46413346,
+      "startMs": 46900128,
+      "endMs": 47177611,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -1459,8 +1555,8 @@
       ]
      },
      {
-      "startMs": 46413346,
-      "endMs": 58485370,
+      "startMs": 47177611,
+      "endMs": 57279809,
       "kind": "stay",
       "origin": "baseline",
       "label": "밭일",
@@ -1478,8 +1574,8 @@
       ]
      },
      {
-      "startMs": 58485370,
-      "endMs": 58762853,
+      "startMs": 57279809,
+      "endMs": 57557292,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -1511,7 +1607,7 @@
       ]
      },
      {
-      "startMs": 58762853,
+      "startMs": 57557292,
       "endMs": 72000000,
       "kind": "stay",
       "origin": "baseline",
@@ -1546,6 +1642,94 @@
     "baseline": [
      {
       "startMs": 0,
+      "endMs": 24727251,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P2",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": true,
+      "riders": [],
+      "xy": [
+       300.0,
+       570.0
+      ]
+     },
+     {
+      "startMs": 24727251,
+      "endMs": 26527251,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P2",
+      "toPlace": "TOWN",
+      "mode": "offmap",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        570.0
+       ],
+       [
+        300.0,
+        -70.0
+       ]
+      ]
+     },
+     {
+      "startMs": 26527251,
+      "endMs": 61022097,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "읍내",
+      "place": "TOWN",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       -70.0
+      ]
+     },
+     {
+      "startMs": 61022097,
+      "endMs": 62822097,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "TOWN",
+      "toPlace": "HOME:P2",
+      "mode": "offmap",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        -70.0
+       ],
+       [
+        300.0,
+        570.0
+       ]
+      ]
+     },
+     {
+      "startMs": 62822097,
       "endMs": 72000000,
       "kind": "stay",
       "origin": "baseline",
@@ -1567,6 +1751,94 @@
     "realized": [
      {
       "startMs": 0,
+      "endMs": 24727251,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P2",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": true,
+      "riders": [],
+      "xy": [
+       300.0,
+       570.0
+      ]
+     },
+     {
+      "startMs": 24727251,
+      "endMs": 26527251,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P2",
+      "toPlace": "TOWN",
+      "mode": "offmap",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        570.0
+       ],
+       [
+        300.0,
+        -70.0
+       ]
+      ]
+     },
+     {
+      "startMs": 26527251,
+      "endMs": 61022097,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "읍내",
+      "place": "TOWN",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       -70.0
+      ]
+     },
+     {
+      "startMs": 61022097,
+      "endMs": 62822097,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "TOWN",
+      "toPlace": "HOME:P2",
+      "mode": "offmap",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        -70.0
+       ],
+       [
+        300.0,
+        570.0
+       ]
+      ]
+     },
+     {
+      "startMs": 62822097,
       "endMs": 72000000,
       "kind": "stay",
       "origin": "baseline",
@@ -1601,7 +1873,7 @@
     "baseline": [
      {
       "startMs": 0,
-      "endMs": 32162827,
+      "endMs": 32462827,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -1619,8 +1891,8 @@
       ]
      },
      {
-      "startMs": 32162827,
-      "endMs": 33962827,
+      "startMs": 32462827,
+      "endMs": 34262827,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -1644,7 +1916,7 @@
       ]
      },
      {
-      "startMs": 33962827,
+      "startMs": 34262827,
       "endMs": 48420000,
       "kind": "stay",
       "origin": "baseline",
@@ -1710,7 +1982,7 @@
     "realized": [
      {
       "startMs": 0,
-      "endMs": 32162827,
+      "endMs": 32462827,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -1728,8 +2000,8 @@
       ]
      },
      {
-      "startMs": 32162827,
-      "endMs": 33962827,
+      "startMs": 32462827,
+      "endMs": 34262827,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -1753,7 +2025,7 @@
       ]
      },
      {
-      "startMs": 33962827,
+      "startMs": 34262827,
       "endMs": 48420000,
       "kind": "stay",
       "origin": "baseline",
@@ -1832,7 +2104,7 @@
     "baseline": [
      {
       "startMs": 0,
-      "endMs": 29396340,
+      "endMs": 28716653,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -1850,8 +2122,8 @@
       ]
      },
      {
-      "startMs": 29396340,
-      "endMs": 29631780,
+      "startMs": 28716653,
+      "endMs": 28952093,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -1879,8 +2151,8 @@
       ]
      },
      {
-      "startMs": 29631780,
-      "endMs": 61014436,
+      "startMs": 28952093,
+      "endMs": 60929032,
       "kind": "stay",
       "origin": "baseline",
       "label": "마을식품 근무",
@@ -1898,8 +2170,8 @@
       ]
      },
      {
-      "startMs": 61014436,
-      "endMs": 61104436,
+      "startMs": 60929032,
+      "endMs": 61019032,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -1923,8 +2195,8 @@
       ]
      },
      {
-      "startMs": 61104436,
-      "endMs": 67708753,
+      "startMs": 61019032,
+      "endMs": 68514436,
       "kind": "stay",
       "origin": "baseline",
       "label": "어촌체험마을",
@@ -1942,8 +2214,8 @@
       ]
      },
      {
-      "startMs": 67708753,
-      "endMs": 67986236,
+      "startMs": 68514436,
+      "endMs": 68791919,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -1975,7 +2247,7 @@
       ]
      },
      {
-      "startMs": 67986236,
+      "startMs": 68791919,
       "endMs": 72000000,
       "kind": "stay",
       "origin": "baseline",
@@ -1997,7 +2269,7 @@
     "realized": [
      {
       "startMs": 0,
-      "endMs": 29396340,
+      "endMs": 28716653,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -2015,8 +2287,8 @@
       ]
      },
      {
-      "startMs": 29396340,
-      "endMs": 29631780,
+      "startMs": 28716653,
+      "endMs": 28952093,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -2044,8 +2316,8 @@
       ]
      },
      {
-      "startMs": 29631780,
-      "endMs": 61014436,
+      "startMs": 28952093,
+      "endMs": 60929032,
       "kind": "stay",
       "origin": "baseline",
       "label": "마을식품 근무",
@@ -2063,8 +2335,8 @@
       ]
      },
      {
-      "startMs": 61014436,
-      "endMs": 61104436,
+      "startMs": 60929032,
+      "endMs": 61019032,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -2088,8 +2360,8 @@
       ]
      },
      {
-      "startMs": 61104436,
-      "endMs": 67708753,
+      "startMs": 61019032,
+      "endMs": 68514436,
       "kind": "stay",
       "origin": "baseline",
       "label": "어촌체험마을",
@@ -2107,8 +2379,8 @@
       ]
      },
      {
-      "startMs": 67708753,
-      "endMs": 67986236,
+      "startMs": 68514436,
+      "endMs": 68791919,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -2140,7 +2412,7 @@
       ]
      },
      {
-      "startMs": 67986236,
+      "startMs": 68791919,
       "endMs": 72000000,
       "kind": "stay",
       "origin": "baseline",
@@ -2175,6 +2447,214 @@
     "baseline": [
      {
       "startMs": 0,
+      "endMs": 22024046,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P5",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": true,
+      "riders": [],
+      "xy": [
+       300.0,
+       510.0
+      ]
+     },
+     {
+      "startMs": 22024046,
+      "endMs": 22629463,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P5",
+      "toPlace": "PORT",
+      "mode": "walk",
+      "metres": 706.3,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        120.0,
+        990.0
+       ]
+      ]
+     },
+     {
+      "startMs": 22629463,
+      "endMs": 23379681,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 23379681,
+      "endMs": 23597462,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "PORT",
+      "toPlace": "SEA",
+      "mode": "boat",
+      "metres": 363.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        120.0,
+        990.0
+       ],
+       [
+        470.0,
+        1110.0
+       ]
+      ]
+     },
+     {
+      "startMs": 23597462,
+      "endMs": 39370822,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "조업",
+      "place": "SEA",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       470.0,
+       1110.0
+      ]
+     },
+     {
+      "startMs": 39370822,
+      "endMs": 39588603,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "SEA",
+      "toPlace": "PORT",
+      "mode": "boat",
+      "metres": 363.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        470.0,
+        1110.0
+       ],
+       [
+        120.0,
+        990.0
+       ]
+      ]
+     },
+     {
+      "startMs": 39588603,
+      "endMs": 41829727,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 41829727,
+      "endMs": 42435144,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "PORT",
+      "toPlace": "HOME:P5",
+      "mode": "walk",
+      "metres": 706.3,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        120.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 42435144,
       "endMs": 72000000,
       "kind": "stay",
       "origin": "baseline",
@@ -2196,6 +2676,214 @@
     "realized": [
      {
       "startMs": 0,
+      "endMs": 22024046,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P5",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": true,
+      "riders": [],
+      "xy": [
+       300.0,
+       510.0
+      ]
+     },
+     {
+      "startMs": 22024046,
+      "endMs": 22629463,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HOME:P5",
+      "toPlace": "PORT",
+      "mode": "walk",
+      "metres": 706.3,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        120.0,
+        990.0
+       ]
+      ]
+     },
+     {
+      "startMs": 22629463,
+      "endMs": 23379681,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 23379681,
+      "endMs": 23597462,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "PORT",
+      "toPlace": "SEA",
+      "mode": "boat",
+      "metres": 363.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        120.0,
+        990.0
+       ],
+       [
+        470.0,
+        1110.0
+       ]
+      ]
+     },
+     {
+      "startMs": 23597462,
+      "endMs": 39370822,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "조업",
+      "place": "SEA",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       470.0,
+       1110.0
+      ]
+     },
+     {
+      "startMs": 39370822,
+      "endMs": 39588603,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "SEA",
+      "toPlace": "PORT",
+      "mode": "boat",
+      "metres": 363.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        470.0,
+        1110.0
+       ],
+       [
+        120.0,
+        990.0
+       ]
+      ]
+     },
+     {
+      "startMs": 39588603,
+      "endMs": 41829727,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 41829727,
+      "endMs": 42435144,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "PORT",
+      "toPlace": "HOME:P5",
+      "mode": "walk",
+      "metres": 706.3,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        120.0,
+        990.0
+       ],
+       [
+        180.0,
+        990.0
+       ],
+       [
+        300.0,
+        990.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ]
+      ]
+     },
+     {
+      "startMs": 42435144,
       "endMs": 72000000,
       "kind": "stay",
       "origin": "baseline",
@@ -2230,7 +2918,7 @@
     "baseline": [
      {
       "startMs": 0,
-      "endMs": 24972895,
+      "endMs": 25513877,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -2248,8 +2936,8 @@
       ]
      },
      {
-      "startMs": 24972895,
-      "endMs": 25292421,
+      "startMs": 25513877,
+      "endMs": 25833403,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -2277,8 +2965,8 @@
       ]
      },
      {
-      "startMs": 25292421,
-      "endMs": 28626854,
+      "startMs": 25833403,
+      "endMs": 28872895,
       "kind": "stay",
       "origin": "baseline",
       "label": "마을회관",
@@ -2296,8 +2984,8 @@
       ]
      },
      {
-      "startMs": 28626854,
-      "endMs": 35404097,
+      "startMs": 28872895,
+      "endMs": 36126854,
       "kind": "patrol",
       "origin": "baseline",
       "label": "마을 순찰",
@@ -2365,8 +3053,8 @@
       ]
      },
      {
-      "startMs": 35404097,
-      "endMs": 35723623,
+      "startMs": 36126854,
+      "endMs": 36446380,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -2394,8 +3082,8 @@
       ]
      },
      {
-      "startMs": 35723623,
-      "endMs": 42824146,
+      "startMs": 36446380,
+      "endMs": 42604097,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -2413,8 +3101,8 @@
       ]
      },
      {
-      "startMs": 42824146,
-      "endMs": 43311843,
+      "startMs": 42604097,
+      "endMs": 43091794,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -2446,8 +3134,8 @@
       ]
      },
      {
-      "startMs": 43311843,
-      "endMs": 45936581,
+      "startMs": 43091794,
+      "endMs": 47024146,
       "kind": "stay",
       "origin": "baseline",
       "label": "마을식품 근무",
@@ -2465,7 +3153,7 @@
       ]
      },
      {
-      "startMs": 45936581,
+      "startMs": 47024146,
       "endMs": 57600000,
       "kind": "patrol",
       "origin": "baseline",
@@ -2589,7 +3277,7 @@
     "realized": [
      {
       "startMs": 0,
-      "endMs": 24972895,
+      "endMs": 25513877,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -2607,8 +3295,8 @@
       ]
      },
      {
-      "startMs": 24972895,
-      "endMs": 25292421,
+      "startMs": 25513877,
+      "endMs": 25833403,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -2636,8 +3324,8 @@
       ]
      },
      {
-      "startMs": 25292421,
-      "endMs": 28626854,
+      "startMs": 25833403,
+      "endMs": 28872895,
       "kind": "stay",
       "origin": "baseline",
       "label": "마을회관",
@@ -2655,7 +3343,7 @@
       ]
      },
      {
-      "startMs": 28626854,
+      "startMs": 28872895,
       "endMs": 34200000,
       "kind": "patrol",
       "origin": "baseline",
@@ -2725,7 +3413,7 @@
      },
      {
       "startMs": 34200000,
-      "endMs": 34300903,
+      "endMs": 34452257,
       "kind": "travel",
       "origin": "task",
       "label": "안부 확인 이동",
@@ -2733,11 +3421,15 @@
       "fromPlace": "PATROL",
       "toPlace": "HOME:P1",
       "mode": "walk",
-      "metres": 117.7,
+      "metres": 294.3,
       "requestId": "req-P1-1",
       "interruptible": false,
       "riders": [],
       "polyline": [
+       [
+        300.0,
+        630.0
+       ],
        [
         300.0,
         810.0
@@ -2749,8 +3441,8 @@
       ]
      },
      {
-      "startMs": 34300903,
-      "endMs": 34578386,
+      "startMs": 34452257,
+      "endMs": 34729740,
       "kind": "travel",
       "origin": "task",
       "label": "안부 확인 이동",
@@ -2782,8 +3474,8 @@
       ]
      },
      {
-      "startMs": 34578386,
-      "endMs": 34878386,
+      "startMs": 34729740,
+      "endMs": 35029740,
       "kind": "stay",
       "origin": "task",
       "label": "안부 확인",
@@ -2801,8 +3493,8 @@
       ]
      },
      {
-      "startMs": 34878386,
-      "endMs": 35458577,
+      "startMs": 35029740,
+      "endMs": 35609931,
       "kind": "travel",
       "origin": "baseline",
       "label": "일과 복귀",
@@ -2838,8 +3530,8 @@
       ]
      },
      {
-      "startMs": 35458577,
-      "endMs": 35723623,
+      "startMs": 35609931,
+      "endMs": 36126854,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -2857,8 +3549,37 @@
       ]
      },
      {
-      "startMs": 35723623,
-      "endMs": 42824146,
+      "startMs": 36126854,
+      "endMs": 36446380,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "이동",
+      "place": null,
+      "fromPlace": "HALL",
+      "toPlace": "HOME:P6",
+      "mode": "walk",
+      "metres": 372.8,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        220.0,
+        630.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        330.0
+       ]
+      ]
+     },
+     {
+      "startMs": 36446380,
+      "endMs": 42604097,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -2876,8 +3597,8 @@
       ]
      },
      {
-      "startMs": 42824146,
-      "endMs": 43311843,
+      "startMs": 42604097,
+      "endMs": 43091794,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -2909,8 +3630,8 @@
       ]
      },
      {
-      "startMs": 43311843,
-      "endMs": 45936581,
+      "startMs": 43091794,
+      "endMs": 47024146,
       "kind": "stay",
       "origin": "baseline",
       "label": "마을식품 근무",
@@ -2928,7 +3649,7 @@
       ]
      },
      {
-      "startMs": 45936581,
+      "startMs": 47024146,
       "endMs": 57600000,
       "kind": "patrol",
       "origin": "baseline",
@@ -3050,7 +3771,7 @@
      }
     ],
     "planChanged": true,
-    "addedTaskMs": 978386,
+    "addedTaskMs": 1129740,
     "contactsReceived": 1
    },
    "P7": {
@@ -3065,7 +3786,7 @@
     "baseline": [
      {
       "startMs": 0,
-      "endMs": 20297865,
+      "endMs": 19583758,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -3083,8 +3804,8 @@
       ]
      },
      {
-      "startMs": 20297865,
-      "endMs": 20903282,
+      "startMs": 19583758,
+      "endMs": 20189175,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -3124,8 +3845,27 @@
       ]
      },
      {
-      "startMs": 20903282,
-      "endMs": 21121063,
+      "startMs": 20189175,
+      "endMs": 20427154,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 20427154,
+      "endMs": 20644935,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -3149,8 +3889,8 @@
       ]
      },
      {
-      "startMs": 21121063,
-      "endMs": 38127154,
+      "startMs": 20644935,
+      "endMs": 39478785,
       "kind": "stay",
       "origin": "baseline",
       "label": "조업",
@@ -3168,8 +3908,8 @@
       ]
      },
      {
-      "startMs": 38127154,
-      "endMs": 38344935,
+      "startMs": 39478785,
+      "endMs": 39696566,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -3193,8 +3933,8 @@
       ]
      },
      {
-      "startMs": 38344935,
-      "endMs": 43230758,
+      "startMs": 39696566,
+      "endMs": 43065339,
       "kind": "stay",
       "origin": "baseline",
       "label": "항구",
@@ -3212,8 +3952,8 @@
       ]
      },
      {
-      "startMs": 43230758,
-      "endMs": 43920261,
+      "startMs": 43065339,
+      "endMs": 43754842,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -3257,8 +3997,8 @@
       ]
      },
      {
-      "startMs": 43920261,
-      "endMs": 47164477,
+      "startMs": 43754842,
+      "endMs": 46512794,
       "kind": "stay",
       "origin": "baseline",
       "label": "마을식품 근무",
@@ -3276,8 +4016,8 @@
       ]
      },
      {
-      "startMs": 47164477,
-      "endMs": 47853980,
+      "startMs": 46512794,
+      "endMs": 47202297,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -3321,8 +4061,8 @@
       ]
      },
      {
-      "startMs": 47853980,
-      "endMs": 61378785,
+      "startMs": 47202297,
+      "endMs": 61385062,
       "kind": "stay",
       "origin": "baseline",
       "label": "항구",
@@ -3340,8 +4080,8 @@
       ]
      },
      {
-      "startMs": 61378785,
-      "endMs": 62110331,
+      "startMs": 61385062,
+      "endMs": 62116608,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -3389,8 +4129,8 @@
       ]
      },
      {
-      "startMs": 62110331,
-      "endMs": 68445339,
+      "startMs": 62116608,
+      "endMs": 68636918,
       "kind": "stay",
       "origin": "baseline",
       "label": "어촌체험마을",
@@ -3408,8 +4148,8 @@
       ]
      },
      {
-      "startMs": 68445339,
-      "endMs": 68571468,
+      "startMs": 68636918,
+      "endMs": 68763047,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -3437,7 +4177,7 @@
       ]
      },
      {
-      "startMs": 68571468,
+      "startMs": 68763047,
       "endMs": 72000000,
       "kind": "stay",
       "origin": "baseline",
@@ -3459,7 +4199,7 @@
     "realized": [
      {
       "startMs": 0,
-      "endMs": 20297865,
+      "endMs": 19583758,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -3477,8 +4217,8 @@
       ]
      },
      {
-      "startMs": 20297865,
-      "endMs": 20903282,
+      "startMs": 19583758,
+      "endMs": 20189175,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -3518,8 +4258,27 @@
       ]
      },
      {
-      "startMs": 20903282,
-      "endMs": 21121063,
+      "startMs": 20189175,
+      "endMs": 20427154,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "항구",
+      "place": "PORT",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       120.0,
+       990.0
+      ]
+     },
+     {
+      "startMs": 20427154,
+      "endMs": 20644935,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -3543,8 +4302,8 @@
       ]
      },
      {
-      "startMs": 21121063,
-      "endMs": 38127154,
+      "startMs": 20644935,
+      "endMs": 39478785,
       "kind": "stay",
       "origin": "baseline",
       "label": "조업",
@@ -3562,8 +4321,8 @@
       ]
      },
      {
-      "startMs": 38127154,
-      "endMs": 38344935,
+      "startMs": 39478785,
+      "endMs": 39696566,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -3587,8 +4346,8 @@
       ]
      },
      {
-      "startMs": 38344935,
-      "endMs": 43230758,
+      "startMs": 39696566,
+      "endMs": 43065339,
       "kind": "stay",
       "origin": "baseline",
       "label": "항구",
@@ -3606,8 +4365,8 @@
       ]
      },
      {
-      "startMs": 43230758,
-      "endMs": 43920261,
+      "startMs": 43065339,
+      "endMs": 43754842,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -3651,8 +4410,8 @@
       ]
      },
      {
-      "startMs": 43920261,
-      "endMs": 47164477,
+      "startMs": 43754842,
+      "endMs": 46512794,
       "kind": "stay",
       "origin": "baseline",
       "label": "마을식품 근무",
@@ -3670,8 +4429,8 @@
       ]
      },
      {
-      "startMs": 47164477,
-      "endMs": 47853980,
+      "startMs": 46512794,
+      "endMs": 47202297,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -3715,8 +4474,8 @@
       ]
      },
      {
-      "startMs": 47853980,
-      "endMs": 61378785,
+      "startMs": 47202297,
+      "endMs": 61385062,
       "kind": "stay",
       "origin": "baseline",
       "label": "항구",
@@ -3734,8 +4493,8 @@
       ]
      },
      {
-      "startMs": 61378785,
-      "endMs": 62110331,
+      "startMs": 61385062,
+      "endMs": 62116608,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -3783,8 +4542,8 @@
       ]
      },
      {
-      "startMs": 62110331,
-      "endMs": 68445339,
+      "startMs": 62116608,
+      "endMs": 68636918,
       "kind": "stay",
       "origin": "baseline",
       "label": "어촌체험마을",
@@ -3802,8 +4561,8 @@
       ]
      },
      {
-      "startMs": 68445339,
-      "endMs": 68571468,
+      "startMs": 68636918,
+      "endMs": 68763047,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -3831,7 +4590,7 @@
       ]
      },
      {
-      "startMs": 68571468,
+      "startMs": 68763047,
       "endMs": 72000000,
       "kind": "stay",
       "origin": "baseline",
@@ -3866,7 +4625,7 @@
     "baseline": [
      {
       "startMs": 0,
-      "endMs": 18919392,
+      "endMs": 20201952,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -3884,8 +4643,8 @@
       ]
      },
      {
-      "startMs": 18919392,
-      "endMs": 19524809,
+      "startMs": 20201952,
+      "endMs": 20807369,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -3925,27 +4684,8 @@
       ]
      },
      {
-      "startMs": 19524809,
-      "endMs": 20711793,
-      "kind": "stay",
-      "origin": "baseline",
-      "label": "항구",
-      "place": "PORT",
-      "fromPlace": null,
-      "toPlace": null,
-      "mode": "stay",
-      "metres": 0.0,
-      "requestId": null,
-      "interruptible": false,
-      "riders": [],
-      "xy": [
-       120.0,
-       990.0
-      ]
-     },
-     {
-      "startMs": 20711793,
-      "endMs": 20929574,
+      "startMs": 20807369,
+      "endMs": 21025150,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -3969,8 +4709,8 @@
       ]
      },
      {
-      "startMs": 20929574,
-      "endMs": 38530658,
+      "startMs": 21025150,
+      "endMs": 39011793,
       "kind": "stay",
       "origin": "baseline",
       "label": "조업",
@@ -3988,8 +4728,8 @@
       ]
      },
      {
-      "startMs": 38530658,
-      "endMs": 38748439,
+      "startMs": 39011793,
+      "endMs": 39229574,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -4013,8 +4753,8 @@
       ]
      },
      {
-      "startMs": 38748439,
-      "endMs": 42823940,
+      "startMs": 39229574,
+      "endMs": 42550658,
       "kind": "stay",
       "origin": "baseline",
       "label": "항구",
@@ -4032,8 +4772,8 @@
       ]
      },
      {
-      "startMs": 42823940,
-      "endMs": 43513443,
+      "startMs": 42550658,
+      "endMs": 43240161,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -4077,8 +4817,8 @@
       ]
      },
      {
-      "startMs": 43513443,
-      "endMs": 47047529,
+      "startMs": 43240161,
+      "endMs": 47203940,
       "kind": "stay",
       "origin": "baseline",
       "label": "마을식품 근무",
@@ -4096,8 +4836,8 @@
       ]
      },
      {
-      "startMs": 47047529,
-      "endMs": 47737032,
+      "startMs": 47203940,
+      "endMs": 47893443,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -4141,8 +4881,8 @@
       ]
      },
      {
-      "startMs": 47737032,
-      "endMs": 61772277,
+      "startMs": 47893443,
+      "endMs": 61747529,
       "kind": "stay",
       "origin": "baseline",
       "label": "항구",
@@ -4160,8 +4900,8 @@
       ]
      },
      {
-      "startMs": 61772277,
-      "endMs": 62503823,
+      "startMs": 61747529,
+      "endMs": 62479075,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -4209,8 +4949,8 @@
       ]
      },
      {
-      "startMs": 62503823,
-      "endMs": 67809450,
+      "startMs": 62479075,
+      "endMs": 68109450,
       "kind": "stay",
       "origin": "baseline",
       "label": "어촌체험마을",
@@ -4228,8 +4968,8 @@
       ]
      },
      {
-      "startMs": 67809450,
-      "endMs": 67935579,
+      "startMs": 68109450,
+      "endMs": 68235579,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -4257,7 +4997,7 @@
       ]
      },
      {
-      "startMs": 67935579,
+      "startMs": 68235579,
       "endMs": 72000000,
       "kind": "stay",
       "origin": "baseline",
@@ -4279,7 +5019,7 @@
     "realized": [
      {
       "startMs": 0,
-      "endMs": 18919392,
+      "endMs": 20201952,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -4297,8 +5037,8 @@
       ]
      },
      {
-      "startMs": 18919392,
-      "endMs": 19524809,
+      "startMs": 20201952,
+      "endMs": 20807369,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -4338,27 +5078,8 @@
       ]
      },
      {
-      "startMs": 19524809,
-      "endMs": 20711793,
-      "kind": "stay",
-      "origin": "baseline",
-      "label": "항구",
-      "place": "PORT",
-      "fromPlace": null,
-      "toPlace": null,
-      "mode": "stay",
-      "metres": 0.0,
-      "requestId": null,
-      "interruptible": false,
-      "riders": [],
-      "xy": [
-       120.0,
-       990.0
-      ]
-     },
-     {
-      "startMs": 20711793,
-      "endMs": 20929574,
+      "startMs": 20807369,
+      "endMs": 21025150,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -4382,8 +5103,8 @@
       ]
      },
      {
-      "startMs": 20929574,
-      "endMs": 38530658,
+      "startMs": 21025150,
+      "endMs": 39011793,
       "kind": "stay",
       "origin": "baseline",
       "label": "조업",
@@ -4401,8 +5122,8 @@
       ]
      },
      {
-      "startMs": 38530658,
-      "endMs": 38748439,
+      "startMs": 39011793,
+      "endMs": 39229574,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -4426,8 +5147,8 @@
       ]
      },
      {
-      "startMs": 38748439,
-      "endMs": 42823940,
+      "startMs": 39229574,
+      "endMs": 42550658,
       "kind": "stay",
       "origin": "baseline",
       "label": "항구",
@@ -4445,8 +5166,8 @@
       ]
      },
      {
-      "startMs": 42823940,
-      "endMs": 43513443,
+      "startMs": 42550658,
+      "endMs": 43240161,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -4490,8 +5211,8 @@
       ]
      },
      {
-      "startMs": 43513443,
-      "endMs": 47047529,
+      "startMs": 43240161,
+      "endMs": 47203940,
       "kind": "stay",
       "origin": "baseline",
       "label": "마을식품 근무",
@@ -4509,8 +5230,8 @@
       ]
      },
      {
-      "startMs": 47047529,
-      "endMs": 47737032,
+      "startMs": 47203940,
+      "endMs": 47893443,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -4554,8 +5275,8 @@
       ]
      },
      {
-      "startMs": 47737032,
-      "endMs": 61772277,
+      "startMs": 47893443,
+      "endMs": 61747529,
       "kind": "stay",
       "origin": "baseline",
       "label": "항구",
@@ -4573,8 +5294,8 @@
       ]
      },
      {
-      "startMs": 61772277,
-      "endMs": 62503823,
+      "startMs": 61747529,
+      "endMs": 62479075,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -4622,8 +5343,8 @@
       ]
      },
      {
-      "startMs": 62503823,
-      "endMs": 67809450,
+      "startMs": 62479075,
+      "endMs": 68109450,
       "kind": "stay",
       "origin": "baseline",
       "label": "어촌체험마을",
@@ -4641,8 +5362,8 @@
       ]
      },
      {
-      "startMs": 67809450,
-      "endMs": 67935579,
+      "startMs": 68109450,
+      "endMs": 68235579,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -4670,7 +5391,7 @@
       ]
      },
      {
-      "startMs": 67935579,
+      "startMs": 68235579,
       "endMs": 72000000,
       "kind": "stay",
       "origin": "baseline",
@@ -4914,7 +5635,7 @@
      },
      {
       "startMs": 31080000,
-      "endMs": 64698522,
+      "endMs": 64998522,
       "kind": "stay",
       "origin": "baseline",
       "label": "읍내",
@@ -4932,8 +5653,8 @@
       ]
      },
      {
-      "startMs": 64698522,
-      "endMs": 66498522,
+      "startMs": 64998522,
+      "endMs": 66798522,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -4957,8 +5678,8 @@
       ]
      },
      {
-      "startMs": 66498522,
-      "endMs": 68242313,
+      "startMs": 66798522,
+      "endMs": 68542313,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -4976,8 +5697,8 @@
       ]
      },
      {
-      "startMs": 68242313,
-      "endMs": 68931816,
+      "startMs": 68542313,
+      "endMs": 69231816,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -5017,7 +5738,7 @@
       ]
      },
      {
-      "startMs": 68931816,
+      "startMs": 69231816,
       "endMs": 71940000,
       "kind": "stay",
       "origin": "baseline",
@@ -5124,7 +5845,7 @@
      },
      {
       "startMs": 31080000,
-      "endMs": 64698522,
+      "endMs": 64998522,
       "kind": "stay",
       "origin": "baseline",
       "label": "읍내",
@@ -5142,8 +5863,8 @@
       ]
      },
      {
-      "startMs": 64698522,
-      "endMs": 66498522,
+      "startMs": 64998522,
+      "endMs": 66798522,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -5167,8 +5888,8 @@
       ]
      },
      {
-      "startMs": 66498522,
-      "endMs": 68242313,
+      "startMs": 66798522,
+      "endMs": 68542313,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -5186,8 +5907,8 @@
       ]
      },
      {
-      "startMs": 68242313,
-      "endMs": 68931816,
+      "startMs": 68542313,
+      "endMs": 69231816,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -5227,7 +5948,7 @@
       ]
      },
      {
-      "startMs": 68931816,
+      "startMs": 69231816,
       "endMs": 71940000,
       "kind": "stay",
       "origin": "baseline",
@@ -5309,7 +6030,7 @@
    "policyId": "policy-A-v1"
   },
   {
-   "atMs": 34300903,
+   "atMs": 34452257,
    "decisionId": "dec-2",
    "question": "자택에 없을 때 확인을 계속할 것인가",
    "chosen": "P6",
@@ -5319,7 +6040,7 @@
  "decisions": [
   {
    "id": "dec-1",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-A-v1-1cf183387c86",
    "simTimeMs": 34200000,
    "policyId": "policy-A-v1",
    "question": "응답이 없는 상태를 누가 어떻게 확인할 것인가",
@@ -5346,8 +6067,8 @@
     },
     {
      "actorId": "P2",
-     "included": true,
-     "reason": "공개된 평소 일과상 이 시각 자택에 있다고 되어 있다. 이동 수단·접근 가능 여부는 확인 필요(unknown)"
+     "included": false,
+     "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
     },
     {
      "actorId": "P3",
@@ -5361,8 +6082,8 @@
     },
     {
      "actorId": "P5",
-     "included": true,
-     "reason": "공개된 평소 일과상 이 시각 자택에 있다고 되어 있다. 이동 수단·접근 가능 여부는 확인 필요(unknown)"
+     "included": false,
+     "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
     },
     {
      "actorId": "P6",
@@ -5398,8 +6119,8 @@
   },
   {
    "id": "dec-2",
-   "attemptId": "att-A-v1-a4de8f2cecad",
-   "simTimeMs": 34300903,
+   "attemptId": "att-A-v1-1cf183387c86",
+   "simTimeMs": 34452257,
    "policyId": "policy-A-v1",
    "question": "자택에 없을 때 확인을 계속할 것인가",
    "candidates": [
@@ -5426,7 +6147,7 @@
  "reviews": [
   {
    "id": "rev-1",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-A-v1-1cf183387c86",
    "actorId": "P1",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5467,7 +6188,7 @@
   },
   {
    "id": "rev-10",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-A-v1-1cf183387c86",
    "actorId": "P7",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5482,7 +6203,7 @@
   },
   {
    "id": "rev-11",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-A-v1-1cf183387c86",
    "actorId": "P8",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5497,7 +6218,7 @@
   },
   {
    "id": "rev-12",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-A-v1-1cf183387c86",
    "actorId": "P9",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5512,7 +6233,7 @@
   },
   {
    "id": "rev-13",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-A-v1-1cf183387c86",
    "actorId": "HC_NURSE",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5527,7 +6248,7 @@
   },
   {
    "id": "rev-2",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-A-v1-1cf183387c86",
    "actorId": "P10",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5542,7 +6263,7 @@
   },
   {
    "id": "rev-3",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-A-v1-1cf183387c86",
    "actorId": "P11",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5557,7 +6278,7 @@
   },
   {
    "id": "rev-4",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-A-v1-1cf183387c86",
    "actorId": "P12",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5572,7 +6293,7 @@
   },
   {
    "id": "rev-5",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-A-v1-1cf183387c86",
    "actorId": "P2",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5587,7 +6308,7 @@
   },
   {
    "id": "rev-6",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-A-v1-1cf183387c86",
    "actorId": "P3",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5602,7 +6323,7 @@
   },
   {
    "id": "rev-7",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-A-v1-1cf183387c86",
    "actorId": "P4",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5617,7 +6338,7 @@
   },
   {
    "id": "rev-8",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-A-v1-1cf183387c86",
    "actorId": "P5",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5632,7 +6353,7 @@
   },
   {
    "id": "rev-9",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-A-v1-1cf183387c86",
    "actorId": "P6",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5662,7 +6383,7 @@
     {
      "key": "time_respected",
      "assessment": "mixed",
-     "reason": "일과를 16분 중단하고 이동했다. 부담의 크기는 본인 확인이 필요하다"
+     "reason": "일과를 19분 중단하고 이동했다. 부담의 크기는 본인 확인이 필요하다"
     },
     {
      "key": "choice",
