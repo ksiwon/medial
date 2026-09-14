@@ -7,47 +7,19 @@ reviewer can disagree with it.
 
 Deliberately absent: any probability of acceptance, any trust score, any
 conversion of a decline into a relationship penalty.
+
+Also deliberately absent: whether a phone is answered in a given place. That is
+a fact about the world, not about this person, and it lives in
+``EnvironmentRevision`` so that swapping this adapter for a model cannot make a
+phone start ringing in a field.
 """
 from __future__ import annotations
 
 from typing import Any, Sequence
 
-from ..contracts import ActionProposal, Channel, ProposalAction
+from ..contracts import ActionProposal, ProposalAction
 from ..observations import ActorView
 from .base import ProposalFactory
-
-# Whether a phone call is picked up at a given place. None of these are measured.
-PHONE_REACHABILITY: dict[str, dict[str, Any]] = {
-    "FARM": {"reachable": False,
-             "provenance": "source-adapted",
-             "reason": "원본 사건에서 밭에 있는 동안 문진에 응답하지 않았다"},
-    "SEA": {"reachable": False, "provenance": "researcher-assumption",
-            "reason": "조업 중에는 받지 못한다고 가정"},
-    "PORT": {"reachable": False, "provenance": "researcher-assumption",
-             "reason": "그물 작업 중에는 받지 못한다고 가정"},
-    "FOOD": {"reachable": False, "provenance": "researcher-assumption",
-             "reason": "근무 중에는 받지 못한다고 가정"},
-    "EN_ROUTE": {"reachable": False, "provenance": "researcher-assumption",
-                 "reason": "이동 중 응답 여부를 알 수 없어 미응답으로 가정"},
-}
-PHONE_DEFAULT = {"reachable": True, "provenance": "researcher-assumption",
-                 "reason": "그 밖의 장소에서는 받는다고 가정"}
-
-
-def phone_rule(place: str) -> dict[str, Any]:
-    if place.startswith("HOME:"):
-        return PHONE_DEFAULT
-    return PHONE_REACHABILITY.get(place, PHONE_DEFAULT)
-
-
-def device_rule(actor_id: str, place: str) -> dict[str, Any]:
-    """The clock-radio is fixed in the house, so it only reaches someone at home."""
-    at_home = place == "HOME:" + actor_id
-    return {
-        "reachable": at_home,
-        "provenance": "source-adapted",
-        "reason": "안내 시계는 집에 설치된 기기이므로 집에 있을 때만 닿는다",
-    }
 
 
 class RuleResidentAdapter:

@@ -35,8 +35,6 @@ from .agents.rule_agents import (
     RuleHealthStaffAdapter,
     RuleResidentAdapter,
     RuleVillageHeadAdapter,
-    device_rule,
-    phone_rule,
 )
 from .agents.scripted import ScriptedAdapter
 from .contracts import (
@@ -58,6 +56,7 @@ from .contracts import (
     ScenarioDeck,
     validate_proposal,
 )
+from .environment import get_environment, resolve_place
 from .institution import Desk, ShiftExhausted
 from .observations import ActorView, ObservationLog, home_window, shared_routine
 from .policies.rule_policies import Intent, MedialPolicy, PolicyContext
@@ -75,17 +74,6 @@ VILLAGE_HEAD_ID = "P6"
 ROUTINE_DISCLOSURE_FIELD = "공개 동의된 평소 일과"
 
 # Lower runs first when two things land on the same millisecond.
-PRIORITY = {
-    "scenario": 10,
-    "contact": 20,
-    "reaction": 30,
-    "arrival": 40,
-    "institution": 50,
-    "transport": 60,
-    "finalize": 90,
-}
-
-
 @dataclass(order=True)
 class _Pending:
     at_ms: int
@@ -121,8 +109,13 @@ class Engine:
                  resources: ResourceRevision, village: Village,
                  script: list[dict[str, Any]] | None = None,
                  personas: dict[str, Any] | None = None,
-                 policy_switch: dict[str, Any] | None = None) -> None:
+                 policy_switch: dict[str, Any] | None = None,
+                 environment: Any | None = None) -> None:
         self.attempt = attempt
+        #: World rules as data. The attempt records which revision it ran on so
+        #: that changing an assumption shows up as a different input rather than
+        #: as a policy effect.
+        self.environment = environment or get_environment(attempt.environmentRevisionId)
         self.policy_revision = policy
         self.deck = deck
         self.resources = resources
@@ -223,8 +216,10 @@ class Engine:
         base = kind.partition(":")[0]
         if at_ms > self.deck.horizonMs and base != "finalize":
             return
-        heapq.heappush(self._queue,
-                       _Pending(int(at_ms), PRIORITY[base], next(self._tick), kind, payload))
+        heapq.heappush(
+            self._queue,
+            _Pending(int(at_ms), self.environment.priority(base), next(self._tick), kind,
+                     payload))
 
     # -- run -------------------------------------------------------------
     def run(self) -> RunResult:
@@ -376,19 +371,19 @@ class Engine:
         self._record_disclosure(contact.get("disclosure"), to_actor)
 
         place = self.world.place_of(to_actor, at_ms)
-        rule = device_rule(to_actor, place) if channel is Channel.home_device else phone_rule(place)
+        rule = self.environment.reaches(resolve_place(place, to_actor), channel)
 
         # Why the phone was or was not answered is a fact about the world. It is
         # written down for the researcher and never handed to the caller.
         self._emit(at_ms, EventType.world_reachability_resolved, ENGINE, correlation,
                    [RESEARCHER],
                    {"toActorId": to_actor, "channel": channel.value,
-                    "answered": bool(rule["reachable"]), "worldReason": rule["reason"],
-                    "provenance": rule["provenance"], "place": place,
+                    "answered": rule.reachable, "worldReason": rule.reason,
+                    "provenance": rule.provenance, "place": place,
                     "note": "연구자 전용. 연락한 쪽은 '응답 없음'만 알 수 있다."},
                    causation=attempted.id)
 
-        if rule["reachable"]:
+        if rule.reachable:
             answered = self._emit(
                 at_ms, EventType.contact_answered, to_actor, correlation,
                 [from_actor, to_actor],

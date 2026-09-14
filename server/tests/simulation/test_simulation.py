@@ -28,6 +28,7 @@ from app.simulation.contracts import (  # noqa: E402
     ProposalAction,
 )
 from app.simulation.decks.p1_no_response import CHECKIN_MS, DECK  # noqa: E402
+from app.simulation.environment import FIXED_ENVIRONMENT_ID  # noqa: E402
 from app.simulation.observations import ActorView, ObservationLeak, visible_to  # noqa: E402
 from app.simulation.persistence.store import Store  # noqa: E402
 from app.simulation.runner import log_fingerprint, run_attempt  # noqa: E402
@@ -55,15 +56,29 @@ def village():
 
 
 def run(policy_id: str, attempt_id: str | None = None, adapter: str = "rule",
-        script=None, deck_id: str = DECK_ID, resource_id: str = RES_ID):
+        script=None, deck_id: str = DECK_ID, resource_id: str = RES_ID,
+        environment_id: str = FIXED_ENVIRONMENT_ID):
+    """Scenario mechanics run on the recorded day, not a drawn one.
+
+    These tests ask whether the engine does the right thing given a situation -
+    P1 out in the field at 09:30, the centre reaching him once he is home. The
+    day-to-day draw is a separate question with its own tests, and letting it
+    run here would fail these for the wrong reason on some seeds.
+    """
     return run_attempt(attempt_id or ("att-" + policy_id), policy_id, deck_id,
                        resource_id, village=village(), adapter=adapter, script=script,
-                       persona_path=SYNTHETIC_PERSONAS)
+                       persona_path=SYNTHETIC_PERSONAS, environment_id=environment_id)
 
 
 def service(store: Store | None = None) -> SimulationService:
+    """Scenario mechanics, on the recorded day.
+    The day-to-day draw is switched off here. These tests ask whether a
+    mechanism works given a situation; whether a given day produces that
+    situation is a separate question with its own tests in test_day.py.
+    """
     return SimulationService(store=store or Store(":memory:"), village=village(),
-                             persona_path=SYNTHETIC_PERSONAS)
+                             persona_path=SYNTHETIC_PERSONAS,
+                             environment_id=FIXED_ENVIRONMENT_ID)
 
 
 # ---------------------------------------------------------------- data import

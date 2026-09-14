@@ -27,6 +27,7 @@ from app.simulation.contracts import (  # noqa: E402
     ResourceRevision,
 )
 from app.simulation.decks.p1_no_response import CHECKIN_MS  # noqa: E402
+from app.simulation.environment import FIXED_ENVIRONMENT_ID  # noqa: E402
 from app.simulation.institution import Desk, ShiftExhausted  # noqa: E402
 from app.simulation.persistence.store import AttemptExists, CommandConflict, Store  # noqa: E402
 from app.simulation.persona import load_personas  # noqa: E402
@@ -58,8 +59,14 @@ def village():
 
 
 def service(store: Store | None = None) -> SimulationService:
+    """Scenario mechanics, on the recorded day.
+    The day-to-day draw is switched off here. These tests ask whether a
+    mechanism works given a situation; whether a given day produces that
+    situation is a separate question with its own tests in test_day.py.
+    """
     return SimulationService(store=store or Store(":memory:"), village=village(),
-                             persona_path=SYNTHETIC_PERSONAS)
+                             persona_path=SYNTHETIC_PERSONAS,
+                             environment_id=FIXED_ENVIRONMENT_ID)
 
 
 def temp_db() -> Path:

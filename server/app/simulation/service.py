@@ -64,10 +64,15 @@ def _short_id() -> str:
 
 class SimulationService:
     def __init__(self, store: Store | None = None, village: Village | None = None,
-                 persona_path: str | None = None) -> None:
+                 persona_path: str | None = None,
+                 environment_id: str | None = None) -> None:
         self.store = store or Store()
         self.village = village or load_village()
         self.persona_path = persona_path
+        #: Which world rules every run of this service uses. Pinned per service
+        #: rather than per call so that a session cannot end up comparing two
+        #: attempts that disagreed about when a phone is answered.
+        self.environment_id = environment_id
         self.policies: dict[str, PolicyRevision] = dict(POLICIES)
         self._runs: dict[str, Any] = {}
         self._restore_policies()
@@ -283,7 +288,8 @@ class SimulationService:
                            village=self.village, parent_id=parent_id,
                            parent_seq=parent_seq, policy=running_policy,
                            lineage=lineage, policy_switch=policy_switch,
-                           persona_path=self.persona_path)
+                           persona_path=self.persona_path,
+                           environment_id=self.environment_id)
 
     def _store_and_return(self, result: Any, policy: PolicyRevision) -> dict[str, Any]:
         # The attempt records the policy it ended under; for a fork that is the

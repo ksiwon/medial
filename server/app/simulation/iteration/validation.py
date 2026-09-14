@@ -1,4 +1,10 @@
-"""Mechanical boundary between a Quest/Task Change Set and MEDial execution."""
+"""Mechanical boundary between a Quest/Task Change Set and MEDial execution.
+
+Two whitelists and one blacklist. The whitelists say which Quest, Task, rule
+field and engine binding exist; the blacklist (``FIXED_INPUT_PREFIXES``) names
+the inputs that are fixed for the whole comparison, so that a rejection reads as
+"this is not MEDial's to change" rather than as "unsupported field".
+"""
 from __future__ import annotations
 
 from typing import Any
@@ -19,6 +25,27 @@ SUPPORTED_RULE_FIELDS = frozenset({
 })
 PARAM_BINDINGS = frozenset(PolicyParams.SUPPORTED)
 SUPPORTED_BINDINGS = frozenset({"contactStrategy", *PARAM_BINDINGS})
+
+#: Fixed case input. These are conditions of the world and of the people in it,
+#: not things MEDial operates. The generic binding whitelist would already
+#: reject them, but silently and with a misleading reason, so they are named:
+#: a Change Set that reaches for one of these is not proposing a better service,
+#: it is proposing that the problem stop happening.
+FIXED_INPUT_PREFIXES = (
+    "environment", "reachability", "scheduling", "variation",
+    "village", "persona", "baseline", "routine", "deck", "scenario",
+    "resource", "review", "evaluation",
+)
+FIXED_INPUT_REASON = (
+    "{key}는 고정 사례 입력이다. 세계·주민·평가 조건을 바꾸면 MEDial이 나아진 것이 아니라 "
+    "문제가 발생하지 않게 만든 것이므로 Change Set으로 편집할 수 없다. "
+    "다른 가정을 시험하려면 새 EnvironmentRevision으로 별도 실험을 실행한다."
+)
+
+
+def _fixed_input(key: str) -> bool:
+    head = key.split(".", 1)[0].split("[", 1)[0]
+    return head.lower() in FIXED_INPUT_PREFIXES
 
 
 def change_hash(change_set: ChangeSet) -> str:
@@ -125,7 +152,9 @@ def validate_change_set(
             errors.append(f"지원하지 않는 Task다: {unknown_tasks}")
         if change.scope.value == "task" and not change.taskIds:
             errors.append("Task 변경에는 영향을 받는 Task가 하나 이상 필요하다.")
-        if change.field not in SUPPORTED_RULE_FIELDS:
+        if _fixed_input(change.field):
+            errors.append(FIXED_INPUT_REASON.format(key=change.field))
+        elif change.field not in SUPPORTED_RULE_FIELDS:
             errors.append(f"지원하지 않는 Quest/Task 필드다: {change.field}")
         if not change.beforeRule.strip() or not change.afterRule.strip():
             errors.append("사람이 읽을 수 있는 변경 전·후 규칙이 모두 필요하다.")
@@ -133,6 +162,9 @@ def validate_change_set(
             errors.append("변경 전과 후의 Quest/Task 규칙이 같다.")
         for binding in change.executionBindings:
             executable_bindings += 1
+            if _fixed_input(binding.key):
+                errors.append(FIXED_INPUT_REASON.format(key=binding.key))
+                continue
             if binding.key not in SUPPORTED_BINDINGS:
                 errors.append(f"지원하지 않는 내부 실행 바인딩이다: {binding.key}")
                 continue

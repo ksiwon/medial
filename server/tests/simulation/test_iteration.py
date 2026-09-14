@@ -48,6 +48,7 @@ from app.simulation.iteration.validation import (  # noqa: E402
     validate_change_set,
 )
 from app.simulation.iteration.improvement import SUPPORTED_CAPABILITIES  # noqa: E402
+from app.simulation.environment import FIXED_ENVIRONMENT_ID  # noqa: E402
 from app.simulation.persistence.store import Store  # noqa: E402
 from app.simulation.service import SimulationService  # noqa: E402
 from app.simulation.village import load_village  # noqa: E402
@@ -70,8 +71,14 @@ def village():
 
 
 def sim_service(store: Store | None = None) -> SimulationService:
+    """Scenario mechanics, on the recorded day.
+    The day-to-day draw is switched off here. These tests ask whether a
+    mechanism works given a situation; whether a given day produces that
+    situation is a separate question with its own tests in test_day.py.
+    """
     return SimulationService(store=store or Store(":memory:"), village=village(),
-                             persona_path=SYNTHETIC_PERSONAS)
+                             persona_path=SYNTHETIC_PERSONAS,
+                             environment_id=FIXED_ENVIRONMENT_ID)
 
 
 def iteration(store: Store | None = None,

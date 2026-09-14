@@ -128,10 +128,18 @@ class Village:
         self.graph = RoadGraph(data["roadGraph"]["nodes"], data["roadGraph"]["adjacency"])
         self.by_id = {r["id"]: r for r in self.residents}
         self._patrol_cum = self._cumulative(self.patrol)
+        #: Set by ``day.apply_realization`` on a village whose baselines were
+        #: redrawn for a seed. Which village this is and which day it is are two
+        #: separate facts; without this the two collapse and every seed looks
+        #: like a different registry.
+        self.source_content_hash: str | None = None
+        self.day_realization_id: str | None = None
 
     # -- identity ------------------------------------------------------
     @property
     def content_hash(self) -> str:
+        if self.source_content_hash is not None:
+            return self.source_content_hash
         payload = json.dumps(self.raw, ensure_ascii=False, sort_keys=True).encode("utf-8")
         return hashlib.sha256(payload).hexdigest()[:16]
 

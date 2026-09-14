@@ -425,6 +425,166 @@ class ResourceRevision(Base):
     assumptions: list[str] = Field(default_factory=list)
 
 
+class ReachabilityRule(Base):
+    """Whether a channel reaches a person standing in a given place.
+
+    This is a fact about the world, not about the person, which is why it lives
+    here and not in a resident adapter. Swapping the rule adapter for a model
+    must not change whether a phone rings in a field.
+
+    ``provenance`` separates the one rule the source material actually records
+    (P1 did not answer while out in the field) from the assumptions around it.
+    """
+
+    place: str
+    channel: Channel
+    reachable: bool
+    provenance: Literal["source-adapted", "researcher-assumption"]
+    reason: str
+
+
+class RoutineVariation(Base):
+    """How much a recorded day is allowed to differ from itself on a rerun.
+
+    The source gives one day's departure times. Treating them as exact laws is a
+    stronger claim than the data supports, so a run may jitter them. The jitter
+    is *uncertainty about the record*, not a new claim that a resident varies.
+
+    Every field here is a researcher setting. None of it is measured, so it is
+    hashed into the attempt and shown next to any day it produced.
+    """
+
+    enabled: bool = True
+    #: Symmetric bound in minutes on a source-recorded departure time.
+    departJitterMin: int = Field(default=15, ge=0, le=120)
+    #: Chance that one outing (home -> somewhere -> home) does not happen at all.
+    #: The source records no frequency for this; the value is an experiment
+    #: assumption and the resulting day is labelled ``plausible_extension``.
+    skipOutingProbability: float = Field(default=0.15, ge=0.0, le=1.0)
+    #: Chance of repeating an outing to a place already in this person's own
+    #: baseline. New destinations are never invented, so this cannot move anyone
+    #: anywhere the source did not already put them.
+    repeatOutingProbability: float = Field(default=0.0, ge=0.0, le=1.0)
+    #: Residents whose baseline is a single all-day step have nothing to vary.
+    #: Varying them would be invention, so they are named and left alone.
+    excludeSingleStepResidents: bool = True
+    assumptions: list[str] = Field(default_factory=list)
+
+
+class EnvironmentRevision(Base):
+    """The world's rules, as a versioned artifact rather than module constants.
+
+    Visibility, scheduling and dynamics used to sit in three different modules as
+    literals, which meant two runs could disagree about when a phone is answered
+    and still report identical input hashes. They are gathered here so that
+    changing an assumption is visible as a different input.
+
+    This is fixed case input. A Change Set may not edit it: MEDial must not be
+    able to look better by making the world stop producing the problem. A
+    researcher who wants different assumptions creates a new revision and runs a
+    different experiment, which the comparison screen then reports as such.
+    """
+
+    EDITABLE_BY_CHANGE_SET: ClassVar[bool] = False
+
+    id: str
+    label: str
+    #: Order in which same-timestamp work is drained, by pending kind.
+    scheduling: dict[str, int]
+    reachability: list[ReachabilityRule]
+    variation: RoutineVariation = Field(default_factory=RoutineVariation)
+    assumptions: list[str] = Field(default_factory=list)
+
+    def priority(self, kind: str) -> int:
+        try:
+            return self.scheduling[kind]
+        except KeyError:
+            raise KeyError(
+                "environment %s has no scheduling priority for %r" % (self.id, kind)
+            ) from None
+
+    def reaches(self, place: str, channel: Channel) -> ReachabilityRule:
+        """Most specific match wins: exact place, then prefix, then default."""
+        default: ReachabilityRule | None = None
+        prefix: ReachabilityRule | None = None
+        for rule in self.reachability:
+            if rule.channel is not channel:
+                continue
+            if rule.place == place:
+                return rule
+            if rule.place == "*":
+                default = rule
+            elif rule.place.endswith("*") and place.startswith(rule.place[:-1]):
+                prefix = rule
+        chosen = prefix or default
+        if chosen is None:
+            raise KeyError(
+                "environment %s has no reachability rule for %s over %s"
+                % (self.id, place, channel.value)
+            )
+        return chosen
+
+
+class StepChange(Base):
+    """One edit the realization made to a recorded step, and why.
+
+    Kept per step rather than summarised, because "P1 left 12 minutes late" is
+    the kind of thing a reader has to be able to check against the source before
+    believing anything the day produced.
+    """
+
+    index: int
+    kind: Literal["jitter", "clamp", "skip_outing", "repeat_outing"]
+    target: str
+    beforeMs: int | None = None
+    afterMs: int | None = None
+    note: str
+
+
+class ResidentDay(Base):
+    """One person's realized day."""
+
+    actorId: str
+    steps: list[dict[str, Any]]
+    changes: list[StepChange] = Field(default_factory=list)
+    #: Set when this person was deliberately left alone. The reason is shown
+    #: rather than hidden: a resident with no recorded routine is a gap in the
+    #: data, and inventing one would be the opposite of what this tool is for.
+    excludedReason: str | None = None
+
+
+class DayRealization(Base):
+    """The day a run actually took place on.
+
+    The source records one day. Treating its departure times as exact laws is a
+    stronger claim than the data supports, so a run may draw a nearby day from
+    the same seed. This is uncertainty about the record, not a claim that a
+    resident is erratic.
+
+    It is a pure function of (village, environment, seed), which is what makes a
+    controlled comparison work: a rerun and a fork inherit the parent's seed, so
+    they land on the same day without anyone having to copy it. Changing the
+    seed is an explicit decision to run a *different day*, and it shows up as a
+    different input hash rather than as a policy effect.
+    """
+
+    id: str
+    seed: int
+    villageContentHash: str
+    environmentRevisionId: str
+    #: ``source_baseline`` - nothing was varied.
+    #: ``source_jittered`` - only recorded times moved, within the stated bound.
+    #: ``plausible_extension`` - an outing was dropped or repeated, which the
+    #: source does not record the frequency of.
+    classification: Literal["source_baseline", "source_jittered", "plausible_extension"]
+    residents: list[ResidentDay]
+    assumptions: list[str] = Field(default_factory=list)
+
+    @property
+    def changed_actor_ids(self) -> list[str]:
+        return [day.actorId for day in self.residents if day.changes]
+
+
 class AttemptMode(str, Enum):
     experiment = "experiment"
     source_replay = "source_replay"
@@ -471,6 +631,12 @@ class Attempt(Base):
     status: AttemptStatus = AttemptStatus.created
     engineVersion: str = ENGINE_VERSION
     adapter: Literal["rule", "scripted", "llm"] = "rule"
+    #: Which world rules this run used. Defaulted so that attempts stored before
+    #: the environment was extracted still load; they all ran on ``env-v1``.
+    environmentRevisionId: str = "env-v1"
+    #: Identifies the realized day (baseline + seeded variation). Two attempts
+    #: may only be compared as a controlled pair when this matches.
+    dayRealizationId: str | None = None
     createdAt: str
     cursorSeq: int = 0
     eventCount: int = 0

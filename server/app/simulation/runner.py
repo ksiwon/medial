@@ -21,6 +21,8 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 
+from .day import apply_realization, realize_day
+from .environment import get_environment
 from .contracts import (
     ENGINE_VERSION,
     Attempt,
@@ -58,7 +60,10 @@ def build_attempt(attempt_id: str, label: str, policy: PolicyRevision, deck: Sce
                   parent_seq: int | None = None,
                   lineage: AttemptLineage = AttemptLineage.root,
                   persona_revision: str | None = None,
-                  persona_source: str | None = None) -> Attempt:
+                  persona_source: str | None = None,
+                  environment: Any | None = None,
+                  day: Any | None = None) -> Attempt:
+    environment = environment or get_environment()
     return Attempt(
         id=attempt_id,
         parentId=parent_id,
@@ -75,6 +80,8 @@ def build_attempt(attempt_id: str, label: str, policy: PolicyRevision, deck: Sce
         status=AttemptStatus.created,
         engineVersion=ENGINE_VERSION,
         adapter=adapter,  # type: ignore[arg-type]
+        environmentRevisionId=environment.id,
+        dayRealizationId=day.id if day is not None else None,
         createdAt=datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         dataSource=village.data_source,
         inputHashes={
@@ -82,6 +89,14 @@ def build_attempt(attempt_id: str, label: str, policy: PolicyRevision, deck: Sce
             "policy": _hash(policy.model_dump()),
             "deck": _hash(deck.model_dump()),
             "resources": _hash(resources.model_dump()),
+            # Without this, editing a world assumption - whether a phone is
+            # answered in a field, say - produced two runs with identical input
+            # hashes, and the difference read as a policy effect.
+            "environment": _hash(environment.model_dump()),
+            # The realized day. Two attempts are a controlled pair only when
+            # this matches; a different seed is a different day, not a policy
+            # effect, and the comparison screen has to be able to say so.
+            "day": day.id if day is not None else "none",
             "persona": persona_revision or "none",
             "personaSource": persona_source or "none",
         },
@@ -97,7 +112,8 @@ def run_attempt(attempt_id: str, policy_id: str, deck_id: str, resource_id: str,
                 policy: PolicyRevision | None = None,
                 lineage: AttemptLineage = AttemptLineage.root,
                 policy_switch: dict[str, Any] | None = None,
-                persona_path: str | None = None) -> RunResult:
+                persona_path: str | None = None,
+                environment_id: str | None = None) -> RunResult:
     """``policy`` overrides the built-in registry so that an edited revision,
     which only exists in the service, can be executed without being registered
     globally."""
@@ -106,19 +122,27 @@ def run_attempt(attempt_id: str, policy_id: str, deck_id: str, resource_id: str,
     deck = DECKS[deck_id]
     resources = RESOURCE_SETS[resource_id]
     profiles, provenance = personas(persona_path)
+    env = get_environment(environment_id)
+    # The day is drawn before anything runs, from (village, environment, seed)
+    # alone. A rerun and a fork inherit the parent's seed, so they land on this
+    # same day without copying it.
+    day = realize_day(village, env, seed, deck.horizonMs)
+    village = apply_realization(village, day)
     attempt = build_attempt(attempt_id, label or policy.label, policy, deck, resources,
                             village, seed=seed, adapter=adapter,
                             parent_id=parent_id, parent_seq=parent_seq,
                             lineage=lineage,
                             persona_revision=provenance.get("revisionId"),
-                            persona_source=provenance.get("dataSource"))
+                            persona_source=provenance.get("dataSource"),
+                            environment=env, day=day)
     engine = Engine(attempt, policy, deck, resources, village, script=script,
-                    personas=profiles, policy_switch=policy_switch)
+                    personas=profiles, policy_switch=policy_switch, environment=env)
     result = engine.run()
     result.attempt.status = AttemptStatus.completed
     result.attempt.eventCount = len(result.events)
     result.attempt.cursorSeq = 0
     result.metrics["personaProvenance"] = provenance
+    result.metrics["dayRealization"] = day.model_dump(mode="json")
     return result
 
 
