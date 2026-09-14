@@ -198,6 +198,18 @@ def test_the_log_carries_both_a_key_and_a_sentence():
     assert event.payload["reason"] != event.payload["rule"]
 
 
+def test_the_refusals_are_counted_by_the_rule_that_fired():
+    """What the comparison screen reads: a count per rule, and each sentence."""
+    refusals = _run("policy-C-v1", "env-v2-fixed", "att-c3").metrics["refusals"]
+    assert refusals["count"] == 2
+    assert refusals["byRule"] == {"persona_condition": 2}
+    assert [(r["actorId"], r["kind"], r["seenByMedial"]) for r in refusals["rows"]] == [
+        ("P10", "declined", True), ("P11", "declined", True)]
+    assert all(r["reason"] == "영업 중 가게를 비울 수 없다" for r in refusals["rows"])
+    # Asking each neighbour in turn is not a hand-off between neighbours.
+    assert _run("policy-C-v1", "env-v2-fixed", "att-c4").metrics["handovers"]["count"] == 0
+
+
 def test_asking_the_neighbours_first_touches_more_people_than_asking_the_head():
     """The trade-off the policy exists to show, not a winner."""
     head = _run("policy-A-v1", "env-v2-fixed", "att-head")

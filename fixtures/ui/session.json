@@ -1,6 +1,6 @@
 {
  "session": {
-  "id": "iter-a78e2ceffbc0",
+  "id": "iter-65e66db12997",
   "label": "화면 테스트용 반복",
   "coreItem": "누구의 시간으로 해결할 것인가",
   "briefRevision": "brief-2644fbc3",
@@ -80,7 +80,7 @@
   "control": "bounded_auto",
   "basePolicyRevisionId": "policy-IT-v0",
   "maxGenerations": 2,
-  "maxCandidatesPerGeneration": 2,
+  "maxChangeSetsPerGeneration": 2,
   "callBudget": 0,
   "tokenBudget": 0,
   "timeBudgetMs": 0,
@@ -94,8 +94,8 @@
   "currentGenerationIndex": 0,
   "callsUsed": 0,
   "tokensUsed": 0,
-  "createdAt": "2026-09-14T04:19:13+00:00",
-  "updatedAt": "2026-09-14T04:19:13+00:00"
+  "createdAt": "2026-09-14T15:11:08+00:00",
+  "updatedAt": "2026-09-14T15:11:08+00:00"
  },
  "adapterMode": "rule",
  "stopReasonText": "검증된 Change Set 초안이 있다. 연구자가 확정하기 전에는 실행하지 않는다.",
@@ -110,36 +110,35 @@
  },
  "generations": [
   {
-   "id": "gen-2ceffbc0-0",
-   "sessionId": "iter-a78e2ceffbc0",
+   "id": "gen-6db12997-0",
+   "sessionId": "iter-65e66db12997",
    "index": 0,
    "parentGenerationId": null,
    "policyRevisionId": "policy-IT-v0",
    "label": "v0 · v0 · 초기 운영안 (조율 절차 미정)",
    "attemptIds": [
-    "att-IT-v0-403f56a86f6c"
+    "att-IT-v0-626c502ffeb6"
    ],
    "reviewIds": [
-    "rev-gen-2ceffbc0-0-56a86f6c-HC_NURSE",
-    "rev-gen-2ceffbc0-0-56a86f6c-P1",
-    "rev-gen-2ceffbc0-0-56a86f6c-P10",
-    "rev-gen-2ceffbc0-0-56a86f6c-P11",
-    "rev-gen-2ceffbc0-0-56a86f6c-P12",
-    "rev-gen-2ceffbc0-0-56a86f6c-P2",
-    "rev-gen-2ceffbc0-0-56a86f6c-P3",
-    "rev-gen-2ceffbc0-0-56a86f6c-P4",
-    "rev-gen-2ceffbc0-0-56a86f6c-P5",
-    "rev-gen-2ceffbc0-0-56a86f6c-P6",
-    "rev-gen-2ceffbc0-0-56a86f6c-P7",
-    "rev-gen-2ceffbc0-0-56a86f6c-P8",
-    "rev-gen-2ceffbc0-0-56a86f6c-P9"
+    "rev-gen-6db12997-0-502ffeb6-HC_NURSE",
+    "rev-gen-6db12997-0-502ffeb6-P1",
+    "rev-gen-6db12997-0-502ffeb6-P10",
+    "rev-gen-6db12997-0-502ffeb6-P11",
+    "rev-gen-6db12997-0-502ffeb6-P12",
+    "rev-gen-6db12997-0-502ffeb6-P2",
+    "rev-gen-6db12997-0-502ffeb6-P3",
+    "rev-gen-6db12997-0-502ffeb6-P4",
+    "rev-gen-6db12997-0-502ffeb6-P5",
+    "rev-gen-6db12997-0-502ffeb6-P6",
+    "rev-gen-6db12997-0-502ffeb6-P7",
+    "rev-gen-6db12997-0-502ffeb6-P8",
+    "rev-gen-6db12997-0-502ffeb6-P9"
    ],
-   "synthesisId": "syn-gen-2ceffbc0-0",
+   "synthesisId": "syn-gen-6db12997-0",
    "changeSetIds": [
-    "change-gen-2ceffbc0-0-1",
-    "change-gen-2ceffbc0-0-unsupported-2"
+    "change-gen-6db12997-0-1",
+    "change-gen-6db12997-0-unsupported-2"
    ],
-   "branchGenerationIds": [],
    "comparisonId": null,
    "outcome": "proposed",
    "appliedChangeSetId": null,
@@ -149,14 +148,14 @@
     "vector": {
      "engineFaults": 0.0,
      "unresolvedRequests": 0.0,
-     "meanWaitMinutes": 8.8,
-     "neighbourMinutes": 18.8,
+     "meanWaitMinutes": 6.3,
+     "neighbourMinutes": 16.3,
      "institutionStaffMinutes": 0.0,
      "disclosureFieldCount": 2.0,
      "transportConflicts": 0.0
     },
     "objective": {
-     "att-IT-v0-403f56a86f6c": {
+     "att-IT-v0-626c502ffeb6": {
       "deckId": "deck-p1-no-response-v1",
       "requests": {
        "raised": 1,
@@ -171,9 +170,9 @@
       },
       "waitMs": {
        "resolvedOnly": [
-        529740
+        378386
        ],
-       "meanMinutesResolvedOnly": 8.8,
+       "meanMinutesResolvedOnly": 6.3,
        "censoredCount": 0,
        "note": "미해결 건은 평균에 넣지 않고 censored로 센다."
       },
@@ -186,7 +185,7 @@
        "toSubject": 1,
        "note": "무응답을 거절로 합치지 않는다."
       },
-      "neighbourMinutes": 18.8,
+      "neighbourMinutes": 16.3,
       "institutionBurden": {
        "staffCount": 1,
        "shiftStartMs": 32400000,
@@ -227,10 +226,12 @@
       },
       "residentBurden": {
        "P6": {
-        "addedTaskMinutes": 18.8,
-        "addedTravelMetres": 618.0,
+        "addedTaskMinutes": 16.3,
+        "addedTravelMetres": 441.5,
         "interruptions": 2,
         "contactsReceived": 1,
+        "askedByMedial": 1,
+        "askedByNeighbour": 0,
         "basis": "실현된 계획에서 baseline 대비 추가된 task 구간"
        }
       }
@@ -247,13 +248,13 @@
     },
     "note": "모의 리뷰 집계와 로그 기반 지표를 함께 두되 하나의 만족도 점수로 합치지 않는다."
    },
-   "createdAt": "2026-09-14T04:19:13+00:00",
+   "createdAt": "2026-09-14T15:11:08+00:00",
    "reviews": [
     {
-     "id": "rev-gen-2ceffbc0-0-56a86f6c-HC_NURSE",
-     "sessionId": "iter-a78e2ceffbc0",
+     "id": "rev-gen-6db12997-0-502ffeb6-HC_NURSE",
+     "sessionId": "iter-65e66db12997",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-403f56a86f6c",
+     "attemptId": "att-IT-v0-626c502ffeb6",
      "actorId": "HC_NURSE",
      "actorRole": "health_staff",
      "policyRevisionId": "policy-IT-v0",
@@ -321,14 +322,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T04:19:13+00:00",
+     "createdAt": "2026-09-14T15:11:08+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-2ceffbc0-0-56a86f6c-P1",
-     "sessionId": "iter-a78e2ceffbc0",
+     "id": "rev-gen-6db12997-0-502ffeb6-P1",
+     "sessionId": "iter-65e66db12997",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-403f56a86f6c",
+     "attemptId": "att-IT-v0-626c502ffeb6",
      "actorId": "P1",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -410,14 +411,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T04:19:13+00:00",
+     "createdAt": "2026-09-14T15:11:08+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-2ceffbc0-0-56a86f6c-P10",
-     "sessionId": "iter-a78e2ceffbc0",
+     "id": "rev-gen-6db12997-0-502ffeb6-P10",
+     "sessionId": "iter-65e66db12997",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-403f56a86f6c",
+     "attemptId": "att-IT-v0-626c502ffeb6",
      "actorId": "P10",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -485,14 +486,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T04:19:13+00:00",
+     "createdAt": "2026-09-14T15:11:08+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-2ceffbc0-0-56a86f6c-P11",
-     "sessionId": "iter-a78e2ceffbc0",
+     "id": "rev-gen-6db12997-0-502ffeb6-P11",
+     "sessionId": "iter-65e66db12997",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-403f56a86f6c",
+     "attemptId": "att-IT-v0-626c502ffeb6",
      "actorId": "P11",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -560,14 +561,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T04:19:13+00:00",
+     "createdAt": "2026-09-14T15:11:08+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-2ceffbc0-0-56a86f6c-P12",
-     "sessionId": "iter-a78e2ceffbc0",
+     "id": "rev-gen-6db12997-0-502ffeb6-P12",
+     "sessionId": "iter-65e66db12997",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-403f56a86f6c",
+     "attemptId": "att-IT-v0-626c502ffeb6",
      "actorId": "P12",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -635,14 +636,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T04:19:13+00:00",
+     "createdAt": "2026-09-14T15:11:08+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-2ceffbc0-0-56a86f6c-P2",
-     "sessionId": "iter-a78e2ceffbc0",
+     "id": "rev-gen-6db12997-0-502ffeb6-P2",
+     "sessionId": "iter-65e66db12997",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-403f56a86f6c",
+     "attemptId": "att-IT-v0-626c502ffeb6",
      "actorId": "P2",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -710,14 +711,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T04:19:13+00:00",
+     "createdAt": "2026-09-14T15:11:08+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-2ceffbc0-0-56a86f6c-P3",
-     "sessionId": "iter-a78e2ceffbc0",
+     "id": "rev-gen-6db12997-0-502ffeb6-P3",
+     "sessionId": "iter-65e66db12997",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-403f56a86f6c",
+     "attemptId": "att-IT-v0-626c502ffeb6",
      "actorId": "P3",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -785,14 +786,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T04:19:13+00:00",
+     "createdAt": "2026-09-14T15:11:08+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-2ceffbc0-0-56a86f6c-P4",
-     "sessionId": "iter-a78e2ceffbc0",
+     "id": "rev-gen-6db12997-0-502ffeb6-P4",
+     "sessionId": "iter-65e66db12997",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-403f56a86f6c",
+     "attemptId": "att-IT-v0-626c502ffeb6",
      "actorId": "P4",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -860,14 +861,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T04:19:13+00:00",
+     "createdAt": "2026-09-14T15:11:08+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-2ceffbc0-0-56a86f6c-P5",
-     "sessionId": "iter-a78e2ceffbc0",
+     "id": "rev-gen-6db12997-0-502ffeb6-P5",
+     "sessionId": "iter-65e66db12997",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-403f56a86f6c",
+     "attemptId": "att-IT-v0-626c502ffeb6",
      "actorId": "P5",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -935,14 +936,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T04:19:13+00:00",
+     "createdAt": "2026-09-14T15:11:08+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-2ceffbc0-0-56a86f6c-P6",
-     "sessionId": "iter-a78e2ceffbc0",
+     "id": "rev-gen-6db12997-0-502ffeb6-P6",
+     "sessionId": "iter-65e66db12997",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-403f56a86f6c",
+     "attemptId": "att-IT-v0-626c502ffeb6",
      "actorId": "P6",
      "actorRole": "village_head",
      "policyRevisionId": "policy-IT-v0",
@@ -974,7 +975,7 @@
       {
        "dimension": "time_labour",
        "assessment": "mixed",
-       "reason": "하던 일을 멈추고 19분을 썼다. 감당은 했지만 시간이 들었다.",
+       "reason": "하던 일을 멈추고 16분을 썼다. 감당은 했지만 시간이 들었다.",
        "eventRefs": [
         "ev-10",
         "ev-11",
@@ -1035,14 +1036,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T04:19:13+00:00",
+     "createdAt": "2026-09-14T15:11:08+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-2ceffbc0-0-56a86f6c-P7",
-     "sessionId": "iter-a78e2ceffbc0",
+     "id": "rev-gen-6db12997-0-502ffeb6-P7",
+     "sessionId": "iter-65e66db12997",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-403f56a86f6c",
+     "attemptId": "att-IT-v0-626c502ffeb6",
      "actorId": "P7",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -1110,14 +1111,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T04:19:13+00:00",
+     "createdAt": "2026-09-14T15:11:08+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-2ceffbc0-0-56a86f6c-P8",
-     "sessionId": "iter-a78e2ceffbc0",
+     "id": "rev-gen-6db12997-0-502ffeb6-P8",
+     "sessionId": "iter-65e66db12997",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-403f56a86f6c",
+     "attemptId": "att-IT-v0-626c502ffeb6",
      "actorId": "P8",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -1185,14 +1186,14 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T04:19:13+00:00",
+     "createdAt": "2026-09-14T15:11:08+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     },
     {
-     "id": "rev-gen-2ceffbc0-0-56a86f6c-P9",
-     "sessionId": "iter-a78e2ceffbc0",
+     "id": "rev-gen-6db12997-0-502ffeb6-P9",
+     "sessionId": "iter-65e66db12997",
      "generationIndex": 0,
-     "attemptId": "att-IT-v0-403f56a86f6c",
+     "attemptId": "att-IT-v0-626c502ffeb6",
      "actorId": "P9",
      "actorRole": "resident",
      "policyRevisionId": "policy-IT-v0",
@@ -1260,40 +1261,40 @@
      ],
      "model": null,
      "promptVersion": "medial-review/1.0.0",
-     "createdAt": "2026-09-14T04:19:13+00:00",
+     "createdAt": "2026-09-14T15:11:08+00:00",
      "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
     }
    ],
    "synthesis": {
-    "id": "syn-gen-2ceffbc0-0",
-    "sessionId": "iter-a78e2ceffbc0",
+    "id": "syn-gen-6db12997-0",
+    "sessionId": "iter-65e66db12997",
     "generationIndex": 0,
     "attemptIds": [
-     "att-IT-v0-403f56a86f6c"
+     "att-IT-v0-626c502ffeb6"
     ],
     "reviewIds": [
-     "rev-gen-2ceffbc0-0-56a86f6c-HC_NURSE",
-     "rev-gen-2ceffbc0-0-56a86f6c-P1",
-     "rev-gen-2ceffbc0-0-56a86f6c-P10",
-     "rev-gen-2ceffbc0-0-56a86f6c-P11",
-     "rev-gen-2ceffbc0-0-56a86f6c-P12",
-     "rev-gen-2ceffbc0-0-56a86f6c-P2",
-     "rev-gen-2ceffbc0-0-56a86f6c-P3",
-     "rev-gen-2ceffbc0-0-56a86f6c-P4",
-     "rev-gen-2ceffbc0-0-56a86f6c-P5",
-     "rev-gen-2ceffbc0-0-56a86f6c-P6",
-     "rev-gen-2ceffbc0-0-56a86f6c-P7",
-     "rev-gen-2ceffbc0-0-56a86f6c-P8",
-     "rev-gen-2ceffbc0-0-56a86f6c-P9"
+     "rev-gen-6db12997-0-502ffeb6-HC_NURSE",
+     "rev-gen-6db12997-0-502ffeb6-P1",
+     "rev-gen-6db12997-0-502ffeb6-P10",
+     "rev-gen-6db12997-0-502ffeb6-P11",
+     "rev-gen-6db12997-0-502ffeb6-P12",
+     "rev-gen-6db12997-0-502ffeb6-P2",
+     "rev-gen-6db12997-0-502ffeb6-P3",
+     "rev-gen-6db12997-0-502ffeb6-P4",
+     "rev-gen-6db12997-0-502ffeb6-P5",
+     "rev-gen-6db12997-0-502ffeb6-P6",
+     "rev-gen-6db12997-0-502ffeb6-P7",
+     "rev-gen-6db12997-0-502ffeb6-P8",
+     "rev-gen-6db12997-0-502ffeb6-P9"
     ],
     "adapter": "rule",
     "issueGroups": [
      {
-      "id": "iss-effbc0-0-time_labour",
+      "id": "iss-b12997-0-time_labour",
       "title": "특정인에게 몰린 시간과 이동 (1명)",
       "dimension": "time_labour",
       "reviewItemRefs": [
-       "rev-gen-2ceffbc0-0-56a86f6c-P6#1"
+       "rev-gen-6db12997-0-502ffeb6-P6#1"
       ],
       "eventRefs": [
        "ev-10",
@@ -1324,11 +1325,11 @@
       ]
      },
      {
-      "id": "iss-effbc0-0-understandability",
+      "id": "iss-b12997-0-understandability",
       "title": "당사자에게 돌아가지 않은 설명 (1명)",
       "dimension": "understandability",
       "reviewItemRefs": [
-       "rev-gen-2ceffbc0-0-56a86f6c-P6#4"
+       "rev-gen-6db12997-0-502ffeb6-P6#4"
       ],
       "eventRefs": [
        "ev-8"
@@ -1353,11 +1354,11 @@
       ]
      },
      {
-      "id": "iss-effbc0-0-reuse_condition",
+      "id": "iss-b12997-0-reuse_condition",
       "title": "다음 이용 조건이 확인되지 않음 (1명)",
       "dimension": "reuse_condition",
       "reviewItemRefs": [
-       "rev-gen-2ceffbc0-0-56a86f6c-P6#5"
+       "rev-gen-6db12997-0-502ffeb6-P6#5"
       ],
       "eventRefs": [
        "ev-10",
@@ -1382,13 +1383,13 @@
      }
     ],
     "minorityConcernIds": [
-     "iss-effbc0-0-time_labour",
-     "iss-effbc0-0-understandability",
-     "iss-effbc0-0-reuse_condition"
+     "iss-b12997-0-time_labour",
+     "iss-b12997-0-understandability",
+     "iss-b12997-0-reuse_condition"
     ],
     "conflicts": [],
     "objectiveMetrics": {
-     "att-IT-v0-403f56a86f6c": {
+     "att-IT-v0-626c502ffeb6": {
       "deckId": "deck-p1-no-response-v1",
       "requests": {
        "raised": 1,
@@ -1403,9 +1404,9 @@
       },
       "waitMs": {
        "resolvedOnly": [
-        529740
+        378386
        ],
-       "meanMinutesResolvedOnly": 8.8,
+       "meanMinutesResolvedOnly": 6.3,
        "censoredCount": 0,
        "note": "미해결 건은 평균에 넣지 않고 censored로 센다."
       },
@@ -1418,7 +1419,7 @@
        "toSubject": 1,
        "note": "무응답을 거절로 합치지 않는다."
       },
-      "neighbourMinutes": 18.8,
+      "neighbourMinutes": 16.3,
       "institutionBurden": {
        "staffCount": 1,
        "shiftStartMs": 32400000,
@@ -1459,10 +1460,12 @@
       },
       "residentBurden": {
        "P6": {
-        "addedTaskMinutes": 18.8,
-        "addedTravelMetres": 618.0,
+        "addedTaskMinutes": 16.3,
+        "addedTravelMetres": 441.5,
         "interruptions": 2,
         "contactsReceived": 1,
+        "askedByMedial": 1,
+        "askedByNeighbour": 0,
         "basis": "실현된 계획에서 baseline 대비 추가된 task 구간"
        }
       }
@@ -1487,21 +1490,21 @@
      "어떻게 마무리됐는지 한 번만 알려 줬으면 한다."
     ],
     "model": null,
-    "createdAt": "2026-09-14T04:19:13+00:00",
+    "createdAt": "2026-09-14T15:11:08+00:00",
     "disclaimer": "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
    },
    "changeSets": [
     {
-     "id": "change-gen-2ceffbc0-0-1",
-     "sessionId": "iter-a78e2ceffbc0",
+     "id": "change-gen-6db12997-0-1",
+     "sessionId": "iter-65e66db12997",
      "generationIndex": 0,
      "baseRevisionId": "policy-IT-v0",
      "label": "본인에게 다시 연락한 뒤 해결되지 않으면 기관에 인계한다.",
      "reviewItemRefs": [
-      "rev-gen-2ceffbc0-0-56a86f6c-P6#1"
+      "rev-gen-6db12997-0-502ffeb6-P6#1"
      ],
      "issueRefs": [
-      "iss-effbc0-0-time_labour"
+      "iss-b12997-0-time_labour"
      ],
      "eventRefs": [
       "ev-10",
@@ -1573,20 +1576,20 @@
      "resultingAttemptId": null,
      "adapter": "rule",
      "model": null,
-     "createdAt": "2026-09-14T04:19:13+00:00",
+     "createdAt": "2026-09-14T15:11:08+00:00",
      "changeHash": "bba88ef4e8234e5b5d2fabeb00b0727c"
     },
     {
-     "id": "change-gen-2ceffbc0-0-unsupported-2",
-     "sessionId": "iter-a78e2ceffbc0",
+     "id": "change-gen-6db12997-0-unsupported-2",
+     "sessionId": "iter-65e66db12997",
      "generationIndex": 0,
      "baseRevisionId": "policy-IT-v0",
      "label": "종료 결과 통지",
      "reviewItemRefs": [
-      "rev-gen-2ceffbc0-0-56a86f6c-P6#4"
+      "rev-gen-6db12997-0-502ffeb6-P6#4"
      ],
      "issueRefs": [
-      "iss-effbc0-0-understandability"
+      "iss-b12997-0-understandability"
      ],
      "eventRefs": [
       "ev-8"
@@ -1632,7 +1635,7 @@
      "resultingAttemptId": null,
      "adapter": "rule",
      "model": null,
-     "createdAt": "2026-09-14T04:19:13+00:00",
+     "createdAt": "2026-09-14T15:11:08+00:00",
      "changeHash": ""
     }
    ],
@@ -1648,6 +1651,7 @@
      "retryIntervalMin": 40,
      "quietWindowMin": 0,
      "helperContactCap": 1,
+     "neighbourAskLimit": 3,
      "disclosure": "named",
      "escalateToInstitutionAfterMin": null,
      "allowHeadContact": true,

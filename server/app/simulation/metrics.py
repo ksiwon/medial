@@ -43,6 +43,11 @@ def build_metrics(engine: "Engine") -> dict[str, Any]:
             "addedTravelMetres": round(runtime.task_metres, 1),
             "interruptions": runtime.interruptions,
             "contactsReceived": runtime.contacts_received,
+            # Who did the asking. MEDial's ledger counts only the first column;
+            # a neighbour pulled in by another neighbour is in the second and
+            # MEDial never sees that row.
+            "askedByMedial": runtime.asked_by_medial,
+            "askedByNeighbour": runtime.asked_by_neighbour,
             "basis": "실현된 계획에서 baseline 대비 추가된 task 구간",
         }
 
@@ -74,6 +79,8 @@ def build_metrics(engine: "Engine") -> dict[str, Any]:
                        if "emergencyRuledOut" in e.payload]
 
     transport = _transport_metrics(engine)
+    handovers = _handovers(engine)
+    refusals = _refusals(engine)
 
     return {
         "requests": {
@@ -106,6 +113,8 @@ def build_metrics(engine: "Engine") -> dict[str, Any]:
         },
         "disclosure": disclosure,
         "transport": transport,
+        "handovers": handovers,
+        "refusals": refusals,
         "safety": {
             "emergencyClassifications": len(emergency_events),
             "expected": 0,
@@ -117,6 +126,95 @@ def build_metrics(engine: "Engine") -> dict[str, Any]:
         "rejectedProposals": len(engine.rejected_proposals),
         "decisionCount": len(engine.decisions),
         "eventCount": len(engine.events),
+    }
+
+
+def _handovers(engine: "Engine") -> dict[str, Any]:
+    """Work one resident passed to another, read from the committed log.
+
+    Not from ``engine.relay_chains``: that list also holds the people MEDial
+    asked in turn under ``neighbour_first``, and a request that went P10 → P11
+    → P9 by MEDial asking each one is not a hand-off. Only ``request.relayed``
+    is, and only the log says who finally did the work.
+    """
+    offered: dict[str, list[str]] = {}
+    hops: dict[str, list[dict[str, Any]]] = {}
+    performed: dict[str, str] = {}
+    for event in engine.events:
+        rid = event.payload.get("requestId")
+        if not isinstance(rid, str):
+            continue
+        if event.type is EventType.request_offered:
+            offered.setdefault(rid, []).append(event.payload["toActorId"])
+        elif event.type is EventType.request_relayed:
+            hops.setdefault(rid, []).append({
+                "fromActorId": event.payload["fromActorId"],
+                "toActorId": event.payload["toActorId"],
+                "atMs": event.simTimeMs,
+                "basis": event.payload.get("basis"),
+                "relationKind": event.payload.get("relationKind"),
+            })
+        elif event.type is EventType.world_relay_resolved:
+            performed[rid] = event.payload["performedBy"]
+
+    rows = []
+    for rid, chain in sorted(hops.items()):
+        request = engine.requests.get(rid, {})
+        rows.append({
+            "requestId": rid,
+            "subjectId": request.get("subjectId"),
+            # The person MEDial's ledger credits: the one it asked, who said yes.
+            "askedActorId": chain[0]["fromActorId"],
+            "chain": [chain[0]["fromActorId"]] + [h["toActorId"] for h in chain],
+            "hops": chain,
+            # None when nobody went: the person it was handed to said no, and
+            # MEDial still believes the first one accepted.
+            "performedBy": performed.get(rid),
+            "outcome": request.get("outcome") or "unresolved",
+        })
+
+    asked_by_medial = {a for a, r in engine.world.actors.items() if r.asked_by_medial}
+    asked_by_neighbour = {a for a, r in engine.world.actors.items() if r.asked_by_neighbour}
+    return {
+        "count": len(rows),
+        "rows": rows,
+        "peopleAskedByMedial": sorted(asked_by_medial),
+        "peopleAskedByNeighbour": sorted(asked_by_neighbour),
+        "note": ("MEDial은 자기가 부탁한 사람이 수락했다고만 안다. 이웃끼리 넘긴 것과 "
+                 "실제로 간 사람은 연구자 전용 기록이다."),
+    }
+
+
+def _refusals(engine: "Engine") -> dict[str, Any]:
+    """Every no and every not-now, with the rule that produced it.
+
+    ``rule`` is the machine key from the decline table (or the ride-path code);
+    ``reason`` is the sentence the person is recorded as giving. Both stay: a
+    count needs the key and a reader needs the sentence.
+    """
+    rows = []
+    by_rule: dict[str, int] = {}
+    for event in engine.events:
+        if event.type not in (EventType.request_declined, EventType.request_deferred):
+            continue
+        rule = event.payload.get("rule") or event.payload.get("reason") or "unspecified"
+        rows.append({
+            "requestId": event.payload.get("requestId"),
+            "actorId": event.actorId,
+            "kind": "declined" if event.type is EventType.request_declined else "deferred",
+            "rule": rule,
+            "reason": event.payload.get("reason"),
+            "atMs": event.simTimeMs,
+            # Whether MEDial was even told. A refusal further down a hand-off
+            # is addressed to the neighbours and the researcher only.
+            "seenByMedial": MEDIAL in event.visibility,
+        })
+        by_rule[rule] = by_rule.get(rule, 0) + 1
+    return {
+        "count": len(rows),
+        "byRule": dict(sorted(by_rule.items())),
+        "rows": rows,
+        "note": "거절과 미룸을 합산 점수로 만들지 않는다. 규칙 하나가 걸린 것이 곧 사유다.",
     }
 
 
@@ -354,6 +452,9 @@ def compare(runs: list[dict[str, Any]]) -> dict[str, Any]:
             "disclosure": metrics["disclosure"],
             "residentBurden": metrics["residentBurden"],
             "transport": metrics.get("transport", {}),
+            "handovers": metrics.get("handovers", {}).get("count", 0),
+            "refusals": metrics.get("refusals", {}).get("count", 0),
+            "dayRealization": metrics.get("dayRealization"),
             "emergencyClassifications": metrics["safety"]["emergencyClassifications"],
         })
 

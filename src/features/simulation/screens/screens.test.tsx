@@ -1,13 +1,16 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import attemptFixture from '../../../../fixtures/ui/attempt.json';
+import neighboursFixture from '../../../../fixtures/ui/attempt-neighbours.json';
 import eventsFixture from '../../../../fixtures/ui/events.json';
+import neighbourEventsFixture from '../../../../fixtures/ui/events-neighbours.json';
 import personasFixture from '../../../../fixtures/ui/personas.json';
 import sessionFixture from '../../../../fixtures/ui/session.json';
 import villageFixture from '../../../../fixtures/ui/village.json';
 import type { GenerationDetail, SessionDetail } from '../api/iteration';
 import type { AttemptDetail, DomainEvent, PersonasPayload, VillagePayload } from '../api/types';
 import { medialKnowledge, posesAt } from '../positions';
+import { dayChangeLines } from '../selectors/words';
 import { eventsUpTo } from '../store';
 import CompareScreen from './CompareScreen';
 import ObserveScreen from './ObserveScreen';
@@ -29,6 +32,9 @@ import ObserveScreen from './ObserveScreen';
 const village = villageFixture as unknown as VillagePayload;
 const detail = attemptFixture as unknown as AttemptDetail;
 const events = (eventsFixture as { events: DomainEvent[] }).events;
+/** The same day under 가까운 이웃 우선, where the refusal table actually fires. */
+const neighbours = neighboursFixture as unknown as AttemptDetail;
+const neighbourEvents = (neighbourEventsFixture as { events: DomainEvent[] }).events;
 const personas = personasFixture as unknown as PersonasPayload;
 const session = sessionFixture as unknown as SessionDetail;
 
@@ -128,6 +134,40 @@ describe('ObserveScreen', () => {
       .map((e) => String((e.payload as Record<string, unknown>).worldReason ?? ''))
       .filter(Boolean);
     for (const reason of worldReasons) expect(text).not.toContain(reason);
+  });
+
+  it('shows each person asked and the sentence they refused with', () => {
+    const cursor = neighbourEvents.length;
+    observe({
+      detail: neighbours,
+      visibleEvents: eventsUpTo(neighbourEvents, cursor, 'researcher'),
+      allEvents: neighbourEvents,
+      cursorSeq: cursor,
+      eventCount: neighbours.attempt.eventCount,
+      detailActor: null,
+    });
+    expect(screen.getByText('누구에게 부탁했고, 뭐라고 했나')).toBeDefined();
+    const refusals = neighbours.metrics.refusals!.rows;
+    expect(refusals.length).toBeGreaterThan(0);
+    // The sentence the person gave is on screen; the rule key is not.
+    for (const row of refusals) {
+      expect(screen.getAllByText(row.reason!).length).toBeGreaterThan(0);
+    }
+    expect(screen.queryByText('persona_condition')).toBeNull();
+    // Nothing here was hidden from MEDial, so nothing says so.
+    expect(screen.queryByText('MEDial은 모름')).toBeNull();
+  });
+
+  it('names the day the run took place on, and lists its edits behind a tooltip', () => {
+    observe();
+    const day = detail.metrics.dayRealization!;
+    const tag = screen.getByText(
+      { source_baseline: '기록된 하루 그대로', source_jittered: '기록된 시각이 조금 다른 하루',
+        plausible_extension: '외출 하나가 다른 하루' }[day.classification],
+    );
+    // One line per edit, plus one per person deliberately left alone.
+    const lines = dayChangeLines(day);
+    if (lines.length > 0) expect(tag.getAttribute('title')?.split('\n')).toEqual(lines);
   });
 
   it('rests on the board of everyone, and does not claim a person nobody chose', () => {
@@ -231,6 +271,14 @@ describe('CompareScreen', () => {
     if (branches.length < 2) return; // this fixture has no two unrelated branches
     compare({ leftId: branches[0].id, rightId: branches[1].id });
     expect(screen.getByText('통제 비교가 아닙니다')).toBeDefined();
+  });
+
+  it('says which day each side ran on, and who refused, without a score', () => {
+    const { container } = compare();
+    const text = container.textContent ?? '';
+    expect(text).toContain('어느 하루였나');
+    expect(text).toContain('누가 거절했나');
+    expect(text).not.toContain('persona_condition');
   });
 
   it('keeps 미수집 distinct from zero', () => {

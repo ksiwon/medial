@@ -47,6 +47,15 @@ attempt_id = r.json()["attempt"]["id"]
 
 save("attempt.json", api.get("/api/sim/attempts/%s" % attempt_id).json())
 save("events.json", api.get("/api/sim/attempts/%s/events" % attempt_id).json())
+# The same day under the neighbour-first policy, which is the run where the
+# refusal table and its sentences actually fire on the shipped deck.
+r = api.post("/api/sim/attempts", json={
+    "policyId": "policy-C-v1", "scenarioDeckId": "deck-p1-no-response-v1",
+    "resourceRevisionId": "assumed-resources-v1"})
+neighbour_id = r.json()["attempt"]["id"]
+save("attempt-neighbours.json", api.get("/api/sim/attempts/%s" % neighbour_id).json())
+save("events-neighbours.json", api.get("/api/sim/attempts/%s/events" % neighbour_id).json())
+
 save("village.json", api.get("/api/sim/village").json())
 save("personas.json", api.get("/api/sim/personas").json())
 

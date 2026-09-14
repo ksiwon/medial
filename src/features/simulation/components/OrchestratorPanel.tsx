@@ -2,12 +2,15 @@ import styled from 'styled-components';
 import type { DecisionRecord, DomainEvent } from '../api/types';
 import {
   STAGE_LABELS,
+  askedPeople,
   currentSentence,
   institutionsInvolved,
   latestReasoning,
+  type AskedRow,
   type RequestFlow,
 } from '../selectors/requests';
-import { personName, storyRows } from '../selectors/story';
+import { personName, storyRows, withParticle } from '../selectors/story';
+import { ruleName } from '../selectors/words';
 import { formatClock } from '../positions';
 import {
   Disclosure,
@@ -18,6 +21,7 @@ import {
   Scroll,
   Sub,
   Tag,
+  type TagKind,
 } from '../ui/primitives';
 import { colour, font } from '../ui/theme';
 
@@ -140,6 +144,59 @@ const Empty = styled.div`
 
 const shortType = (event: DomainEvent) => event.type.split('.').slice(1).join('.');
 
+const Asked = styled.ol`
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: ${font.small};
+  line-height: 1.5;
+`;
+
+const AskedLine = styled.li`
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  flex-wrap: wrap;
+`;
+
+const ANSWER: Record<AskedRow['answer'], { text: string; kind: TagKind }> = {
+  accepted: { text: '수락', kind: 'positive' },
+  declined: { text: '거절', kind: 'negative' },
+  deferred: { text: '나중에', kind: 'warn' },
+  relayed: { text: '다른 사람에게 넘김', kind: 'warn' },
+  pending: { text: '답 기다리는 중', kind: 'unknown' },
+};
+
+/** One line per ask: who, what they said, and - for the researcher - whether
+ *  MEDial was even told. A refusal carries the sentence the person gave. */
+function AskedList({ rows }: { rows: AskedRow[] }) {
+  return (
+    <Asked>
+      {rows.map((row) => {
+        const answer = ANSWER[row.answer];
+        return (
+          <AskedLine key={`${row.actorId}-${row.seq}`}>
+            <strong>{personName(row.actorId)}</strong>
+            {row.askedBy !== 'MEDial' && (
+              <Sub as="span">← {withParticle(personName(row.askedBy), 'subject')} 부탁</Sub>
+            )}
+            <Tag $kind={answer.kind}>
+              {answer.text}
+              {row.answer === 'relayed' && row.passedTo && ` · ${personName(row.passedTo)}`}
+            </Tag>
+            {row.reason && <span>{row.reason}</span>}
+            {row.rule && !row.reason && <span>{ruleName(row.rule)}</span>}
+            {!row.seenByMedial && <Tag $kind="unknown">MEDial은 모름</Tag>}
+          </AskedLine>
+        );
+      })}
+    </Asked>
+  );
+}
+
 interface Props {
   flows: RequestFlow[];
   decisions: DecisionRecord[];
@@ -157,6 +214,7 @@ export default function OrchestratorPanel({
 }: Props) {
   const flow = flows.find((f) => f.id === selectedId) ?? flows[0] ?? null;
   const reasoning = flow ? latestReasoning(flow, decisions) : null;
+  const asked = flow ? askedPeople(flow) : [];
 
   return (
     <Panel>
@@ -271,21 +329,25 @@ export default function OrchestratorPanel({
               </Section>
 
               <Section>
-                <SectionTitle>이 요청에 관련된 사람</SectionTitle>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {flow.participants.length === 0 ? (
-                    <Empty style={{ padding: 0 }}>아직 없습니다.</Empty>
-                  ) : (
-                    flow.participants.map((id) => (
+                <SectionTitle>누구에게 부탁했고, 뭐라고 했나</SectionTitle>
+                {asked.length === 0 ? (
+                  <Empty style={{ padding: 0 }}>아직 아무에게도 부탁하지 않았습니다.</Empty>
+                ) : (
+                  <AskedList rows={asked} />
+                )}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                  {flow.participants
+                    .filter((id) => !asked.some((row) => row.actorId === id))
+                    .map((id) => (
                       <Tag key={id} $kind={id === flow.subjectId ? 'neutral' : 'unknown'}>
                         {personName(id)}
                         {id === flow.subjectId && ' · 대상'}
                       </Tag>
-                    ))
-                  )}
+                    ))}
                 </div>
                 <Sub>
-                  화면상 가까운 사람이 아니라, 이 요청의 사건에 실제로 등장한 사람만입니다.
+                  이 요청의 사건에 실제로 등장한 사람만입니다. 거절 옆의 말은 그 사람이 남긴
+                  사유이고, 점수로 합치지 않습니다.
                 </Sub>
               </Section>
 

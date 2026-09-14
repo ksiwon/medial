@@ -1,0 +1,562 @@
+{
+ "events": [
+  {
+   "id": "ev-1",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "seq": 1,
+   "simTimeMs": 0,
+   "type": "world.day_started",
+   "actorId": "ENGINE",
+   "causationId": null,
+   "correlationId": "world",
+   "visibility": [
+    "RESEARCHER"
+   ],
+   "committed": true,
+   "payload": {
+    "dayStartMs": 0,
+    "dataSource": "synthetic"
+   }
+  },
+  {
+   "id": "ev-2",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "seq": 2,
+   "simTimeMs": 34200000,
+   "type": "contact.attempted",
+   "actorId": "MEDial",
+   "causationId": null,
+   "correlationId": "checkin-P1",
+   "visibility": [
+    "MEDial",
+    "P1"
+   ],
+   "committed": true,
+   "payload": {
+    "channel": "home_device",
+    "toActorId": "P1",
+    "purpose": "daily_checkin",
+    "disclosure": {
+     "subjectId": "P1",
+     "fields": [],
+     "recipientClass": "subject"
+    },
+    "attemptNumber": 1,
+    "scenarioEventId": "exo-checkin-1"
+   }
+  },
+  {
+   "id": "ev-3",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "seq": 3,
+   "simTimeMs": 34200000,
+   "type": "world.reachability_resolved",
+   "actorId": "ENGINE",
+   "causationId": "ev-2",
+   "correlationId": "checkin-P1",
+   "visibility": [
+    "RESEARCHER"
+   ],
+   "committed": true,
+   "payload": {
+    "toActorId": "P1",
+    "channel": "home_device",
+    "answered": false,
+    "worldReason": "안내 시계는 집에 설치된 기기이므로 집 밖에서는 닿지 않는다",
+    "provenance": "source-adapted",
+    "place": "FARM",
+    "note": "연구자 전용. 연락한 쪽은 '응답 없음'만 알 수 있다."
+   }
+  },
+  {
+   "id": "ev-4",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "seq": 4,
+   "simTimeMs": 34200000,
+   "type": "contact.no_response",
+   "actorId": "P1",
+   "causationId": "ev-2",
+   "correlationId": "checkin-P1",
+   "visibility": [
+    "MEDial",
+    "P1"
+   ],
+   "committed": true,
+   "payload": {
+    "channel": "home_device",
+    "toActorId": "P1",
+    "attemptNumber": 1,
+    "note": "무응답은 거절이 아니다. 응답이 없었다는 것만 말해 준다. 왜 응답이 없었는지는 연락한 쪽이 알 수 없다."
+   }
+  },
+  {
+   "id": "ev-5",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "seq": 5,
+   "simTimeMs": 34200000,
+   "type": "medial.classified",
+   "actorId": "MEDial",
+   "causationId": null,
+   "correlationId": "req-P1-1",
+   "visibility": [
+    "MEDial"
+   ],
+   "committed": true,
+   "payload": {
+    "classification": "unconfirmed_wellbeing",
+    "rationale": "문진에 응답이 없었다는 것만 확인되었다. 이것으로는 어디에 있는지도, 몸 상태가 어떤지도 알 수 없다. 둘 다 미확인으로 두고 확인 절차를 시작한다.",
+    "clinicalStatus": "unconfirmed",
+    "locationStatus": "unconfirmed",
+    "emergencyEvidence": [],
+    "emergencyEvidenceNote": "응급을 시사하는 관측이 들어온 것이 없다. 이는 '응급이 아니라고 판정했다'는 뜻이 아니라 '판정할 근거가 없다'는 뜻이다.",
+    "subjectId": "P1"
+   }
+  },
+  {
+   "id": "ev-6",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "seq": 6,
+   "simTimeMs": 34200000,
+   "type": "request.raised",
+   "actorId": "MEDial",
+   "causationId": null,
+   "correlationId": "req-P1-1",
+   "visibility": [
+    "MEDial",
+    "RESEARCHER"
+   ],
+   "committed": true,
+   "payload": {
+    "requestId": "req-P1-1",
+    "subjectId": "P1",
+    "need": "welfare_check"
+   }
+  },
+  {
+   "id": "ev-7",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "seq": 7,
+   "simTimeMs": 34200000,
+   "type": "medial.decided",
+   "actorId": "MEDial",
+   "causationId": null,
+   "correlationId": "req-P1-1",
+   "visibility": [
+    "MEDial"
+   ],
+   "committed": true,
+   "payload": {
+    "decisionId": "dec-1",
+    "question": "응답이 없는 상태를 누가 어떻게 확인할 것인가",
+    "chosen": "P10",
+    "rationale": "이장 한 사람에게 몰지 않고, 공개된 일과상 이 시각 자택에 있는 사람에게 먼저 부탁한다. 거절하면 다음 사람에게 묻되 3명까지만 묻는다. 실제로 갈 수 있는지는 본인 응답으로만 알 수 있다.",
+    "policyId": "policy-C-v1",
+    "excluded": [
+     {
+      "actorId": "P1",
+      "included": false,
+      "reason": "확인 대상 본인"
+     },
+     {
+      "actorId": "P12",
+      "included": false,
+      "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
+     },
+     {
+      "actorId": "P3",
+      "included": false,
+      "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
+     },
+     {
+      "actorId": "P4",
+      "included": false,
+      "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
+     },
+     {
+      "actorId": "P7",
+      "included": false,
+      "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
+     },
+     {
+      "actorId": "P8",
+      "included": false,
+      "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
+     }
+    ]
+   }
+  },
+  {
+   "id": "ev-8",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "seq": 8,
+   "simTimeMs": 34200000,
+   "type": "request.offered",
+   "actorId": "MEDial",
+   "causationId": null,
+   "correlationId": "req-P1-1",
+   "visibility": [
+    "MEDial",
+    "P10"
+   ],
+   "committed": true,
+   "payload": {
+    "requestId": "req-P1-1",
+    "toActorId": "P10",
+    "need": "welfare_check",
+    "subjectId": "P1",
+    "disclosure": {
+     "subjectId": "P1",
+     "fields": [
+      "응답 없음",
+      "연락 시도 시각"
+     ],
+     "recipientClass": "neighbour",
+     "disclosureSetting": "named",
+     "note": "공개 항목 수와 수신자 구분을 따로 센다. 인원 합계를 프라이버시 점수로 쓰지 않는다."
+    }
+   }
+  },
+  {
+   "id": "ev-9",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "seq": 9,
+   "simTimeMs": 34200000,
+   "type": "request.declined",
+   "actorId": "P10",
+   "causationId": null,
+   "correlationId": "req-P1-1",
+   "visibility": [
+    "MEDial",
+    "P10"
+   ],
+   "committed": true,
+   "payload": {
+    "requestId": "req-P1-1",
+    "rule": "persona_condition",
+    "reason": "영업 중 가게를 비울 수 없다",
+    "utterance": "영업 중 가게를 비울 수 없다",
+    "evidenceRefs": [
+     "ev-P10-5"
+    ],
+    "note": "거절은 신뢰 하락으로 계산하지 않는다."
+   }
+  },
+  {
+   "id": "ev-10",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "seq": 10,
+   "simTimeMs": 34200000,
+   "type": "request.offered",
+   "actorId": "MEDial",
+   "causationId": null,
+   "correlationId": "req-P1-1",
+   "visibility": [
+    "MEDial",
+    "P11"
+   ],
+   "committed": true,
+   "payload": {
+    "requestId": "req-P1-1",
+    "toActorId": "P11",
+    "need": "welfare_check",
+    "subjectId": "P1",
+    "disclosure": {
+     "subjectId": "P1",
+     "fields": [
+      "응답 없음",
+      "연락 시도 시각"
+     ],
+     "recipientClass": "neighbour",
+     "disclosureSetting": "named",
+     "note": "공개 항목 수와 수신자 구분을 따로 센다. 인원 합계를 프라이버시 점수로 쓰지 않는다."
+    }
+   }
+  },
+  {
+   "id": "ev-11",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "seq": 11,
+   "simTimeMs": 34200000,
+   "type": "request.declined",
+   "actorId": "P11",
+   "causationId": null,
+   "correlationId": "req-P1-1",
+   "visibility": [
+    "MEDial",
+    "P11"
+   ],
+   "committed": true,
+   "payload": {
+    "requestId": "req-P1-1",
+    "rule": "persona_condition",
+    "reason": "영업 중 가게를 비울 수 없다",
+    "utterance": "영업 중 가게를 비울 수 없다",
+    "evidenceRefs": [
+     "ev-P11-5"
+    ],
+    "note": "거절은 신뢰 하락으로 계산하지 않는다."
+   }
+  },
+  {
+   "id": "ev-12",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "seq": 12,
+   "simTimeMs": 34200000,
+   "type": "request.offered",
+   "actorId": "MEDial",
+   "causationId": null,
+   "correlationId": "req-P1-1",
+   "visibility": [
+    "MEDial",
+    "P2"
+   ],
+   "committed": true,
+   "payload": {
+    "requestId": "req-P1-1",
+    "toActorId": "P2",
+    "need": "welfare_check",
+    "subjectId": "P1",
+    "disclosure": {
+     "subjectId": "P1",
+     "fields": [
+      "응답 없음",
+      "연락 시도 시각"
+     ],
+     "recipientClass": "neighbour",
+     "disclosureSetting": "named",
+     "note": "공개 항목 수와 수신자 구분을 따로 센다. 인원 합계를 프라이버시 점수로 쓰지 않는다."
+    }
+   }
+  },
+  {
+   "id": "ev-13",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "seq": 13,
+   "simTimeMs": 34200000,
+   "type": "request.accepted",
+   "actorId": "P2",
+   "causationId": null,
+   "correlationId": "req-P1-1",
+   "visibility": [
+    "MEDial",
+    "P2"
+   ],
+   "committed": true,
+   "payload": {
+    "requestId": "req-P1-1",
+    "params": {
+     "rule": null,
+     "reason": "지금 하던 일을 잠시 놓고 다녀올 수 있다.",
+     "activity": "자택",
+     "place": "HOME:P2"
+    },
+    "utterance": "가 보겠습니다.",
+    "evidenceRefs": []
+   }
+  },
+  {
+   "id": "ev-14",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "seq": 14,
+   "simTimeMs": 34200000,
+   "type": "plan.modified",
+   "actorId": "P2",
+   "causationId": null,
+   "correlationId": "req-P1-1",
+   "visibility": [
+    "MEDial",
+    "P2",
+    "RESEARCHER"
+   ],
+   "committed": true,
+   "payload": {
+    "actorId": "P2",
+    "change": "안부 확인 요청 수락",
+    "insertedSegments": [
+     {
+      "startMs": 34200000,
+      "endMs": 34452257,
+      "kind": "travel",
+      "origin": "task",
+      "label": "안부 확인 이동",
+      "place": null,
+      "fromPlace": "HOME:P2",
+      "toPlace": "HOME:P1",
+      "mode": "walk",
+      "metres": 294.3,
+      "requestId": "req-P1-1",
+      "interruptible": false,
+      "riders": []
+     },
+     {
+      "startMs": 34452257,
+      "endMs": 34752257,
+      "kind": "stay",
+      "origin": "task",
+      "label": "안부 확인",
+      "place": "HOME:P1",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": "req-P1-1",
+      "interruptible": false,
+      "riders": []
+     }
+    ],
+    "resumeSegments": [
+     {
+      "startMs": 34752257,
+      "endMs": 35004514,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "일과 복귀",
+      "place": null,
+      "fromPlace": "HOME:P1",
+      "toPlace": "HOME:P2",
+      "mode": "walk",
+      "metres": 294.3,
+      "requestId": null,
+      "interruptible": false,
+      "riders": []
+     },
+     {
+      "startMs": 35004514,
+      "endMs": 72000000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P2",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": false,
+      "riders": []
+     }
+    ]
+   }
+  },
+  {
+   "id": "ev-15",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "seq": 15,
+   "simTimeMs": 34200000,
+   "type": "task.started",
+   "actorId": "P2",
+   "causationId": null,
+   "correlationId": "req-P1-1",
+   "visibility": [
+    "MEDial",
+    "P2"
+   ],
+   "committed": true,
+   "payload": {
+    "requestId": "req-P1-1"
+   }
+  },
+  {
+   "id": "ev-16",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "seq": 16,
+   "simTimeMs": 34200000,
+   "type": "task.travel_started",
+   "actorId": "P2",
+   "causationId": null,
+   "correlationId": "req-P1-1",
+   "visibility": [
+    "MEDial",
+    "P2"
+   ],
+   "committed": true,
+   "payload": {
+    "requestId": "req-P1-1",
+    "from": "HOME:P2",
+    "to": "HOME:P1",
+    "mode": "walk",
+    "distanceM": 294.3,
+    "durationMs": 252257,
+    "distanceBasis": "road-graph-shortest-path"
+   }
+  },
+  {
+   "id": "ev-17",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "seq": 17,
+   "simTimeMs": 34452257,
+   "type": "task.travel_arrived",
+   "actorId": "P2",
+   "causationId": null,
+   "correlationId": "req-P1-1",
+   "visibility": [
+    "MEDial",
+    "P2"
+   ],
+   "committed": true,
+   "payload": {
+    "requestId": "req-P1-1",
+    "place": "HOME:P1"
+   }
+  },
+  {
+   "id": "ev-18",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "seq": 18,
+   "simTimeMs": 34452257,
+   "type": "task.check_performed",
+   "actorId": "P2",
+   "causationId": null,
+   "correlationId": "req-P1-1",
+   "visibility": [
+    "MEDial",
+    "P2"
+   ],
+   "committed": true,
+   "payload": {
+    "requestId": "req-P1-1",
+    "subjectId": "P1",
+    "place": "HOME:P1",
+    "outcome": "subject_absent",
+    "note": "확인한 것은 '그 장소에 있는가'이며 건강 상태 판정이 아니다."
+   }
+  },
+  {
+   "id": "ev-19",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "seq": 19,
+   "simTimeMs": 34452257,
+   "type": "need.unresolved",
+   "actorId": "MEDial",
+   "causationId": null,
+   "correlationId": "req-P1-1",
+   "visibility": [
+    "MEDial",
+    "RESEARCHER"
+   ],
+   "committed": true,
+   "payload": {
+    "requestId": "req-P1-1",
+    "subjectId": "P1",
+    "reason": "자택에 없었고 다음 확인처에 대한 근거가 없다"
+   }
+  },
+  {
+   "id": "ev-20",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "seq": 20,
+   "simTimeMs": 72000000,
+   "type": "attempt.completed",
+   "actorId": "ENGINE",
+   "causationId": null,
+   "correlationId": "world",
+   "visibility": [
+    "RESEARCHER"
+   ],
+   "committed": true,
+   "payload": {
+    "horizonMs": 72000000
+   }
+  }
+ ]
+}

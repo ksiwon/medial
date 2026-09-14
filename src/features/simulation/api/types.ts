@@ -109,6 +109,12 @@ export interface Attempt {
   status: string;
   engineVersion: string;
   adapter: string;
+  /** Which world rules, which realized day, which relation graph. Fixed
+   *  inputs: a change set cannot touch them, and two runs are a controlled
+   *  pair only when all three match. */
+  environmentRevisionId: string;
+  dayRealizationId: string | null;
+  relationRevisionId: string;
   createdAt: string;
   cursorSeq: number;
   eventCount: number;
@@ -197,7 +203,60 @@ export interface Burden {
   addedTravelMetres: number;
   interruptions: number;
   contactsReceived: number;
+  /** Who did the asking. MEDial's own ledger only ever has the first.
+   *  Absent on attempts stored before the split existed. */
+  askedByMedial?: number;
+  askedByNeighbour?: number;
   basis: string;
+}
+
+/** One request a resident passed to another. Researcher-only knowledge: MEDial
+ *  was told the person it asked accepted, and never hears the rest. */
+export interface Handover {
+  requestId: string;
+  subjectId: string | null;
+  askedActorId: string;
+  chain: string[];
+  hops: { fromActorId: string; toActorId: string; atMs: number; basis: string | null;
+          relationKind: string | null }[];
+  /** null when nobody went: the person it was handed to said no. */
+  performedBy: string | null;
+  outcome: string;
+}
+
+export interface Refusal {
+  requestId: string | null;
+  actorId: string;
+  kind: 'declined' | 'deferred';
+  /** Machine key of the rule that fired (or the ride-path code). */
+  rule: string;
+  /** The sentence the person is recorded as giving, when there is one. */
+  reason: string | null;
+  atMs: number;
+  seenByMedial: boolean;
+}
+
+export interface StepChange {
+  index: number;
+  kind: 'jitter' | 'clamp' | 'skip_outing' | 'repeat_outing';
+  target: string;
+  beforeMs: number | null;
+  afterMs: number | null;
+  note: string;
+}
+
+/** The day a run took place on: the recorded routine, possibly nudged within
+ *  the bounds the environment states. A pure function of (village, environment,
+ *  seed), so a rerun lands on the same day without copying anything. */
+export interface DayRealization {
+  id: string;
+  seed: number;
+  villageContentHash: string;
+  environmentRevisionId: string;
+  classification: 'source_baseline' | 'source_jittered' | 'plausible_extension';
+  residents: { actorId: string; steps: unknown[]; changes: StepChange[];
+               excludedReason: string | null }[];
+  assumptions: string[];
 }
 
 export interface TransportMetrics {
@@ -247,6 +306,17 @@ export interface Metrics {
   };
   disclosure: Record<string, { recipientCount: number; fieldCount: number }>;
   transport: TransportMetrics;
+  /** These three are absent on attempts stored before they were computed;
+   *  a stored run is never recomputed, so the screens treat them as optional. */
+  handovers?: {
+    count: number;
+    rows: Handover[];
+    peopleAskedByMedial: string[];
+    peopleAskedByNeighbour: string[];
+    note: string;
+  };
+  refusals?: { count: number; byRule: Record<string, number>; rows: Refusal[]; note: string };
+  dayRealization?: DayRealization;
   safety: {
     emergencyClassifications: number;
     expected: number;

@@ -11,6 +11,7 @@ import {
 } from '../api/iteration';
 import { nameList, personName } from '../selectors/story';
 import { conditionDiff, versionFacts, type Measure, type VersionFacts } from '../selectors/versionFacts';
+import { inputName, paramName, paramValue, ruleName } from '../selectors/words';
 import {
   Body,
   Button,
@@ -194,10 +195,73 @@ function burdenCell(facts: VersionFacts) {
       ) : (
         <span style={{ color: colour.unknown }}>일과가 바뀐 사람 기록 없음</span>
       )}
+      {/* MEDial's ledger against the village's. The second list is people a
+          neighbour pulled in; MEDial never learns they were involved. */}
+      {facts.askedByMedial.length > 0 && (
+        <span>
+          MEDial이 부탁한 사람 <strong>{facts.askedByMedial.length}</strong>명
+          {facts.askedByNeighbour.length > 0 && (
+            <>
+              {' '}
+              · 이웃이 대신 끌어들인 사람 <strong>{facts.askedByNeighbour.length}</strong>명 (
+              {nameList(facts.askedByNeighbour)}) — MEDial은 모름
+            </>
+          )}
+        </span>
+      )}
       <Label style={{ marginBottom: 0, marginTop: 2 }}>
         분 · 원래 일과에서 벗어난 시간입니다. 도와준 이웃과 도움을 받은 본인이 같은 값에
         들어갑니다 — 이 지표는 둘을 구분하지 않습니다.
       </Label>
+    </div>
+  );
+}
+
+/** Every no and every not-now, with the sentence the person gave. A count per
+ *  rule is what changes between versions; the sentences are why. */
+function refusalCell(facts: VersionFacts) {
+  if (facts.refusals.length === 0) {
+    return <span style={{ color: colour.unknown }}>거절한 사람 없음</span>;
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {facts.refusals.map((row) => (
+        <span key={`${row.actorId}-${row.atMs}-${row.requestId ?? ''}`}>
+          <strong>{personName(row.actorId)}</strong> {row.kind === 'deferred' ? '나중에' : '거절'}
+          {row.reason ? ` — ${row.reason}` : ` — ${ruleName(row.rule)}`}
+          {!row.seenByMedial && <Tag $kind="unknown" style={{ marginLeft: 6 }}>MEDial은 모름</Tag>}
+        </span>
+      ))}
+      <Label style={{ marginBottom: 0, marginTop: 2 }}>
+        거절 표에서 걸린 줄 하나가 곧 사유입니다. 합산 점수가 아닙니다.
+      </Label>
+    </div>
+  );
+}
+
+/** Which day each side ran on. Same seed, same day; a different label here is
+ *  a different input, not a policy effect, and the callout above says so. */
+function dayCell(facts: VersionFacts) {
+  if (facts.days.length === 0) {
+    return <span style={{ color: colour.unknown }}>하루 기록 없음 (예전 실행)</span>;
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {facts.days.map((day) => (
+        <span key={day.attemptId}>
+          <strong>{day.label}</strong>
+          {day.changes.length > 0 && (
+            <Disclosure>
+              <summary>바뀐 것 {day.changes.length}개</summary>
+              <div>
+                {day.changes.map((line) => (
+                  <div key={line}>{line}</div>
+                ))}
+              </div>
+            </Disclosure>
+          )}
+        </span>
+      ))}
     </div>
   );
 }
@@ -370,7 +434,7 @@ export default function CompareScreen({
               <div style={{ marginTop: 4 }}>{diff.claim}</div>
               {diff.differingInputs.length > 0 && (
                 <Sub style={{ marginTop: 4 }}>
-                  달라진 입력: {diff.differingInputs.join(', ')}
+                  달라진 입력: {diff.differingInputs.map(inputName).join(', ')}
                 </Sub>
               )}
               <Disclosure>
@@ -398,8 +462,8 @@ export default function CompareScreen({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {diff.rows.map((row) => (
                         <div key={row.field}>
-                          <strong>{conditionName(row.field)}</strong>: {plain(row.before)} →{' '}
-                          <strong>{plain(row.after)}</strong>
+                          <strong>{paramName(row.field)}</strong>: {paramValue(row.before)} →{' '}
+                          <strong>{paramValue(row.after)}</strong>
                         </div>
                       ))}
                       {drivingReviews.changeSet && (
@@ -471,9 +535,21 @@ export default function CompareScreen({
               </tr>
 
               <tr>
+                <td>어느 하루였나</td>
+                <td>{dayCell(leftFacts)}</td>
+                <td>{dayCell(rightFacts)}</td>
+              </tr>
+
+              <tr>
                 <td>누구의 일과가 바뀌었나</td>
                 <td>{burdenCell(leftFacts)}</td>
                 <td>{burdenCell(rightFacts)}</td>
+              </tr>
+
+              <tr>
+                <td>누가 거절했나</td>
+                <td>{refusalCell(leftFacts)}</td>
+                <td>{refusalCell(rightFacts)}</td>
               </tr>
 
               <tr>
@@ -655,7 +731,8 @@ export default function CompareScreen({
                     {drivingReviews.changeSet.changes.flatMap((change) =>
                       change.executionBindings.map((binding) => (
                         <div key={`${change.field}-${binding.key}`}>
-                          <Mono>{binding.key}</Mono>: {plain(binding.before)} → {plain(binding.after)}
+                          <Mono>{binding.key}</Mono>: {paramValue(binding.before)} →{' '}
+                          {paramValue(binding.after)}
                         </div>
                       )),
                     )}
@@ -677,7 +754,7 @@ export default function CompareScreen({
               {diff && diff.rows.length > 0 ? (
                 diff.rows.map((row) => (
                   <div key={row.field}>
-                    {conditionName(row.field)}: {plain(row.before)} → {plain(row.after)}
+                    {paramName(row.field)}: {paramValue(row.before)} → {paramValue(row.after)}
                   </div>
                 ))
               ) : (
@@ -804,7 +881,7 @@ export default function CompareScreen({
                     <summary>기술 세부사항 · 내부 실행값 수정</summary>
                     {Object.entries(editor.bindingValues).map(([key, value]) => (
                       <div key={key}>
-                        <Label style={{ marginTop: 10 }}>{conditionName(key)} · 실행값</Label>
+                        <Label style={{ marginTop: 10 }}>{paramName(key)} · 실행값</Label>
                         <Input
                           value={value}
                           onChange={(e) => setEditor({
@@ -958,32 +1035,3 @@ function ProblemList({ items, empty }: { items: string[]; empty: string }) {
   );
 }
 
-/** Field paths in plain words. Unknown paths keep their path - better an
- *  unfamiliar name than a wrong translation. */
-function conditionName(field: string): string {
-  return (
-    {
-      contactStrategy: '연락 순서',
-      retryCount: '재연락 횟수',
-      retryIntervalMin: '재연락 간격(분)',
-      quietWindowMin: '연락 사이 최소 간격(분)',
-      helperContactCap: '이웃에게 부탁하는 최대 인원',
-      disclosure: '상대에게 알리는 정보 범위',
-      escalateToInstitutionAfterMin: '보건소 인계 기한(분)',
-      allowHeadContact: '이장에게 물어봐도 되는가',
-      rideCandidateOrder: '동승 후보 순서',
-      maxRideDetourMin: '운전자에게 허용하는 우회 시간(분)',
-    }[field] ?? field
-  );
-}
-
-function plain(value: unknown): string {
-  if (value === null || value === undefined) return '없음';
-  if (typeof value === 'boolean') return value ? '예' : '아니오';
-  if (value === 'head_first') return '이장에게 먼저';
-  if (value === 'subject_first') return '본인에게 먼저';
-  if (value === 'retry_then_clinic') return '본인 재연락 후 보건소';
-  if (value === 'minimal') return '최소한만';
-  if (value === 'named') return '이름까지';
-  return String(value);
-}

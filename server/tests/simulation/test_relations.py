@@ -219,6 +219,36 @@ def test_the_burden_ledger_separates_who_did_the_asking():
     assert (went.asked_by_medial, went.asked_by_neighbour) == (0, 1)
 
 
+def test_the_metrics_name_the_hand_off_from_the_log():
+    """What the screens read. Built from committed events, not engine state."""
+    from app.simulation.metrics import build_metrics
+    engine = _run_offer(AFTERNOON, "P12", "P9")
+    metrics = build_metrics(engine)
+    handovers = metrics["handovers"]
+    assert handovers["count"] == 1
+    row = handovers["rows"][0]
+    assert row["askedActorId"] == "P12"
+    assert row["chain"] == ["P12", "P6"]
+    assert row["performedBy"] == "P6"
+    assert row["outcome"] != "unresolved"
+    assert handovers["peopleAskedByMedial"] == ["P12"]
+    assert handovers["peopleAskedByNeighbour"] == ["P6"]
+    assert metrics["residentBurden"]["P6"]["askedByNeighbour"] == 1
+    assert metrics["residentBurden"]["P6"]["askedByMedial"] == 0
+
+
+def test_a_hand_off_nobody_completed_is_still_a_hand_off():
+    from app.simulation.metrics import build_metrics
+    engine = _run_offer(LUNCH, "P6", "P1")
+    metrics = build_metrics(engine)
+    row = metrics["handovers"]["rows"][0]
+    assert row["performedBy"] is None
+    assert row["outcome"] == "unresolved"
+    # The refusal down the chain is one MEDial was never addressed on.
+    later = [r for r in metrics["refusals"]["rows"] if r["actorId"] != "P6"]
+    assert later and not any(r["seenByMedial"] for r in later)
+
+
 def test_a_refusal_further_down_leaves_medial_believing_it_was_accepted():
     """The failure this makes visible: MEDial's ledger says yes, nobody went."""
     engine = _run_offer(LUNCH, "P6", "P1")

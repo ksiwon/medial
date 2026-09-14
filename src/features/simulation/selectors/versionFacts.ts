@@ -1,4 +1,6 @@
 import type { AgentReview, GenerationDetail, UsageStatus } from '../api/iteration';
+import type { DayRealization, Handover, Refusal } from '../api/types';
+import { dayChangeLines, dayLabel } from './words';
 
 // One version's readable facts, aggregated from the stored metrics of the
 // attempts that version ran.
@@ -33,6 +35,14 @@ export interface VersionFacts {
   institutionMinutes: Measure;
   /** Sorted worst-first, so a total cannot hide one person carrying it. */
   burden: BurdenRow[];
+  /** People MEDial asked, and people a neighbour pulled in - the second set
+   *  is on no ledger MEDial keeps. */
+  askedByMedial: string[];
+  askedByNeighbour: string[];
+  handovers: Handover[];
+  refusals: Refusal[];
+  /** One entry per attempt in the version: which day it ran on. */
+  days: { attemptId: string; label: string; changes: string[] }[];
   contactAttempts: Measure;
   transportNeeds: Measure;
   transportCompleted: Measure;
@@ -88,6 +98,24 @@ export function versionFacts(generation: GenerationDetail): VersionFacts {
     }
   }
 
+  const askedByMedial = new Set<string>();
+  const askedByNeighbour = new Set<string>();
+  const handovers: Handover[] = [];
+  const refusals: Refusal[] = [];
+  const days: VersionFacts['days'] = [];
+  for (const [attemptId, attempt] of Object.entries(objective)) {
+    const h = dig(attempt, 'handovers') as
+      | { rows?: Handover[]; peopleAskedByMedial?: string[]; peopleAskedByNeighbour?: string[] }
+      | undefined;
+    for (const id of h?.peopleAskedByMedial ?? []) askedByMedial.add(id);
+    for (const id of h?.peopleAskedByNeighbour ?? []) askedByNeighbour.add(id);
+    handovers.push(...(h?.rows ?? []));
+    const r = dig(attempt, 'refusals') as { rows?: Refusal[] } | undefined;
+    refusals.push(...(r?.rows ?? []));
+    const day = dig(attempt, 'dayRealization') as DayRealization | undefined;
+    if (day) days.push({ attemptId, label: dayLabel(day), changes: dayChangeLines(day) });
+  }
+
   const usage: Partial<Record<UsageStatus, number>> = {};
   for (const review of reviews) {
     usage[review.usageStatus] = (usage[review.usageStatus] ?? 0) + 1;
@@ -123,6 +151,11 @@ export function versionFacts(generation: GenerationDetail): VersionFacts {
       basis: '분 · 보건소 담당자 업무 시간 (실험 자원 가정 기반)',
     },
     burden: [...burdenMap.values()].sort((a, b) => b.minutes - a.minutes || b.contacts - a.contacts),
+    askedByMedial: [...askedByMedial].sort(),
+    askedByNeighbour: [...askedByNeighbour].sort(),
+    handovers,
+    refusals,
+    days,
     contactAttempts: {
       value: sumAcross(objectives, 'contacts', 'attempts'),
       basis: '회 · 무응답을 거절로 합치지 않음',

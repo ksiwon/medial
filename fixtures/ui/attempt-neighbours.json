@@ -1,11 +1,11 @@
 {
  "attempt": {
-  "id": "att-A-v1-a4de8f2cecad",
+  "id": "att-C-v1-b287ca0e3deb",
   "parentId": null,
   "parentSeq": null,
   "lineage": "root",
-  "label": "A · 이장 우선 확인",
-  "policyId": "policy-A-v1",
+  "label": "C · 가까운 이웃 우선",
+  "policyId": "policy-C-v1",
   "scenarioDeckId": "deck-p1-no-response-v1",
   "personaRevisionId": "persona-synthetic-b7889f7457bde193",
   "baselineRevisionId": "baseline-1666cf9ccb87e954",
@@ -25,13 +25,13 @@
    "mode": "off"
   },
   "relationRevisionId": "rel-v1",
-  "createdAt": "2026-09-14T15:11:07+00:00",
+  "createdAt": "2026-09-14T15:11:08+00:00",
   "cursorSeq": 0,
-  "eventCount": 24,
+  "eventCount": 20,
   "dataSource": "synthetic",
   "inputHashes": {
    "village": "1666cf9ccb87e954",
-   "policy": "03629affb95da9bf",
+   "policy": "7631260cd438de04",
    "deck": "553907b4679a9aa1",
    "resources": "fa080f60dffd5e61",
    "environment": "9c9646b396329549",
@@ -45,21 +45,17 @@
  "metrics": {
   "requests": {
    "raised": 1,
-   "resolved": 1,
-   "unresolved": 0,
+   "resolved": 0,
+   "unresolved": 1,
    "outcomes": [
-    "no_issue_found"
+    "unresolved"
    ],
-   "resolutionPaths": [
-    "neighbour_visit"
-   ]
+   "resolutionPaths": []
   },
   "waitMs": {
-   "resolvedOnly": [
-    378386
-   ],
-   "meanMinutesResolvedOnly": 6.3,
-   "censoredCount": 0,
+   "resolvedOnly": [],
+   "meanMinutesResolvedOnly": null,
+   "censoredCount": 1,
    "note": "미해결 건은 평균에 넣지 않고 censored로 센다."
   },
   "contacts": {
@@ -72,17 +68,35 @@
    "note": "무응답을 거절로 합치지 않는다."
   },
   "residentBurden": {
-   "P6": {
-    "addedTaskMinutes": 16.3,
-    "addedTravelMetres": 441.5,
-    "interruptions": 2,
+   "P2": {
+    "addedTaskMinutes": 9.2,
+    "addedTravelMetres": 294.3,
+    "interruptions": 1,
+    "contactsReceived": 1,
+    "askedByMedial": 1,
+    "askedByNeighbour": 0,
+    "basis": "실현된 계획에서 baseline 대비 추가된 task 구간"
+   },
+   "P10": {
+    "addedTaskMinutes": 0.0,
+    "addedTravelMetres": 0.0,
+    "interruptions": 0,
+    "contactsReceived": 1,
+    "askedByMedial": 1,
+    "askedByNeighbour": 0,
+    "basis": "실현된 계획에서 baseline 대비 추가된 task 구간"
+   },
+   "P11": {
+    "addedTaskMinutes": 0.0,
+    "addedTravelMetres": 0.0,
+    "interruptions": 0,
     "contactsReceived": 1,
     "askedByMedial": 1,
     "askedByNeighbour": 0,
     "basis": "실현된 계획에서 baseline 대비 추가된 task 구간"
    }
   },
-  "neighbourMinutes": 16.3,
+  "neighbourMinutes": 9.2,
   "institutionBurden": {
    "staffCount": 1,
    "shiftStartMs": 32400000,
@@ -106,8 +120,8 @@
   },
   "disclosure": {
    "neighbour": {
-    "recipientCount": 1,
-    "fieldCount": 2
+    "recipientCount": 3,
+    "fieldCount": 6
    }
   },
   "transport": {
@@ -125,15 +139,38 @@
    "count": 0,
    "rows": [],
    "peopleAskedByMedial": [
-    "P6"
+    "P10",
+    "P11",
+    "P2"
    ],
    "peopleAskedByNeighbour": [],
    "note": "MEDial은 자기가 부탁한 사람이 수락했다고만 안다. 이웃끼리 넘긴 것과 실제로 간 사람은 연구자 전용 기록이다."
   },
   "refusals": {
-   "count": 0,
-   "byRule": {},
-   "rows": [],
+   "count": 2,
+   "byRule": {
+    "persona_condition": 2
+   },
+   "rows": [
+    {
+     "requestId": "req-P1-1",
+     "actorId": "P10",
+     "kind": "declined",
+     "rule": "persona_condition",
+     "reason": "영업 중 가게를 비울 수 없다",
+     "atMs": 34200000,
+     "seenByMedial": true
+    },
+    {
+     "requestId": "req-P1-1",
+     "actorId": "P11",
+     "kind": "declined",
+     "rule": "persona_condition",
+     "reason": "영업 중 가게를 비울 수 없다",
+     "atMs": 34200000,
+     "seenByMedial": true
+    }
+   ],
    "note": "거절과 미룸을 합산 점수로 만들지 않는다. 규칙 하나가 걸린 것이 곧 사유다."
   },
   "safety": {
@@ -144,8 +181,8 @@
   },
   "adapterFailures": 0,
   "rejectedProposals": 0,
-  "decisionCount": 2,
-  "eventCount": 24,
+  "decisionCount": 1,
+  "eventCount": 20,
   "personaProvenance": {
    "dataSource": "synthetic",
    "revisionId": "persona-synthetic-b7889f7457bde193",
@@ -1036,12 +1073,15 @@
   }
  },
  "policy": {
-  "id": "policy-A-v1",
-  "parentId": null,
+  "id": "policy-C-v1",
+  "parentId": "policy-A-v1",
   "coreItem": "응답이 없는 안부 확인을 누구의 시간으로 해결할 것인가",
-  "label": "A · 이장 우선 확인",
-  "changes": [],
-  "contactStrategy": "head_first",
+  "label": "C · 가까운 이웃 우선",
+  "changes": [
+   "이장에게 먼저 묻지 않는다",
+   "공개된 일과상 이 시각 자택에 있는 사람에게 먼저 부탁"
+  ],
+  "contactStrategy": "neighbour_first",
   "params": {
    "retryCount": 0,
    "retryIntervalMin": 40,
@@ -1059,7 +1099,7 @@
    "assumption-phone-reachability"
   ]
  },
- "logFingerprint": "46b8972843da9df1",
+ "logFingerprint": "53ebf9681d4ce022",
  "timeline": {
   "horizonMs": 72000000,
   "actors": {
@@ -1567,6 +1607,102 @@
     "realized": [
      {
       "startMs": 0,
+      "endMs": 34200000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P2",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": true,
+      "riders": [],
+      "xy": [
+       300.0,
+       570.0
+      ]
+     },
+     {
+      "startMs": 34200000,
+      "endMs": 34452257,
+      "kind": "travel",
+      "origin": "task",
+      "label": "안부 확인 이동",
+      "place": null,
+      "fromPlace": "HOME:P2",
+      "toPlace": "HOME:P1",
+      "mode": "walk",
+      "metres": 294.3,
+      "requestId": "req-P1-1",
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        930.0
+       ]
+      ]
+     },
+     {
+      "startMs": 34452257,
+      "endMs": 34752257,
+      "kind": "stay",
+      "origin": "task",
+      "label": "안부 확인",
+      "place": "HOME:P1",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": "req-P1-1",
+      "interruptible": false,
+      "riders": [],
+      "xy": [
+       300.0,
+       930.0
+      ]
+     },
+     {
+      "startMs": 34752257,
+      "endMs": 35004514,
+      "kind": "travel",
+      "origin": "baseline",
+      "label": "일과 복귀",
+      "place": null,
+      "fromPlace": "HOME:P1",
+      "toPlace": "HOME:P2",
+      "mode": "walk",
+      "metres": 294.3,
+      "requestId": null,
+      "interruptible": false,
+      "riders": [],
+      "polyline": [
+       [
+        300.0,
+        930.0
+       ],
+       [
+        300.0,
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ]
+      ]
+     },
+     {
+      "startMs": 35004514,
       "endMs": 72000000,
       "kind": "stay",
       "origin": "baseline",
@@ -1585,9 +1721,9 @@
       ]
      }
     ],
-    "planChanged": false,
-    "addedTaskMs": 0,
-    "contactsReceived": 0
+    "planChanged": true,
+    "addedTaskMs": 552257,
+    "contactsReceived": 1
    },
    "P3": {
     "id": "P3",
@@ -2656,7 +2792,7 @@
      },
      {
       "startMs": 28626854,
-      "endMs": 34200000,
+      "endMs": 35404097,
       "kind": "patrol",
       "origin": "baseline",
       "label": "마을 순찰",
@@ -2724,108 +2860,23 @@
       ]
      },
      {
-      "startMs": 34200000,
-      "endMs": 34300903,
-      "kind": "travel",
-      "origin": "task",
-      "label": "안부 확인 이동",
-      "place": null,
-      "fromPlace": "PATROL",
-      "toPlace": "HOME:P1",
-      "mode": "walk",
-      "metres": 117.7,
-      "requestId": "req-P1-1",
-      "interruptible": false,
-      "riders": [],
-      "polyline": [
-       [
-        300.0,
-        810.0
-       ],
-       [
-        300.0,
-        930.0
-       ]
-      ]
-     },
-     {
-      "startMs": 34300903,
-      "endMs": 34578386,
-      "kind": "travel",
-      "origin": "task",
-      "label": "안부 확인 이동",
-      "place": null,
-      "fromPlace": "HOME:P1",
-      "toPlace": "FARM",
-      "mode": "walk",
-      "metres": 323.7,
-      "requestId": "req-P1-1",
-      "interruptible": false,
-      "riders": [],
-      "polyline": [
-       [
-        300.0,
-        930.0
-       ],
-       [
-        300.0,
-        810.0
-       ],
-       [
-        170.0,
-        810.0
-       ],
-       [
-        90.0,
-        810.0
-       ]
-      ]
-     },
-     {
-      "startMs": 34578386,
-      "endMs": 34878386,
-      "kind": "stay",
-      "origin": "task",
-      "label": "안부 확인",
-      "place": "FARM",
-      "fromPlace": null,
-      "toPlace": null,
-      "mode": "stay",
-      "metres": 0.0,
-      "requestId": "req-P1-1",
-      "interruptible": false,
-      "riders": [],
-      "xy": [
-       90.0,
-       810.0
-      ]
-     },
-     {
-      "startMs": 34878386,
-      "endMs": 35458577,
+      "startMs": 35404097,
+      "endMs": 35723623,
       "kind": "travel",
       "origin": "baseline",
-      "label": "일과 복귀",
+      "label": "이동",
       "place": null,
-      "fromPlace": "FARM",
+      "fromPlace": "HALL",
       "toPlace": "HOME:P6",
       "mode": "walk",
-      "metres": 676.9,
+      "metres": 372.8,
       "requestId": null,
       "interruptible": false,
       "riders": [],
       "polyline": [
        [
-        90.0,
-        810.0
-       ],
-       [
-        170.0,
-        810.0
-       ],
-       [
-        300.0,
-        810.0
+        220.0,
+        630.0
        ],
        [
         300.0,
@@ -2835,25 +2886,6 @@
         300.0,
         330.0
        ]
-      ]
-     },
-     {
-      "startMs": 35458577,
-      "endMs": 35723623,
-      "kind": "stay",
-      "origin": "baseline",
-      "label": "자택",
-      "place": "HOME:P6",
-      "fromPlace": null,
-      "toPlace": null,
-      "mode": "stay",
-      "metres": 0.0,
-      "requestId": null,
-      "interruptible": true,
-      "riders": [],
-      "xy": [
-       300.0,
-       330.0
       ]
      },
      {
@@ -3049,9 +3081,9 @@
       ]
      }
     ],
-    "planChanged": true,
-    "addedTaskMs": 978386,
-    "contactsReceived": 1
+    "planChanged": false,
+    "addedTaskMs": 0,
+    "contactsReceived": 0
    },
    "P7": {
     "id": "P7",
@@ -4801,7 +4833,7 @@
     ],
     "planChanged": false,
     "addedTaskMs": 0,
-    "contactsReceived": 0
+    "contactsReceived": 1
    },
    "P11": {
     "id": "P11",
@@ -4856,7 +4888,7 @@
     ],
     "planChanged": false,
     "addedTaskMs": 0,
-    "contactsReceived": 0
+    "contactsReceived": 1
    },
    "P12": {
     "id": "P12",
@@ -5305,23 +5337,16 @@
    "atMs": 34200000,
    "decisionId": "dec-1",
    "question": "응답이 없는 상태를 누가 어떻게 확인할 것인가",
-   "chosen": "P6",
-   "policyId": "policy-A-v1"
-  },
-  {
-   "atMs": 34300903,
-   "decisionId": "dec-2",
-   "question": "자택에 없을 때 확인을 계속할 것인가",
-   "chosen": "P6",
-   "policyId": "policy-A-v1"
+   "chosen": "P10",
+   "policyId": "policy-C-v1"
   }
  ],
  "decisions": [
   {
    "id": "dec-1",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-C-v1-b287ca0e3deb",
    "simTimeMs": 34200000,
-   "policyId": "policy-A-v1",
+   "policyId": "policy-C-v1",
    "question": "응답이 없는 상태를 누가 어떻게 확인할 것인가",
    "candidates": [
     {
@@ -5385,8 +5410,8 @@
      "reason": "공개된 평소 일과상 이 시각 자택에 있다고 되어 있다. 이동 수단·접근 가능 여부는 확인 필요(unknown)"
     }
    ],
-   "chosen": "P6",
-   "rationale": "이장은 이 마을에서 안부 확인을 실제로 해 온 사람이고, 확인만 요청하고 판단은 넘기지 않는다. 공개 일과로는 지금 갈 수 있는지 알 수 없으므로 요청을 보내고 본인의 응답을 기다린다.",
+   "chosen": "P10",
+   "rationale": "이장 한 사람에게 몰지 않고, 공개된 일과상 이 시각 자택에 있는 사람에게 먼저 부탁한다. 거절하면 다음 사람에게 묻되 3명까지만 묻는다. 실제로 갈 수 있는지는 본인 응답으로만 알 수 있다.",
    "knownFacts": [
     "P1에게 1회 연락했고 응답이 없다",
     "MEDial은 P1의 현재 위치를 알지 못한다"
@@ -5395,52 +5420,24 @@
     "obs-1"
    ],
    "excludedByPermission": []
-  },
-  {
-   "id": "dec-2",
-   "attemptId": "att-A-v1-a4de8f2cecad",
-   "simTimeMs": 34300903,
-   "policyId": "policy-A-v1",
-   "question": "자택에 없을 때 확인을 계속할 것인가",
-   "candidates": [
-    {
-     "actorId": "P6",
-     "included": true,
-     "reason": "이미 현장에 있고 본인이 확인처를 제안했다"
-    }
-   ],
-   "chosen": "P6",
-   "rationale": "자택에서 확인되지 않았다는 것도 위치와 상태 어느 쪽도 확정하지 않는다. 이장이 제안한 확인처(FARM)는 MEDial이 갖고 있지 않던 지역 지식이며 근거는 평소 일과에 대한 지역 지식이다.",
-   "knownFacts": [
-    "P1에게 1회 연락했고 응답이 없다",
-    "MEDial은 P1의 현재 위치를 알지 못한다"
-   ],
-   "observationIds": [
-    "obs-1",
-    "obs-3",
-    "obs-5"
-   ],
-   "excludedByPermission": []
   }
  ],
  "reviews": [
   {
    "id": "rev-1",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-C-v1-b287ca0e3deb",
    "actorId": "P1",
    "source": "simulated",
    "scope": "day_end_retrospective",
    "experiencedEventIds": [
     "ev-2",
-    "ev-4",
-    "ev-21",
-    "ev-23"
+    "ev-4"
    ],
    "dimensions": [
     {
      "key": "resolution",
-     "assessment": "positive",
-     "reason": "이 사람이 관련된 확인이 종료되는 것을 경험했다"
+     "assessment": "unknown",
+     "reason": "종료 여부를 이 사람이 경험한 사건에서 알 수 없다"
     },
     {
      "key": "time_respected",
@@ -5458,7 +5455,7 @@
      "reason": "다른 사람 사정을 1건 전달받았다. 알고 싶었는지는 본인만 답할 수 있다"
     }
    ],
-   "assessment": "positive",
+   "assessment": "unknown",
    "comment": "규칙 기반 시뮬레이션 경험 평가이며 실제 주민 만족도가 아니다.",
    "unknowns": [
     "실제 본인 평가",
@@ -5467,7 +5464,7 @@
   },
   {
    "id": "rev-10",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-C-v1-b287ca0e3deb",
    "actorId": "P7",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5482,7 +5479,7 @@
   },
   {
    "id": "rev-11",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-C-v1-b287ca0e3deb",
    "actorId": "P8",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5497,7 +5494,7 @@
   },
   {
    "id": "rev-12",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-C-v1-b287ca0e3deb",
    "actorId": "P9",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5512,7 +5509,7 @@
   },
   {
    "id": "rev-13",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-C-v1-b287ca0e3deb",
    "actorId": "HC_NURSE",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5527,37 +5524,85 @@
   },
   {
    "id": "rev-2",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-C-v1-b287ca0e3deb",
    "actorId": "P10",
    "source": "simulated",
    "scope": "day_end_retrospective",
-   "experiencedEventIds": [],
-   "dimensions": [],
-   "assessment": "unknown",
-   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
+   "experiencedEventIds": [
+    "ev-8",
+    "ev-9"
+   ],
+   "dimensions": [
+    {
+     "key": "resolution",
+     "assessment": "unknown",
+     "reason": "종료 여부를 이 사람이 경험한 사건에서 알 수 없다"
+    },
+    {
+     "key": "time_respected",
+     "assessment": "unknown",
+     "reason": "요청을 받았으나 수행으로 이어지지 않았다"
+    },
+    {
+     "key": "choice",
+     "assessment": "positive",
+     "reason": "수락·거절·연기 중에서 고를 수 있는 요청을 받았다"
+    },
+    {
+     "key": "disclosure",
+     "assessment": "unknown",
+     "reason": "다른 사람 사정을 1건 전달받았다. 알고 싶었는지는 본인만 답할 수 있다"
+    }
+   ],
+   "assessment": "positive",
+   "comment": "규칙 기반 시뮬레이션 경험 평가이며 실제 주민 만족도가 아니다.",
    "unknowns": [
-    "경험 없음",
-    "실제 본인 평가"
+    "실제 본인 평가",
+    "실제 감정 반응"
    ]
   },
   {
    "id": "rev-3",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-C-v1-b287ca0e3deb",
    "actorId": "P11",
    "source": "simulated",
    "scope": "day_end_retrospective",
-   "experiencedEventIds": [],
-   "dimensions": [],
-   "assessment": "unknown",
-   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
+   "experiencedEventIds": [
+    "ev-10",
+    "ev-11"
+   ],
+   "dimensions": [
+    {
+     "key": "resolution",
+     "assessment": "unknown",
+     "reason": "종료 여부를 이 사람이 경험한 사건에서 알 수 없다"
+    },
+    {
+     "key": "time_respected",
+     "assessment": "unknown",
+     "reason": "요청을 받았으나 수행으로 이어지지 않았다"
+    },
+    {
+     "key": "choice",
+     "assessment": "positive",
+     "reason": "수락·거절·연기 중에서 고를 수 있는 요청을 받았다"
+    },
+    {
+     "key": "disclosure",
+     "assessment": "unknown",
+     "reason": "다른 사람 사정을 1건 전달받았다. 알고 싶었는지는 본인만 답할 수 있다"
+    }
+   ],
+   "assessment": "positive",
+   "comment": "규칙 기반 시뮬레이션 경험 평가이며 실제 주민 만족도가 아니다.",
    "unknowns": [
-    "경험 없음",
-    "실제 본인 평가"
+    "실제 본인 평가",
+    "실제 감정 반응"
    ]
   },
   {
    "id": "rev-4",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-C-v1-b287ca0e3deb",
    "actorId": "P12",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5572,97 +5617,29 @@
   },
   {
    "id": "rev-5",
-   "attemptId": "att-A-v1-a4de8f2cecad",
+   "attemptId": "att-C-v1-b287ca0e3deb",
    "actorId": "P2",
    "source": "simulated",
    "scope": "day_end_retrospective",
-   "experiencedEventIds": [],
-   "dimensions": [],
-   "assessment": "unknown",
-   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
-   "unknowns": [
-    "경험 없음",
-    "실제 본인 평가"
-   ]
-  },
-  {
-   "id": "rev-6",
-   "attemptId": "att-A-v1-a4de8f2cecad",
-   "actorId": "P3",
-   "source": "simulated",
-   "scope": "day_end_retrospective",
-   "experiencedEventIds": [],
-   "dimensions": [],
-   "assessment": "unknown",
-   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
-   "unknowns": [
-    "경험 없음",
-    "실제 본인 평가"
-   ]
-  },
-  {
-   "id": "rev-7",
-   "attemptId": "att-A-v1-a4de8f2cecad",
-   "actorId": "P4",
-   "source": "simulated",
-   "scope": "day_end_retrospective",
-   "experiencedEventIds": [],
-   "dimensions": [],
-   "assessment": "unknown",
-   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
-   "unknowns": [
-    "경험 없음",
-    "실제 본인 평가"
-   ]
-  },
-  {
-   "id": "rev-8",
-   "attemptId": "att-A-v1-a4de8f2cecad",
-   "actorId": "P5",
-   "source": "simulated",
-   "scope": "day_end_retrospective",
-   "experiencedEventIds": [],
-   "dimensions": [],
-   "assessment": "unknown",
-   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
-   "unknowns": [
-    "경험 없음",
-    "실제 본인 평가"
-   ]
-  },
-  {
-   "id": "rev-9",
-   "attemptId": "att-A-v1-a4de8f2cecad",
-   "actorId": "P6",
-   "source": "simulated",
-   "scope": "day_end_retrospective",
    "experiencedEventIds": [
-    "ev-8",
-    "ev-9",
-    "ev-10",
-    "ev-11",
     "ev-12",
     "ev-13",
     "ev-14",
     "ev-15",
+    "ev-16",
     "ev-17",
-    "ev-18",
-    "ev-19",
-    "ev-20",
-    "ev-21",
-    "ev-22",
-    "ev-23"
+    "ev-18"
    ],
    "dimensions": [
     {
      "key": "resolution",
-     "assessment": "positive",
-     "reason": "이 사람이 관련된 확인이 종료되는 것을 경험했다"
+     "assessment": "unknown",
+     "reason": "종료 여부를 이 사람이 경험한 사건에서 알 수 없다"
     },
     {
      "key": "time_respected",
      "assessment": "mixed",
-     "reason": "일과를 16분 중단하고 이동했다. 부담의 크기는 본인 확인이 필요하다"
+     "reason": "일과를 9분 중단하고 이동했다. 부담의 크기는 본인 확인이 필요하다"
     },
     {
      "key": "choice",
@@ -5680,6 +5657,66 @@
    "unknowns": [
     "실제 본인 평가",
     "실제 감정 반응"
+   ]
+  },
+  {
+   "id": "rev-6",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "actorId": "P3",
+   "source": "simulated",
+   "scope": "day_end_retrospective",
+   "experiencedEventIds": [],
+   "dimensions": [],
+   "assessment": "unknown",
+   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
+   "unknowns": [
+    "경험 없음",
+    "실제 본인 평가"
+   ]
+  },
+  {
+   "id": "rev-7",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "actorId": "P4",
+   "source": "simulated",
+   "scope": "day_end_retrospective",
+   "experiencedEventIds": [],
+   "dimensions": [],
+   "assessment": "unknown",
+   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
+   "unknowns": [
+    "경험 없음",
+    "실제 본인 평가"
+   ]
+  },
+  {
+   "id": "rev-8",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "actorId": "P5",
+   "source": "simulated",
+   "scope": "day_end_retrospective",
+   "experiencedEventIds": [],
+   "dimensions": [],
+   "assessment": "unknown",
+   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
+   "unknowns": [
+    "경험 없음",
+    "실제 본인 평가"
+   ]
+  },
+  {
+   "id": "rev-9",
+   "attemptId": "att-C-v1-b287ca0e3deb",
+   "actorId": "P6",
+   "source": "simulated",
+   "scope": "day_end_retrospective",
+   "experiencedEventIds": [],
+   "dimensions": [],
+   "assessment": "unknown",
+   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
+   "unknowns": [
+    "경험 없음",
+    "실제 본인 평가"
    ]
   }
  ],

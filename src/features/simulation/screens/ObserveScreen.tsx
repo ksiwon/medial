@@ -16,6 +16,7 @@ import PersonPanel from '../components/PersonPanel';
 import VillageMap, { type MapHighlight } from '../components/VillageMap';
 import { formatClock, type ActorPose, type MedialKnown } from '../positions';
 import { requestFlows } from '../selectors/requests';
+import { dayChangeLines, dayLabel } from '../selectors/words';
 import { IconButton, Panel, PanelHead, PanelTitle, Select, Sub, Tag } from '../ui/primitives';
 import { colour, font, radius } from '../ui/theme';
 
@@ -304,6 +305,25 @@ export default function ObserveScreen({
               <Tag $kind={village.isSynthetic ? 'warn' : 'unknown'}>
                 {village.isSynthetic ? '합성 지도' : '원자료 지형'}
               </Tag>
+              {/* Which day this run happened on. The one line says whether the
+                  routine was taken as recorded or nudged; the edits themselves
+                  are in the tooltip, one per person, checkable against the
+                  source. A run stored before days were drawn has no tag. */}
+              {detail.metrics.dayRealization && (
+                <Tag
+                  $kind={
+                    detail.metrics.dayRealization.classification === 'source_baseline'
+                      ? 'unknown'
+                      : 'warn'
+                  }
+                  title={
+                    dayChangeLines(detail.metrics.dayRealization).join('\n') ||
+                    '기록된 일과를 그대로 썼습니다.'
+                  }
+                >
+                  {dayLabel(detail.metrics.dayRealization)}
+                </Tag>
+              )}
               <Select
                 aria-label="관찰 시점"
                 style={{ minHeight: 30, fontSize: font.small, padding: '3px 8px' }}

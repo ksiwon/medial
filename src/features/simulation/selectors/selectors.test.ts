@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { DecisionRecord, DomainEvent } from '../api/types';
-import { currentSentence, latestReasoning, requestFlows } from './requests';
+import type { DayRealization, DecisionRecord, DomainEvent } from '../api/types';
+import { askedPeople, currentSentence, latestReasoning, requestFlows } from './requests';
 import { hiddenRows, personName, sentenceFor, storyRows, withParticle } from './story';
+import { dayChangeLines, dayLabel, inputName, paramName, ruleName, strategyName } from './words';
 
 // Behaviour of the two selectors the observe screen is built on.
 //
@@ -286,5 +287,111 @@ describe('personName', () => {
     const [row] = storyRows([event({ type: 'request.accepted', actorId: 'P6', payload: {} })]);
     expect(row.text).toBe('이장이 하겠다고 했습니다.');
     expect(row.text).not.toContain('이장가');
+  });
+});
+
+// A hand-off as the engine records it: MEDial hears an acceptance from the
+// person it asked; the researcher also sees the request move on and who went.
+function handoffLog(): DomainEvent[] {
+  const both = ['MEDial', 'P12'];
+  const theirs = ['P12', 'P6', 'RESEARCHER'];
+  return [
+    event({ type: 'request.raised', payload: { subjectId: 'P9' } }),
+    event({ type: 'request.offered', payload: { toActorId: 'P12', subjectId: 'P9' }, visibility: both }),
+    event({ type: 'request.accepted', actorId: 'P12', visibility: both }),
+    event({
+      type: 'request.relayed',
+      actorId: 'P12',
+      visibility: theirs,
+      payload: { fromActorId: 'P12', toActorId: 'P6', subjectId: 'P9', basis: 'recorded_relation' },
+    }),
+    event({ type: 'request.accepted', actorId: 'P6', visibility: theirs }),
+    event({ type: 'task.check_performed', actorId: 'P6', visibility: ['P6', 'RESEARCHER'],
+            payload: { outcome: 'subject_found_well', place: 'HOME:P9', subjectId: 'P9' } }),
+    event({ type: 'need.resolved', visibility: ['MEDial', 'P12', 'P6', 'P9', 'RESEARCHER'],
+            payload: { byActorId: 'P12', resolutionPath: 'neighbour_check' } }),
+    event({ type: 'world.relay_resolved', actorId: 'ENGINE', visibility: ['RESEARCHER'],
+            payload: { reportedBy: 'P12', performedBy: 'P6' } }),
+  ];
+}
+
+describe('askedPeople', () => {
+  it('shows the researcher the hand-off and MEDial the acceptance it was told', () => {
+    const all = handoffLog();
+    const researcher = askedPeople(requestFlows(all)[0]);
+    expect(researcher.map((r) => [r.actorId, r.askedBy, r.answer])).toEqual([
+      ['P12', 'MEDial', 'relayed'],
+      ['P6', 'P12', 'accepted'],
+    ]);
+    expect(researcher[0].passedTo).toBe('P6');
+    expect(researcher[1].seenByMedial).toBe(false);
+
+    const medial = askedPeople(requestFlows(all.filter((e) => e.visibility.includes('MEDial')))[0]);
+    expect(medial.map((r) => [r.actorId, r.answer])).toEqual([['P12', 'accepted']]);
+  });
+
+  it('keeps one row per ask so three refusals in turn are all shown', () => {
+    const flow = requestFlows([
+      event({ type: 'request.offered', payload: { toActorId: 'P10' } }),
+      event({ type: 'request.declined', actorId: 'P10',
+              payload: { rule: 'persona_condition', reason: '영업 중 가게를 비울 수 없다' } }),
+      event({ type: 'request.offered', payload: { toActorId: 'P11' } }),
+      event({ type: 'request.declined', actorId: 'P11',
+              payload: { rule: 'persona_condition', reason: '영업 중 가게를 비울 수 없다' } }),
+      event({ type: 'request.offered', payload: { toActorId: 'P9' } }),
+      event({ type: 'request.accepted', actorId: 'P9' }),
+    ])[0];
+    const rows = askedPeople(flow);
+    expect(rows.map((r) => r.answer)).toEqual(['declined', 'declined', 'accepted']);
+    expect(rows[0].reason).toBe('영업 중 가게를 비울 수 없다');
+    expect(rows[0].rule).toBe('persona_condition');
+    expect(rows.every((r) => r.seenByMedial)).toBe(true);
+  });
+});
+
+describe('storyRows for a hand-off', () => {
+  it('says who really went, and that MEDial does not know', () => {
+    const rows = storyRows(handoffLog());
+    const texts = rows.map((r) => r.text);
+    expect(texts.some((t) => t.includes('이장에게 P9 확인을 넘겼습니다') && t.includes('MEDial은 이것을 모릅니다'))).toBe(true);
+    expect(texts.some((t) => t.includes('실제로 간 사람은 이장'))).toBe(true);
+  });
+
+  it('never reaches MEDial view', () => {
+    const rows = storyRows(handoffLog().filter((e) => e.visibility.includes('MEDial')));
+    expect(rows.some((r) => r.event.type === 'request.relayed')).toBe(false);
+    expect(rows.some((r) => r.event.type === 'world.relay_resolved')).toBe(false);
+  });
+
+  it('prints the refusal sentence, not the rule key', () => {
+    const [row] = storyRows([
+      event({ type: 'request.declined', actorId: 'P10',
+              payload: { rule: 'persona_condition', reason: '영업 중 가게를 비울 수 없다' } }),
+    ]);
+    expect(row.text).toContain('영업 중 가게를 비울 수 없다');
+    expect(row.text).not.toContain('persona_condition');
+  });
+});
+
+describe('words', () => {
+  it('names every strategy and rule the engine can emit', () => {
+    expect(strategyName('neighbour_first')).toBe('가까운 이웃에게 먼저');
+    expect(paramName('neighbourAskLimit')).not.toBe('neighbourAskLimit');
+    expect(ruleName('too_far')).toBe('너무 멀어서');
+    expect(inputName('day')).toBe('뽑힌 하루');
+  });
+
+  it('describes the day in one line and its edits per person', () => {
+    const day: DayRealization = {
+      id: 'day-1', seed: 7, villageContentHash: 'h', environmentRevisionId: 'env-v2',
+      classification: 'source_jittered',
+      residents: [{ actorId: 'P1', steps: [], excludedReason: null, changes: [
+        { index: 0, kind: 'jitter', target: 'FARM', beforeMs: 9 * 3_600_000,
+          afterMs: 9 * 3_600_000 + 12 * 60_000, note: '' }] }],
+      assumptions: [],
+    };
+    expect(dayLabel(day)).toBe('기록된 시각이 조금 다른 하루');
+    expect(dayChangeLines(day)).toEqual(['P1 · FARM 09:00 → 09:12 (12분 늦게)']);
+    expect(dayLabel(undefined)).toBe('하루 기록 없음');
   });
 });

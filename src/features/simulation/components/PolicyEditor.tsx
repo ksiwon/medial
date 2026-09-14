@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import styled from 'styled-components';
 import type { AttemptDetail, Catalog, PolicyField } from '../api/types';
+import { strategyName } from '../selectors/words';
 import { formatClock } from '../positions';
 
 // The policy editor replaces the single hard-coded "set helperContactCap to 0"
@@ -238,7 +239,7 @@ export default function PolicyEditor({
         <Select value={strategy} onChange={(e) => setStrategy(e.target.value)}>
           {catalog.policyFields.strategies.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {strategyName(s)}
             </option>
           ))}
         </Select>

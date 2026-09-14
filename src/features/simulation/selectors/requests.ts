@@ -37,6 +37,7 @@ const STAGE_OF: Record<string, StageKey> = {
   'request.accepted': 'coordinate',
   'request.declined': 'coordinate',
   'request.deferred': 'coordinate',
+  'request.relayed': 'coordinate',
   'handoff.requested': 'coordinate',
   'handoff.accepted': 'coordinate',
   'institution.queued': 'coordinate',
@@ -233,11 +234,15 @@ export function currentSentence(flow: RequestFlow): string {
     // accepted or refused. `toActorId` is who the offer was addressed to, and
     // the reply events do not carry it, so reading it here named "상대".
     case 'request.declined':
-      return `${withParticle(replier, 'subject')} 거절했습니다. 다음 후보를 찾는 중입니다.`;
+      return `${withParticle(replier, 'subject')} 거절했습니다 (${reasonText(p.reason)}). 다음 후보를 찾는 중입니다.`;
     case 'request.accepted':
       return `${withParticle(replier, 'subject')} 수락했습니다.`;
     case 'request.deferred':
-      return `${withParticle(replier, 'subject')} 나중으로 미뤘습니다.`;
+      return `${withParticle(replier, 'subject')} 나중으로 미뤘습니다${
+        str(p.reason) ? ` (${reasonText(p.reason)})` : ''
+      }.`;
+    case 'request.relayed':
+      return `${withParticle(replier, 'subject')} ${to ?? '이웃'}에게 넘겼습니다. MEDial의 장부에는 ${replier}의 수락으로 남아 있습니다.`;
     case 'contact.attempted':
       return `${to ?? who}에게 연락을 걸어 두었습니다.`;
     case 'contact.no_response':
@@ -325,6 +330,99 @@ export function latestReasoning(
     knownFacts: record?.knownFacts ?? [],
     excluded,
   };
+}
+
+export interface AskedRow {
+  actorId: string;
+  /** MEDial, or the neighbour who handed it on. */
+  askedBy: string;
+  answer: 'accepted' | 'declined' | 'deferred' | 'relayed' | 'pending';
+  /** The sentence the person gave, already in Korean; null when they said
+   *  nothing or have not answered yet. */
+  reason: string | null;
+  /** Machine key of the decline-table line, for the technical disclosure. */
+  rule: string | null;
+  /** Who they handed it to, when the answer is `relayed`. */
+  passedTo: string | null;
+  /** False for anything MEDial was not addressed on: a hand-off, or a refusal
+   *  further down one. The researcher sees the row with that mark. */
+  seenByMedial: boolean;
+  seq: number;
+}
+
+/**
+ * Everyone who was asked to do something for this request, in the order they
+ * were asked, with what they answered.
+ *
+ * One row per ask, not per person: under `neighbour_first` MEDial asks three
+ * people in turn and the reader has to see each answer, not the last one. A
+ * person who was handed the request by a neighbour gets a row whose `askedBy`
+ * is that neighbour, and MEDial never sees that row - which is the point.
+ */
+export function askedPeople(flow: RequestFlow): AskedRow[] {
+  const rows: AskedRow[] = [];
+  const open = (actorId: string) =>
+    [...rows].reverse().find((row) => row.actorId === actorId && row.answer === 'pending');
+
+  for (const event of flow.events) {
+    const p = asRecord(event);
+    const seen = event.visibility.includes('MEDial');
+    switch (event.type) {
+      case 'request.offered':
+        rows.push({
+          actorId: str(p.toActorId) ?? '',
+          askedBy: 'MEDial',
+          answer: 'pending',
+          reason: null,
+          rule: null,
+          passedTo: null,
+          seenByMedial: seen,
+          seq: event.seq,
+        });
+        break;
+      case 'request.relayed': {
+        // The engine writes the acceptance MEDial hears *before* the hand-off
+        // the researcher sees, so the row is already "accepted" here. In the
+        // researcher's view it becomes the hand-off it really was; in MEDial's
+        // view this event never arrives and the acceptance stands.
+        const from = [...rows].reverse().find((row) => row.actorId === event.actorId);
+        if (from) {
+          from.answer = 'relayed';
+          from.passedTo = str(p.toActorId);
+        }
+        rows.push({
+          actorId: str(p.toActorId) ?? '',
+          askedBy: event.actorId,
+          answer: 'pending',
+          reason: null,
+          rule: null,
+          passedTo: null,
+          seenByMedial: seen,
+          seq: event.seq,
+        });
+        break;
+      }
+      case 'request.accepted':
+      case 'request.declined':
+      case 'request.deferred': {
+        const row = open(event.actorId);
+        if (!row) break;
+        row.answer =
+          event.type === 'request.accepted'
+            ? 'accepted'
+            : event.type === 'request.declined'
+              ? 'declined'
+              : 'deferred';
+        row.reason = str(p.reason) ? reasonText(p.reason) : null;
+        row.rule = str(p.rule);
+        row.seenByMedial = row.seenByMedial && seen;
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  return rows;
 }
 
 /** Whether the health centre or 119 are actually in this request's log. Nothing

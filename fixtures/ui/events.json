@@ -2,7 +2,7 @@
  "events": [
   {
    "id": "ev-1",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 1,
    "simTimeMs": 0,
    "type": "world.day_started",
@@ -20,7 +20,7 @@
   },
   {
    "id": "ev-2",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 2,
    "simTimeMs": 34200000,
    "type": "contact.attempted",
@@ -47,7 +47,7 @@
   },
   {
    "id": "ev-3",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 3,
    "simTimeMs": 34200000,
    "type": "world.reachability_resolved",
@@ -62,7 +62,7 @@
     "toActorId": "P1",
     "channel": "home_device",
     "answered": false,
-    "worldReason": "안내 시계는 집에 설치된 기기이므로 집에 있을 때만 닿는다",
+    "worldReason": "안내 시계는 집에 설치된 기기이므로 집 밖에서는 닿지 않는다",
     "provenance": "source-adapted",
     "place": "FARM",
     "note": "연구자 전용. 연락한 쪽은 '응답 없음'만 알 수 있다."
@@ -70,7 +70,7 @@
   },
   {
    "id": "ev-4",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 4,
    "simTimeMs": 34200000,
    "type": "contact.no_response",
@@ -91,7 +91,7 @@
   },
   {
    "id": "ev-5",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 5,
    "simTimeMs": 34200000,
    "type": "medial.classified",
@@ -114,7 +114,7 @@
   },
   {
    "id": "ev-6",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 6,
    "simTimeMs": 34200000,
    "type": "request.raised",
@@ -134,7 +134,7 @@
   },
   {
    "id": "ev-7",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 7,
    "simTimeMs": 34200000,
    "type": "medial.decided",
@@ -163,22 +163,12 @@
       "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
      },
      {
-      "actorId": "P2",
-      "included": false,
-      "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
-     },
-     {
       "actorId": "P3",
       "included": false,
       "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
      },
      {
       "actorId": "P4",
-      "included": false,
-      "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
-     },
-     {
-      "actorId": "P5",
       "included": false,
       "reason": "공개된 평소 일과상 이 시각 외출 중이다. 어디인지는 MEDial에 공개되지 않는다"
      },
@@ -197,7 +187,7 @@
   },
   {
    "id": "ev-8",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 8,
    "simTimeMs": 34200000,
    "type": "request.offered",
@@ -228,7 +218,7 @@
   },
   {
    "id": "ev-9",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 9,
    "simTimeMs": 34200000,
    "type": "request.accepted",
@@ -243,8 +233,10 @@
    "payload": {
     "requestId": "req-P1-1",
     "params": {
-     "basis": "interruptible_activity",
-     "activity": "마을 순찰"
+     "rule": null,
+     "reason": "지금 하던 일을 잠시 놓고 다녀올 수 있다.",
+     "activity": "마을 순찰",
+     "place": "PATROL"
     },
     "utterance": "지금 순찰 중이니 들러 보겠습니다.",
     "evidenceRefs": []
@@ -252,7 +244,7 @@
   },
   {
    "id": "ev-10",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 10,
    "simTimeMs": 34200000,
    "type": "plan.modified",
@@ -271,7 +263,7 @@
     "insertedSegments": [
      {
       "startMs": 34200000,
-      "endMs": 34452257,
+      "endMs": 34300903,
       "kind": "travel",
       "origin": "task",
       "label": "안부 확인 이동",
@@ -279,14 +271,14 @@
       "fromPlace": "PATROL",
       "toPlace": "HOME:P1",
       "mode": "walk",
-      "metres": 294.3,
+      "metres": 117.7,
       "requestId": "req-P1-1",
       "interruptible": false,
       "riders": []
      },
      {
-      "startMs": 34452257,
-      "endMs": 34752257,
+      "startMs": 34300903,
+      "endMs": 34600903,
       "kind": "stay",
       "origin": "task",
       "label": "안부 확인",
@@ -302,8 +294,8 @@
     ],
     "resumeSegments": [
      {
-      "startMs": 34752257,
-      "endMs": 35256771,
+      "startMs": 34600903,
+      "endMs": 35105417,
       "kind": "travel",
       "origin": "baseline",
       "label": "일과 복귀",
@@ -317,8 +309,8 @@
       "riders": []
      },
      {
-      "startMs": 35256771,
-      "endMs": 36000000,
+      "startMs": 35105417,
+      "endMs": 35404097,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -332,8 +324,8 @@
       "riders": []
      },
      {
-      "startMs": 36000000,
-      "endMs": 36319526,
+      "startMs": 35404097,
+      "endMs": 35723623,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -347,8 +339,8 @@
       "riders": []
      },
      {
-      "startMs": 36319526,
-      "endMs": 42900000,
+      "startMs": 35723623,
+      "endMs": 42824146,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -362,8 +354,8 @@
       "riders": []
      },
      {
-      "startMs": 42900000,
-      "endMs": 43387697,
+      "startMs": 42824146,
+      "endMs": 43311843,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -377,8 +369,8 @@
       "riders": []
      },
      {
-      "startMs": 43387697,
-      "endMs": 46800000,
+      "startMs": 43311843,
+      "endMs": 45936581,
       "kind": "stay",
       "origin": "baseline",
       "label": "마을식품 근무",
@@ -392,7 +384,7 @@
       "riders": []
      },
      {
-      "startMs": 46800000,
+      "startMs": 45936581,
       "endMs": 57600000,
       "kind": "patrol",
       "origin": "baseline",
@@ -441,7 +433,7 @@
   },
   {
    "id": "ev-11",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 11,
    "simTimeMs": 34200000,
    "type": "task.started",
@@ -459,7 +451,7 @@
   },
   {
    "id": "ev-12",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 12,
    "simTimeMs": 34200000,
    "type": "task.travel_started",
@@ -476,16 +468,16 @@
     "from": "PATROL",
     "to": "HOME:P1",
     "mode": "walk",
-    "distanceM": 294.3,
-    "durationMs": 252257,
+    "distanceM": 117.7,
+    "durationMs": 100903,
     "distanceBasis": "road-graph-shortest-path"
    }
   },
   {
    "id": "ev-13",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 13,
-   "simTimeMs": 34452257,
+   "simTimeMs": 34300903,
    "type": "task.travel_arrived",
    "actorId": "P6",
    "causationId": null,
@@ -502,9 +494,9 @@
   },
   {
    "id": "ev-14",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 14,
-   "simTimeMs": 34452257,
+   "simTimeMs": 34300903,
    "type": "task.check_performed",
    "actorId": "P6",
    "causationId": null,
@@ -524,9 +516,9 @@
   },
   {
    "id": "ev-15",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 15,
-   "simTimeMs": 34452257,
+   "simTimeMs": 34300903,
    "type": "medial.observed",
    "actorId": "P6",
    "causationId": null,
@@ -547,9 +539,9 @@
   },
   {
    "id": "ev-16",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 16,
-   "simTimeMs": 34452257,
+   "simTimeMs": 34300903,
    "type": "medial.decided",
    "actorId": "MEDial",
    "causationId": null,
@@ -569,9 +561,9 @@
   },
   {
    "id": "ev-17",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 17,
-   "simTimeMs": 34452257,
+   "simTimeMs": 34300903,
    "type": "plan.modified",
    "actorId": "P6",
    "causationId": null,
@@ -587,8 +579,8 @@
     "change": "안부 확인 요청 수락",
     "insertedSegments": [
      {
-      "startMs": 34452257,
-      "endMs": 34729740,
+      "startMs": 34300903,
+      "endMs": 34578386,
       "kind": "travel",
       "origin": "task",
       "label": "안부 확인 이동",
@@ -602,8 +594,8 @@
       "riders": []
      },
      {
-      "startMs": 34729740,
-      "endMs": 35029740,
+      "startMs": 34578386,
+      "endMs": 34878386,
       "kind": "stay",
       "origin": "task",
       "label": "안부 확인",
@@ -619,8 +611,8 @@
     ],
     "resumeSegments": [
      {
-      "startMs": 35029740,
-      "endMs": 35609931,
+      "startMs": 34878386,
+      "endMs": 35458577,
       "kind": "travel",
       "origin": "baseline",
       "label": "일과 복귀",
@@ -634,8 +626,8 @@
       "riders": []
      },
      {
-      "startMs": 35609931,
-      "endMs": 36000000,
+      "startMs": 35458577,
+      "endMs": 35723623,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -649,23 +641,8 @@
       "riders": []
      },
      {
-      "startMs": 36000000,
-      "endMs": 36319526,
-      "kind": "travel",
-      "origin": "baseline",
-      "label": "이동",
-      "place": null,
-      "fromPlace": "HALL",
-      "toPlace": "HOME:P6",
-      "mode": "walk",
-      "metres": 372.8,
-      "requestId": null,
-      "interruptible": false,
-      "riders": []
-     },
-     {
-      "startMs": 36319526,
-      "endMs": 42900000,
+      "startMs": 35723623,
+      "endMs": 42824146,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -679,8 +656,8 @@
       "riders": []
      },
      {
-      "startMs": 42900000,
-      "endMs": 43387697,
+      "startMs": 42824146,
+      "endMs": 43311843,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -694,8 +671,8 @@
       "riders": []
      },
      {
-      "startMs": 43387697,
-      "endMs": 46800000,
+      "startMs": 43311843,
+      "endMs": 45936581,
       "kind": "stay",
       "origin": "baseline",
       "label": "마을식품 근무",
@@ -709,7 +686,7 @@
       "riders": []
      },
      {
-      "startMs": 46800000,
+      "startMs": 45936581,
       "endMs": 57600000,
       "kind": "patrol",
       "origin": "baseline",
@@ -758,9 +735,9 @@
   },
   {
    "id": "ev-18",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 18,
-   "simTimeMs": 34452257,
+   "simTimeMs": 34300903,
    "type": "task.started",
    "actorId": "P6",
    "causationId": null,
@@ -776,9 +753,9 @@
   },
   {
    "id": "ev-19",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 19,
-   "simTimeMs": 34452257,
+   "simTimeMs": 34300903,
    "type": "task.travel_started",
    "actorId": "P6",
    "causationId": null,
@@ -800,9 +777,9 @@
   },
   {
    "id": "ev-20",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 20,
-   "simTimeMs": 34729740,
+   "simTimeMs": 34578386,
    "type": "task.travel_arrived",
    "actorId": "P6",
    "causationId": null,
@@ -819,9 +796,9 @@
   },
   {
    "id": "ev-21",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 21,
-   "simTimeMs": 34729740,
+   "simTimeMs": 34578386,
    "type": "task.check_performed",
    "actorId": "P6",
    "causationId": null,
@@ -842,9 +819,9 @@
   },
   {
    "id": "ev-22",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 22,
-   "simTimeMs": 34729740,
+   "simTimeMs": 34578386,
    "type": "task.completed",
    "actorId": "P6",
    "causationId": null,
@@ -860,9 +837,9 @@
   },
   {
    "id": "ev-23",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 23,
-   "simTimeMs": 34729740,
+   "simTimeMs": 34578386,
    "type": "need.resolved",
    "actorId": "MEDial",
    "causationId": null,
@@ -885,7 +862,7 @@
   },
   {
    "id": "ev-24",
-   "attemptId": "att-A-v1-9f87c2c9cc42",
+   "attemptId": "att-A-v1-a4de8f2cecad",
    "seq": 24,
    "simTimeMs": 72000000,
    "type": "attempt.completed",

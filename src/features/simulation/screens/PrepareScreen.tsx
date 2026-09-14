@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import type { Capabilities } from '../api/iteration';
 import type { Catalog, PolicyRevision } from '../api/types';
 import type { StartPhase, StartRequest } from '../iterationStore';
+import { strategyName } from '../selectors/words';
 import {
   Body,
   Button,
@@ -119,7 +120,11 @@ function describePolicy(policy: PolicyRevision | undefined): string[] {
       ? '먼저 본인에게 직접 연락합니다.'
       : policy.contactStrategy === 'head_first'
         ? '먼저 이장에게 물어봅니다.'
-        : `연락 순서: ${policy.contactStrategy}.`;
+        : policy.contactStrategy === 'neighbour_first'
+          ? `본인 대신 가까운 이웃에게 먼저 부탁합니다. 거절하면 다음 사람에게, 최대 ${
+              typeof p.neighbourAskLimit === 'number' ? p.neighbourAskLimit : '?'
+            }명까지.`
+          : `연락 순서: ${strategyName(policy.contactStrategy)}.`;
   const retries =
     typeof p.retryCount === 'number' && p.retryCount > 0
       ? ` 응답이 없으면 ${p.retryIntervalMin}분 뒤에 최대 ${p.retryCount}번까지 다시 겁니다.`

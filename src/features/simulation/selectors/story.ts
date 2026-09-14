@@ -14,13 +14,19 @@ import { formatClock } from '../positions';
 const BOOKKEEPING = new Set([
   'world.actor_moved',
   'world.actor_arrived',
+  'world.copresence',
   'task.started',
   'attempt.completed',
 ]);
 
 /** Researcher-only world facts: why a phone was not answered is knowledge the
  *  caller does not have. Kept out of the readable list even in researcher mode,
- *  where it stays available under the technical disclosure. */
+ *  where it stays available under the technical disclosure.
+ *
+ *  `world.relay_resolved` is *not* here. It is researcher-only too, but it is
+ *  the one sentence the hand-off mechanism exists to produce - MEDial credits
+ *  one person, another went - and it reads as a sentence. The view-mode filter
+ *  upstream keeps it out of MEDial's view; in the researcher's it is shown. */
 const WORLD_ONLY = new Set(['world.reachability_resolved']);
 
 export type StoryTone = 'plain' | 'good' | 'attention' | 'bad';
@@ -240,7 +246,26 @@ export function sentenceFor(event: DomainEvent): { text: string; tone: StoryTone
         tone: 'attention',
       };
     case 'request.deferred':
-      return { text: `${withParticle(who, 'subject')} 나중으로 미뤘습니다.`, tone: 'attention' };
+      return {
+        text: `${withParticle(who, 'subject')} 나중으로 미뤘습니다${
+          str(p.reason) ? ` (${reasonText(p.reason)})` : ''
+        }.`,
+        tone: 'attention',
+      };
+    // Reaches the reader only in researcher mode: the event is not addressed
+    // to MEDial, and the upstream filter drops it from MEDial's view.
+    case 'request.relayed':
+      return {
+        text: `${withParticle(who, 'subject')} ${to}에게 ${subject} 확인을 넘겼습니다${
+          p.basis === 'copresent' ? ' (같이 있던 사람)' : ''
+        }. MEDial은 이것을 모릅니다.`,
+        tone: 'attention',
+      };
+    case 'world.relay_resolved':
+      return {
+        text: `MEDial은 ${withParticle(person(str(p.reportedBy)), 'subject')} 확인했다고 알고 있지만, 실제로 간 사람은 ${person(str(p.performedBy))}입니다.`,
+        tone: 'attention',
+      };
     case 'plan.modified':
       return {
         text: `${person(str(p.actorId))}의 원래 일과가 바뀌었습니다: ${str(p.change) ?? ''}`,

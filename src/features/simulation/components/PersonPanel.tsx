@@ -483,6 +483,11 @@ export default function PersonPanel({
                   추가 과업 {burden.addedTaskMinutes}분 · 추가 이동{' '}
                   {Math.round(burden.addedTravelMetres)} m · 중단 {burden.interruptions}회 · 받은
                   연락 {burden.contactsReceived}건
+                  {/* Who asked. MEDial's own ledger has only the first number;
+                      a person pulled in by a neighbour is on nobody's list but
+                      the researcher's. Shown only when it happened. */}
+                  {(burden.askedByNeighbour ?? 0) > 0 &&
+                    ` (MEDial ${burden.askedByMedial ?? 0} · 이웃 ${burden.askedByNeighbour})`}
                 </Text>
                 <Sub>{burden.basis}</Sub>
               </>

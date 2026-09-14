@@ -1133,8 +1133,6 @@ doc 19이 사례 1의 연구 대상으로 **"연락 순서"** 를 적어 두었�
   안 함 → 양방향 접근 차단"이 있는데 **페르소나 registry에 옮겨져 있지 않습니다.**
   이건 제가 지어낼 수 없고 전사 확인이 필요합니다. 결함 하나가 다른 결함을 가리고
   있던 것이 이 수정으로 드러났습니다.
-- **거절 사유가 화면에 안 보입니다.** `rule`/`reason`이 로그에 실리지만 비교·평가 화면이
-  읽지 않습니다. 1b의 `dayRealization`, 4단계의 전가와 함께 묶어야 할 UI 작업입니다.
 - **이동 경로의 거절은 아직 자기 표를 씁니다.** `does_not_drive` 같은 키가 `reason`에
   그대로 들어가서, 안부 확인 경로의 `reason`(문장)과 뜻이 다릅니다. `rule`은 양쪽 다
   실리므로 기계 매칭은 일관되지만, 문구 통일은 3단계에서 해야 합니다.
@@ -1142,6 +1140,47 @@ doc 19이 사례 1의 연구 대상으로 **"연락 순서"** 를 적어 두었�
 
 **남은 단계:** 3 2단계 의사결정과 LLM 실제 연결 / 5 보건소 다건·소장 / 6 119 5단계 /
 7 감도 분석 / 8 문서 19·23 경계 갱신.
+
+## 2026-09-15 · 로그에만 있던 셋을 화면에 — 거절 사유, 전가, 뽑힌 하루
+
+원칙 그대로: **뒷단은 엄밀하게, 화면은 읽기만.** 노브는 하나도 늘지 않았다 (D079).
+
+### 뒷단 — 셋 다 커밋된 사건에서 지표로 계산한다
+
+| 지표 | 어디서 | 왜 엔진 상태가 아니라 사건에서 |
+|---|---|---|
+| `metrics.handovers` | `request.relayed` + `world.relay_resolved` | `engine.relay_chains`는 MEDial이 차례로 물은 사람도 담는다. P10→P11→P2를 MEDial이 순서대로 물은 것은 전가가 아니다. 행마다 `askedActorId`(MEDial 장부가 믿는 사람)·`chain`·`performedBy`(실제로 간 사람, 아무도 안 갔으면 null)·`outcome` |
+| `metrics.refusals` | `request.declined` / `request.deferred` | 행마다 `rule`(기계 키)·`reason`(문장)·`seenByMedial`(그 사건에 MEDial이 수신자였는가). `byRule` 은 규칙별 횟수 — 합산 점수가 아니라 셈 |
+| `residentBurden[*].askedByMedial / askedByNeighbour` | `ActorRuntime` 장부 | 4단계에서 갈라 둔 것을 지표까지 올렸다 |
+| `metrics.dayRealization` | 1b 그대로 | 이미 있었다. 읽는 쪽만 없었다 |
+
+`compare()`의 `outcomeDifference`에도 `handovers`·`refusals` 건수와 `dayRealization`을 실었다.
+예전에 저장된 실행에는 이 키가 없고 다시 계산하지 않으므로 프런트 타입은 선택(optional)이다.
+
+### 화면 — 세 곳, 전부 읽기
+
+| 화면 | 보이는 것 | 안 보이는 것 |
+|---|---|---|
+| 관찰 · 조율 패널 | **누구에게 부탁했고, 뭐라고 했나** — 물은 순서대로 한 줄씩: 이름 · 수락/거절/나중에/넘김 · 그 사람이 남긴 **문장**. 이웃이 대신 부탁한 줄은 "← 이장이 부탁". MEDial이 수신자가 아니었던 줄엔 `MEDial은 모름` | 규칙 키(`persona_condition`). 원 사건 목록에만 있다 |
+| 관찰 · 일어난 일 | `request.relayed` → "P12가 이장에게 P9 확인을 넘겼습니다. MEDial은 이것을 모릅니다." / `world.relay_resolved` → "MEDial은 P12가 확인했다고 알고 있지만, 실제로 간 사람은 이장입니다." | 둘 다 **MEDial이 아는 것** 관점에서는 사라진다 — 화면이 감추는 게 아니라 `visibility` 필터가 거른다. `world.copresence`는 부기(bookkeeping)로 접힘 |
+| 관찰 · 지도 헤더 | 하루 태그: `기록된 하루 그대로` / `기록된 시각이 조금 다른 하루` / `외출 하나가 다른 하루`. 마우스를 올리면 사람별 편집 목록 ("P1 · FARM 09:00 → 09:12 (12분 늦게)") | |
+| 관찰 · 사람 | 받은 연락 N건 **(MEDial n · 이웃 m)** — 이웃 몫이 있을 때만 | |
+| 비교 | 새 행 **어느 하루였나** (양쪽 하루 이름 + 바뀐 것 N개 접기), **누가 거절했나** (사람 · 거절/나중에 · 문장), "누구의 일과가 바뀌었나"에 "MEDial이 부탁한 사람 X명 · 이웃이 대신 끌어들인 사람 Y명 — MEDial은 모름". `달라진 입력` 은 `day`→"뽑힌 하루" 처럼 우리말로 | 점수. 규칙 키 |
+
+정책 낱말(`neighbour_first`→"가까운 이웃에게 먼저", `neighbourAskLimit`→"한 건에 이웃 몇 명까지
+물어보는가", 입력 이름, 규칙 이름, 하루 이름)은 `selectors/words.ts` 한 곳으로 모았고,
+비교 화면·준비 화면·정책 편집기에 각각 있던 사본은 지웠다.
+
+### 확인한 것
+
+- 서버 343 · 프런트 52 · `tsc` · `vite build` 통과.
+- 실제 마을 policy-C: 거절 2건 (P10·P11 "영업 중 가게를 비울 수 없다", 둘 다 MEDial이 봄),
+  전가 0건, MEDial이 부탁한 사람 3명, 하루 `plausible_extension`(편집 41개).
+- `fixtures/ui/`에 합성 마을 policy-C 실행(`attempt-neighbours.json`, `events-neighbours.json`)을
+  추가해, 조율 패널이 거절 **문장**을 찍고 규칙 **키**는 찍지 않는 것을 mount 검사로 고정.
+  전가는 실행 중인 덱에서 안 일어나므로 selector 단위 검사(`handoffLog`)로 고정:
+  연구자 관점엔 `relayed → accepted(← P12)`, MEDial 관점엔 `accepted` 하나.
+- 브라우저 확인은 아직 안 했다. `./run.sh` 로 열어 policy-C 실행을 고르면 위 표대로 보여야 한다.
 
 ### 1:1:1 작업 중 검사로 발견해 고친 것
 
