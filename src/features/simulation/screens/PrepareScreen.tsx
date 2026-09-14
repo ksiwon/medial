@@ -115,27 +115,31 @@ function describePolicy(policy: PolicyRevision | undefined): string[] {
   const p = policy.params;
   const lines: string[] = [];
 
-  const first =
-    policy.contactStrategy === 'subject_first'
-      ? '먼저 본인에게 직접 연락합니다.'
-      : policy.contactStrategy === 'head_first'
-        ? '먼저 이장에게 물어봅니다.'
-        : policy.contactStrategy === 'neighbour_first'
-          ? `본인 대신 가까운 이웃에게 먼저 부탁합니다. 거절하면 다음 사람에게, 최대 ${
-              typeof p.neighbourAskLimit === 'number' ? p.neighbourAskLimit : '?'
-            }명까지.`
-          : `연락 순서: ${strategyName(policy.contactStrategy)}.`;
+  const limit = typeof p.neighbourAskLimit === 'number' ? p.neighbourAskLimit : '?';
+  // The retry runs before any contact order (engine 0.3.0), so it is said first.
   const retries =
     typeof p.retryCount === 'number' && p.retryCount > 0
-      ? ` 응답이 없으면 ${p.retryIntervalMin}분 뒤에 최대 ${p.retryCount}번까지 다시 겁니다.`
-      : ' 응답이 없어도 다시 걸지 않습니다.';
-  lines.push(first + retries);
+      ? `응답이 없으면 먼저 ${p.retryIntervalMin}분 간격으로 본인에게 ${p.retryCount}번 더 전화합니다. 그래도 닿지 않으면 `
+      : '응답이 없으면 다시 걸지 않고 바로 ';
+  const next =
+    policy.contactStrategy === 'head_first'
+      ? '이장에게 물어봅니다.'
+      : policy.contactStrategy === 'neighbour_first'
+        ? `가까이 사는 이웃에게 부탁합니다. 거절하면 다음 사람에게, 최대 ${limit}명까지.`
+        : policy.contactStrategy === 'relation_first'
+          ? `기록된 가까운 관계(동행·친척·도움 기록)에게 먼저, 이장은 마지막에 부탁합니다. 최대 ${limit}명까지.`
+          : policy.contactStrategy === 'retry_then_clinic'
+            ? '보건소 담당자에게 넘깁니다.'
+            : `연락 순서: ${strategyName(policy.contactStrategy)}.`;
+  lines.push(retries + next);
 
   if (typeof p.helperContactCap === 'number') {
+    // helperContactCap is a per-person daily cap on asks, not a head count.
     lines.push(
-      p.allowHeadContact
-        ? `그래도 안 되면 이웃에게 최대 ${p.helperContactCap}명까지 부탁하고, 이장에게도 물을 수 있습니다.`
-        : `그래도 안 되면 이웃에게 최대 ${p.helperContactCap}명까지 부탁합니다. 이장에게는 묻지 않습니다.`,
+      `한 사람이 하루에 받는 부탁은 ${p.helperContactCap}번까지입니다.` +
+        (p.allowHeadContact || policy.contactStrategy === 'retry_then_clinic'
+          ? ''
+          : ' 이장에게는 묻지 않습니다.'),
     );
   }
   lines.push(

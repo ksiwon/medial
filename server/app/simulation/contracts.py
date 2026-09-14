@@ -20,8 +20,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 #: The comparison treats it as a controlled input, so two runs that differ only
 #: because the code changed are reported as *not* a controlled comparison rather
 #: than as a policy effect. 0.2.0: observation projection, institution desk,
-#: transport reservations, standing escalation deadline.
-ENGINE_VERSION = "medial-sim/0.2.0"
+#: transport reservations, standing escalation deadline. 0.3.0: the retry runs first
+#: under every contact order, by phone; relation_first.
+ENGINE_VERSION = "medial-sim/0.3.0"
 
 MEDIAL = "MEDial"
 HEALTH_DIRECTOR = "HC_DIRECTOR"
@@ -332,6 +333,12 @@ class ContactStrategy(str, Enum):
     #: was hard-coded, and the candidate list the engine computed was shown on
     #: screen and then thrown away.
     neighbour_first = "neighbour_first"
+    #: Ask the people the subject has a recorded relation with first - a
+    #: companion group, kin, someone who has helped them before - and the
+    #: village head last. Only recorded edges count (``relations.py``); a
+    #: subject whose only recorded tie is the head gets the head, and the
+    #: screen says why rather than inventing a friend.
+    relation_first = "relation_first"
 
 
 class PolicyParams(Base):
@@ -345,7 +352,8 @@ class PolicyParams(Base):
 
     retryCount: int = Field(
         default=0, ge=0, le=6,
-        description="본인에게 다시 연락해 보는 횟수. 0이면 재연락하지 않는다.")
+        description="다른 사람에게 부탁하기 전에 본인에게 전화로 다시 연락해 보는 횟수. "
+                    "모든 연락 순서에서 가장 먼저 실행된다. 0이면 재연락하지 않는다.")
     retryIntervalMin: int = Field(
         default=40, ge=5, le=240,
         description="재연락 사이의 간격(분).")
@@ -782,7 +790,7 @@ class ModelPolicy(Base):
     #: Which prompt build this ran under. Bumped whenever the payload sent to the
     #: model changes shape, because an identical prompt hash across a prompt
     #: change would make two different questions look like the same one.
-    promptRevisionId: str = "prompt-v2"
+    promptRevisionId: str = "prompt-v3"
     #: ``record`` calls the provider and writes every call down. ``replay`` calls
     #: nothing: a prompt with no recorded answer is an adapter failure, never a
     #: quiet fresh call. ``off`` is the rule/scripted path, where no model exists.

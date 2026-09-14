@@ -1702,7 +1702,10 @@ class Engine:
             raised_ms=int(request.get("raisedMs", at_ms)),
             last_contact_ms=int(request.get("lastContactMs", at_ms)),
             observation_ids=[o.id for o in medial_obs],
-            known_facts=_known_facts(subject, request, attempt_number))
+            known_facts=_known_facts(subject, request, attempt_number),
+            relations=[{"actorId": self.relations.other(e, subject), "kind": e.kind,
+                        "reason": e.reason}
+                       for e in self.relations.neighbours(subject)])
 
     def _commit_decision(self, at_ms: int, decision: DecisionRecord,
                          request: dict[str, Any]) -> None:

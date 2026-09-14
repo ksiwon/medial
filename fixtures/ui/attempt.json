@@ -1,6 +1,6 @@
 {
  "attempt": {
-  "id": "att-A-v1-d37b71cbdd39",
+  "id": "att-A-v1-7b1146c3fe64",
   "parentId": null,
   "parentSeq": null,
   "lineage": "root",
@@ -13,7 +13,7 @@
   "seed": 17,
   "mode": "experiment",
   "status": "completed",
-  "engineVersion": "medial-sim/0.2.0",
+  "engineVersion": "medial-sim/0.3.0",
   "adapter": "rule",
   "environmentRevisionId": "env-v3",
   "dayRealizationId": "day-58d7f0c850257455",
@@ -23,11 +23,11 @@
    "residentModelId": "none",
    "temperature": 0.0,
    "maxOutputTokens": 1024,
-   "promptRevisionId": "prompt-v2",
+   "promptRevisionId": "prompt-v3",
    "mode": "off"
   },
   "relationRevisionId": "rel-v1",
-  "createdAt": "2026-09-14T16:30:44+00:00",
+  "createdAt": "2026-09-14T17:10:41+00:00",
   "cursorSeq": 0,
   "eventCount": 24,
   "dataSource": "synthetic",
@@ -38,7 +38,7 @@
    "resources": "fa080f60dffd5e61",
    "environment": "93fe4eaa98c3eed7",
    "day": "day-58d7f0c850257455",
-   "modelPolicy": "22bdc065aa6bf722",
+   "modelPolicy": "89760976af7b6bf4",
    "relations": "62ade898153f86df",
    "persona": "persona-synthetic-b7889f7457bde193",
    "personaSource": "synthetic"
@@ -1127,7 +1127,7 @@
     "residentModelId": "none",
     "temperature": 0.0,
     "maxOutputTokens": 1024,
-    "promptRevisionId": "prompt-v2",
+    "promptRevisionId": "prompt-v3",
     "mode": "off"
    },
    "total": 0,
@@ -6044,7 +6044,7 @@
  "decisions": [
   {
    "id": "dec-1",
-   "attemptId": "att-A-v1-d37b71cbdd39",
+   "attemptId": "att-A-v1-7b1146c3fe64",
    "simTimeMs": 34200000,
    "policyId": "policy-A-v1",
    "question": "응답이 없는 상태를 누가 어떻게 확인할 것인가",
@@ -6123,7 +6123,7 @@
   },
   {
    "id": "dec-2",
-   "attemptId": "att-A-v1-d37b71cbdd39",
+   "attemptId": "att-A-v1-7b1146c3fe64",
    "simTimeMs": 34452257,
    "policyId": "policy-A-v1",
    "question": "자택에 없을 때 확인을 계속할 것인가",
@@ -6151,7 +6151,7 @@
  "reviews": [
   {
    "id": "rev-1",
-   "attemptId": "att-A-v1-d37b71cbdd39",
+   "attemptId": "att-A-v1-7b1146c3fe64",
    "actorId": "P1",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6192,7 +6192,7 @@
   },
   {
    "id": "rev-10",
-   "attemptId": "att-A-v1-d37b71cbdd39",
+   "attemptId": "att-A-v1-7b1146c3fe64",
    "actorId": "P7",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6207,7 +6207,7 @@
   },
   {
    "id": "rev-11",
-   "attemptId": "att-A-v1-d37b71cbdd39",
+   "attemptId": "att-A-v1-7b1146c3fe64",
    "actorId": "P8",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6222,7 +6222,7 @@
   },
   {
    "id": "rev-12",
-   "attemptId": "att-A-v1-d37b71cbdd39",
+   "attemptId": "att-A-v1-7b1146c3fe64",
    "actorId": "P9",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6237,7 +6237,7 @@
   },
   {
    "id": "rev-13",
-   "attemptId": "att-A-v1-d37b71cbdd39",
+   "attemptId": "att-A-v1-7b1146c3fe64",
    "actorId": "HC_NURSE",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6252,7 +6252,7 @@
   },
   {
    "id": "rev-2",
-   "attemptId": "att-A-v1-d37b71cbdd39",
+   "attemptId": "att-A-v1-7b1146c3fe64",
    "actorId": "P10",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6267,7 +6267,7 @@
   },
   {
    "id": "rev-3",
-   "attemptId": "att-A-v1-d37b71cbdd39",
+   "attemptId": "att-A-v1-7b1146c3fe64",
    "actorId": "P11",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6282,7 +6282,7 @@
   },
   {
    "id": "rev-4",
-   "attemptId": "att-A-v1-d37b71cbdd39",
+   "attemptId": "att-A-v1-7b1146c3fe64",
    "actorId": "P12",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6297,7 +6297,7 @@
   },
   {
    "id": "rev-5",
-   "attemptId": "att-A-v1-d37b71cbdd39",
+   "attemptId": "att-A-v1-7b1146c3fe64",
    "actorId": "P2",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6312,7 +6312,7 @@
   },
   {
    "id": "rev-6",
-   "attemptId": "att-A-v1-d37b71cbdd39",
+   "attemptId": "att-A-v1-7b1146c3fe64",
    "actorId": "P3",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6327,7 +6327,7 @@
   },
   {
    "id": "rev-7",
-   "attemptId": "att-A-v1-d37b71cbdd39",
+   "attemptId": "att-A-v1-7b1146c3fe64",
    "actorId": "P4",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6342,7 +6342,7 @@
   },
   {
    "id": "rev-8",
-   "attemptId": "att-A-v1-d37b71cbdd39",
+   "attemptId": "att-A-v1-7b1146c3fe64",
    "actorId": "P5",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6357,7 +6357,7 @@
   },
   {
    "id": "rev-9",
-   "attemptId": "att-A-v1-d37b71cbdd39",
+   "attemptId": "att-A-v1-7b1146c3fe64",
    "actorId": "P6",
    "source": "simulated",
    "scope": "day_end_retrospective",

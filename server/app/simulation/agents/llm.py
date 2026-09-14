@@ -42,7 +42,7 @@ from .provider import CallSpec
 #: Bumped whenever ``build_prompt_payload`` or the system prompt changes shape.
 #: It is part of the call key, so an old recording is not silently replayed
 #: against a new prompt.
-PROMPT_REVISION = "prompt-v2"
+PROMPT_REVISION = "prompt-v3"
 
 #: The rule key written on a decline or deferral the model chose. It says
 #: "this person's own judgement"; the table's verdict is beside it.

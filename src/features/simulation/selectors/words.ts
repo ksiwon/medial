@@ -12,9 +12,9 @@ import { personName } from './story';
 
 const STRATEGY: Record<string, string> = {
   head_first: '이장에게 먼저',
-  subject_first: '본인에게 먼저',
   retry_then_clinic: '본인 재연락 후 보건소',
   neighbour_first: '가까운 이웃에게 먼저',
+  relation_first: '가까운 관계에게 먼저, 이장은 마지막',
 };
 
 export const strategyName = (id: string): string => STRATEGY[id] ?? id;

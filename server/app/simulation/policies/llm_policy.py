@@ -41,7 +41,7 @@ from .rule_policies import (
     PolicyContext,
 )
 
-PROMPT_REVISION = "prompt-v2"
+PROMPT_REVISION = "prompt-v3"
 MIN_MS = 60_000
 
 HEAD_SYSTEM = """당신은 MEDial입니다. 한국의 작은 시골 마을에서 어르신들의 안부를 살피고, 필요하면 이웃·이장·보건소에 도움을 요청하는 돌봄 조율 시스템입니다.
@@ -53,7 +53,8 @@ HEAD_SYSTEM = """당신은 MEDial입니다. 한국의 작은 시골 마을에서
 - 사람의 시간은 비용입니다. 한 사람에게 부탁이 몰리지 않게, 꼭 필요한 만큼만 부탁합니다.
 - 주민이 한 말을 읽고 그에 맞게 다음을 정합니다. "30분 뒤에 갈 수 있다"는 말과 "못 간다"는 말은 다릅니다.
 - policy에 적힌 운영 조건은 설계자가 정한 것이며 지켜야 합니다. 어기면 그 이유가 돌아오고 다시 정하게 됩니다.
-- wait는 "지금은 아무것도 하지 않고 waitMinutes 뒤에 다시 본다"는 뜻입니다. 한 건에 두 번까지만 기다릴 수 있고, retryCount가 0이면 재연락 간격은 의미가 없습니다.
+- 본인에게 다시 연락하는 것(재연락)은 policy.retryCount만큼 이미 끝났습니다. 당신에게 이 질문이 온 것은 재연락도 닿지 않았다는 뜻입니다.
+- wait는 "지금은 아무것도 하지 않고 waitMinutes 뒤에 다시 본다"는 뜻입니다. 한 건에 두 번까지만 기다릴 수 있습니다.
 - 부탁하는 말(message)은 실제로 그 사람에게 보내는 말입니다. 짧고 정중하게, 상대가 알아야 할 것만. 대상자에 대해 policy.disclosure가 허용한 범위 밖의 정보는 말하지 않습니다.
 - 반드시 JSON 객체 하나만 답합니다."""
 
@@ -79,7 +80,7 @@ DECIDE_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
         "action": {"type": "string",
-                   "enum": ["offer_request", "schedule_contact", "handoff", "wait"]},
+                   "enum": ["offer_request", "handoff", "wait"]},
         "candidates": {
             "type": "array",
             "description": "마을 사람 전원에 대해 한 줄씩: 부탁 후보인지와 그 이유",
@@ -121,6 +122,7 @@ STRATEGY_WORDS = {
     ContactStrategy.head_first: "이장에게 먼저 부탁한다. askOrder의 첫 사람은 이장이어야 한다.",
     ContactStrategy.retry_then_clinic: "본인에게 다시 연락하고, 그래도 닿지 않으면 보건소로 넘긴다. 이웃에게는 부탁하지 않는다.",
     ContactStrategy.neighbour_first: "이장 한 사람에게 몰지 않고 가까운 이웃에게 먼저 부탁한다. 거절당하면 askOrder의 다음 사람에게 간다.",
+    ContactStrategy.relation_first: "대상자와 기록된 관계가 있는 사람(people[].recordedRelationToSubject)에게 먼저 부탁하고, 이장은 마지막에 둔다. 기록된 관계가 없는 사람에게는 부탁하지 않는다.",
 }
 
 AskFn = Callable[[dict[str, Any], CallSpec], dict[str, Any]]
@@ -193,12 +195,17 @@ class LlmMedialPolicy(MedialPolicy):
                 chosen=HEALTH_STAFF, rationale=escalate,
             ), [self._handoff_intent(ctx)])
 
+        # Nor whether to call the person back first: the count is a procedure.
+        retry = self._retry_due(ctx)
+        if retry is not None:
+            return retry
+
         events = self._events_for(ctx.request_id)
         payload = self._base_payload(ctx, "decide", events)
         payload["situation"] = self._readings.get(ctx.request_id)
         payload["people"] = self._people(ctx, events)
         payload["policy"] = self._policy_words(ctx)
-        payload["allowedActions"] = ["offer_request", "schedule_contact", "handoff", "wait"]
+        payload["allowedActions"] = ["offer_request", "handoff", "wait"]
         spec = CallSpec(role="head", system=HEAD_SYSTEM, schema=DECIDE_SCHEMA,
                         schema_name="next_step", max_tokens=self._max_tokens)
 
@@ -220,18 +227,6 @@ class LlmMedialPolicy(MedialPolicy):
                 "requestId": ctx.request_id,
                 "purpose": "welfare_check",
                 "disclosure": self.disclosure_to("neighbour", ctx),
-                "message": message,
-            })]
-        elif action == "schedule_contact":
-            chosen = ctx.subject_id
-            intents = [Intent("schedule_contact", {
-                "toActorId": ctx.subject_id,
-                "atMs": self._next_contact_ms(ctx),
-                "channel": Channel.home_device.value if ctx.attempt_number == 1
-                           else Channel.phone.value,
-                "purpose": "welfare_retry",
-                "attemptNumber": ctx.attempt_number + 1,
-                "disclosure": self.disclosure_to("subject", ctx),
                 "message": message,
             })]
         elif action == "handoff":
@@ -297,7 +292,9 @@ class LlmMedialPolicy(MedialPolicy):
         order = [str(a) for a in data.get("askOrder") or []]
         message = str(data.get("message") or "").strip()
 
-        if action in ("offer_request", "schedule_contact", "handoff") and not message:
+        if action not in ("offer_request", "handoff", "wait"):
+            out.append("action은 offer_request · handoff · wait 중 하나다. 재연락은 이미 끝났다")
+        if action in ("offer_request", "handoff") and not message:
             out.append("message가 비어 있다. 실제로 보낼 말을 적는다")
 
         if action == "offer_request":
@@ -321,13 +318,18 @@ class LlmMedialPolicy(MedialPolicy):
             if strategy is ContactStrategy.head_first and order and order[0] != self.village_head_id:
                 out.append("contactStrategy=head_first: askOrder의 첫 사람은 이장(%s)이어야 한다"
                            % self.village_head_id)
+            if strategy is ContactStrategy.relation_first:
+                ties = {r["actorId"] for r in ctx.relations}
+                strangers = [a for a in order if a != self.village_head_id and a not in ties]
+                if strangers:
+                    out.append("contactStrategy=relation_first: %s 는 대상자와 기록된 관계가 없다"
+                               % ", ".join(strangers))
+                if self.village_head_id in order and order[-1] != self.village_head_id:
+                    out.append("contactStrategy=relation_first: 이장(%s)은 askOrder의 마지막이어야 한다"
+                               % self.village_head_id)
             if strategy is ContactStrategy.retry_then_clinic:
                 out.append("contactStrategy=%s: 이웃에게 부탁하지 않는다. "
                            "재연락(schedule_contact)이나 handoff 중에서 고른다" % strategy.value)
-        elif action == "schedule_contact":
-            if ctx.attempt_number > params.retryCount:
-                out.append("retryCount=%d: 재연락 횟수를 다 썼다. 다시 연락할 수 없다"
-                           % params.retryCount)
         elif action == "wait":
             minutes = data.get("waitMinutes")
             if not isinstance(minutes, int) or not 5 <= minutes <= 120:
@@ -367,14 +369,17 @@ class LlmMedialPolicy(MedialPolicy):
                 row = asked.setdefault(e["actorId"], {"asked": True, "answer": None, "said": None})
                 row["answer"] = e["type"].split(".")[1]
                 row["said"] = e.get("utterance")
+        ties = {r["actorId"]: r for r in ctx.relations}
         rows = []
         for actor_id in self._residents:
             routine = ctx.routines.get(actor_id, {})
+            tie = ties.get(actor_id)
             rows.append({
                 "actorId": actor_id,
                 "isSubject": actor_id == ctx.subject_id,
                 "isVillageHead": actor_id == self.village_head_id,
                 "routineSaysHomeNow": routine_says_home(routine, ctx.sim_time_ms),
+                "recordedRelationToSubject": tie.get("reason") if tie else None,
                 "askedForThisRequest": asked.get(actor_id, {}).get("asked", False),
                 "lastAnswer": asked.get(actor_id, {}).get("answer"),
                 "lastSaid": asked.get(actor_id, {}).get("said"),
@@ -390,9 +395,7 @@ class LlmMedialPolicy(MedialPolicy):
             "neighbourAskLimit": p.neighbourAskLimit,
             "helperContactCap": p.helperContactCap,
             "retryCount": p.retryCount,
-            # Shown only when it can matter. A light model given a 40-minute
-            # retry interval under retryCount=0 waited 40 minutes for nothing.
-            **({"retryIntervalMin": p.retryIntervalMin} if p.retryCount > 0 else {}),
+            "retriesAlreadyMade": max(0, ctx.attempt_number - 1),
             "disclosure": p.disclosure,
             "disclosureMeans": ("응답이 없었다는 것만 말한다" if p.disclosure == "minimal"
                                 else "응답이 없었다는 것과 연락한 시각까지 말해도 된다"),

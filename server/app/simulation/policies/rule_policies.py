@@ -70,6 +70,10 @@ class PolicyContext:
     last_contact_ms: int = 0
     observation_ids: list[str] = field(default_factory=list)
     known_facts: list[str] = field(default_factory=list)
+    #: The subject's recorded relations, as MEDial holds them: who they have a
+    #: recorded tie with and what the record says. Assumed registered as the
+    #: subject's close contacts (``assumption-registered-contacts``).
+    relations: list[dict[str, Any]] = field(default_factory=list)
 
 
 class MedialPolicy:
@@ -148,6 +152,10 @@ class MedialPolicy:
                 rationale=escalate,
             ), [self._handoff_intent(ctx)])
 
+        retry = self._retry_due(ctx)
+        if retry is not None:
+            return retry
+
         if self.revision.contactStrategy == ContactStrategy.neighbour_first:
             available = [c for c in candidates
                          if c.included and c.actorId != self.village_head_id]
@@ -193,20 +201,37 @@ class MedialPolicy:
                 "purpose": "welfare_check",
                 "disclosure": self.disclosure_to("neighbour", ctx),
             })]
-        else:
-            chosen = ctx.subject_id
-            retry_at = self._next_contact_ms(ctx)
-            rationale = ("이웃의 시간을 먼저 쓰지 않는다. 본인에게 다시 연락해 보고, "
-                         "그래도 닿지 않으면 기관에 넘긴다.")
-            intents = [Intent("schedule_contact", {
-                "toActorId": ctx.subject_id,
-                "atMs": retry_at,
-                "channel": Channel.home_device.value if ctx.attempt_number == 1
-                           else Channel.phone.value,
-                "purpose": "welfare_retry",
-                "attemptNumber": ctx.attempt_number + 1,
-                "disclosure": self.disclosure_to("subject", ctx),
+        elif self.revision.contactStrategy == ContactStrategy.relation_first:
+            candidates = self._mark_relations(ctx, candidates)
+            order = self._relation_order(ctx, candidates)
+            if not order:
+                return (self._decision(
+                    ctx,
+                    question="응답이 없는 상태를 누가 어떻게 확인할 것인가",
+                    candidates=candidates, chosen=None,
+                    rationale=("기록된 가까운 관계 중 지금 부탁할 수 있는 사람이 없고, "
+                               "이장에게도 부탁할 수 없다."),
+                ), [])
+            chosen = order[0]
+            related = [a for a in order if a != self.village_head_id]
+            rationale = (("기록된 가까운 관계(%s)에게 먼저 부탁하고, 마지막에 이장에게 간다."
+                          % ", ".join(related)) if related else
+                         ("이 사람에게 기록된 가까운 관계 중 지금 부탁할 수 있는 사람이 없어 "
+                          "이장에게 간다. 이장에게 부담이 몰리는 것은 이 순서의 결과이지 "
+                          "정책이 이장을 고른 것이 아니다."))
+            intents = [Intent("offer_request", {
+                "toActorId": chosen,
+                "fallbackOrder": order[1:],
+                "requestId": ctx.request_id,
+                "purpose": "welfare_check",
+                "disclosure": self.disclosure_to("neighbour", ctx),
             })]
+        else:
+            # retry_then_clinic with the retries spent. The engine routes that
+            # to ``on_retry_exhausted`` before asking here; reaching this line
+            # means the routing and the policy disagree, which is a bug.
+            raise ValueError("retry_then_clinic reached on_unanswered_checkin "
+                             "with no retries left")
 
         return (self._decision(
             ctx,
@@ -343,6 +368,66 @@ class MedialPolicy:
         })])
 
     # -- policy conditions the engine must honour --------------------------
+    def _retry_due(self, ctx: PolicyContext) -> tuple[DecisionRecord, list[Intent]] | None:
+        """Call the person again before asking anyone else, ``retryCount`` times.
+
+        The first step of every contact order, not a feature of one strategy.
+        Until 2026-09-15 only ``retry_then_clinic`` retried, so a Change Set
+        setting ``retryCount`` on a head-first policy validated, was confirmed,
+        and changed nothing - and the comparison read as "retrying made no
+        difference". Done here, in code, for the model head too: a count the
+        designer set is a procedure, not an option the head may skip.
+
+        The retry goes by phone. The first check-in is the home device, and a
+        second try on a device that only works at home tells nothing new.
+        """
+        params = self.revision.params
+        if ctx.attempt_number > params.retryCount:
+            return None
+        at = self._next_contact_ms(ctx)
+        return (self._decision(
+            ctx,
+            question="응답이 없는 상태를 누가 어떻게 확인할 것인가",
+            candidates=[Candidate(actorId=ctx.subject_id, included=True,
+                                  reason="다른 사람에게 부탁하기 전에 본인에게 다시 연락한다")],
+            chosen=ctx.subject_id,
+            rationale=("재연락 %d/%d회: 다른 사람의 시간을 쓰기 전에 %d분 뒤 본인에게 전화한다."
+                       % (ctx.attempt_number, params.retryCount,
+                          (at - ctx.sim_time_ms) // MIN_MS)),
+        ), [Intent("schedule_contact", {
+            "toActorId": ctx.subject_id,
+            "atMs": at,
+            "channel": Channel.phone.value,
+            "purpose": "welfare_retry",
+            "attemptNumber": ctx.attempt_number + 1,
+            "disclosure": self.disclosure_to("subject", ctx),
+        })])
+
+    def _mark_relations(self, ctx: PolicyContext,
+                        candidates: list[Candidate]) -> list[Candidate]:
+        """Say on each candidate row whether a recorded relation ties them to
+        the subject, so the decision log shows why the order is what it is."""
+        ties = {r["actorId"]: r for r in ctx.relations}
+        out = []
+        for c in candidates:
+            tie = ties.get(c.actorId)
+            if tie is None or c.actorId == self.village_head_id:
+                out.append(c)
+                continue
+            out.append(c.model_copy(update={
+                "reason": "%s · 기록된 관계: %s" % (c.reason, tie.get("reason") or tie.get("kind"))}))
+        return out
+
+    def _relation_order(self, ctx: PolicyContext, candidates: list[Candidate]) -> list[str]:
+        """Recorded relations who may be asked, then the head, within the limit."""
+        params = self.revision.params
+        ties = {r["actorId"] for r in ctx.relations}
+        related = [c.actorId for c in candidates
+                   if c.included and c.actorId in ties and c.actorId != self.village_head_id]
+        if params.allowHeadContact:
+            return related[:max(0, params.neighbourAskLimit - 1)] + [self.village_head_id]
+        return related[:params.neighbourAskLimit]
+
     def _next_contact_ms(self, ctx: PolicyContext) -> int:
         """Retry interval, but never inside the quiet window after the last call.
 

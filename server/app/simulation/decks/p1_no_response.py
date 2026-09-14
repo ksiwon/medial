@@ -113,6 +113,26 @@ POLICY_C = PolicyRevision(
     assumptionRefs=["assumption-head-availability", "assumption-phone-reachability"],
 )
 
+POLICY_D = PolicyRevision(
+    id="policy-D-v1",
+    parentId="policy-A-v1",
+    coreItem="응답이 없는 안부 확인을 누구의 시간으로 해결할 것인가",
+    label="D · 재연락 후 가까운 관계, 마지막에 이장",
+    changes=["이웃·이장에게 묻기 전에 본인에게 한 번 더 전화한다",
+             "기록된 가까운 관계(동행군·친척·도움을 주고받은 기록)에게 먼저 부탁",
+             "이장은 마지막"],
+    contactStrategy=ContactStrategy.relation_first,
+    params=PolicyParams(
+        retryCount=1,
+        retryIntervalMin=40,
+        helperContactCap=2,
+        disclosure="named",
+        allowHeadContact=True,
+    ),
+    assumptionRefs=["assumption-registered-contacts", "assumption-head-availability",
+                    "assumption-phone-reachability"],
+)
+
 RESOURCES = ResourceRevision(
     id="assumed-resources-v1",
     label="연구용 보건소 자원 가정",
