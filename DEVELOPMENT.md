@@ -1080,6 +1080,26 @@ doc 19이 사례 1의 연구 대상으로 **"연락 순서"** 를 적어 두었�
 **검증:** `python -m pytest server/tests -q` 332 passed(신규 `test_decline_rules.py` 23개),
 `npm test -- --run` 42 passed, 빌드 통과. 새 결정 D075~D078.
 
+### 고친 것 — `model_calls` 이름 충돌로 서버가 뜨지 않았다
+
+2단계에서 만든 `model_calls` 테이블·메서드 이름이 **이미 쓰이고 있었습니다.**
+`IterationTables`가 리뷰 세션의 모델 호출을 같은 이름으로 들고 있고 `Store`가
+그것을 상속합니다.
+
+- **기존 DB에서는 서버가 죽었습니다.** `CREATE TABLE IF NOT EXISTS`가 조용히
+  아무것도 안 하고, 뒤따르는 인덱스가 `no such column: attempt_id`로 실패합니다.
+  `run.sh`는 health 응답을 30초 기다리다 멈춥니다.
+- **새 DB에서는 반대로 제 테이블이 이겨서** iteration 쪽 `CREATE`가 no-op이
+  됐습니다. 그리고 `Store.model_calls()`가 `IterationTables.model_calls()`를
+  **덮어써서** 리뷰 루프가 빈 목록을 받고 있었습니다.
+- **테스트가 못 잡은 이유:** `Store(":memory:")`는 항상 새 DB라 인덱스가
+  성공했고, `test_iteration.py`의 `len(store.model_calls(session.id)) == 0`은
+  덮어쓴 메서드가 빈 목록을 돌려줘서 **통과하고 있었습니다.**
+- 제 쪽을 `attempt_model_calls`로 바꿨습니다. 두 테이블이 공존하고 두 메서드가
+  서로를 가리지 않는다는 회귀 검사를 추가했습니다.
+
+실제 DB(51건 저장됨)에서 서버 기동·`/api/sim/health`·시도 생성까지 확인했습니다.
+
 ### 아직 안 한 것 / 드러난 구멍
 
 - **P9가 400m 오르막을 걸어 내려갔습니다.** 거리 규칙(9.7분)에 걸리지 않고, 페르소나에도

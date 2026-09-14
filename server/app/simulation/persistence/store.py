@@ -110,7 +110,12 @@ CREATE TABLE IF NOT EXISTS findings (
     resulting_attempt_id TEXT,
     finding_json TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS model_calls (
+-- Named for the attempt on purpose. ``model_calls`` was already taken by the
+-- iteration tables, which hold the *session's* review and change-set calls, and
+-- the collision was invisible: on a fresh database this CREATE ran first and the
+-- iteration one silently no-opped, while on an existing database the index below
+-- failed and the server would not start.
+CREATE TABLE IF NOT EXISTS attempt_model_calls (
     attempt_id TEXT NOT NULL,
     key TEXT NOT NULL,
     actor_id TEXT NOT NULL,
@@ -125,7 +130,8 @@ CREATE TABLE IF NOT EXISTS model_calls (
     PRIMARY KEY (attempt_id, actor_id, call_index)
 );
 CREATE INDEX IF NOT EXISTS events_by_attempt ON events (attempt_id, seq);
-CREATE INDEX IF NOT EXISTS model_calls_by_key ON model_calls (attempt_id, key);
+CREATE INDEX IF NOT EXISTS attempt_model_calls_by_key
+    ON attempt_model_calls (attempt_id, key);
 """
 
 
@@ -236,7 +242,7 @@ class Store(IterationTables):
                           json.dumps(o.model_dump(mode="json"), ensure_ascii=False))
                          for o in result.observations])
                     self._conn.executemany(
-                        "INSERT INTO model_calls (attempt_id, key, actor_id,"
+                        "INSERT INTO attempt_model_calls (attempt_id, key, actor_id,"
                         " call_index, sim_time_ms, origin, status, record_json)"
                         " VALUES (?,?,?,?,?,?,?,?)",
                         [(attempt.id, m.key, m.actorId, m.callIndex, m.simTimeMs,
@@ -399,15 +405,20 @@ class Store(IterationTables):
                 "SELECT review_json FROM reviews WHERE attempt_id = ? ORDER BY id",
                 (attempt_id,)).fetchall()]
 
-    def model_calls(self, attempt_id: str) -> list[dict[str, Any]]:
+    def attempt_model_calls(self, attempt_id: str) -> list[dict[str, Any]]:
         """Every model call a stored attempt made, in the order it made them.
 
         This is what a fork hands its child so the shared prefix replays the
         parent's exact answers instead of asking the model again.
+
+        Not ``model_calls``: ``IterationTables`` already defines that for the
+        review session's own calls, and this class inherits from it. The short
+        name here overrode it, so the iteration loop was asking the wrong table
+        and getting an empty list back.
         """
         with self._lock:
             rows = self._conn.execute(
-                "SELECT record_json FROM model_calls WHERE attempt_id = ?"
+                "SELECT record_json FROM attempt_model_calls WHERE attempt_id = ?"
                 " ORDER BY actor_id, call_index", (attempt_id,)).fetchall()
         return [json.loads(row["record_json"]) for row in rows]
 

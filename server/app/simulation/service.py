@@ -324,7 +324,7 @@ class SimulationService:
         if not attempt_id:
             return []
         return [ModelCallRecord.model_validate(row)
-                for row in self.store.model_calls(attempt_id)]
+                for row in self.store.attempt_model_calls(attempt_id)]
 
     def _store_and_return(self, result: Any, policy: PolicyRevision) -> dict[str, Any]:
         # The attempt records the policy it ended under; for a fork that is the

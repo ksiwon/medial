@@ -278,7 +278,7 @@ def test_model_calls_survive_being_stored():
     store = Store(":memory:")
     result = _run(RECORD, provider=Provider(), attempt_id="att-store")
     store.save_run(result, POLICIES["policy-A-v1"], log_fingerprint(result.events))
-    rows = store.model_calls("att-store")
+    rows = store.attempt_model_calls("att-store")
     assert len(rows) == len(result.model_calls)
     assert {row["actorId"] for row in rows} == {m.actorId for m in result.model_calls}
 
@@ -333,12 +333,12 @@ def test_a_fork_replays_its_parents_answers_across_the_shared_prefix():
     svc = _service(RECORD, provider)
     parent = svc.create_attempt("policy-A-v1", "deck-p1-no-response-v1",
                                 "assumed-resources-v1", adapter="llm")["attempt"]
-    parent_calls = svc.store.model_calls(parent["id"])
+    parent_calls = svc.store.attempt_model_calls(parent["id"])
     assert parent_calls, "the parent asked nobody anything"
 
     child = svc.fork_attempt(parent["id"], 3, {"params": {"retryCount": 1}},
                              "재연락 한 번")["attempt"]
-    child_calls = svc.store.model_calls(child["id"])
+    child_calls = svc.store.attempt_model_calls(child["id"])
     # The fork's own prefix verification already refused a divergent log; what
     # this adds is that the prefix was replayed rather than re-asked.
     assert any(call["origin"] == "replayed" for call in child_calls)
@@ -357,5 +357,40 @@ def test_a_rerun_does_not_inherit_the_parents_recording():
                                 "assumed-resources-v1", adapter="llm")["attempt"]
     child = svc.rerun_attempt(parent["id"], {"params": {"retryCount": 1}},
                               "재연락 한 번")["attempt"]
-    origins = {call["origin"] for call in svc.store.model_calls(child["id"])}
+    origins = {call["origin"] for call in svc.store.attempt_model_calls(child["id"])}
     assert origins == {"live"}
+
+
+# ------------------------------------------------- not the iteration table
+def test_the_attempt_table_did_not_take_the_iteration_tables_name():
+    """Found by the server refusing to start on a database that already existed.
+
+    ``IterationTables`` owns ``model_calls`` for the review session's own calls,
+    and ``Store`` inherits from it. Calling this table and this method
+    ``model_calls`` too was invisible on a fresh database - the schema ran first
+    and the iteration CREATE silently no-opped - and on an existing one the
+    index failed and the server would not boot.
+    """
+    store = Store(":memory:")
+    names = {row[0] for row in store._conn.execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table'")}
+    assert {"model_calls", "attempt_model_calls"} <= names
+
+    # Both readers exist and neither shadows the other.
+    assert store.attempt_model_calls("att-x") == []
+    assert store.model_calls("session-x") == []
+    assert Store.model_calls is not Store.attempt_model_calls
+
+
+def test_the_two_tables_hold_their_own_rows():
+    store = Store(":memory:")
+    result = _run(RECORD, provider=Provider(), attempt_id="att-both")
+    from app.simulation.decks.registry import POLICIES
+    store.save_run(result, POLICIES["policy-A-v1"], log_fingerprint(result.events))
+
+    store.save_model_call({
+        "id": "mc-iter-1", "sessionId": "sess-1", "role": "reviewer",
+        "requestHash": "h", "status": "ok", "createdAt": "now"})
+
+    assert len(store.attempt_model_calls("att-both")) == len(result.model_calls)
+    assert [c["id"] for c in store.model_calls("sess-1")] == ["mc-iter-1"]
