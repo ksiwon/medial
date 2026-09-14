@@ -5,6 +5,10 @@ material supports a rule the provenance says ``source-adapted``; everywhere else
 it says ``researcher-assumption`` and the reason travels with the proposal so a
 reviewer can disagree with it.
 
+Why somebody refuses is a list of rules asked in order - see ``decline_rules``.
+It is not a score: nothing is added up, and the first line that fires is the
+reason the person gives.
+
 Deliberately absent: any probability of acceptance, any trust score, any
 conversion of a decline into a relationship penalty.
 
@@ -22,6 +26,7 @@ from typing import Any, Sequence
 from ..contracts import ActionProposal, ProposalAction
 from ..observations import ActorView
 from .base import ProposalFactory
+from .decline_rules import assess
 
 
 class RuleResidentAdapter:
@@ -29,8 +34,11 @@ class RuleResidentAdapter:
 
     name = "rule-resident"
 
-    def __init__(self, factory: ProposalFactory) -> None:
+    def __init__(self, factory: ProposalFactory, interaction: Any | None = None) -> None:
         self.factory = factory
+        #: Thresholds the refusal table reads. They belong to the world, not to
+        #: this adapter, so swapping this for a model keeps the same limits.
+        self.interaction = interaction
 
     def propose(self, view: ActorView,
                 allowed: Sequence[ProposalAction]) -> list[ActionProposal]:
@@ -46,48 +54,54 @@ class RuleResidentAdapter:
             return []
 
         request_id = offer.payload.get("requestId")
-        cap = int(view.policy.get("helperContactCap", 2))
+        requester = offer.payload.get("fromActorId")
+        relation = next((r.get("kind") for r in view.relations
+                         if r.get("actorId") == requester), None)
+        verdict = assess(view, self.interaction, requester_id=requester,
+                         relation_kind=relation)
 
-        if view.contacts_received_today > cap:
-            return [self.factory.make(
-                view.actor_id, view.sim_time_ms, ProposalAction.decline,
-                requestId=request_id,
-                params={"reason": "contact_cap_reached",
-                        "provenance": "researcher-assumption"},
-                utterance="오늘은 이미 여러 번 불려서 어렵겠는데요.",
-                observationIds=[offer.id],
-                uncertainty="상한값은 연구자 설정이며 실제 수용 한계가 아니다",
-            )]
-
-        if not view.own_interruptible:
-            # Being tied up is where the interviews show work moving sideways
+        if verdict.action == "step_aside":
+            # Tied up here is where the interviews show work moving sideways
             # rather than stopping: P3 was already on his own errand and took
             # the medicine along anyway. So before deferring, ask whether there
             # is somebody this person actually deals with.
-            handed = self._hand_it_on(view, offer, request_id, allowed)
+            handed = self._hand_it_on(view, offer, request_id, allowed, verdict)
             if handed:
                 return handed
             return [self.factory.make(
                 view.actor_id, view.sim_time_ms, ProposalAction.defer,
                 requestId=request_id,
-                params={"reason": "activity_locked",
-                        "activity": view.own_activity,
-                        "provenance": "researcher-assumption"},
+                params={"rule": verdict.rule, "reason": verdict.reason,
+                        "provenance": verdict.provenance, **verdict.detail},
                 utterance="지금은 일 중이라 바로는 못 갑니다.",
                 observationIds=[offer.id],
+            )]
+
+        if verdict.action == "decline":
+            return [self.factory.make(
+                view.actor_id, view.sim_time_ms, ProposalAction.decline,
+                requestId=request_id,
+                params={"rule": verdict.rule, "reason": verdict.reason,
+                        "provenance": verdict.provenance, **verdict.detail},
+                utterance=verdict.reason,
+                observationIds=[offer.id],
+                evidenceRefs=verdict.evidence,
+                uncertainty=(None if verdict.provenance == "source-adapted" else
+                             "거절 기준은 연구자 설정이며 실제 수용 한계가 아니다"),
             )]
 
         return [self.factory.make(
             view.actor_id, view.sim_time_ms, ProposalAction.accept,
             requestId=request_id,
-            params={"basis": "interruptible_activity", "activity": view.own_activity},
+            params={"rule": None, "reason": verdict.reason, **verdict.detail},
             utterance="지금 순찰 중이니 들러 보겠습니다."
             if view.own_place == "PATROL" else "가 보겠습니다.",
             observationIds=[offer.id],
         )]
 
     def _hand_it_on(self, view: ActorView, offer, request_id: str | None,
-                    allowed: Sequence[ProposalAction]) -> list[ActionProposal]:
+                    allowed: Sequence[ProposalAction],
+                    verdict: Any) -> list[ActionProposal]:
         """Pass the request to a neighbour, preferring whoever is standing here.
 
         Two rules, and both are about not inventing anything. The candidate must
@@ -113,6 +127,7 @@ class RuleResidentAdapter:
             targetActorId=chosen["actorId"],
             params={"targetActorId": chosen["actorId"], "basis": basis,
                     "relationKind": chosen.get("kind"),
+                    "rule": verdict.rule, "reason": verdict.reason,
                     "activity": view.own_activity,
                     "provenance": "researcher-assumption"},
             utterance=("지금 같이 있으니 내가 말해 두겠습니다."
@@ -145,7 +160,7 @@ class RuleResidentAdapter:
                 return []
             return [self.factory.make(
                 view.actor_id, view.sim_time_ms, action, requestId=request_id,
-                params={"reason": reason, **(extra or {})},
+                params={"rule": reason, "reason": reason, **(extra or {})},
                 utterance=utterance, observationIds=[offer.id],
                 evidenceRefs=evidence or refs,
                 uncertainty=persona.get("unknowns") and

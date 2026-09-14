@@ -289,7 +289,11 @@ def test_a_dead_end_waits_for_the_escalation_deadline_instead_of_closing():
     types = [e["type"] for e in events]
 
     declined = next(e for e in events if e["type"] == EventType.request_declined.value)
-    assert declined["payload"]["reason"] == "contact_cap_reached"
+    # ``rule`` is the stable key; ``reason`` is the sentence a reader sees. The
+    # two are kept apart so the screen can show plain words without the log
+    # losing a thing to match on.
+    assert declined["payload"]["rule"] == "asked_too_often"
+    assert declined["payload"]["reason"] == "오늘 이미 여러 번 불렸다."
 
     # the decline must not close the case while the deadline is still ahead
     waiting = [e for e in events
@@ -795,9 +799,10 @@ def test_a_decline_carries_the_evidence_it_came_from():
     for event in declines:
         assert event["payload"]["evidenceRefs"], \
             "a rule that speaks for a resident must say what it read"
-        assert event["payload"]["reason"] in (
+        assert event["payload"]["rule"] in (
             "does_not_drive", "driving_status_unknown", "detour_too_long",
-            "cannot_leave_post", "no_route", "contact_cap_reached")
+            "cannot_leave_post", "no_route",
+            "asked_too_often", "persona_condition", "too_far")
 
 
 def test_persona_provenance_travels_with_the_attempt():

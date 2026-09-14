@@ -148,7 +148,39 @@ class MedialPolicy:
                 rationale=escalate,
             ), [self._handoff_intent(ctx)])
 
-        if self.revision.contactStrategy == ContactStrategy.head_first:
+        if self.revision.contactStrategy == ContactStrategy.neighbour_first:
+            available = [c for c in candidates
+                         if c.included and c.actorId != self.village_head_id]
+            if not available:
+                # Everybody the shared routine places at home is already spoken
+                # for, or there is nobody. Falling back to the head is not a
+                # workaround: it is what this village does when no one else is in.
+                available = [c for c in candidates if c.included]
+            if not available:
+                return (self._decision(
+                    ctx,
+                    question="응답이 없는 상태를 누가 어떻게 확인할 것인가",
+                    candidates=candidates, chosen=None,
+                    rationale="공개된 일과상 지금 부탁할 수 있는 사람이 없다.",
+                ), [])
+            order = [c.actorId for c in available][:params.neighbourAskLimit]
+            chosen = order[0]
+            rationale = ("이장 한 사람에게 몰지 않고, 공개된 일과상 이 시각 자택에 있는 "
+                         "사람에게 먼저 부탁한다. 거절하면 다음 사람에게 묻되 %d명까지만 "
+                         "묻는다. 실제로 갈 수 있는지는 본인 응답으로만 알 수 있다."
+                         % params.neighbourAskLimit)
+            intents = [Intent("offer_request", {
+                "toActorId": chosen,
+                # The rest of the order travels with the intent so that a refusal
+                # moves on instead of ending the day. Asking four people is not a
+                # free fallback: it is four people's afternoons, and the metrics
+                # count it.
+                "fallbackOrder": order[1:],
+                "requestId": ctx.request_id,
+                "purpose": "welfare_check",
+                "disclosure": self.disclosure_to("neighbour", ctx),
+            })]
+        elif self.revision.contactStrategy == ContactStrategy.head_first:
             if not params.allowHeadContact:
                 raise ValueError("head_first policy with allowHeadContact disabled")
             chosen = self.village_head_id

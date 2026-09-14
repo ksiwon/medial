@@ -97,6 +97,22 @@ POLICY_B = PolicyRevision(
     assumptionRefs=["assumption-clinic-capacity", "assumption-phone-reachability"],
 )
 
+POLICY_C = PolicyRevision(
+    id="policy-C-v1",
+    parentId="policy-A-v1",
+    coreItem="응답이 없는 안부 확인을 누구의 시간으로 해결할 것인가",
+    label="C · 가까운 이웃 우선",
+    changes=["이장에게 먼저 묻지 않는다", "공개된 일과상 이 시각 자택에 있는 사람에게 먼저 부탁"],
+    contactStrategy=ContactStrategy.neighbour_first,
+    params=PolicyParams(
+        retryCount=0,
+        helperContactCap=2,
+        disclosure="named",
+        allowHeadContact=True,
+    ),
+    assumptionRefs=["assumption-head-availability", "assumption-phone-reachability"],
+)
+
 RESOURCES = ResourceRevision(
     id="assumed-resources-v1",
     label="연구용 보건소 자원 가정",

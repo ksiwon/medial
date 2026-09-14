@@ -25,7 +25,12 @@ MIN_MS = 60_000
 # Which baseline activities may be interrupted by a coordination task.
 # This is a researcher assumption, not something the interviews establish; it is
 # surfaced through ``INTERRUPTIBILITY_PROVENANCE`` wherever it is reported.
-INTERRUPTIBLE_PLACES = {"HOME", "PATROL", "HALL", "FARM"}
+#: Where a person staying put could break off and go somewhere else. Moved to
+#: ``EnvironmentRevision.availability`` so that the rule travels with the attempt
+#: and can be revised without silently changing what stored runs meant. This is
+#: the fallback used when no environment is supplied - a plain WorldState built
+#: for geometry questions in a test, say - and it reproduces ``env-v1``.
+FALLBACK_AVAILABLE_PLACES = {"PATROL", "HALL", "FARM"}
 LOCKED_PLACES = {"FOOD", "PORT", "SEA", "TOWN", "EXP", "MIGA"}
 INTERRUPTIBILITY_PROVENANCE = "researcher-assumption"
 
@@ -65,17 +70,28 @@ class Segment:
         data.update(overrides)
         return Segment(**data)
 
-    @property
-    def interruptible(self) -> bool:
+    def interruptible_under(self, environment: Any | None = None) -> bool:
+        """Whether this person could be asked to break off, right here.
+
+        The first three answers are structural and belong to the segment: work
+        already taken on is not dropped, a patrol is a loop that can absorb a
+        detour, and somebody on the road is on the road. Only the last one - can
+        you leave *this place* - is a rule about the world, and that is the one
+        the environment owns.
+        """
         if self.origin == "task":
             return False
         if self.kind == "patrol":
             return True
         if self.kind == "travel":
             return False
-        return (self.place or "") in INTERRUPTIBLE_PLACES
+        place = self.place or ""
+        if environment is None:
+            return place in FALLBACK_AVAILABLE_PLACES
+        return environment.available(place).available
 
-    def as_dict(self, with_polyline: bool = False) -> dict[str, Any]:
+    def as_dict(self, with_polyline: bool = False,
+                environment: Any | None = None) -> dict[str, Any]:
         out = {
             "startMs": self.start_ms,
             "endMs": self.end_ms,
@@ -88,7 +104,7 @@ class Segment:
             "mode": self.mode,
             "metres": round(self.metres, 1),
             "requestId": self.request_id,
-            "interruptible": self.interruptible,
+            "interruptible": self.interruptible_under(environment),
             "riders": list(self.riders),
         }
         if with_polyline and self.polyline:
@@ -280,9 +296,9 @@ class ActorRuntime:
     def segment_at(self, t_ms: int) -> Segment | None:
         return place_at(self.realized, t_ms)[1]
 
-    def is_interruptible_at(self, t_ms: int) -> bool:
+    def is_interruptible_at(self, t_ms: int, environment: Any | None = None) -> bool:
         seg = self.segment_at(t_ms)
-        return bool(seg and seg.interruptible)
+        return bool(seg and seg.interruptible_under(environment))
 
 
 class WorldState:

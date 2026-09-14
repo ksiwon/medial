@@ -326,6 +326,12 @@ class DecisionRecord(Base):
 class ContactStrategy(str, Enum):
     head_first = "head_first"
     retry_then_clinic = "retry_then_clinic"
+    #: Ask whoever the shared routine says is home, rather than the village head
+    #: every time. Doc 19 names "연락 순서" as one of the things case 1 studies,
+    #: and until this existed there was no policy that could vary it: the head
+    #: was hard-coded, and the candidate list the engine computed was shown on
+    #: screen and then thrown away.
+    neighbour_first = "neighbour_first"
 
 
 class PolicyParams(Base):
@@ -353,6 +359,10 @@ class PolicyParams(Base):
         default=2, ge=0, le=10,
         description="한 사람이 하루에 받을 수 있는 조율 연락의 상한. 넘으면 거절한다. "
                     "연구자 설정이며 실제 수용 한계가 아니다.")
+    neighbourAskLimit: int = Field(
+        default=3, ge=1, le=8,
+        description="한 건에 대해 이웃 몇 명까지 물어볼지. 거절당하면 다음 사람에게 간다. "
+                    "연구자 설정이며, 이 숫자가 곧 '몇 명의 하루를 건드렸는가'다.")
     #: ``minimal`` discloses only that a check-in went unanswered; ``named``
     #: additionally shares the attempt times and the consented routine.
     disclosure: Literal["minimal", "named"] = Field(
@@ -381,6 +391,7 @@ class PolicyParams(Base):
     #: cannot drift apart.
     SUPPORTED: ClassVar[tuple[str, ...]] = (
         "retryCount", "retryIntervalMin", "quietWindowMin", "helperContactCap",
+        "neighbourAskLimit",
         "disclosure", "escalateToInstitutionAfterMin", "allowHeadContact",
         "rideCandidateOrder", "maxRideDetourMin",
     )
@@ -487,6 +498,26 @@ class RoutineVariation(Base):
     assumptions: list[str] = Field(default_factory=list)
 
 
+class AvailabilityRule(Base):
+    """Whether somebody staying in a place can be asked to break off and go.
+
+    The sibling of ``ReachabilityRule``: one says whether a call is picked up,
+    this one says whether the person could actually leave. Both are facts about
+    the world rather than about the person, which is why neither lives in an
+    adapter.
+
+    Almost all of it is assumption. The interviews record two things about being
+    unable to leave - the restaurant couple cannot leave the shop, and the
+    village head does his rounds - and the first of those is a *persona*
+    condition, not a place rule. Everything here is labelled accordingly.
+    """
+
+    place: str
+    available: bool
+    provenance: Literal["source-adapted", "researcher-assumption"]
+    reason: str
+
+
 class RelationEdge(Base):
     """Two people with a recorded working connection.
 
@@ -561,6 +592,18 @@ class InteractionRules(Base):
     #: Whether being in the same place is offered to an adapter as a reason to
     #: name somebody. Off means a relay must be justified by the relation alone.
     copresenceEnabled: bool = True
+    #: How long a walk somebody will make for an errand. The distance is measured
+    #: from the road graph; this limit is not measured at all. 25 sits between
+    #: the longest walk inside the village (about 10 minutes) and the trip back
+    #: from the town (about 30), which is a geometric justification, not an
+    #: interview one.
+    maxErrandMinutes: int = Field(default=25, ge=1, le=240)
+    #: Which lines of the refusal table are asked. Listed so that a run can turn
+    #: one off and show which line actually changed the day; nothing here is a
+    #: designer-facing knob.
+    enabledDeclineRules: list[str] = Field(
+        default_factory=lambda: ["persona_condition", "cannot_leave_here",
+                                 "asked_too_often", "too_far"])
     assumptions: list[str] = Field(default_factory=list)
 
 
@@ -587,6 +630,7 @@ class EnvironmentRevision(Base):
     reachability: list[ReachabilityRule]
     variation: RoutineVariation = Field(default_factory=RoutineVariation)
     interaction: InteractionRules = Field(default_factory=InteractionRules)
+    availability: list[AvailabilityRule] = Field(default_factory=list)
     assumptions: list[str] = Field(default_factory=list)
 
     def priority(self, kind: str) -> int:
@@ -596,6 +640,23 @@ class EnvironmentRevision(Base):
             raise KeyError(
                 "environment %s has no scheduling priority for %r" % (self.id, kind)
             ) from None
+
+    def available(self, place: str) -> AvailabilityRule:
+        """Most specific match wins: exact place, then prefix, then default."""
+        default: AvailabilityRule | None = None
+        prefix: AvailabilityRule | None = None
+        for rule in self.availability:
+            if rule.place == place:
+                return rule
+            if rule.place == "*":
+                default = rule
+            elif rule.place.endswith("*") and place.startswith(rule.place[:-1]):
+                prefix = rule
+        chosen = prefix or default
+        if chosen is None:
+            raise KeyError(
+                "environment %s has no availability rule for %s" % (self.id, place))
+        return chosen
 
     def reaches(self, place: str, channel: Channel) -> ReachabilityRule:
         """Most specific match wins: exact place, then prefix, then default."""
@@ -788,7 +849,7 @@ class Attempt(Base):
     adapter: Literal["rule", "scripted", "llm"] = "rule"
     #: Which world rules this run used. Defaulted so that attempts stored before
     #: the environment was extracted still load; they all ran on ``env-v1``.
-    environmentRevisionId: str = "env-v1"
+    environmentRevisionId: str = "env-v1"  # noqa: E501 - stored runs predate env-v2
     #: Identifies the realized day (baseline + seeded variation). Two attempts
     #: may only be compared as a controlled pair when this matches.
     dayRealizationId: str | None = None

@@ -24,7 +24,8 @@ def _merge(name: str, *groups: Any) -> dict[str, Any]:
 
 
 DECKS = _merge("deck", [p1.DECK], [p9.DECK])
-POLICIES = _merge("policy", [p1.POLICY_A, p1.POLICY_B], [p9.POLICY_T_A, p9.POLICY_T_B],
+POLICIES = _merge("policy", [p1.POLICY_A, p1.POLICY_B, p1.POLICY_C],
+                  [p9.POLICY_T_A, p9.POLICY_T_B],
                   [it.POLICY_ITER_V0])
 RESOURCE_SETS = _merge("resource revision", [p1.RESOURCES], [p9.RESOURCES_T])
 

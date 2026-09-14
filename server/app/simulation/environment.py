@@ -18,6 +18,7 @@ Two rules of the house:
 from __future__ import annotations
 
 from .contracts import (
+    AvailabilityRule,
     Channel,
     EnvironmentRevision,
     InteractionRules,
@@ -88,6 +89,34 @@ _DEVICE = [
         reason="안내 시계는 집에 설치된 기기이므로 집 밖에서는 닿지 않는다"),
 ]
 
+#: Whether somebody staying in a place could break off and go. Sibling of the
+#: phone table, and like it, mostly assumption: the interviews say the restaurant
+#: couple cannot leave the shop, but that is a *persona* condition and is checked
+#: there, not here.
+_AVAILABLE_V1 = [
+    AvailabilityRule(
+        place="PATROL", available=True, provenance="researcher-assumption",
+        reason="순찰은 도는 일이라 가는 길에 들를 수 있다고 가정"),
+    AvailabilityRule(
+        place="HALL", available=True, provenance="researcher-assumption",
+        reason="마을회관에 있는 동안에는 자리를 뜰 수 있다고 가정"),
+    AvailabilityRule(
+        place="FARM", available=True, provenance="researcher-assumption",
+        reason="밭일은 잠시 놓고 다녀올 수 있다고 가정"),
+    # v1 kept homes unavailable. Not on purpose: the rule was a set containing
+    # "HOME" while a stay at home carries the place "HOME:P1", so the entry never
+    # matched. Every stored attempt ran under this, so v1 states it plainly
+    # instead of quietly acquiring the fix and changing what those runs meant.
+    AvailabilityRule(
+        place="HOME:*", available=False, provenance="researcher-assumption",
+        reason=("v1은 자택 체류를 '자리를 뜰 수 없음'으로 다룬다. 의도한 규칙이 아니라 "
+                "구현상 결과이며, 저장된 실행은 모두 이 조건에서 돌았다. env-v2가 고친다."),
+    ),
+    AvailabilityRule(
+        place="*", available=False, provenance="researcher-assumption",
+        reason="일터·조업·이동 중에는 자리를 뜰 수 없다고 가정"),
+]
+
 ENV_V1 = EnvironmentRevision(
     id="env-v1",
     label="원본 도입 조건 (v1)",
@@ -109,6 +138,7 @@ ENV_V1 = EnvironmentRevision(
             "원자료에 일과 기록이 없어 흔들면 창작이 된다.",
         ],
     ),
+    availability=list(_AVAILABLE_V1),
     interaction=InteractionRules(
         relayEnabled=True,
         maxRelayHops=1,
@@ -140,13 +170,50 @@ ENV_V1_FIXED = ENV_V1.model_copy(deep=True, update={
 })
 ENV_V1_FIXED.variation.enabled = False
 
+#: v2 differs from v1 in exactly one rule: somebody at home can be asked.
+#:
+#: Under v1 nobody at home could ever be interrupted, which left two of twelve
+#: people available at nine in the morning and *nobody at all* at lunch or in the
+#: evening. That is not what the interviews describe. Whether a particular person
+#: can actually leave - the restaurant couple cannot - is a persona condition and
+#: is still checked there.
+#:
+#: v1 is kept rather than edited. Every stored attempt ran on it, and a stored
+#: run whose meaning changes underneath it is worse than one that is simply old.
+#: Two attempts on different revisions are reported as an uncontrolled pair.
+ENV_V2 = ENV_V1.model_copy(deep=True, update={
+    "id": "env-v2",
+    "label": "원본 도입 조건 (v2) · 자택에서도 부탁을 받을 수 있음",
+})
+for _rule in ENV_V2.availability:
+    if _rule.place == "HOME:*":
+        _rule.available = True
+        _rule.reason = "자택에 있는 동안에는 부탁을 받고 나설 수 있다고 가정"
+ENV_V2.assumptions = [
+    *ENV_V1.assumptions,
+    "자택 체류를 '자리를 뜰 수 있음'으로 바꾼 것은 v1 대비 유일한 차이다. "
+    "이 때문에 결과가 좋아졌다면 그것은 MEDial이 나아진 것이 아니라 세계 조건을 바꾼 것이며, "
+    "비교 화면은 두 실행을 통제된 쌍으로 부르지 않는다.",
+]
+
+ENV_V2_FIXED = ENV_V2.model_copy(deep=True, update={
+    "id": "env-v2-fixed",
+    "label": "원본 도입 조건 (v2) · 일과 변이 없음",
+})
+ENV_V2_FIXED.variation.enabled = False
+
 ENVIRONMENTS: dict[str, EnvironmentRevision] = {
     ENV_V1.id: ENV_V1,
     ENV_V1_FIXED.id: ENV_V1_FIXED,
+    ENV_V2.id: ENV_V2,
+    ENV_V2_FIXED.id: ENV_V2_FIXED,
 }
-DEFAULT_ENVIRONMENT_ID = ENV_V1.id
+DEFAULT_ENVIRONMENT_ID = ENV_V2.id
 #: What a deterministic scenario test should ask for by name.
-FIXED_ENVIRONMENT_ID = ENV_V1_FIXED.id
+FIXED_ENVIRONMENT_ID = ENV_V2_FIXED.id
+#: The revision every attempt stored before availability became data ran on.
+LEGACY_ENVIRONMENT_ID = ENV_V1.id
+LEGACY_FIXED_ENVIRONMENT_ID = ENV_V1_FIXED.id
 
 
 def get_environment(environment_id: str | None = None) -> EnvironmentRevision:

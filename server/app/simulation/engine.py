@@ -212,11 +212,12 @@ class Engine:
             # from being bookkeeping the others share.
             return {actor_id: ScriptedAdapter(self.factory, list(script or []))
                     for actor_id in actor_ids}
+        rules = self.environment.interaction
         adapters: dict[str, Any] = {}
         for resident in self.village.residents:
             adapters[resident["id"]] = (
-                RuleVillageHeadAdapter(self.factory) if resident["isVillageHead"]
-                else RuleResidentAdapter(self.factory)
+                RuleVillageHeadAdapter(self.factory, rules) if resident["isVillageHead"]
+                else RuleResidentAdapter(self.factory, rules)
             )
         adapters[HEALTH_STAFF] = RuleHealthStaffAdapter(self.factory)
         return adapters
@@ -313,7 +314,7 @@ class Engine:
         def dump(segments: list[Segment], actor_id: str) -> list[dict[str, Any]]:
             out = []
             for seg in segments:
-                row = seg.as_dict(with_polyline=True)
+                row = seg.as_dict(with_polyline=True, environment=self.environment)
                 if seg.kind == "stay" and seg.place:
                     x, y = self.village.position_of_place(seg.place, actor_id)
                     row["xy"] = [round(x, 1), round(y, 1)]
@@ -495,6 +496,7 @@ class Engine:
             self._emit(at_ms, EventType.medial_waiting, MEDIAL, request["id"], [MEDIAL],
                        {"reason": "retry_scheduled", "untilMs": int(data["atMs"])})
         elif intent.kind == "offer_request":
+            request["fallbackOrder"] = list(data.get("fallbackOrder") or [])
             self._offer(at_ms, request, data["toActorId"], data["disclosure"])
         elif intent.kind == "offer_ride":
             self._offer_ride(at_ms, request, data["toActorId"], data["disclosure"])
@@ -518,7 +520,10 @@ class Engine:
         self.world.actors[to_actor].contacts_received += 1
         self.obs.record(self.attempt.id, to_actor, offered, "request.offered",
                         subject_id=request["subjectId"],
-                        payload={"requestId": request["id"], "need": request["need"]})
+                        payload={"requestId": request["id"], "need": request["need"],
+                                 "fromActorId": MEDIAL,
+                                 "travelMinutes": self._errand_minutes(
+                                     to_actor, at_ms, "HOME:" + request["subjectId"])})
 
         allowed = [ProposalAction.accept, ProposalAction.decline, ProposalAction.defer]
         if self._can_relay(request, to_actor):
@@ -542,20 +547,67 @@ class Engine:
             self._emit(at_ms, EventType.request_deferred, to_actor, request["id"],
                        [MEDIAL, to_actor],
                        {"requestId": request["id"], "untilMs": at_ms,
+                        "rule": proposal.params.get("rule"),
                         "reason": proposal.params.get("reason"),
                         "utterance": proposal.utterance,
                         "evidenceRefs": proposal.evidenceRefs})
-            self._unresolved(at_ms, request,
-                             "요청받은 사람이 지금은 갈 수 없다고 했고 이 정책에는 대안 후보가 없다")
+            if not self._offer_next(at_ms, request, disclosure):
+                self._unresolved(
+                    at_ms, request,
+                    "요청받은 사람이 지금은 갈 수 없다고 했고 이 정책에는 대안 후보가 없다")
         else:
             self._emit(at_ms, EventType.request_declined, to_actor, request["id"],
                        [MEDIAL, to_actor],
                        {"requestId": request["id"],
+                        "rule": proposal.params.get("rule"),
                         "reason": proposal.params.get("reason", "unspecified"),
                         "utterance": proposal.utterance,
                         "evidenceRefs": proposal.evidenceRefs,
                         "note": "거절은 신뢰 하락으로 계산하지 않는다."})
-            self._unresolved(at_ms, request, "요청이 거절되었고 이 정책에는 대안 후보가 없다")
+            if not self._offer_next(at_ms, request, disclosure):
+                self._unresolved(at_ms, request,
+                                 "요청이 거절되었고 이 정책에는 대안 후보가 없다")
+
+    def _errand_minutes(self, actor_id: str, at_ms: int, place: str) -> float | None:
+        """How long the walk would be. Measured, so the adapter need not guess.
+
+        Handed over the same way ``detourMin`` already is for a ride: the adapter
+        holds no map, and giving it one would let it reason about geography its
+        own view does not contain.
+        """
+        runtime = self.world.actors.get(actor_id)
+        if runtime is None:
+            return None
+        x, y = self.world.position_of(actor_id, at_ms)
+        try:
+            route = self.village.route(self.village.nearest_node(x, y),
+                                       self.village.anchor_of_place(place, actor_id))
+        except KeyError:
+            return None
+        if route is None:
+            return None
+        _polyline, metres = route
+        return self.village.travel_ms(metres, "walk") / MIN_MS
+
+    def _offer_next(self, at_ms: int, request: dict[str, Any],
+                    disclosure: dict[str, Any]) -> bool:
+        """Ask the next name on the policy's order, if there is one.
+
+        Only a policy that supplied an order gets this. It is not a general
+        fallback: "someone else will do it" is exactly the assumption that makes
+        a coordination tool look better than it is, so a policy that named one
+        person still ends when that person says no.
+        """
+        order = request.get("fallbackOrder") or []
+        while order:
+            nxt = order.pop(0)
+            if nxt in self.world.actors and nxt not in self.relay_chains.get(
+                    request["id"], []):
+                request["fallbackOrder"] = order
+                self._offer(at_ms, request, nxt, disclosure)
+                return True
+        request["fallbackOrder"] = []
+        return False
 
     # -- one resident hands work to another ---------------------------------
     def _can_relay(self, request: dict[str, Any], actor_id: str) -> bool:
@@ -647,7 +699,14 @@ class Engine:
                             subject_id=request["subjectId"],
                             payload={"requestId": request["id"],
                                      "fromActorId": from_actor, "toActorId": target,
-                                     "need": request["need"]})
+                                     "need": request["need"],
+                                     # From where they will be when they are
+                                     # actually asked, not where they are now.
+                                     "travelMinutes": self._errand_minutes(
+                                         observer,
+                                         at_ms + self.environment.interaction
+                                         .relayDelayMin * MIN_MS,
+                                         "HOME:" + request["subjectId"])})
 
         if self.environment.interaction.copresenceEnabled:
             place = self.world.place_of(from_actor, at_ms)
@@ -709,6 +768,7 @@ class Engine:
         extra = ({"reason": proposal.params.get("reason", "unspecified")}
                  if proposal.action is ProposalAction.decline
                  else {"untilMs": at_ms, "reason": proposal.params.get("reason")})
+        extra["rule"] = proposal.params.get("rule")
         self._emit(at_ms, etype, target, request["id"],
                    [from_actor, target, RESEARCHER],
                    {"requestId": request["id"], **extra,
@@ -1129,6 +1189,7 @@ class Engine:
             extra = ({"untilMs": at_ms} if etype is EventType.request_deferred else {})
             self._emit(at_ms, etype, to_actor, request["id"], [MEDIAL, to_actor],
                        {"requestId": request["id"],
+                        "rule": proposal.params.get("rule"),
                         "reason": proposal.params.get("reason", "unspecified"),
                         "utterance": proposal.utterance,
                         "evidenceRefs": proposal.evidenceRefs,
@@ -1581,8 +1642,10 @@ class Engine:
             observations=self.obs.for_actor(actor_id, at_ms),
             own_place=runtime.place_at(at_ms) if runtime else None,
             own_activity=segment.label if segment else None,
-            own_interruptible=bool(segment and segment.interruptible),
-            commitments=[s.as_dict() for s in (runtime.realized if runtime else [])
+            own_interruptible=bool(segment
+                                   and segment.interruptible_under(self.environment)),
+            commitments=[s.as_dict(environment=self.environment)
+                         for s in (runtime.realized if runtime else [])
                          if s.request_id and s.start_ms >= at_ms],
             shared_routine=self.routines.get(actor_id, {}),
             contacts_received_today=runtime.contacts_received if runtime else 0,

@@ -183,7 +183,7 @@ def test_a_run_records_which_day_it_happened_on():
     created = svc.create_attempt("policy-A-v1", "deck-p1-no-response-v1",
                                  "assumed-resources-v1")
     attempt = created["attempt"]
-    assert attempt["environmentRevisionId"] == "env-v1"
+    assert attempt["environmentRevisionId"] == "env-v2"
     assert attempt["dayRealizationId"]
     assert attempt["inputHashes"]["day"] == attempt["dayRealizationId"]
 
