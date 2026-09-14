@@ -31,6 +31,7 @@ from typing import Any
 
 from .agents.base import AdapterError, ProposalFactory
 from .agents.llm import LlmAdapter
+from .agents.model_calls import ModelCallLog
 from .agents.rule_agents import (
     RuleHealthStaffAdapter,
     RuleResidentAdapter,
@@ -93,6 +94,9 @@ class RunResult:
     metrics: dict[str, Any]
     trace: list[dict[str, Any]]
     timeline: dict[str, Any]
+    #: Every model call this attempt used, live or replayed from a parent. Empty
+    #: for the rule and scripted adapters, which call nothing.
+    model_calls: list[Any] = field(default_factory=list)
 
 
 class ForkPrefixMismatch(RuntimeError):
@@ -110,7 +114,9 @@ class Engine:
                  script: list[dict[str, Any]] | None = None,
                  personas: dict[str, Any] | None = None,
                  policy_switch: dict[str, Any] | None = None,
-                 environment: Any | None = None) -> None:
+                 environment: Any | None = None,
+                 model_calls: Any | None = None,
+                 provider: Any | None = None) -> None:
         self.attempt = attempt
         #: World rules as data. The attempt records which revision it ran on so
         #: that changing an assumption shows up as a different input rather than
@@ -153,6 +159,11 @@ class Engine:
         self._queue: list[_Pending] = []
         self._switch = policy_switch
         self._switched = False
+        #: Records or replays every model call. Built here rather than inside the
+        #: adapters because the recording belongs to the attempt, not to one
+        #: actor - a fork replays the parent's calls across all of them.
+        self.model_calls = model_calls or ModelCallLog(attempt.id, attempt.modelPolicy)
+        self._provider = provider
         self._adapters = self._build_adapters(script)
 
     # -- setup -----------------------------------------------------------
@@ -172,16 +183,26 @@ class Engine:
         return {MEDIAL: medial, VILLAGE_HEAD_ID: head, HEALTH_STAFF: {}}
 
     def _build_adapters(self, script: list[dict[str, Any]] | None) -> dict[str, Any]:
+        """One instance per actor, always.
+
+        Adapters used to be one shared object handed to everybody. That is fine
+        while an adapter is stateless and silently wrong the moment it is not:
+        a per-actor call counter, a retrieval cache or a conversation history on
+        a shared instance belongs to whoever spoke last. The engine already
+        isolates what each actor may *see* - see ``observations`` - and this is
+        the same isolation on the side that does the talking.
+        """
+        actor_ids = [r["id"] for r in self.village.residents] + [HEALTH_STAFF]
         if self.attempt.adapter == "llm":
-            shared = LlmAdapter(self.factory)
-            out: dict[str, Any] = {r["id"]: shared for r in self.village.residents}
-            out[HEALTH_STAFF] = shared
-            return out
+            return {actor_id: LlmAdapter(self.factory, actor_id, self.model_calls,
+                                         provider=self._provider)
+                    for actor_id in actor_ids}
         if self.attempt.adapter == "scripted":
-            shared = ScriptedAdapter(self.factory, script or [])
-            out = {r["id"]: shared for r in self.village.residents}
-            out[HEALTH_STAFF] = shared
-            return out
+            # A copy each: the script is matched by actorId anyway, so splitting
+            # changes no behaviour, and it stops one actor's consumed entries
+            # from being bookkeeping the others share.
+            return {actor_id: ScriptedAdapter(self.factory, list(script or []))
+                    for actor_id in actor_ids}
         adapters: dict[str, Any] = {}
         for resident in self.village.residents:
             adapters[resident["id"]] = (
@@ -245,6 +266,7 @@ class Engine:
             metrics=build_metrics(self),
             trace=self.trace,
             timeline=self.timeline(),
+            model_calls=list(self.model_calls.records),
         )
 
     def _maybe_switch_policy(self, at_ms: int) -> None:

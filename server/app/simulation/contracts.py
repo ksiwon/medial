@@ -598,6 +598,67 @@ class AttemptStatus(str, Enum):
     failed = "failed"
 
 
+class ModelPolicy(Base):
+    """Everything about a model call that changes the answer.
+
+    Fixed case input, like the environment: a Change Set may not edit it. MEDial
+    improving because the model got bigger is not MEDial improving, and the
+    comparison screen has to be able to say the two runs asked the same model
+    the same way.
+
+    ``temperature`` is recorded but never trusted as a reproducibility mechanism.
+    temperature=0 is not deterministic on any provider we can call, which is why
+    reproducibility here comes from replaying recorded calls rather than from
+    asking nicely.
+    """
+
+    EDITABLE_BY_CHANGE_SET: ClassVar[bool] = False
+
+    modelId: str = "none"
+    temperature: float = 0.0
+    maxOutputTokens: int = 512
+    #: Which prompt build this ran under. Bumped whenever the payload sent to the
+    #: model changes shape, because an identical prompt hash across a prompt
+    #: change would make two different questions look like the same one.
+    promptRevisionId: str = "prompt-v1"
+    #: ``record`` calls the provider and writes every call down. ``replay`` calls
+    #: nothing: a prompt with no recorded answer is an adapter failure, never a
+    #: quiet fresh call. ``off`` is the rule/scripted path, where no model exists.
+    mode: Literal["off", "record", "replay"] = "off"
+
+
+class ModelCallRecord(Base):
+    """One model call, written down so the run can be replayed exactly.
+
+    ``key`` is content-addressed - model, temperature, prompt revision, actor,
+    that actor's call index and the prompt payload - and deliberately excludes
+    wall-clock time, so re-running the same day produces the same keys.
+    ``latencyMs`` and ``createdAt`` are recorded for cost accounting but are not
+    part of the key for that reason.
+    """
+
+    key: str
+    attemptId: str
+    actorId: str
+    callIndex: int
+    simTimeMs: int
+    modelId: str
+    temperature: float
+    promptRevisionId: str
+    prompt: dict[str, Any]
+    #: Raw provider text. Parsing happens in the adapter so that a parse fix can
+    #: be re-applied to an old recording instead of requiring a fresh call.
+    response: str | None = None
+    status: Literal["ok", "error"] = "ok"
+    error: str | None = None
+    latencyMs: int | None = None
+    createdAt: str | None = None
+    #: ``live`` was answered by the provider during this attempt; ``replayed``
+    #: came from a recording (the parent's, for a fork). A run whose calls are
+    #: all replayed did not spend a token, and the screen must not imply it did.
+    origin: Literal["live", "replayed"] = "live"
+
+
 class AttemptLineage(str, Enum):
     """How this attempt relates to its parent.
 
@@ -637,6 +698,9 @@ class Attempt(Base):
     #: Identifies the realized day (baseline + seeded variation). Two attempts
     #: may only be compared as a controlled pair when this matches.
     dayRealizationId: str | None = None
+    #: Which model, asked how. Defaulted to the ``off`` policy so that attempts
+    #: stored before this existed still load: they all ran on rules.
+    modelPolicy: ModelPolicy = Field(default_factory=ModelPolicy)
     createdAt: str
     cursorSeq: int = 0
     eventCount: int = 0

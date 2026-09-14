@@ -110,7 +110,22 @@ CREATE TABLE IF NOT EXISTS findings (
     resulting_attempt_id TEXT,
     finding_json TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS model_calls (
+    attempt_id TEXT NOT NULL,
+    key TEXT NOT NULL,
+    actor_id TEXT NOT NULL,
+    call_index INTEGER NOT NULL,
+    sim_time_ms INTEGER NOT NULL,
+    origin TEXT NOT NULL,
+    status TEXT NOT NULL,
+    record_json TEXT NOT NULL,
+    -- Keyed by (attempt, actor, call index) rather than by the content address:
+    -- two identical prompts from the same actor are two calls, and collapsing
+    -- them would store a recording that cannot reproduce its own run.
+    PRIMARY KEY (attempt_id, actor_id, call_index)
+);
 CREATE INDEX IF NOT EXISTS events_by_attempt ON events (attempt_id, seq);
+CREATE INDEX IF NOT EXISTS model_calls_by_key ON model_calls (attempt_id, key);
 """
 
 
@@ -220,6 +235,14 @@ class Store(IterationTables):
                         [(attempt.id, o.id, o.actorId,
                           json.dumps(o.model_dump(mode="json"), ensure_ascii=False))
                          for o in result.observations])
+                    self._conn.executemany(
+                        "INSERT INTO model_calls (attempt_id, key, actor_id,"
+                        " call_index, sim_time_ms, origin, status, record_json)"
+                        " VALUES (?,?,?,?,?,?,?,?)",
+                        [(attempt.id, m.key, m.actorId, m.callIndex, m.simTimeMs,
+                          m.origin, m.status,
+                          json.dumps(m.model_dump(mode="json"), ensure_ascii=False))
+                         for m in getattr(result, "model_calls", [])])
                     self._conn.executemany(
                         "INSERT INTO reviews (attempt_id, id, actor_id, source, review_json)"
                         " VALUES (?,?,?,?,?)",
@@ -375,6 +398,18 @@ class Store(IterationTables):
             return [json.loads(r["review_json"]) for r in self._conn.execute(
                 "SELECT review_json FROM reviews WHERE attempt_id = ? ORDER BY id",
                 (attempt_id,)).fetchall()]
+
+    def model_calls(self, attempt_id: str) -> list[dict[str, Any]]:
+        """Every model call a stored attempt made, in the order it made them.
+
+        This is what a fork hands its child so the shared prefix replays the
+        parent's exact answers instead of asking the model again.
+        """
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT record_json FROM model_calls WHERE attempt_id = ?"
+                " ORDER BY actor_id, call_index", (attempt_id,)).fetchall()
+        return [json.loads(row["record_json"]) for row in rows]
 
     def observations(self, attempt_id: str, actor_id: str | None = None) -> list[dict[str, Any]]:
         with self._lock:

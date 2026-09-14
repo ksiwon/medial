@@ -36,6 +36,8 @@ from .contracts import (
     AttemptLineage,
     ContactStrategy,
     DesignFinding,
+    ModelCallRecord,
+    ModelPolicy,
     PolicyParams,
     PolicyRevision,
 )
@@ -65,7 +67,9 @@ def _short_id() -> str:
 class SimulationService:
     def __init__(self, store: Store | None = None, village: Village | None = None,
                  persona_path: str | None = None,
-                 environment_id: str | None = None) -> None:
+                 environment_id: str | None = None,
+                 model_policy: ModelPolicy | None = None,
+                 provider: Any | None = None) -> None:
         self.store = store or Store()
         self.village = village or load_village()
         self.persona_path = persona_path
@@ -73,6 +77,13 @@ class SimulationService:
         #: rather than per call so that a session cannot end up comparing two
         #: attempts that disagreed about when a phone is answered.
         self.environment_id = environment_id
+        #: Which model, asked how. Pinned per service for the same reason as the
+        #: environment: a session that compared two attempts run against
+        #: different models would be reading a model swap as a policy effect.
+        self.model_policy = model_policy or ModelPolicy()
+        #: ``(prompt, policy) -> raw text``. None in this build; without one a
+        #: ``record`` run fails loudly rather than pretending it asked.
+        self.provider = provider
         self.policies: dict[str, PolicyRevision] = dict(POLICIES)
         self._runs: dict[str, Any] = {}
         self._restore_policies()
@@ -247,7 +258,8 @@ class SimulationService:
                            parent["attempt"]["adapter"],
                            parent_id=attempt_id, parent_seq=at_seq,
                            lineage=AttemptLineage.fork,
-                           policy_switch={"afterSeq": at_seq, "policy": revision})
+                           policy_switch={"afterSeq": at_seq, "policy": revision},
+                           inherit_calls_from=attempt_id)
 
         self._verify_fork_prefix(attempt_id, result, at_seq)
         return self._store_and_return(result, self.policies[revision.id])
@@ -272,7 +284,8 @@ class SimulationService:
              label: str | None, seed: int, adapter: str,
              parent_id: str | None = None, parent_seq: int | None = None,
              lineage: AttemptLineage = AttemptLineage.root,
-             policy_switch: dict[str, Any] | None = None) -> Any:
+             policy_switch: dict[str, Any] | None = None,
+             inherit_calls_from: str | None = None) -> Any:
         policy = self.policies[policy_id]
         if deck_id not in DECKS:
             raise KeyError("unknown deck %s" % deck_id)
@@ -289,7 +302,23 @@ class SimulationService:
                            parent_seq=parent_seq, policy=running_policy,
                            lineage=lineage, policy_switch=policy_switch,
                            persona_path=self.persona_path,
-                           environment_id=self.environment_id)
+                           environment_id=self.environment_id,
+                           model_policy=self.model_policy,
+                           inherited_model_calls=self._inherited_calls(inherit_calls_from),
+                           provider=self.provider)
+
+    def _inherited_calls(self, attempt_id: str | None) -> list[ModelCallRecord]:
+        """The parent's recorded model calls, for a fork to replay.
+
+        Only a fork asks for these. A rerun starts the day again under a
+        different policy from the first minute, so nothing it asks is guaranteed
+        to match, and handing it the parent's recording would invite an accidental
+        match to pass as continuity.
+        """
+        if not attempt_id:
+            return []
+        return [ModelCallRecord.model_validate(row)
+                for row in self.store.model_calls(attempt_id)]
 
     def _store_and_return(self, result: Any, policy: PolicyRevision) -> dict[str, Any]:
         # The attempt records the policy it ended under; for a fork that is the

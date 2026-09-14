@@ -29,11 +29,13 @@ from .contracts import (
     AttemptLineage,
     AttemptMode,
     AttemptStatus,
+    ModelPolicy,
     PolicyRevision,
     ResourceRevision,
     ScenarioDeck,
 )
 from .decks.registry import DECK_DEFAULTS, DECKS, POLICIES, RESOURCE_SETS
+from .agents.model_calls import ModelCallLog
 from .engine import Engine, RunResult
 from .persona import load_personas
 from .village import Village, load_village
@@ -62,8 +64,10 @@ def build_attempt(attempt_id: str, label: str, policy: PolicyRevision, deck: Sce
                   persona_revision: str | None = None,
                   persona_source: str | None = None,
                   environment: Any | None = None,
-                  day: Any | None = None) -> Attempt:
+                  day: Any | None = None,
+                  model_policy: Any | None = None) -> Attempt:
     environment = environment or get_environment()
+    model_policy = model_policy or ModelPolicy()
     return Attempt(
         id=attempt_id,
         parentId=parent_id,
@@ -82,6 +86,7 @@ def build_attempt(attempt_id: str, label: str, policy: PolicyRevision, deck: Sce
         adapter=adapter,  # type: ignore[arg-type]
         environmentRevisionId=environment.id,
         dayRealizationId=day.id if day is not None else None,
+        modelPolicy=model_policy,
         createdAt=datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         dataSource=village.data_source,
         inputHashes={
@@ -97,6 +102,11 @@ def build_attempt(attempt_id: str, label: str, policy: PolicyRevision, deck: Sce
             # this matches; a different seed is a different day, not a policy
             # effect, and the comparison screen has to be able to say so.
             "day": day.id if day is not None else "none",
+            # Which model, at which temperature, under which prompt build. A
+            # model swap changes answers as thoroughly as a policy edit does, and
+            # without this the two are indistinguishable on the comparison
+            # screen. The engine version already covers code changes.
+            "modelPolicy": _hash(model_policy.model_dump()),
             "persona": persona_revision or "none",
             "personaSource": persona_source or "none",
         },
@@ -113,7 +123,10 @@ def run_attempt(attempt_id: str, policy_id: str, deck_id: str, resource_id: str,
                 lineage: AttemptLineage = AttemptLineage.root,
                 policy_switch: dict[str, Any] | None = None,
                 persona_path: str | None = None,
-                environment_id: str | None = None) -> RunResult:
+                environment_id: str | None = None,
+                model_policy: Any | None = None,
+                inherited_model_calls: Any | None = None,
+                provider: Any | None = None) -> RunResult:
     """``policy`` overrides the built-in registry so that an edited revision,
     which only exists in the service, can be executed without being registered
     globally."""
@@ -123,6 +136,7 @@ def run_attempt(attempt_id: str, policy_id: str, deck_id: str, resource_id: str,
     resources = RESOURCE_SETS[resource_id]
     profiles, provenance = personas(persona_path)
     env = get_environment(environment_id)
+    model_policy = model_policy or ModelPolicy()
     # The day is drawn before anything runs, from (village, environment, seed)
     # alone. A rerun and a fork inherit the parent's seed, so they land on this
     # same day without copying it.
@@ -134,15 +148,26 @@ def run_attempt(attempt_id: str, policy_id: str, deck_id: str, resource_id: str,
                             lineage=lineage,
                             persona_revision=provenance.get("revisionId"),
                             persona_source=provenance.get("dataSource"),
-                            environment=env, day=day)
+                            environment=env, day=day, model_policy=model_policy)
+    # A fork is handed its parent's recorded calls. Along the shared prefix the
+    # prompts are identical, so the keys match and the child replays the parent's
+    # answers; after the checkpoint they diverge, and what diverges is the policy.
+    log = ModelCallLog(attempt.id, model_policy, inherited=inherited_model_calls or [])
     engine = Engine(attempt, policy, deck, resources, village, script=script,
-                    personas=profiles, policy_switch=policy_switch, environment=env)
+                    personas=profiles, policy_switch=policy_switch, environment=env,
+                    model_calls=log, provider=provider)
     result = engine.run()
     result.attempt.status = AttemptStatus.completed
     result.attempt.eventCount = len(result.events)
     result.attempt.cursorSeq = 0
     result.metrics["personaProvenance"] = provenance
     result.metrics["dayRealization"] = day.model_dump(mode="json")
+    result.metrics["modelCalls"] = {
+        "policy": model_policy.model_dump(mode="json"),
+        "total": len(result.model_calls),
+        "replayed": sum(1 for m in result.model_calls if m.origin == "replayed"),
+        "failed": sum(1 for m in result.model_calls if m.status == "error"),
+    }
     return result
 
 
@@ -193,7 +218,8 @@ def catalog() -> dict[str, Any]:
         "adapters": {
             "available": ["rule", "scripted"],
             "unavailable": ["llm"],
-            "note": "LLM 어댑터는 인터페이스만 있고 모델을 호출하지 않는다. API 키가 필요 없다.",
+            "note": ("LLM 어댑터는 모델 공급자가 연결되어 있지 않다. 기록된 호출을 재생하는 "
+                     "경로는 동작하지만 새로 호출하지는 않으며, API 키가 필요 없다."),
         },
     }
 

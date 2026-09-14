@@ -33,6 +33,10 @@ SUPPORTED_BINDINGS = frozenset({"contactStrategy", *PARAM_BINDINGS})
 #: it is proposing that the problem stop happening.
 FIXED_INPUT_PREFIXES = (
     "environment", "reachability", "scheduling", "variation",
+    # A Change Set that could raise the temperature or swap the model would be
+    # improving the model, not MEDial, and the comparison would read it as a
+    # policy effect.
+    "model", "modelpolicy", "prompt", "temperature",
     "village", "persona", "baseline", "routine", "deck", "scenario",
     "resource", "review", "evaluation",
 )
