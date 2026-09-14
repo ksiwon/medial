@@ -195,7 +195,7 @@ class LlmClient:
 
         The user turn is JSON *data*, and the system prompt says so: anything
         inside it is village material, never an instruction. The boundaries that
-        matter - which events an actor may cite, which policy paths a patch may
+        matter - which events an actor may cite and which Quest/Task rules a Change Set may
         touch - are re-checked in code afterwards, because a sentence in a prompt
         is not an access control mechanism.
         """

@@ -177,11 +177,10 @@ def _create_session(api: TestClient) -> str:
         "developmentDeckRefs": [CHECKIN_DECK],
         "resourceRevisionId": RES_ID,
         "maxGenerations": 1,
-        "maxCandidatesPerGeneration": 1,
+        "maxChangeSetsPerGeneration": 1,
         "callBudget": 0,
         "reviewAdapter": "rule",
         "improvementAdapter": "rule",
-        "selectionRule": "pareto_then_stop",
     })
     assert response.status_code == 200, response.text
     return response.json()["session"]["id"]
@@ -236,23 +235,9 @@ def test_listing_sessions_creates_nothing():
     assert api.get("/api/sim/iteration/sessions").json()["sessions"] == []
     assert api.get("/api/sim/catalog").json()["attempts"] == []
 
-# -- needs_decision: the state screen D has to render ------------------------
+# -- researcher confirmation: drafts are not execution branches ---------------
 
-def test_a_tied_pair_stops_and_offers_its_branches_on_the_parent():
-    """Where the choosable candidates live.
-
-    This is the shape doc 15 section 9's screen D depends on, and it is not the
-    obvious one: when the loop stops for a decision, the branch proposals belong
-    to the generation that *produced* the tie - the parent - not to the versions
-    it produced. The comparison screen originally read them off the version it
-    was showing on the right, which under the default pairing (child on the
-    right) is always empty, so a session in ``needs_decision`` rendered no next
-    action at all.
-
-    The assertion is therefore: a needs_decision session has at least one
-    generation carrying branch proposals, and that generation also carries the
-    selection reason explaining the tie.
-    """
+def test_change_sets_stop_before_execution_and_stay_on_the_source_generation():
     from app.simulation.iteration.contracts import SessionStatus  # noqa: PLC0415
 
     api = client()
@@ -260,16 +245,13 @@ def test_a_tied_pair_stops_and_offers_its_branches_on_the_parent():
         "label": "trade-off 확인",
         "coreItem": "누구의 시간으로 해결할 것인가",
         "basePolicyId": "policy-IT-v0",
-        # Both decks and three candidates is what actually produces a tie the
-        # rule adapter cannot break.
         "developmentDeckRefs": [CHECKIN_DECK, TRANSPORT_DECK],
         "resourceRevisionId": TRANSPORT_RES_ID,
         "maxGenerations": 2,
-        "maxCandidatesPerGeneration": 3,
+        "maxChangeSetsPerGeneration": 3,
         "callBudget": 0,
         "reviewAdapter": "rule",
         "improvementAdapter": "rule",
-        "selectionRule": "pareto_then_stop",
     })
     assert response.status_code == 200, response.text
     session_id = response.json()["session"]["id"]
@@ -279,29 +261,21 @@ def test_a_tied_pair_stops_and_offers_its_branches_on_the_parent():
     assert started.status_code == 200, started.text
 
     detail = api.get("/api/sim/iteration/sessions/%s" % session_id).json()
-    if detail["session"]["status"] != SessionStatus.needs_decision.value:
-        import pytest  # noqa: PLC0415
-        pytest.skip("이 설정이 이번 엔진에서는 trade-off로 갈라지지 않았다: %s"
-                    % detail["session"]["status"])
-
-    with_branches = [g for g in detail["generations"]
-                     if any(p["selectionStatus"] == "branch" for p in g["proposals"])]
-    assert with_branches, "needs_decision인데 고를 후보가 어디에도 없다"
-
-    holder = with_branches[0]
-    branches = [p for p in holder["proposals"] if p["selectionStatus"] == "branch"]
-    assert len(branches) >= 2, "갈라진 후보가 둘 미만이면 고를 것이 없다"
-    assert (holder["metrics"].get("selection") or {}).get("reason"),         "왜 자동으로 고르지 않았는지가 같은 세대에 기록되어야 한다"
-
-    # Each branch has to say what it buys and what it costs, or the designer is
-    # choosing blind.
-    for proposal in branches:
-        assert proposal["mechanism"]
-        assert proposal["expectedEffects"] or proposal["possibleRegressions"]
+    assert detail["session"]["status"] == SessionStatus.awaiting_confirmation.value
+    assert len(detail["generations"]) == 1, "확정 전에는 실행 후보 세대를 만들면 안 된다"
+    drafts = [item for item in detail["generations"][0]["changeSets"]
+              if item["validationStatus"] == "valid"
+              and item["confirmationStatus"] == "draft"]
+    assert drafts, "확인을 기다리는데 실행 가능한 Change Set이 없다"
+    for change_set in drafts:
+        assert change_set["reviewItemRefs"]
+        assert change_set["changes"]
+        assert change_set["expectedEffects"] or change_set["possibleRegressions"]
+        assert change_set["resultingPolicyRevisionId"] is None
 
 
 def test_the_loop_does_not_choose_for_the_designer():
-    """`needs_decision` means stopped, not "picked the last one"."""
+    """Draft generation stops without making a final research decision."""
     from app.simulation.iteration.contracts import SessionStatus  # noqa: PLC0415
 
     api = client()
@@ -309,9 +283,5 @@ def test_the_loop_does_not_choose_for_the_designer():
     api.post("/api/sim/iteration/sessions/%s/commands" % session_id, json={
         "commandId": "start-1", "name": "start", "payload": {}, "blocking": True})
     detail = api.get("/api/sim/iteration/sessions/%s" % session_id).json()
-    if detail["session"]["status"] == SessionStatus.needs_decision.value:
-        assert all(g["selectedBy"] != "auto" or g["outcome"] != "advanced"
-                   for g in detail["generations"]
-                   if g["metrics"].get("selection", {}).get("decision") == "needs_decision")
     # Nothing is decided on the designer's behalf, in any terminal state.
     assert detail["decisions"] == []

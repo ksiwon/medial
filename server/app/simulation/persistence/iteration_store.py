@@ -6,13 +6,13 @@ to disagree after a crash.
 
 Two things here are not ordinary CRUD:
 
-* **artifacts are insert-only.** Reviews, syntheses and proposals are written
+* **artifacts are insert-only.** Reviews, syntheses and Change Sets are written
   once. A generation's *status* is mutable - it has to be, or the loop could not
   resume - but the things it points at never change under it;
 * **model results are cached by an idempotency key** built from the session, the
   generation, the role, the subject and a hash of the input. After a restart the
   loop finds the stored result and reuses it instead of paying for the call
-  again *and* applying the same patch twice.
+  again *and* executing the same Change Set twice.
 
 Every table is created with ``IF NOT EXISTS`` and no existing table is altered
 destructively, so a database written by the previous build keeps its runs.
@@ -61,15 +61,15 @@ CREATE TABLE IF NOT EXISTS review_syntheses (
     created_at TEXT NOT NULL,
     synthesis_json TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS change_proposals (
+CREATE TABLE IF NOT EXISTS change_sets (
     id TEXT PRIMARY KEY,
     session_id TEXT NOT NULL,
     generation_id TEXT NOT NULL,
     validation_status TEXT NOT NULL,
-    selection_status TEXT NOT NULL,
-    patch_hash TEXT,
+    confirmation_status TEXT NOT NULL,
+    change_hash TEXT,
     created_at TEXT NOT NULL,
-    proposal_json TEXT NOT NULL
+    change_set_json TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS model_calls (
     id TEXT PRIMARY KEY,
@@ -120,7 +120,7 @@ CREATE TABLE IF NOT EXISTS iteration_commands (
 );
 CREATE INDEX IF NOT EXISTS generations_by_session ON generations (session_id, idx);
 CREATE INDEX IF NOT EXISTS reviews_by_generation ON agent_reviews (generation_id);
-CREATE INDEX IF NOT EXISTS proposals_by_generation ON change_proposals (generation_id);
+CREATE INDEX IF NOT EXISTS change_sets_by_generation ON change_sets (generation_id);
 """
 
 
@@ -254,45 +254,55 @@ class IterationTables:
                 (synthesis_id,)).fetchone()
         return json.loads(row["synthesis_json"]) if row else None
 
-    def save_proposals(self, generation_id: str, proposals: list[Any]) -> None:
+    def save_change_sets(self, generation_id: str, change_sets: list[Any]) -> None:
         with self._lock, self._conn:
             try:
                 self._conn.executemany(
-                    "INSERT INTO change_proposals (id, session_id, generation_id,"
-                    " validation_status, selection_status, patch_hash, created_at,"
-                    " proposal_json) VALUES (?,?,?,?,?,?,?,?)",
+                    "INSERT INTO change_sets (id, session_id, generation_id,"
+                    " validation_status, confirmation_status, change_hash, created_at,"
+                    " change_set_json) VALUES (?,?,?,?,?,?,?,?)",
                     [(p.id, p.sessionId, generation_id, p.validationStatus.value,
-                      p.selectionStatus.value, p.patchHash, p.createdAt,
+                      p.confirmationStatus.value, p.changeHash, p.createdAt,
                       _dumps(p.model_dump(mode="json")))
-                     for p in proposals])
+                     for p in change_sets])
             except sqlite3.IntegrityError as exc:
                 raise ArtifactExists(
-                    "제안을 두 번 저장하려 했다 (%s): %s" % (generation_id, exc)) from exc
+                    "Change Set을 두 번 저장하려 했다 (%s): %s" % (generation_id, exc)) from exc
 
-    def update_proposal(self, proposal: Any) -> None:
-        """Validation and selection outcomes attach to a proposal that already
-        exists; its patch and its reasoning never change."""
+    def update_change_set(self, change_set: Any) -> None:
+        """Attach validation, confirmation, and execution results to a Change Set."""
         with self._lock, self._conn:
             self._conn.execute(
-                "UPDATE change_proposals SET validation_status = ?,"
-                " selection_status = ?, patch_hash = ?, proposal_json = ? WHERE id = ?",
-                (proposal.validationStatus.value, proposal.selectionStatus.value,
-                 proposal.patchHash, _dumps(proposal.model_dump(mode="json")),
-                 proposal.id))
+                "UPDATE change_sets SET validation_status = ?,"
+                " confirmation_status = ?, change_hash = ?, change_set_json = ? WHERE id = ?",
+                (change_set.validationStatus.value, change_set.confirmationStatus.value,
+                 change_set.changeHash, _dumps(change_set.model_dump(mode="json")),
+                 change_set.id))
 
-    def proposals(self, generation_id: str) -> list[dict[str, Any]]:
+    def change_sets(self, generation_id: str) -> list[dict[str, Any]]:
         with self._lock:
-            return [json.loads(r["proposal_json"]) for r in self._conn.execute(
-                "SELECT proposal_json FROM change_proposals WHERE generation_id = ?"
+            return [json.loads(r["change_set_json"]) for r in self._conn.execute(
+                "SELECT change_set_json FROM change_sets WHERE generation_id = ?"
                 " ORDER BY created_at, id", (generation_id,)).fetchall()]
 
-    def session_patch_hashes(self, session_id: str) -> list[str]:
-        """Every patch this session has already produced, for cycle detection."""
+    def session_change_hashes(self, session_id: str) -> list[str]:
+        """Every Change Set this session has already produced, for cycle detection."""
         with self._lock:
-            return [r["patch_hash"] for r in self._conn.execute(
-                "SELECT DISTINCT patch_hash FROM change_proposals WHERE session_id = ?"
-                " AND patch_hash IS NOT NULL AND patch_hash != ''",
+            return [r["change_hash"] for r in self._conn.execute(
+                "SELECT DISTINCT change_hash FROM change_sets WHERE session_id = ?"
+                " AND change_hash IS NOT NULL AND change_hash != ''",
                 (session_id,)).fetchall()]
+
+    def session_applied_change_hashes(self, session_id: str) -> list[str]:
+        """Only Change Sets that produced a revision; drafts are not applications."""
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT change_set_json FROM change_sets WHERE session_id = ?"
+                " AND change_hash IS NOT NULL AND change_hash != ''",
+                (session_id,)).fetchall()
+        return [data["changeHash"] for row in rows
+                if (data := json.loads(row["change_set_json"]))
+                and data.get("resultingPolicyRevisionId")]
 
     # -- model calls ------------------------------------------------------
     def save_model_call(self, record: Any) -> None:

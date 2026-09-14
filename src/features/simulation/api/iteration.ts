@@ -125,14 +125,31 @@ export interface ReviewSynthesis {
   disclaimer: string;
 }
 
-export interface PatchOp {
-  op: 'replace';
-  path: string;
+export interface ExecutionBinding {
+  key: string;
   before: unknown;
   after: unknown;
 }
 
-export interface ChangeProposal {
+export type ImprovementTarget =
+  | 'quest_completion_escalation'
+  | 'task_composition_flow'
+  | 'task_assignment_refusal'
+  | 'timing_burden'
+  | 'explanation_disclosure';
+
+export interface RuleChange {
+  scope: 'quest' | 'task';
+  target: ImprovementTarget;
+  questId: string;
+  taskIds: string[];
+  field: string;
+  beforeRule: string;
+  afterRule: string;
+  executionBindings: ExecutionBinding[];
+}
+
+export interface ChangeSet {
   id: string;
   sessionId: string;
   generationIndex: number;
@@ -140,22 +157,28 @@ export interface ChangeProposal {
   label: string;
   reviewItemRefs: string[];
   issueRefs: string[];
+  eventRefs: string[];
+  evidenceRefs: string[];
   mechanism: string;
-  patch: PatchOp[];
+  changes: RuleChange[];
   expectedEffects: string[];
   possibleRegressions: string[];
+  unknowns: string[];
   assumptionRefs: string[];
   affectedActors: string[];
   requiredCapabilities: string[];
   watchNext: string[];
   validationStatus: 'pending' | 'valid' | 'rejected' | 'requires_implementation';
   validationErrors: string[];
-  selectionStatus: 'pending' | 'selected' | 'branch' | 'dominated' | 'rejected' | 'not_run';
+  confirmationStatus: 'draft' | 'confirmed' | 'declined' | 'superseded' | 'not_run';
+  confirmationReason: string;
+  confirmedAt: string | null;
   resultingPolicyRevisionId: string | null;
   resultingAttemptId: string | null;
   adapter: string;
+  author: 'rule_draft' | 'ai_draft' | 'researcher_hypothesis';
   createdAt: string;
-  patchHash: string;
+  changeHash: string;
 }
 
 export type SessionStatus =
@@ -165,10 +188,9 @@ export type SessionStatus =
   | 'synthesizing'
   | 'proposing_changes'
   | 'validating_changes'
-  | 'evaluating_candidates'
-  | 'selecting_next'
+  | 'executing_revision'
+  | 'awaiting_confirmation'
   | 'ready_for_designer'
-  | 'needs_decision'
   | 'budget_exhausted'
   | 'no_valid_change'
   | 'stalled'
@@ -183,10 +205,9 @@ export const STATUS_LABELS: Record<SessionStatus, string> = {
   synthesizing: '리뷰 종합 중',
   proposing_changes: '개선안 작성 중',
   validating_changes: '개선안 검증 중',
-  evaluating_candidates: '후보 실행·측정 중',
-  selecting_next: '다음 세대 선택 중',
+  executing_revision: '확정한 MEDial 수정 실행 중',
+  awaiting_confirmation: 'Change Set 연구자 확인 대기',
   ready_for_designer: '디자이너 검토 대기',
-  needs_decision: '결정 필요 (자동 선택 안 함)',
   budget_exhausted: '예산 종료 (완료 아님)',
   no_valid_change: '실행 가능한 개선안 없음',
   stalled: '정체 (새 진전 없음)',
@@ -203,8 +224,7 @@ export const RUNNING_STATUSES: SessionStatus[] = [
   'synthesizing',
   'proposing_changes',
   'validating_changes',
-  'evaluating_candidates',
-  'selecting_next',
+  'executing_revision',
 ];
 
 export interface CriteriaRevision {
@@ -218,7 +238,6 @@ export interface CriteriaRevision {
     maxValue: number | null;
     minValue: number | null;
   }[];
-  priorityOrder: string[];
   note: string;
 }
 
@@ -234,11 +253,9 @@ export interface IterationSession {
   control: string;
   basePolicyRevisionId: string;
   maxGenerations: number;
-  maxCandidatesPerGeneration: number;
+  maxChangeSetsPerGeneration: number;
   callBudget: number;
   tokenBudget: number;
-  allowedPatchPaths: string[];
-  selectionRule: string;
   behaviourAdapter: string;
   reviewAdapter: string;
   improvementAdapter: string;
@@ -258,13 +275,6 @@ export interface GenerationMetrics {
   objective?: Record<string, Record<string, unknown>>;
   requiredViolations?: string[];
   reviewCounts?: Record<string, number>;
-  selection?: {
-    decision: string;
-    reason: string;
-    excluded: { id: string; label: string; reason: string }[];
-    dominated: { id: string; label: string; reason: string }[];
-    nondominated: { id: string; label: string }[];
-  };
   comparedToParent?: {
     controlled: boolean;
     differingInputs: string[];
@@ -292,12 +302,11 @@ export interface Generation {
   attemptIds: string[];
   reviewIds: string[];
   synthesisId: string | null;
-  proposalIds: string[];
-  branchGenerationIds: string[];
+  changeSetIds: string[];
   outcome: string;
-  selectedProposalId: string | null;
-  selectedBy: 'auto' | 'designer' | 'none';
-  selectionReason: string;
+  appliedChangeSetId: string | null;
+  confirmedBy: 'researcher' | 'none';
+  confirmationReason: string;
   metrics: GenerationMetrics;
   createdAt: string;
 }
@@ -305,7 +314,7 @@ export interface Generation {
 export interface GenerationDetail extends Generation {
   reviews: AgentReview[];
   synthesis: ReviewSynthesis | null;
-  proposals: ChangeProposal[];
+  changeSets: ChangeSet[];
   policy: { id: string; label: string; changes: string[] } | null;
 }
 
@@ -369,7 +378,9 @@ export interface HumanReview {
 
 export interface Capabilities {
   supportedCapabilities: string[];
-  editablePolicyPaths: string[];
+  supportedQuestIds: string[];
+  supportedTaskIds: string[];
+  supportedRuleFields: string[];
   decks: { id: string; label: string }[];
   modes: Record<string, boolean>;
   notImplemented: string[];
@@ -416,7 +427,7 @@ export interface GenerationComparison {
   generations: (Pick<
     Generation,
     'id' | 'index' | 'label' | 'parentGenerationId' | 'policyRevisionId' | 'outcome' |
-    'selectedBy' | 'selectionReason' | 'attemptIds'
+    'confirmedBy' | 'confirmationReason' | 'attemptIds'
   > & {
     vector: Record<string, number | null>;
     reviewCounts: Record<string, number>;

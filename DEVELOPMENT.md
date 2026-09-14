@@ -42,6 +42,11 @@ npm install
 Ctrl+C 는 **이 스크립트가 띄운 것만** 정리합니다. 직접 띄우려면 `python server/sim_main.py` 와
 `npm run dev` 를 각각 실행하면 됩니다.
 
+`run.sh`는 Git Bash뿐 아니라 Windows의 Docker Desktop/WSL 호환 `bash.exe`에서도 동작합니다.
+그 환경의 Python에 서버 의존성이 없으면 의존성이 설치된 Windows Python을 PowerShell 경유로
+사용하고, 포트 감지·상태 확인·종료도 Windows 프로세스를 기준으로 수행합니다. 특정 Python을
+강제하려면 `MEDIAL_PYTHON`을 지정합니다. CRLF 형식의 `server/.env`는 파일을 고치지 않고 읽습니다.
+
 기본 실행에 API 키·GPU·모델 호출이 없습니다. 원자료가 없으면 합성 마을·합성 페르소나로 돌고,
 화면 상단 배지가 어느 쪽인지 항상 표시합니다.
 
@@ -417,7 +422,12 @@ npm run build                                     # tsc + vite, 통과
 
 ---
 
-# 리뷰 기반 반복 (v0.3, 13번 문서의 I0~I4)
+# 폐기된 리뷰 기반 반복 (v0.3 역사 기록)
+
+> 아래 v0.3 설명은 자동 후보 실행 구조가 어떤 문제를 가졌는지 추적하기 위한 역사 기록입니다.
+> 현재 구현 계약으로 사용하지 않습니다. 현재 활성 구조는 이 섹션 아래의
+> **2026-09-14 · Quest/Task Change Set 전환 상태**와 `docs/research/23_QUEST_TASK_CHANGE_SET.md`를
+> 따릅니다. v0.3의 `ChangeProposal`, patch path, 후보 분기, 자동 선택 상태와 코드는 삭제됐습니다.
 
 13번 문서의 I0~I4가 구현·검증되었습니다. I5(기관 역할 확장·119·다일)는 하지 않았고 아래
 '아직 구현하지 않은 것'에 그대로 남아 있습니다.
@@ -746,7 +756,29 @@ P10·P11이 표식 두 개로 남는 것, OSM 크레딧, 사람 패널의 정직
 
 `docs/research/screenshots/` 를 gitignore에 넣었습니다. 실서버 스크린샷에는 주민의 일과·장소·
 현재 상태가 그대로 담기고, 그것이 `local-data/` 를 제외하는 이유와 같습니다. 파일은 로컬에
-남고 필요하면 직접 전달합니다.
+## 2026-09-14 · Quest/Task Change Set 전환 상태
+
+[23_QUEST_TASK_CHANGE_SET.md](docs/research/23_QUEST_TASK_CHANGE_SET.md)에서 MEDial의 최소 Quest,
+Task, Change Set 계약을 확정했고 활성 개선 경로를 이 계약으로 교체했습니다.
+
+- **구현됨:** 점수 없는 근거 기반 주민 평가, 다섯 개선 대상, Quest/Task의 의미 있는 전후 규칙,
+  내부 실행 바인딩의 단일 변환 경계, AI/규칙 초안, 연구자 수정본·독립 가설 저장, 실행 전 이유가
+  있는 명시적 확인, 확인된 Change Set 하나만으로 새 revision 실행.
+- **삭제됨:** `PatchOp`·`ChangeProposal`, 허용 patch path, 후보 실행 분기, Pareto/지표 기반 선택,
+  `needs_decision`·`evaluating_candidates`, 자동 우승자와 관련 API·UI·테스트.
+- **UI:** 주민 평가에서 나온 Change Set의 관련 Quest/Task와 전후 규칙만 먼저 보인다. 기대 효과,
+  가능한 부담, 다음 관찰 항목을 함께 보여 주며 내부 실행값은 기술 세부사항 안에 접는다.
+- **감사 이력:** 초안을 수정해도 원본을 덮어쓰지 않는다. 원본은 `superseded`, 수정본은
+  `researcher_hypothesis`로 남으며, 저장과 실행 확인은 별도 명령이다.
+- **범위 한계:** Quest/Task는 무응답 안부 확인·의료 이동 지원 두 사례와 닫힌 Task/필드 목록만
+  지원한다. 다일 기억, 119, 범용 정책 언어, 실제 주민 대신의 타당성 주장은 여전히 미구현이다.
+- **최종 자동 검증:** `python -m pytest server/tests -q` 148 passed, `npm test -- --run` 42 passed,
+  `npm run build` 통과, `git diff --check` 통과.
+- **실제 Chromium 검증:** 구형 v0.3 세션은 활성 목록에서 분리되어 첫 화면이 오류 없이 열렸다.
+  새 session은 Change Set 확인 전 revision 1개만 보였고, 연구자 수정본 저장 후에도 실행되지
+  않았다. 이유를 입력해 확정한 뒤에만 revision이 2개가 됐다. 브라우저 콘솔 오류 0건.
+- **구형 로컬 기록:** 삭제·변환하지 않는다. 활성 계약 목록에서는 제외하고 직접 접근은 409와
+  명확한 이전 형식 안내를 반환한다.
 
 ### 1:1:1 작업 중 검사로 발견해 고친 것
 

@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import styled from 'styled-components';
 import {
   DIMENSION_LABELS,
   USAGE_LABELS,
+  type ChangeSet,
   type GenerationComparison,
   type GenerationDetail,
   type SessionDetail,
@@ -16,6 +17,7 @@ import {
   Callout,
   Disclosure,
   HScroll,
+  Input,
   Mono,
   PageTitle,
   Row,
@@ -226,11 +228,11 @@ interface Props {
   busy: boolean;
   onSetSides: (left: string | null, right: string | null) => void;
   onOpenScene: (attemptId: string, eventId: string) => void;
-  onSelectProposal: (proposalId: string, reason: string) => void;
+  onConfirmChangeSet: (changeSetId: string, reason: string) => void;
+  onSaveResearcherChangeSet: (body: Record<string, unknown>) => void;
   onOpenFieldSheet: () => void;
   onOpenAllAttempts: () => void;
-  /** Reason text for the needs_decision choice, held by the caller so the store
-   *  keeps the record of what was written. */
+  /** Researcher confirmation reason, held by the caller so it survives refreshes. */
   decisionReason: string;
   onDecisionReason: (value: string) => void;
 }
@@ -243,12 +245,14 @@ export default function CompareScreen({
   busy,
   onSetSides,
   onOpenScene,
-  onSelectProposal,
+  onConfirmChangeSet,
+  onSaveResearcherChangeSet,
   onOpenFieldSheet,
   onOpenAllAttempts,
   decisionReason,
   onDecisionReason,
 }: Props) {
+  const [editor, setEditor] = useState<ResearcherEditor | null>(null);
   const generations = useMemo(
     () => [...detail.generations].sort((a, b) => a.index - b.index),
     [detail.generations],
@@ -276,10 +280,10 @@ export default function CompareScreen({
   const leftFacts = versionFacts(left);
   const rightFacts = versionFacts(right);
   const diff = conditionDiff(left, right);
-  const needsDecision = detail.session.status === 'needs_decision';
+  const needsConfirmation = detail.session.status === 'awaiting_confirmation';
   const loopFinished =
     !detail.running &&
-    !needsDecision &&
+    !needsConfirmation &&
     ['ready_for_designer', 'stalled', 'budget_exhausted', 'no_valid_change', 'cancelled'].includes(
       detail.session.status,
     );
@@ -287,9 +291,11 @@ export default function CompareScreen({
   // The reviews that the change on the right was actually built from. This is
   // the link the whole loop exists to make readable.
   const drivingReviews = useMemo(() => {
-    const proposal = left.proposals.find((p) => p.resultingPolicyRevisionId === right.policyRevisionId);
-    if (!proposal) return { proposal: null, quotes: [] as VersionFacts['groundedQuotes'] };
-    const wanted = new Set(proposal.reviewItemRefs);
+    const changeSet = left.changeSets.find(
+      (item) => item.resultingPolicyRevisionId === right.policyRevisionId,
+    );
+    if (!changeSet) return { changeSet: null, quotes: [] as VersionFacts['groundedQuotes'] };
+    const wanted = new Set(changeSet.reviewItemRefs);
     const quotes: VersionFacts['groundedQuotes'] = [];
     for (const review of left.reviews) {
       review.items.forEach((item, index) => {
@@ -304,30 +310,21 @@ export default function CompareScreen({
         });
       });
     }
-    return { proposal, quotes: quotes.length > 0 ? quotes : leftFacts.groundedQuotes.slice(0, 3) };
+    return { changeSet, quotes: quotes.length > 0 ? quotes : leftFacts.groundedQuotes.slice(0, 3) };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [left, right]);
 
-  // Where the loop actually stopped for a decision.
-  //
-  // The branches are proposals of the generation that *produced* the tied
-  // candidates - the parent - not of the versions they produced. Reading them
-  // off the right-hand column meant the default pairing (child on the right)
-  // found an empty list, so a session in needs_decision rendered no next action
-  // at all. This is a session-level state, so it is sourced from the session
-  // rather than from whichever pair the researcher happens to be comparing.
-  const decisionPoint = useMemo(() => {
-    const byMarker = generations.find(
-      (g) => g.metrics.selection?.decision === 'needs_decision',
-    );
-    const byBranch = [...generations]
-      .reverse()
-      .find((g) => g.proposals.some((p) => p.selectionStatus === 'branch'));
-    return byMarker ?? byBranch ?? null;
-  }, [generations]);
-
-  const branches =
-    decisionPoint?.proposals.filter((p) => p.selectionStatus === 'branch') ?? [];
+  const confirmationPoint = useMemo(
+    () => [...generations].reverse().find((generation) =>
+      generation.changeSets.some(
+        (item) => item.validationStatus === 'valid' && item.confirmationStatus === 'draft',
+      ),
+    ) ?? null,
+    [generations],
+  );
+  const drafts = confirmationPoint?.changeSets.filter(
+    (item) => item.validationStatus === 'valid' && item.confirmationStatus === 'draft',
+  ) ?? [];
 
   return (
     <Sheet>
@@ -405,8 +402,8 @@ export default function CompareScreen({
                           <strong>{plain(row.after)}</strong>
                         </div>
                       ))}
-                      {drivingReviews.proposal && (
-                        <Sub>바꾼 이유: {drivingReviews.proposal.mechanism}</Sub>
+                      {drivingReviews.changeSet && (
+                        <Sub>바꾼 이유: {drivingReviews.changeSet.mechanism}</Sub>
                       )}
                       <Disclosure>
                         <summary>기술 diff (필드 경로)</summary>
@@ -516,7 +513,7 @@ export default function CompareScreen({
                   <ProblemList
                     items={[
                       ...rightFacts.newProblems,
-                      ...(drivingReviews.proposal?.possibleRegressions ?? []).map(
+                      ...(drivingReviews.changeSet?.possibleRegressions ?? []).map(
                         (line) => `예상했던 부작용: ${line}`,
                       ),
                     ]}
@@ -621,42 +618,58 @@ export default function CompareScreen({
               </Disclosure>
             </Link_>
             <Link_>
-              <Label>3 · 개선 에이전트의 제안</Label>
-              {drivingReviews.proposal ? (
+              <Label>3 · 연구자가 확정한 MEDial Change Set</Label>
+              {drivingReviews.changeSet ? (
                 <>
-                  <strong>{drivingReviews.proposal.label}</strong>
-                  <div>{drivingReviews.proposal.mechanism}</div>
-                  {drivingReviews.proposal.expectedEffects.length > 0 && (
-                    <Sub>기대: {drivingReviews.proposal.expectedEffects.join(' · ')}</Sub>
+                  <strong>{drivingReviews.changeSet.label}</strong>
+                  <div>{drivingReviews.changeSet.mechanism}</div>
+                  {drivingReviews.changeSet.changes.map((change) => (
+                    <div key={`${change.questId}-${change.field}`} style={{ marginTop: 8 }}>
+                      <Tag $kind="neutral">{change.scope === 'quest' ? 'Quest' : 'Task'}</Tag>{' '}
+                      <strong>{change.beforeRule}</strong> → {change.afterRule}
+                    </div>
+                  ))}
+                  {drivingReviews.changeSet.expectedEffects.length > 0 && (
+                    <Sub>기대: {drivingReviews.changeSet.expectedEffects.join(' · ')}</Sub>
                   )}
-                  {drivingReviews.proposal.possibleRegressions.length > 0 && (
+                  {drivingReviews.changeSet.possibleRegressions.length > 0 && (
                     <Sub style={{ color: colour.warn }}>
-                      예상한 부작용: {drivingReviews.proposal.possibleRegressions.join(' · ')}
+                      예상한 부작용: {drivingReviews.changeSet.possibleRegressions.join(' · ')}
                     </Sub>
                   )}
-                  {drivingReviews.proposal.watchNext.length > 0 && (
-                    <Sub>다음에 확인할 것: {drivingReviews.proposal.watchNext.join(' · ')}</Sub>
+                  {drivingReviews.changeSet.watchNext.length > 0 && (
+                    <Sub>다음에 확인할 것: {drivingReviews.changeSet.watchNext.join(' · ')}</Sub>
                   )}
-                  {drivingReviews.proposal.validationStatus !== 'valid' && (
+                  {drivingReviews.changeSet.validationStatus !== 'valid' && (
                     <Sub style={{ color: colour.warn }}>
-                      검증 상태: {drivingReviews.proposal.validationStatus === 'requires_implementation'
+                      검증 상태: {drivingReviews.changeSet.validationStatus === 'requires_implementation'
                         ? '구현 필요 — 자동 실행하지 않았습니다'
-                        : drivingReviews.proposal.validationStatus}
-                      {drivingReviews.proposal.requiredCapabilities.length > 0 && (
-                        <> · 필요한 기능: {drivingReviews.proposal.requiredCapabilities.join(', ')}</>
+                        : drivingReviews.changeSet.validationStatus}
+                      {drivingReviews.changeSet.requiredCapabilities.length > 0 && (
+                        <> · 필요한 기능: {drivingReviews.changeSet.requiredCapabilities.join(', ')}</>
                       )}
                     </Sub>
                   )}
+                  <Disclosure>
+                    <summary>기술 세부사항 · 내부 실행 바인딩</summary>
+                    {drivingReviews.changeSet.changes.flatMap((change) =>
+                      change.executionBindings.map((binding) => (
+                        <div key={`${change.field}-${binding.key}`}>
+                          <Mono>{binding.key}</Mono>: {plain(binding.before)} → {plain(binding.after)}
+                        </div>
+                      )),
+                    )}
+                  </Disclosure>
                 </>
               ) : (
                 <span style={{ color: colour.unknown }}>
-                  오른쪽 버전을 만든 제안 기록을 찾지 못했습니다 (두 버전이 파생 관계가 아닐 수
+                  오른쪽 버전을 만든 Change Set을 찾지 못했습니다 (두 버전이 파생 관계가 아닐 수
                   있습니다).
                 </span>
               )}
               <Sub>
-                이 제안은 세계 밖 개선 에이전트가 쓴 것입니다. 마을 안에서 연락하고 배정하는
-                MEDial과는 다른 역할이고, 검증을 통과해야만 다음 하루의 운영 조건이 됩니다.
+                초안은 세계 밖 개선 에이전트가 만들 수 있지만, 연구자가 이유와 함께 확정한 뒤에만
+                MEDial의 다음 운영 조건으로 실행됩니다.
               </Sub>
             </Link_>
             <Link_>
@@ -679,13 +692,13 @@ export default function CompareScreen({
           </Chain>
         </div>
 
-        {needsDecision && branches.length === 0 && (
+        {needsConfirmation && drafts.length === 0 && (
           <Callout $tone="warn">
             <div>
-              <strong>결정이 필요한 상태인데 고를 후보를 찾지 못했습니다.</strong>
+              <strong>확인이 필요한 상태인데 실행할 Change Set을 찾지 못했습니다.</strong>
               <div style={{ marginTop: 4 }}>
-                서버는 <Mono>needs_decision</Mono> 으로 멈춰 있습니다. 전체 시도 보기에서 분기로
-                남은 버전을 확인하거나, 진행 표시의 실행 제어로 중지한 뒤 새 실험을 준비하세요.
+                서버는 <Mono>awaiting_confirmation</Mono>에서 멈춰 있습니다. 실행을 중지한 뒤
+                주민 평가와 Change Set 기록을 확인하세요.
               </div>
               <div style={{ marginTop: 12 }}>
                 <Button onClick={onOpenAllAttempts}>전체 시도 보기</Button>
@@ -694,34 +707,39 @@ export default function CompareScreen({
           </Callout>
         )}
 
-        {needsDecision && branches.length > 0 && (
+        {needsConfirmation && drafts.length > 0 && (
           <Callout $tone="warn">
             <div style={{ width: '100%' }}>
-              <strong>어느 방향으로 갈지 정해야 합니다.</strong>
+              <strong>실행할 MEDial Change Set을 연구자가 확정해야 합니다.</strong>
               <div style={{ marginTop: 4 }}>
-                {decisionPoint?.metrics.selection?.reason ??
-                  '여러 후보가 서로 다른 지표에서 낫습니다. 자동으로 고르지 않습니다.'}
+                아래 초안은 아직 실행되지 않았습니다. 주민 평가 근거와 예상 부담을 확인하세요.
               </div>
-              {decisionPoint && (
+              {confirmationPoint && (
                 <Sub style={{ marginTop: 4 }}>
-                  {versionName(decisionPoint.index, decisionPoint.label)} 에서 갈라진 후보입니다.
+                  {versionName(confirmationPoint.index, confirmationPoint.label)}의 주민 평가에서 나온 초안입니다.
                 </Sub>
               )}
               <Sides style={{ marginTop: 12 }}>
-                {branches.map((proposal) => (
-                  <div key={proposal.id}>
-                    <strong>{proposal.label}</strong>
-                    <Body style={{ marginTop: 4 }}>{proposal.mechanism}</Body>
-                    {proposal.expectedEffects.length > 0 && (
-                      <Sub>이익: {proposal.expectedEffects.join(' · ')}</Sub>
+                {drafts.map((changeSet) => (
+                  <div key={changeSet.id}>
+                    <strong>{changeSet.label}</strong>
+                    <Body style={{ marginTop: 4 }}>{changeSet.mechanism}</Body>
+                    {changeSet.changes.map((change) => (
+                      <div key={`${change.questId}-${change.field}`} style={{ marginTop: 6 }}>
+                        <Tag $kind="neutral">{change.scope === 'quest' ? 'Quest' : 'Task'}</Tag>{' '}
+                        {change.beforeRule} → <strong>{change.afterRule}</strong>
+                      </div>
+                    ))}
+                    {changeSet.expectedEffects.length > 0 && (
+                      <Sub>기대: {changeSet.expectedEffects.join(' · ')}</Sub>
                     )}
-                    {proposal.possibleRegressions.length > 0 && (
+                    {changeSet.possibleRegressions.length > 0 && (
                       <Sub style={{ color: colour.error }}>
-                        비용: {proposal.possibleRegressions.join(' · ')}
+                        가능한 부담: {changeSet.possibleRegressions.join(' · ')}
                       </Sub>
                     )}
-                    {proposal.affectedActors.length > 0 && (
-                      <Sub>영향: {nameList(proposal.affectedActors)}</Sub>
+                    {changeSet.affectedActors.length > 0 && (
+                      <Sub>영향: {nameList(changeSet.affectedActors)}</Sub>
                     )}
                     <div style={{ marginTop: 8 }}>
                       <Button
@@ -729,19 +747,106 @@ export default function CompareScreen({
                         disabled={busy || decisionReason.trim().length === 0}
                         title={
                           decisionReason.trim().length === 0
-                            ? '아래에 이유를 적어야 선택할 수 있습니다'
+                            ? '아래에 확정 이유를 적어야 실행할 수 있습니다'
                             : undefined
                         }
-                        onClick={() => onSelectProposal(proposal.id, decisionReason.trim())}
+                        onClick={() => onConfirmChangeSet(changeSet.id, decisionReason.trim())}
                       >
-                        이 방향으로 계속
+                        확정하고 새 revision 실행
                       </Button>
+                      <TextLink
+                        style={{ marginLeft: 12 }}
+                        onClick={() => setEditor(makeEditor(changeSet, true))}
+                      >
+                        이 초안 직접 수정
+                      </TextLink>
+                      <TextLink
+                        style={{ marginLeft: 12 }}
+                        onClick={() => setEditor(makeEditor(changeSet, false))}
+                      >
+                        새 연구자 가설로 작성
+                      </TextLink>
                     </div>
                   </div>
                 ))}
               </Sides>
+              {editor && (
+                <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${colour.border}` }}>
+                  <SectionTitle>
+                    {editor.sourceChangeSetId ? '초안 수정본' : '새 연구자 가설'}
+                  </SectionTitle>
+                  <Sub style={{ marginTop: 4 }}>
+                    저장하면 새 Change Set이 됩니다. 원본과 실행 기록은 덮어쓰지 않습니다.
+                  </Sub>
+                  <Label style={{ marginTop: 12 }}>이름</Label>
+                  <Input
+                    value={editor.label}
+                    onChange={(e) => setEditor({ ...editor, label: e.target.value })}
+                  />
+                  <Label style={{ marginTop: 10 }}>변경 원리</Label>
+                  <TextArea
+                    value={editor.mechanism}
+                    onChange={(e) => setEditor({ ...editor, mechanism: e.target.value })}
+                  />
+                  {editor.afterRules.map((rule, index) => (
+                    <div key={`rule-${index}`}>
+                      <Label style={{ marginTop: 10 }}>변경 후 Quest/Task 규칙 {index + 1}</Label>
+                      <TextArea
+                        value={rule}
+                        onChange={(e) => setEditor({
+                          ...editor,
+                          afterRules: editor.afterRules.map((item, i) => i === index ? e.target.value : item),
+                        })}
+                      />
+                    </div>
+                  ))}
+                  <Disclosure style={{ marginTop: 10 }}>
+                    <summary>기술 세부사항 · 내부 실행값 수정</summary>
+                    {Object.entries(editor.bindingValues).map(([key, value]) => (
+                      <div key={key}>
+                        <Label style={{ marginTop: 10 }}>{conditionName(key)} · 실행값</Label>
+                        <Input
+                          value={value}
+                          onChange={(e) => setEditor({
+                            ...editor,
+                            bindingValues: { ...editor.bindingValues, [key]: e.target.value },
+                          })}
+                        />
+                      </div>
+                    ))}
+                  </Disclosure>
+                  <Label style={{ marginTop: 10 }}>기대 효과 (한 줄에 하나)</Label>
+                  <TextArea
+                    value={editor.expectedEffects}
+                    onChange={(e) => setEditor({ ...editor, expectedEffects: e.target.value })}
+                  />
+                  <Label style={{ marginTop: 10 }}>가능한 부담 (한 줄에 하나)</Label>
+                  <TextArea
+                    value={editor.possibleRegressions}
+                    onChange={(e) => setEditor({ ...editor, possibleRegressions: e.target.value })}
+                  />
+                  <Label style={{ marginTop: 10 }}>다음 실행에서 볼 것 (한 줄에 하나)</Label>
+                  <TextArea
+                    value={editor.watchNext}
+                    onChange={(e) => setEditor({ ...editor, watchNext: e.target.value })}
+                  />
+                  <Row style={{ marginTop: 12 }}>
+                    <Button
+                      $primary
+                      disabled={busy || !editor.label.trim() || !editor.mechanism.trim() || editor.afterRules.some((x) => !x.trim())}
+                      onClick={() => {
+                        onSaveResearcherChangeSet(editorPayload(editor));
+                        setEditor(null);
+                      }}
+                    >
+                      연구자 Change Set으로 저장
+                    </Button>
+                    <Button onClick={() => setEditor(null)}>취소</Button>
+                  </Row>
+                </div>
+              )}
               <div style={{ marginTop: 12 }}>
-                <Label>어떤 근거로 고르는지 (기록에 남습니다)</Label>
+                <Label>왜 이 변경을 실행하는지 (기록에 남습니다)</Label>
                 <TextArea
                   value={decisionReason}
                   onChange={(e) => onDecisionReason(e.target.value)}
@@ -767,8 +872,8 @@ export default function CompareScreen({
               <Sub>
                 {detail.running
                   ? '아직 실행 중입니다. 끝나면 현장 검토할 안을 고를 수 있습니다.'
-                  : needsDecision
-                    ? '먼저 위에서 방향을 고르세요.'
+                  : needsConfirmation
+                    ? '먼저 위에서 Change Set을 검토하고 확정하세요.'
                     : '반복이 끝나면 현장 검토 선택이 열립니다.'}
                 {' '}
                 <TextLink onClick={onOpenFieldSheet}>지금까지의 결정 기록 보기</TextLink>
@@ -785,6 +890,61 @@ export default function CompareScreen({
       </Inner>
     </Sheet>
   );
+}
+
+interface ResearcherEditor {
+  templateChangeSetId: string;
+  sourceChangeSetId: string | null;
+  label: string;
+  mechanism: string;
+  afterRules: string[];
+  bindingValues: Record<string, string>;
+  bindingOriginals: Record<string, unknown>;
+  expectedEffects: string;
+  possibleRegressions: string;
+  watchNext: string;
+}
+
+function makeEditor(changeSet: ChangeSet, supersede: boolean): ResearcherEditor {
+  const bindings = changeSet.changes.flatMap((change) => change.executionBindings);
+  return {
+    templateChangeSetId: changeSet.id,
+    sourceChangeSetId: supersede ? changeSet.id : null,
+    label: supersede ? changeSet.label : `${changeSet.label} · 연구자 가설`,
+    mechanism: changeSet.mechanism,
+    afterRules: changeSet.changes.map((change) => change.afterRule),
+    bindingValues: Object.fromEntries(bindings.map((binding) => [binding.key, String(binding.after)])),
+    bindingOriginals: Object.fromEntries(bindings.map((binding) => [binding.key, binding.after])),
+    expectedEffects: changeSet.expectedEffects.join('\n'),
+    possibleRegressions: changeSet.possibleRegressions.join('\n'),
+    watchNext: changeSet.watchNext.join('\n'),
+  };
+}
+
+function editorPayload(editor: ResearcherEditor): Record<string, unknown> {
+  return {
+    templateChangeSetId: editor.templateChangeSetId,
+    sourceChangeSetId: editor.sourceChangeSetId,
+    label: editor.label.trim(),
+    mechanism: editor.mechanism.trim(),
+    afterRules: editor.afterRules.map((item) => item.trim()),
+    bindingValues: Object.fromEntries(Object.entries(editor.bindingValues).map(([key, value]) => {
+      const original = editor.bindingOriginals[key];
+      if (typeof original === 'number') return [key, Number(value)];
+      if (typeof original === 'boolean') return [key, value.trim().toLowerCase() === 'true'];
+      if (Array.isArray(original)) {
+        try { return [key, JSON.parse(value)]; } catch { return [key, value.split(',').map((x) => x.trim())]; }
+      }
+      return [key, value.trim()];
+    })),
+    expectedEffects: lines(editor.expectedEffects),
+    possibleRegressions: lines(editor.possibleRegressions),
+    watchNext: lines(editor.watchNext),
+  };
+}
+
+function lines(value: string): string[] {
+  return value.split('\n').map((line) => line.trim()).filter(Boolean);
 }
 
 function ProblemList({ items, empty }: { items: string[]; empty: string }) {

@@ -27,7 +27,7 @@ import { colour, font, radius } from './ui/theme';
 // Three screens, and the shell that holds them.
 //
 // The six research steps of doc 12 have not gone anywhere - the loop still runs
-// cycle, review, synthesis, proposal, evaluation, selection in that order on the
+// cycle, review, synthesis, Change Set validation, and researcher confirmation on the
 // server, and ProgressBar shows where it is. What changed is that they are no
 // longer six things to click. Reviews live at the bottom of the observe screen
 // when the day ends; improvement, generations and the field decision live in the
@@ -396,7 +396,8 @@ export default function SimulationApp() {
               busy={it.busy}
               onSetSides={it.setCompareSides}
               onOpenScene={(attemptId, eventId) => void it.openScene(attemptId, eventId)}
-              onSelectProposal={(id, reason) => void it.selectProposal(id, reason)}
+              onConfirmChangeSet={(id, reason) => void it.confirmChangeSet(id, reason)}
+              onSaveResearcherChangeSet={(body) => void it.saveResearcherChangeSet(body)}
               onOpenFieldSheet={() => it.setFieldSheet(true)}
               onOpenAllAttempts={() => it.setCompareView('all_generations')}
               decisionReason={decisionReason}

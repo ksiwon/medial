@@ -1,13 +1,13 @@
 """The iteration state machine: run, review, synthesise, propose, validate,
-evaluate, select, repeat - and stop honestly.
+wait for researcher confirmation, execute one revision, and repeat.
 
 Every transition writes its result to the database before the next one starts,
 and every transition is idempotent: it looks at what the generation already has
 and skips the work if it is there. That is what makes a restart safe. A process
-that dies between "ran the candidate" and "recorded which candidate won" resumes
-without running the candidate twice or applying its patch twice.
+that dies between "ran the confirmed revision" and "recorded its result" resumes
+without applying the same Change Set twice.
 
-Stopping is not one thing. ``reached_max_generations``, ``needs_decision``,
+Stopping is not one thing. ``reached_max_generations``, ``awaiting_confirmation``,
 ``budget_exhausted``, ``no_valid_change``, ``stalled``, ``model_failure`` and
 ``cancelled`` are separate states with separate text, and none of them is
 reported as a completed, successful design. The last generation is never marked
@@ -25,12 +25,12 @@ from ..decks.registry import DECKS
 from ..metrics import compare as compare_runs
 from .contracts import (
     AgentReview,
-    ChangeProposal,
+    ChangeSet,
+    ChangeSetConfirmation,
+    ChangeSetValidation,
     Generation,
     GenerationOutcome,
     IterationSession,
-    ProposalSelection,
-    ProposalValidation,
     ReviewSynthesis,
     SessionStatus,
     STOP_REASON_TEXT,
@@ -40,15 +40,14 @@ from .improvement import SUPPORTED_CAPABILITIES, RuleImprovementAdapter
 from .llm import BudgetExhausted, LlmClient, ModelCallError, ModelNotConfigured, content_hash
 from .llm_adapters import LlmImprovementAdapter, LlmReviewAdapter, LlmSynthesisAdapter
 from .reviewers import ReviewAdapterError, RuleReviewAdapter, ScriptedReviewAdapter
-from .selection import (
+from .evaluation_metrics import (
     DEFAULT_CRITERIA,
-    evaluate,
     outcome_vector,
     per_actor_delta,
     violates_required,
 )
 from .synthesis import RuleSynthesisAdapter
-from .validation import patch_to_changes, validate_proposal
+from .validation import change_set_to_policy_changes, validate_change_set
 
 
 def now_iso() -> str:
@@ -175,8 +174,7 @@ class IterationEngine:
             SessionStatus.synthesizing: self._synthesise,
             SessionStatus.proposing_changes: self._propose,
             SessionStatus.validating_changes: self._validate,
-            SessionStatus.evaluating_candidates: self._evaluate,
-            SessionStatus.selecting_next: self._select,
+            SessionStatus.executing_revision: self._execute_confirmed_revision,
         }.get(self.session.status)
         if handler is None:
             return self.session
@@ -310,28 +308,27 @@ class IterationEngine:
             self._stop(SessionStatus.ready_for_designer, "reached_max_generations")
             return
 
-        if not generation.proposalIds:
+        if not generation.changeSetIds:
             synthesis = ReviewSynthesis.model_validate(
                 self.store.synthesis(generation.synthesisId))
             policy = self._policy(generation.policyRevisionId)
             self._check_budget()
-            proposals, no_change = self._improvement_adapter().propose(
+            change_sets, no_change = self._improvement_adapter().propose(
                 synthesis=synthesis, policy=policy,
-                allowed_paths=self.session.allowedPatchPaths,
                 capabilities=list(SUPPORTED_CAPABILITIES),
                 criteria=[c.model_dump(mode="json")
                           for c in self.session.criteriaRevision.criteria],
                 core_item=self.session.coreItem,
-                max_candidates=self.session.maxCandidatesPerGeneration,
+                max_change_sets=self.session.maxChangeSetsPerGeneration,
                 session_id=self.session.id, generation_index=generation.index,
-                created_at=now_iso(), id_prefix="prop-%s" % generation.id,
-                already_tried=self.store.session_patch_hashes(self.session.id))
-            if proposals:
-                self.store.save_proposals(generation.id, proposals)
-                generation.proposalIds = [p.id for p in proposals]
+                created_at=now_iso(), id_prefix="change-%s" % generation.id,
+                already_tried=self.store.session_change_hashes(self.session.id))
+            if change_sets:
+                self.store.save_change_sets(generation.id, change_sets)
+                generation.changeSetIds = [item.id for item in change_sets]
             generation.outcome = GenerationOutcome.proposed
             self.store.update_generation(generation)
-            if no_change and not any(p.patch for p in proposals):
+            if no_change and not change_sets:
                 self._stop(SessionStatus.no_valid_change, "no_valid_change", no_change)
                 return
         self.session.status = SessionStatus.validating_changes
@@ -343,71 +340,70 @@ class IterationEngine:
         known_items = {"%s#%d" % (r["id"], i)
                        for r in reviews for i in range(len(r["items"]))}
         world_truth = self._world_truth_event_ids(generation)
-        applied = self._applied_patch_hashes()
+        applied = self._applied_change_hashes()
 
-        checked: list[ChangeProposal] = []
-        for row in self.store.proposals(generation.id):
-            proposal = ChangeProposal.model_validate(row)
-            if proposal.validationStatus is not ProposalValidation.pending:
-                checked.append(proposal)
+        checked: list[ChangeSet] = []
+        for row in self.store.change_sets(generation.id):
+            change_set = ChangeSet.model_validate(row)
+            if change_set.validationStatus is not ChangeSetValidation.pending:
+                checked.append(change_set)
                 continue
-            result = validate_proposal(
-                proposal, policy=policy,
-                allowed_paths=self.session.allowedPatchPaths,
+            result = validate_change_set(
+                change_set, policy=policy, capabilities=SUPPORTED_CAPABILITIES,
                 known_review_items=known_items,
                 world_truth_event_ids=world_truth,
-                applied_patch_hashes=applied)
-            self.store.update_proposal(result)
+                applied_change_hashes=applied)
+            self.store.update_change_set(result)
             checked.append(result)
 
-        runnable = [p for p in checked if p.validationStatus is ProposalValidation.valid]
+        runnable = [item for item in checked
+                    if item.validationStatus is ChangeSetValidation.valid]
         if not runnable:
-            blocked = [p for p in checked
-                       if p.validationStatus is ProposalValidation.requires_implementation]
-            repeats = [p for p in checked
-                       if any("반복" in e or "이미 적용" in e for e in p.validationErrors)]
+            blocked = [item for item in checked
+                       if item.validationStatus is ChangeSetValidation.requires_implementation]
+            repeats = [item for item in checked
+                       if any("반복" in e or "이미 실행" in e for e in item.validationErrors)]
             generation.outcome = GenerationOutcome.blocked
             self.store.update_generation(generation)
             if repeats and len(repeats) == len(checked):
                 self._stop(SessionStatus.stalled, "stalled",
-                           "제안된 변경이 이미 적용한 것과 같다.")
+                           "작성된 Change Set이 이미 적용한 것과 같다.")
             else:
                 self._stop(
                     SessionStatus.no_valid_change, "no_valid_change",
-                    ("실행 가능한 정책 변경이 없다. 구현이 필요한 제안 %d건은 기록해 두었다."
+                    ("실행 가능한 Change Set이 없다. 구현이 필요한 초안 %d건은 기록해 두었다."
                      % len(blocked)) if blocked else
-                    "제안이 모두 검증을 통과하지 못했다.")
+                    "Change Set 초안이 모두 검증을 통과하지 못했다.")
             return
-        self.session.status = SessionStatus.evaluating_candidates
+        self._stop(SessionStatus.awaiting_confirmation, "awaiting_confirmation")
 
-    def _evaluate(self) -> None:
-        """Run every valid candidate as its own generation, then measure it."""
+    def _execute_confirmed_revision(self) -> None:
+        """Execute exactly the one Change Set explicitly confirmed by a researcher."""
         generation = self._current()
-        children_by_proposal = {
-            g["selectedProposalId"]: g
-            for g in self.store.list_generations(self.session.id)
-            if g["parentGenerationId"] == generation.id and g["selectedProposalId"]}
-
-        for row in self.store.proposals(generation.id):
-            proposal = ChangeProposal.model_validate(row)
-            if proposal.validationStatus is not ProposalValidation.valid:
-                continue
-            if proposal.id in children_by_proposal:
-                continue  # already run before a restart
+        confirmed = [ChangeSet.model_validate(row)
+                     for row in self.store.change_sets(generation.id)
+                     if row.get("confirmationStatus") == ChangeSetConfirmation.confirmed.value]
+        if len(confirmed) != 1:
+            raise IterationError("실행하려면 연구자가 확정한 Change Set이 정확히 하나여야 한다.")
+        change_set = confirmed[0]
+        child_row = next((row for row in self.store.list_generations(self.session.id)
+                          if row["parentGenerationId"] == generation.id
+                          and row.get("appliedChangeSetId") == change_set.id), None)
+        if child_row is None:
             policy = self._policy(generation.policyRevisionId)
             revision = self.service.create_policy(
-                policy["id"], patch_to_changes(policy, proposal.patch),
-                reason="ChangeProposal %s: %s" % (proposal.id, proposal.mechanism),
-                label="v%d · %s" % (generation.index + 1, proposal.label))
+                policy["id"], change_set_to_policy_changes(policy, change_set),
+                reason="Change Set %s: %s" % (change_set.id, change_set.mechanism),
+                label="v%d · %s" % (generation.index + 1, change_set.label))
             child = Generation(
                 id="gen-%s-%d-%s" % (self.session.id[-8:], generation.index + 1, _short()),
                 sessionId=self.session.id, index=generation.index + 1,
                 parentGenerationId=generation.id, policyRevisionId=revision.id,
-                label="v%d · %s" % (generation.index + 1, proposal.label),
-                selectedProposalId=proposal.id, outcome=GenerationOutcome.running,
+                label="v%d · %s" % (generation.index + 1, change_set.label),
+                appliedChangeSetId=change_set.id, outcome=GenerationOutcome.running,
+                confirmedBy="researcher", confirmationReason=change_set.confirmationReason,
                 createdAt=now_iso())
             self.store.save_generation(child)
-
             attempt_ids = []
             for deck_id in self.session.developmentDeckRefs:
                 detail = self.service.create_attempt(
@@ -425,89 +421,18 @@ class IterationEngine:
             child.metrics["comparedToParent"] = self._compare(generation, child)
             child.outcome = GenerationOutcome.evaluated
             self.store.update_generation(child)
-
-            proposal = proposal.model_copy(update={
+            change_set = change_set.model_copy(update={
                 "resultingPolicyRevisionId": revision.id,
                 "resultingAttemptId": attempt_ids[0] if attempt_ids else None})
-            self.store.update_proposal(proposal)
-
-        generation.branchGenerationIds = [
-            g["id"] for g in self.store.list_generations(self.session.id)
-            if g["parentGenerationId"] == generation.id]
-        generation.outcome = GenerationOutcome.evaluated
+            self.store.update_change_set(change_set)
+        else:
+            child = Generation.model_validate(child_row)
+        generation.outcome = GenerationOutcome.advanced
+        generation.confirmationReason = change_set.confirmationReason
         self.store.update_generation(generation)
-        self.session.status = SessionStatus.selecting_next
-
-    def _select(self) -> None:
-        generation = self._current()
-        children = [Generation.model_validate(g)
-                    for g in self.store.list_generations(self.session.id)
-                    if g["parentGenerationId"] == generation.id]
-        if not children:
-            self._stop(SessionStatus.no_valid_change, "no_valid_change",
-                       "실행된 후보가 없다.")
-            return
-
-        incumbent = {"id": generation.id, "label": generation.label,
-                     "vector": generation.metrics.get("vector", {})}
-        candidates = [{"id": c.id, "label": c.label,
-                       "vector": c.metrics.get("vector", {})} for c in children]
-        verdict = evaluate(incumbent=incumbent, candidates=candidates,
-                           criteria=self.session.criteriaRevision,
-                           selection_rule=self.session.selectionRule)
-
-        by_id = {c.id: c for c in children}
-        for row in self.store.proposals(generation.id):
-            proposal = ChangeProposal.model_validate(row)
-            child = next((c for c in children
-                          if c.selectedProposalId == proposal.id), None)
-            if child is None:
-                continue
-            if verdict["selected"] == child.id:
-                status = ProposalSelection.selected
-            elif any(d["id"] == child.id for d in verdict["dominated"]):
-                status = ProposalSelection.dominated
-            elif any(d["id"] == child.id for d in verdict["excluded"]):
-                status = ProposalSelection.rejected
-            else:
-                status = ProposalSelection.branch
-            self.store.update_proposal(proposal.model_copy(
-                update={"selectionStatus": status}))
-
-        generation.selectionReason = verdict["reason"]
-        generation.metrics["selection"] = verdict
-        self.store.update_generation(generation)
-
-        if verdict["decision"] == "advance":
-            winner = by_id[verdict["selected"]]
-            winner.selectedBy = "auto"
-            winner.selectionReason = verdict["reason"]
-            winner.outcome = GenerationOutcome.running
-            self.store.update_generation(winner)
-            for other in children:
-                if other.id == winner.id:
-                    continue
-                other.outcome = GenerationOutcome.blocked
-                other.selectionReason = "분기로 보존한다. 삭제하지 않는다."
-                self.store.update_generation(other)
-            generation.outcome = GenerationOutcome.advanced
-            self.store.update_generation(generation)
-            self.session.currentGenerationIndex = winner.index
-            self._current_id = winner.id
-            self.session.status = SessionStatus.running_cycle
-            return
-
-        reason = {"needs_decision": "needs_decision",
-                  "no_progress": "stalled",
-                  "no_valid": "no_valid_change"}[verdict["decision"]]
-        status = {"needs_decision": SessionStatus.needs_decision,
-                  "no_progress": SessionStatus.stalled,
-                  "no_valid": SessionStatus.no_valid_change}[verdict["decision"]]
-        for child in children:
-            child.outcome = GenerationOutcome.blocked
-            child.selectionReason = verdict["reason"]
-            self.store.update_generation(child)
-        self._stop(status, reason, verdict["reason"])
+        self.session.currentGenerationIndex = child.index
+        self._current_id = child.id
+        self.session.status = SessionStatus.synthesizing
 
     # -- helpers ----------------------------------------------------------
     _current_id: str | None = None
@@ -519,7 +444,7 @@ class IterationEngine:
             if row is not None:
                 return Generation.model_validate(row)
         # After a restart: the current generation is the deepest one that was
-        # either started or chosen, never a branch that lost.
+        # either started or explicitly confirmed by the researcher.
         live = [g for g in rows
                 if g["index"] == self.session.currentGenerationIndex
                 and g["outcome"] != GenerationOutcome.blocked.value]
@@ -543,8 +468,7 @@ class IterationEngine:
         objective: dict[str, Any] = {}
         for attempt_id in generation.attemptIds:
             row = self.store.get_attempt(attempt_id)
-            attempt_reviews = [r for r in reviews if r.attemptId == attempt_id]
-            vectors.append(outcome_vector(row["metrics"], attempt_reviews))
+            vectors.append(outcome_vector(row["metrics"]))
             objective[attempt_id] = {
                 "deckId": row["attempt"]["scenarioDeckId"],
                 "requests": row["metrics"]["requests"],
@@ -594,15 +518,15 @@ class IterationEngine:
                     out.add(event["id"])
         return out
 
-    def _applied_patch_hashes(self) -> set[str]:
-        """Patches that already produced a generation, so the loop can notice
+    def _applied_change_hashes(self) -> set[str]:
+        """Change Sets that already produced a generation, so the loop can notice
         itself going round in circles."""
         out: set[str] = set()
         generations = {g["id"] for g in self.store.list_generations(self.session.id)}
         for generation_id in generations:
-            for row in self.store.proposals(generation_id):
-                if row.get("resultingPolicyRevisionId") and row.get("patchHash"):
-                    out.add(row["patchHash"])
+            for row in self.store.change_sets(generation_id):
+                if row.get("resultingPolicyRevisionId") and row.get("changeHash"):
+                    out.add(row["changeHash"])
         return out
 
     def _touch(self) -> None:
@@ -629,7 +553,7 @@ _RUNNABLE = frozenset({
     SessionStatus.created, SessionStatus.running_cycle,
     SessionStatus.collecting_reviews, SessionStatus.synthesizing,
     SessionStatus.proposing_changes, SessionStatus.validating_changes,
-    SessionStatus.evaluating_candidates, SessionStatus.selecting_next,
+    SessionStatus.executing_revision,
 })
 
 

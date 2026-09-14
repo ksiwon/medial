@@ -1,6 +1,6 @@
 {
  "attempt": {
-  "id": "att-A-v1-97085304764f",
+  "id": "att-A-v1-9f87c2c9cc42",
   "parentId": null,
   "parentSeq": null,
   "lineage": "root",
@@ -15,7 +15,7 @@
   "status": "completed",
   "engineVersion": "medial-sim/0.2.0",
   "adapter": "rule",
-  "createdAt": "2026-09-10T15:02:04+00:00",
+  "createdAt": "2026-09-14T04:19:13+00:00",
   "cursorSeq": 0,
   "eventCount": 24,
   "dataSource": "synthetic",
@@ -5076,7 +5076,7 @@
  "decisions": [
   {
    "id": "dec-1",
-   "attemptId": "att-A-v1-97085304764f",
+   "attemptId": "att-A-v1-9f87c2c9cc42",
    "simTimeMs": 34200000,
    "policyId": "policy-A-v1",
    "question": "응답이 없는 상태를 누가 어떻게 확인할 것인가",
@@ -5155,7 +5155,7 @@
   },
   {
    "id": "dec-2",
-   "attemptId": "att-A-v1-97085304764f",
+   "attemptId": "att-A-v1-9f87c2c9cc42",
    "simTimeMs": 34452257,
    "policyId": "policy-A-v1",
    "question": "자택에 없을 때 확인을 계속할 것인가",
@@ -5183,7 +5183,7 @@
  "reviews": [
   {
    "id": "rev-1",
-   "attemptId": "att-A-v1-97085304764f",
+   "attemptId": "att-A-v1-9f87c2c9cc42",
    "actorId": "P1",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5224,7 +5224,7 @@
   },
   {
    "id": "rev-10",
-   "attemptId": "att-A-v1-97085304764f",
+   "attemptId": "att-A-v1-9f87c2c9cc42",
    "actorId": "P7",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5239,7 +5239,7 @@
   },
   {
    "id": "rev-11",
-   "attemptId": "att-A-v1-97085304764f",
+   "attemptId": "att-A-v1-9f87c2c9cc42",
    "actorId": "P8",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5254,7 +5254,7 @@
   },
   {
    "id": "rev-12",
-   "attemptId": "att-A-v1-97085304764f",
+   "attemptId": "att-A-v1-9f87c2c9cc42",
    "actorId": "P9",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5269,7 +5269,7 @@
   },
   {
    "id": "rev-13",
-   "attemptId": "att-A-v1-97085304764f",
+   "attemptId": "att-A-v1-9f87c2c9cc42",
    "actorId": "HC_NURSE",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5284,7 +5284,7 @@
   },
   {
    "id": "rev-2",
-   "attemptId": "att-A-v1-97085304764f",
+   "attemptId": "att-A-v1-9f87c2c9cc42",
    "actorId": "P10",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5299,7 +5299,7 @@
   },
   {
    "id": "rev-3",
-   "attemptId": "att-A-v1-97085304764f",
+   "attemptId": "att-A-v1-9f87c2c9cc42",
    "actorId": "P11",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5314,7 +5314,7 @@
   },
   {
    "id": "rev-4",
-   "attemptId": "att-A-v1-97085304764f",
+   "attemptId": "att-A-v1-9f87c2c9cc42",
    "actorId": "P12",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5329,7 +5329,7 @@
   },
   {
    "id": "rev-5",
-   "attemptId": "att-A-v1-97085304764f",
+   "attemptId": "att-A-v1-9f87c2c9cc42",
    "actorId": "P2",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5344,7 +5344,7 @@
   },
   {
    "id": "rev-6",
-   "attemptId": "att-A-v1-97085304764f",
+   "attemptId": "att-A-v1-9f87c2c9cc42",
    "actorId": "P3",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5359,7 +5359,7 @@
   },
   {
    "id": "rev-7",
-   "attemptId": "att-A-v1-97085304764f",
+   "attemptId": "att-A-v1-9f87c2c9cc42",
    "actorId": "P4",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5374,7 +5374,7 @@
   },
   {
    "id": "rev-8",
-   "attemptId": "att-A-v1-97085304764f",
+   "attemptId": "att-A-v1-9f87c2c9cc42",
    "actorId": "P5",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -5389,7 +5389,7 @@
   },
   {
    "id": "rev-9",
-   "attemptId": "att-A-v1-97085304764f",
+   "attemptId": "att-A-v1-9f87c2c9cc42",
    "actorId": "P6",
    "source": "simulated",
    "scope": "day_end_retrospective",

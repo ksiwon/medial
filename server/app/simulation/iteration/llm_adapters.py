@@ -20,9 +20,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from .contracts import (
     REVIEW_CONTRACT_VERSION,
     AgentReview,
-    ChangeProposal,
+    ChangeSet,
     IssueGroup,
-    PatchOp,
+    RuleChange,
     ReviewConflict,
     ReviewDimensionKey,
     ReviewItem,
@@ -55,21 +55,24 @@ class SynthesisOutput(_Out):
     nextQuestions: list[str] = Field(default_factory=list)
 
 
-class ProposalOutput(_Out):
+class ChangeSetOutput(_Out):
     label: str
     mechanism: str
     reviewItemRefs: list[str] = Field(default_factory=list)
     issueRefs: list[str] = Field(default_factory=list)
-    patch: list[PatchOp] = Field(default_factory=list)
+    eventRefs: list[str] = Field(default_factory=list)
+    evidenceRefs: list[str] = Field(default_factory=list)
+    changes: list[RuleChange] = Field(default_factory=list)
     expectedEffects: list[str] = Field(default_factory=list)
     possibleRegressions: list[str] = Field(default_factory=list)
+    unknowns: list[str] = Field(default_factory=list)
     affectedActors: list[str] = Field(default_factory=list)
     requiredCapabilities: list[str] = Field(default_factory=list)
     watchNext: list[str] = Field(default_factory=list)
 
 
 class ImprovementOutput(_Out):
-    proposals: list[ProposalOutput] = Field(default_factory=list)
+    changeSets: list[ChangeSetOutput] = Field(default_factory=list)
     noSupportedChangeReason: str | None = None
 
 
@@ -113,13 +116,15 @@ SYNTHESIS_SYSTEM = f"""너는 여러 행위자의 리뷰를 정리하는 연구 
 
 IMPROVEMENT_SYSTEM = f"""너는 세계 밖에서 MEDial의 다음 운영 정책을 제안하는 설계 보조자다.
 너는 세계 안의 MEDial이 아니다. 주민에게 말을 걸거나 사건을 만들 수 없다.
-사용자가 정한 core item, 고정된 평가 기준, 허용 patch path와 기능 목록을 지켜라.
-각 제안은 어떤 리뷰를 해결하려는지, 정확한 before/after, 기대 기제,
+사용자가 정한 core item, 고정된 평가 기준, Quest/Task 필드와 기능 목록을 지켜라.
+각 Change Set은 어떤 리뷰를 해결하려는지, 사람이 읽는 beforeRule/afterRule, 기대 기제,
 영향받을 actor, 부작용, 다음에 확인할 항목을 포함한다.
-최대 2개 후보만 제안한다. 없으면 proposals를 비우고 noSupportedChangeReason을 적어라.
-before 값은 반드시 제공된 currentPolicy의 실제 값과 같아야 한다.
+최대 2개 Change Set 초안만 작성한다. 없으면 changeSets를 비우고 noSupportedChangeReason을 적어라.
+executionBindings의 before 값은 반드시 currentPolicy의 실제 값과 같아야 한다.
 페르소나·초기 기억·deck·평가 기준·비관측 정보·임상 규칙·인력 증원을 수정하지 마라.
-지원되지 않는 기능은 requiredCapabilities에 적고 patch는 비워라.
+지원되지 않는 기능은 requiredCapabilities에 적고 executionBindings는 비워라.
+Quest는 no-response-welfare-check 또는 medical-transport만, Task는 contact-subject,
+request-welfare-check, arrange-transport, institution-handoff, notify-close만 사용한다.
 다음 세대의 좋은 리뷰나 결과를 미리 만들어내지 마라.
 {DATA_NOT_INSTRUCTIONS}"""
 
@@ -258,50 +263,59 @@ class LlmImprovementAdapter:
         self._on_call = on_call
 
     def propose(self, *, synthesis: ReviewSynthesis, policy: dict[str, Any],
-                allowed_paths: list[str], capabilities: list[str],
+                capabilities: list[str],
                 criteria: list[dict[str, Any]], core_item: str,
-                max_candidates: int, session_id: str, generation_index: int,
+                max_change_sets: int, session_id: str, generation_index: int,
                 created_at: str, id_prefix: str,
-                already_tried: list[str]) -> tuple[list[ChangeProposal], str | None]:
+                already_tried: list[str]) -> tuple[list[ChangeSet], str | None]:
         payload = {
             "coreItem": core_item,
             "currentPolicy": policy,
-            "allowedPatchPaths": allowed_paths,
+            "supportedQuestIds": ["quest:no-response-welfare-check", "quest:medical-transport"],
+            "supportedTaskIds": ["task:contact-subject", "task:request-welfare-check",
+                                 "task:arrange-transport", "task:institution-handoff",
+                                 "task:notify-close"],
+            "supportedRuleFields": ["completion_evidence", "escalation", "fallback",
+                                    "task_flow", "assignment_order", "refusal_reassignment",
+                                    "retry", "quiet_period", "workload_limit", "travel_limit",
+                                    "explanation", "disclosure"],
             "supportedCapabilities": capabilities,
             "fixedCriteria": criteria,
-            "maxCandidates": max_candidates,
+            "maxChangeSets": max_change_sets,
             # The evaluation deck is *not* here, and neither is any world truth.
             "issues": [g.model_dump(mode="json") for g in synthesis.issueGroups],
             "conflicts": [c.model_dump(mode="json") for c in synthesis.conflicts],
             "minorityConcernIds": synthesis.minorityConcernIds,
             "objectiveMetrics": synthesis.objectiveMetrics,
-            "patchesAlreadyTried": already_tried,
+            "changeSetsAlreadyTried": already_tried,
         }
         result = self.client.complete_json(
             role="policy_improvement", system=IMPROVEMENT_SYSTEM, payload=payload,
-            schema=_schema(ImprovementOutput), schema_name="change_proposals",
+            schema=_schema(ImprovementOutput), schema_name="quest_task_change_sets",
             session_id=session_id, generation_index=generation_index,
             input_refs=[synthesis.id], created_at=created_at)
         if self._on_call is not None:
             self._on_call(result.record)
         out = ImprovementOutput.model_validate(result.data)
 
-        proposals: list[ChangeProposal] = []
-        for index, item in enumerate(out.proposals[:max_candidates], start=1):
-            proposals.append(ChangeProposal(
+        change_sets: list[ChangeSet] = []
+        for index, item in enumerate(out.changeSets[:max_change_sets], start=1):
+            change_sets.append(ChangeSet(
                 id="%s-%d" % (id_prefix, index),
                 sessionId=session_id, generationIndex=generation_index,
                 baseRevisionId=policy["id"], label=item.label,
                 reviewItemRefs=item.reviewItemRefs, issueRefs=item.issueRefs,
-                mechanism=item.mechanism, patch=item.patch,
+                eventRefs=item.eventRefs, evidenceRefs=item.evidenceRefs,
+                mechanism=item.mechanism, changes=item.changes,
                 expectedEffects=item.expectedEffects,
                 possibleRegressions=item.possibleRegressions,
+                unknowns=item.unknowns,
                 affectedActors=item.affectedActors,
                 requiredCapabilities=item.requiredCapabilities,
-                watchNext=item.watchNext, adapter="llm",
+                watchNext=item.watchNext, author="ai_draft", adapter="llm",
                 model={"provider": result.record.provider, "model": result.record.model,
                        "callId": result.record.id, "promptVersion": PROMPT_VERSION},
                 createdAt=created_at))
-        return proposals, (None if proposals else
+        return change_sets, (None if change_sets else
                            (out.noSupportedChangeReason
                             or "모델이 허용 범위 안에서 제안할 변경을 찾지 못했다."))

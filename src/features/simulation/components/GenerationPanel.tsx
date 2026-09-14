@@ -95,15 +95,16 @@ export default function GenerationPanel({ comparison, viewGenerationId, onSelect
               >
                 <td>
                   <strong>v{generation.index}</strong> {generation.label}
-                  {generation.selectedBy === 'auto' && <Tag> 자동 선택</Tag>}
-                  {generation.selectedBy === 'designer' && <Tag $kind="minority"> 디자이너 선택</Tag>}
+                  {generation.confirmedBy === 'researcher' && (
+                    <Tag $kind="minority"> 연구자 확인 후 실행</Tag>
+                  )}
                   {generation.outcome === 'blocked' && <Tag $kind="unknown"> 분기(보존)</Tag>}
                   {generation.requiredViolations.length > 0 && (
                     <Note style={{ color: '#8b3a2c' }}>
                       필수 조건 위반: {generation.requiredViolations.join('; ')}
                     </Note>
                   )}
-                  {generation.selectionReason && <Note>{generation.selectionReason}</Note>}
+                  {generation.confirmationReason && <Note>{generation.confirmationReason}</Note>}
                 </td>
                 <td>{generation.parentGenerationId ? '← 상위 세대' : '최초'}</td>
                 {criteria.map((criterion) => (
@@ -174,7 +175,7 @@ export default function GenerationPanel({ comparison, viewGenerationId, onSelect
                   <strong>사람별 득실</strong> — 전체 합계는 한 사람이 크게 손해 본 경우를 감춥니다.
                 </Note>
                 {changed.length === 0 ? (
-                  <Note>이 후보에서 개인별로 달라진 시간·연락 기록이 없습니다.</Note>
+                  <Note>이 revision에서 개인별로 달라진 시간·연락 기록이 없습니다.</Note>
                 ) : (
                   <Table>
                     <thead>

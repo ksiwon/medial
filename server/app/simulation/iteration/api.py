@@ -49,16 +49,14 @@ class CreateSessionBody(BaseModel):
     resourceRevisionId: str
     evaluationDeckRefs: list[str] = Field(default_factory=list)
     maxGenerations: int = Field(default=3, ge=1, le=10)
-    maxCandidatesPerGeneration: int = Field(default=2, ge=1, le=4)
+    maxChangeSetsPerGeneration: int = Field(default=2, ge=1, le=4)
     callBudget: int = Field(default=0, ge=0)
     tokenBudget: int = Field(default=0, ge=0)
-    allowedPatchPaths: list[str] | None = None
     mode: str = "controlled_iteration"
     control: str = "bounded_auto"
     behaviourAdapter: str = "rule"
     reviewAdapter: str = "rule"
     improvementAdapter: str = "rule"
-    selectionRule: str = "pareto_then_stop"
 
 
 class CommandBody(BaseModel):
@@ -120,13 +118,12 @@ def create_session(body: CreateSessionBody) -> dict[str, Any]:
             resource_id=body.resourceRevisionId,
             evaluation_decks=body.evaluationDeckRefs,
             max_generations=body.maxGenerations,
-            max_candidates=body.maxCandidatesPerGeneration,
+            max_change_sets=body.maxChangeSetsPerGeneration,
             call_budget=body.callBudget, token_budget=body.tokenBudget,
-            allowed_paths=body.allowedPatchPaths, mode=body.mode,
+            mode=body.mode,
             control=body.control, behaviour_adapter=body.behaviourAdapter,
             review_adapter=body.reviewAdapter,
-            improvement_adapter=body.improvementAdapter,
-            selection_rule=body.selectionRule)
+            improvement_adapter=body.improvementAdapter)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -140,6 +137,8 @@ def session_detail(session_id: str) -> dict[str, Any]:
         return get_iteration_service().detail(session_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except SessionNotRunnable as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("/sessions/{session_id}/status")
@@ -148,6 +147,8 @@ def session_status(session_id: str) -> dict[str, Any]:
         return get_iteration_service().status(session_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except SessionNotRunnable as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("/sessions/{session_id}/generations")
@@ -156,6 +157,8 @@ def generations(session_id: str) -> dict[str, Any]:
         return get_iteration_service().generation_comparison(session_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except SessionNotRunnable as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.post("/sessions/{session_id}/commands")

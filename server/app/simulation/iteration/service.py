@@ -4,12 +4,8 @@ The engine is a state machine; this is what starts it, stops it, keeps one
 running per session, and turns the stored records into the payloads the screens
 read.
 
-Bounded automatic running means what doc 12 section 8 says it means: the
-designer fixes the generations, the budget, the editable fields and the
-criteria *once*, presses start, and is not asked again unless the loop hits
-something only they can settle. Pause, resume and cancel remain available
-throughout, and pausing keeps the place in the machine rather than restarting
-the generation.
+The automatic part stops after drafting and mechanically validating Change Sets.
+Only a researcher-confirmed Change Set may create and execute a MEDial revision.
 """
 from __future__ import annotations
 
@@ -17,10 +13,14 @@ import threading
 import uuid
 from typing import Any
 
+from pydantic import ValidationError
+
 from ..decks.registry import DECKS, RESOURCE_SETS
 from .contracts import (
     AgentReview,
-    ChangeProposal,
+    ChangeSet,
+    ChangeSetConfirmation,
+    ChangeSetValidation,
     CriteriaRevision,
     DesignerDecision,
     EpisodeCard,
@@ -38,8 +38,13 @@ from .contracts import (
 from .engine import IterationEngine, now_iso
 from .improvement import SUPPORTED_CAPABILITIES
 from .llm import LlmClient, content_hash
-from .selection import DEFAULT_CRITERIA
-from .validation import default_allowed_paths
+from .evaluation_metrics import DEFAULT_CRITERIA
+from .validation import (
+    SUPPORTED_QUESTS,
+    SUPPORTED_RULE_FIELDS,
+    SUPPORTED_TASKS,
+    validate_change_set,
+)
 
 
 class SessionNotRunnable(RuntimeError):
@@ -65,7 +70,9 @@ class IterationService:
         """
         return {
             "supportedCapabilities": list(SUPPORTED_CAPABILITIES),
-            "editablePolicyPaths": default_allowed_paths(),
+            "supportedQuestIds": sorted(SUPPORTED_QUESTS),
+            "supportedTaskIds": sorted(SUPPORTED_TASKS),
+            "supportedRuleFields": sorted(SUPPORTED_RULE_FIELDS),
             "decks": [{"id": d.id, "label": d.label} for d in DECKS.values()],
             "modes": {
                 "controlled_iteration": True,
@@ -90,16 +97,14 @@ class IterationService:
     def create_session(self, *, label: str, core_item: str, base_policy_id: str,
                        development_decks: list[str], resource_id: str,
                        evaluation_decks: list[str] | None = None,
-                       max_generations: int = 3, max_candidates: int = 2,
+                       max_generations: int = 3, max_change_sets: int = 2,
                        call_budget: int = 0, token_budget: int = 0,
-                       allowed_paths: list[str] | None = None,
                        criteria: CriteriaRevision | None = None,
                        mode: str = "controlled_iteration",
                        control: str = "bounded_auto",
                        behaviour_adapter: str = "rule",
                        review_adapter: str = "rule",
-                       improvement_adapter: str = "rule",
-                       selection_rule: str = "pareto_then_stop") -> IterationSession:
+                       improvement_adapter: str = "rule") -> IterationSession:
         if base_policy_id not in self.sim.policies:
             raise KeyError("unknown policy %s" % base_policy_id)
         for deck_id in development_decks:
@@ -142,10 +147,8 @@ class IterationService:
             criteriaRevision=criteria or DEFAULT_CRITERIA,
             mode=SessionMode(mode), control=SessionControl(control),
             basePolicyRevisionId=base_policy_id,
-            maxGenerations=max_generations, maxCandidatesPerGeneration=max_candidates,
+            maxGenerations=max_generations, maxChangeSetsPerGeneration=max_change_sets,
             callBudget=call_budget, tokenBudget=token_budget,
-            allowedPatchPaths=allowed_paths or default_allowed_paths(),
-            selectionRule=selection_rule,  # type: ignore[arg-type]
             behaviourAdapter=behaviour_adapter,  # type: ignore[arg-type]
             reviewAdapter=review_adapter,  # type: ignore[arg-type]
             improvementAdapter=improvement_adapter,  # type: ignore[arg-type]
@@ -157,7 +160,13 @@ class IterationService:
         row = self.store.get_session(session_id)
         if row is None:
             raise KeyError("unknown iteration session %s" % session_id)
-        return IterationSession.model_validate(row)
+        try:
+            return IterationSession.model_validate(row)
+        except ValidationError as exc:
+            raise SessionNotRunnable(
+                "이 세션은 폐기된 MEDial 반복 형식이라 현재 화면에서 열 수 없다. "
+                "원본 기록은 보존되어 있으며 새 Quest/Task Change Set 세션을 시작해야 한다."
+            ) from exc
 
     def _engine(self, session: IterationSession,
                 review_script: dict[str, Any] | None = None) -> IterationEngine:
@@ -189,8 +198,10 @@ class IterationService:
             result = self._resume(session, blocking=blocking)
         elif name == "cancel":
             result = self._cancel(session)
-        elif name == "select_proposal":
-            result = self._select_proposal(session, payload, blocking=blocking)
+        elif name == "confirm_change_set":
+            result = self._confirm_change_set(session, payload, blocking=blocking)
+        elif name == "save_researcher_change_set":
+            result = self._save_researcher_change_set(session, payload)
         else:
             raise ValueError("unknown iteration command %s" % name)
 
@@ -261,38 +272,136 @@ class IterationService:
             self.store.update_session(session)
         return self.status(session.id)
 
-    def _select_proposal(self, session: IterationSession, payload: dict[str, Any],
-                         blocking: bool) -> dict[str, Any]:
-        """The designer settles a trade-off the loop refused to settle itself."""
-        if session.status is not SessionStatus.needs_decision:
+    def _confirm_change_set(self, session: IterationSession, payload: dict[str, Any],
+                            blocking: bool) -> dict[str, Any]:
+        """Grant execution authority to one validated Change Set."""
+        if session.status is not SessionStatus.awaiting_confirmation:
             raise SessionNotRunnable(
-                "후보 선택이 필요한 상태가 아니다 (현재 상태: %s)." % session.status.value)
-        proposal_id = payload.get("proposalId")
-        reason = payload.get("reason") or "디자이너 선택"
-        generations = [Generation.model_validate(g)
-                       for g in self.store.list_generations(session.id)]
-        winner = next((g for g in generations if g.selectedProposalId == proposal_id), None)
-        if winner is None:
-            raise KeyError("이 session에 그 제안으로 실행된 후보가 없다: %s" % proposal_id)
-
-        for other in generations:
-            if other.parentGenerationId == winner.parentGenerationId:
-                other.outcome = (GenerationOutcome.running if other.id == winner.id
-                                 else GenerationOutcome.blocked)
-                other.selectedBy = "designer" if other.id == winner.id else "none"
-                other.selectionReason = (reason if other.id == winner.id
-                                         else "선택되지 않은 분기로 보존한다.")
-                self.store.update_generation(other)
-
-        session.currentGenerationIndex = winner.index
-        session.status = SessionStatus.running_cycle
+                "Change Set 확인을 기다리는 상태가 아니다 (현재 상태: %s)." % session.status.value)
+        change_set_id = payload.get("changeSetId")
+        reason = str(payload.get("reason") or "").strip()
+        if not reason:
+            raise ValueError("Change Set을 확정한 연구자 이유를 입력해야 한다.")
+        generation = next((Generation.model_validate(row)
+                           for row in self.store.list_generations(session.id)
+                           if row["index"] == session.currentGenerationIndex
+                           and row["outcome"] != GenerationOutcome.blocked.value), None)
+        if generation is None:
+            raise KeyError("현재 Quest 실행 기록을 찾지 못했다.")
+        change_sets = [ChangeSet.model_validate(row)
+                       for row in self.store.change_sets(generation.id)]
+        chosen = next((item for item in change_sets if item.id == change_set_id), None)
+        if chosen is None:
+            raise KeyError("현재 주민 평가에서 나온 Change Set이 아니다: %s" % change_set_id)
+        if chosen.validationStatus is not ChangeSetValidation.valid:
+            raise ValueError("기계 검증을 통과한 Change Set만 확정할 수 있다.")
+        if chosen.confirmationStatus is not ChangeSetConfirmation.draft:
+            raise ValueError("이미 처리된 Change Set이다.")
+        confirmed_at = now_iso()
+        for item in change_sets:
+            status = (ChangeSetConfirmation.confirmed if item.id == chosen.id
+                      else ChangeSetConfirmation.declined
+                      if item.validationStatus is ChangeSetValidation.valid
+                      else item.confirmationStatus)
+            self.store.update_change_set(item.model_copy(update={
+                "confirmationStatus": status,
+                "confirmationReason": reason if item.id == chosen.id else "",
+                "confirmedAt": confirmed_at if item.id == chosen.id else None,
+            }))
+        session.status = SessionStatus.executing_revision
         session.stopReason = None
         session.stopDetail = None
         session.updatedAt = now_iso()
         self.store.update_session(session)
         engine = self._engine(session)
-        engine._current_id = winner.id
+        engine._current_id = generation.id
         return self._spawn(session, blocking)
+
+    def _save_researcher_change_set(
+        self, session: IterationSession, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Save a researcher-authored revision without mutating its source draft."""
+        if session.status is not SessionStatus.awaiting_confirmation:
+            raise SessionNotRunnable(
+                "Change Set 확인을 기다리는 상태에서만 직접 수정할 수 있다 "
+                "(현재 상태: %s)." % session.status.value)
+        generation = next((Generation.model_validate(row)
+                           for row in self.store.list_generations(session.id)
+                           if row["index"] == session.currentGenerationIndex), None)
+        if generation is None:
+            raise KeyError("현재 Quest 실행 기록을 찾지 못했다.")
+        change_sets = [ChangeSet.model_validate(row)
+                       for row in self.store.change_sets(generation.id)]
+        template_id = str(payload.get("templateChangeSetId") or "")
+        template = next((item for item in change_sets if item.id == template_id), None)
+        if template is None:
+            raise KeyError("현재 주민 평가의 Change Set 초안이 아니다: %s" % template_id)
+        if template.validationStatus is not ChangeSetValidation.valid:
+            raise ValueError("검증된 Change Set을 바탕으로만 직접 작성할 수 있다.")
+
+        label = str(payload.get("label") or "").strip()
+        mechanism = str(payload.get("mechanism") or "").strip()
+        if not label or not mechanism:
+            raise ValueError("연구자 Change Set의 이름과 변경 원리를 모두 입력해야 한다.")
+        after_rules = payload.get("afterRules") or []
+        binding_values = payload.get("bindingValues") or {}
+        changes = []
+        for index, change in enumerate(template.changes):
+            after_rule = (str(after_rules[index]).strip()
+                          if index < len(after_rules) else change.afterRule)
+            bindings = [binding.model_copy(update={
+                "after": binding_values.get(binding.key, binding.after),
+            }) for binding in change.executionBindings]
+            changes.append(change.model_copy(update={
+                "afterRule": after_rule,
+                "executionBindings": bindings,
+            }))
+
+        authored = template.model_copy(update={
+            "id": "cs-researcher-%s" % uuid.uuid4().hex[:10],
+            "label": label,
+            "mechanism": mechanism,
+            "changes": changes,
+            "expectedEffects": list(payload.get("expectedEffects") or []),
+            "possibleRegressions": list(payload.get("possibleRegressions") or []),
+            "watchNext": list(payload.get("watchNext") or []),
+            "author": "researcher_hypothesis",
+            "validationStatus": ChangeSetValidation.pending,
+            "validationErrors": [],
+            "confirmationStatus": ChangeSetConfirmation.draft,
+            "confirmationReason": "",
+            "confirmedAt": None,
+            "resultingPolicyRevisionId": None,
+            "resultingAttemptId": None,
+            "adapter": "rule",
+            "model": None,
+            "createdAt": now_iso(),
+            "changeHash": "",
+        })
+        policy = self.sim.policies[generation.policyRevisionId].model_dump(mode="json")
+        checked = validate_change_set(
+            authored,
+            policy=policy,
+            capabilities=tuple(SUPPORTED_CAPABILITIES),
+            applied_change_hashes=set(self.store.session_applied_change_hashes(session.id)),
+        )
+        if checked.validationStatus is not ChangeSetValidation.valid:
+            raise ValueError("직접 작성한 Change Set을 실행할 수 없다: "
+                             + "; ".join(checked.validationErrors))
+
+        source_id = str(payload.get("sourceChangeSetId") or "")
+        if source_id:
+            source = next((item for item in change_sets if item.id == source_id), None)
+            if source is None:
+                raise KeyError("수정 원본 Change Set을 찾지 못했다: %s" % source_id)
+            self.store.update_change_set(source.model_copy(update={
+                "confirmationStatus": ChangeSetConfirmation.superseded,
+                "confirmationReason": "연구자 수정본 %s로 대체" % checked.id,
+            }))
+        self.store.save_change_sets(generation.id, [checked])
+        generation.changeSetIds.append(checked.id)
+        self.store.update_generation(generation)
+        return {"changeSet": checked.model_dump(mode="json")}
 
     # -- reads ------------------------------------------------------------
     def status(self, session_id: str) -> dict[str, Any]:
@@ -325,7 +434,7 @@ class IterationService:
                 "reviews": self.store.agent_reviews(generation.id),
                 "synthesis": (self.store.synthesis(generation.synthesisId)
                               if generation.synthesisId else None),
-                "proposals": self.store.proposals(generation.id),
+                "changeSets": self.store.change_sets(generation.id),
                 "policy": (self.sim.policies[generation.policyRevisionId]
                            .model_dump(mode="json")
                            if generation.policyRevisionId in self.sim.policies else None),
@@ -341,10 +450,17 @@ class IterationService:
         }
 
     def list_sessions(self) -> list[dict[str, Any]]:
-        return self.store.list_sessions()
+        active: list[dict[str, Any]] = []
+        for row in self.store.list_sessions():
+            try:
+                IterationSession.model_validate(row)
+            except ValidationError:
+                continue
+            active.append(row)
+        return active
 
     def generation_comparison(self, session_id: str) -> dict[str, Any]:
-        """v0 / v1 / v2 side by side, including the branches that were not taken."""
+        """Confirmed MEDial revisions side by side; unexecuted drafts are not generations."""
         session = self.load(session_id)
         rows = [Generation.model_validate(g)
                 for g in self.store.list_generations(session_id)]
@@ -356,8 +472,8 @@ class IterationService:
                 "parentGenerationId": generation.parentGenerationId,
                 "policyRevisionId": generation.policyRevisionId,
                 "outcome": generation.outcome.value,
-                "selectedBy": generation.selectedBy,
-                "selectionReason": generation.selectionReason,
+                "confirmedBy": generation.confirmedBy,
+                "confirmationReason": generation.confirmationReason,
                 "vector": generation.metrics.get("vector", {}),
                 "reviewCounts": generation.metrics.get("reviewCounts", {}),
                 "requiredViolations": generation.metrics.get("requiredViolations", []),
@@ -412,8 +528,7 @@ class IterationService:
             createdAt=now_iso())
         self.store.save_decision(decision)
 
-        if session.status in (SessionStatus.needs_decision,
-                              SessionStatus.ready_for_designer,
+        if session.status in (SessionStatus.ready_for_designer,
                               SessionStatus.stalled,
                               SessionStatus.no_valid_change):
             session.updatedAt = now_iso()

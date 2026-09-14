@@ -19,6 +19,10 @@ LOG_DIR=".run"
 API_LOG="$LOG_DIR/server.log"
 WEB_LOG="$LOG_DIR/web.log"
 
+case "$API_PORT:$WEB_PORT" in
+  *[!0-9:]*) echo "포트는 숫자여야 합니다: API=$API_PORT WEB=$WEB_PORT"; exit 2 ;;
+esac
+
 open_browser=1
 for arg in "$@"; do
   case "$arg" in
@@ -32,11 +36,49 @@ done
 # --- 포트가 이미 쓰이고 있는가 -----------------------------------------------
 # netstat 로 확인한다. Windows/Git Bash 에도 lsof 가 없는 경우가 많다.
 listening() {
-  netstat -ano 2>/dev/null | grep -E "[:.]$1[[:space:]]" | grep -qi listening
+  if command -v netstat >/dev/null 2>&1 && netstat -ano >/dev/null 2>&1; then
+    netstat -ano 2>/dev/null | grep -E "[:.]$1[[:space:]]" | grep -qi listening
+  else
+    powershell.exe -NoProfile -Command \
+      "if (Get-NetTCPConnection -State Listen -LocalPort $1 -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }" \
+      >/dev/null 2>&1
+  fi
 }
 pid_on() {
-  netstat -ano 2>/dev/null | grep -E "[:.]$1[[:space:]]" | grep -i listening |
-    awk '{print $NF}' | grep -E '^[0-9]+$' | sort -u | head -1
+  if command -v netstat >/dev/null 2>&1 && netstat -ano >/dev/null 2>&1; then
+    netstat -ano 2>/dev/null | grep -E "[:.]$1[[:space:]]" | grep -i listening |
+      awk '{print $NF}' | grep -E '^[0-9]+$' | sort -u | head -1
+  else
+    powershell.exe -NoProfile -Command \
+      "Get-NetTCPConnection -State Listen -LocalPort $1 -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty OwningProcess" \
+      2>/dev/null | tr -d '\r'
+  fi
+}
+stop_pid() {
+  if command -v taskkill >/dev/null 2>&1; then
+    taskkill //F //T //PID "$1" >/dev/null 2>&1 || kill -9 "$1" 2>/dev/null
+  else
+    powershell.exe -NoProfile -Command "taskkill /F /T /PID $1 | Out-Null" >/dev/null 2>&1
+  fi
+}
+http_ok() {
+  if command -v curl >/dev/null 2>&1; then
+    curl -fs "$1" >/dev/null 2>&1
+  elif command -v powershell.exe >/dev/null 2>&1; then
+    powershell.exe -NoProfile -Command \
+      "try { Invoke-WebRequest -UseBasicParsing -Uri '$1' | Out-Null; exit 0 } catch { exit 1 }" \
+      >/dev/null 2>&1
+  else
+    return 1
+  fi
+}
+http_body() {
+  if command -v curl >/dev/null 2>&1; then
+    curl -fs "$1" 2>/dev/null
+  else
+    powershell.exe -NoProfile -Command \
+      "(Invoke-WebRequest -UseBasicParsing -Uri '$1').Content" 2>/dev/null | tr -d '\r'
+  fi
 }
 
 if [ "${mode:-run}" = stop ]; then
@@ -44,7 +86,7 @@ if [ "${mode:-run}" = stop ]; then
     pid="$(pid_on "$port")"
     if [ -n "$pid" ]; then
       echo "포트 $port (PID $pid) 정리"
-      taskkill //F //PID "$pid" >/dev/null 2>&1 || kill -9 "$pid" 2>/dev/null
+      stop_pid "$pid"
     else
       echo "포트 $port 는 비어 있음"
     fi
@@ -60,10 +102,28 @@ if [ ! -d node_modules ]; then
   npm install || exit 1
 fi
 
-if ! python -c "import fastapi, uvicorn" >/dev/null 2>&1; then
-  echo "시뮬레이터 서버 의존성이 없습니다:"
-  echo "  python -m pip install -r server/requirements-sim.txt"
-  exit 1
+PYTHON_BIN="${MEDIAL_PYTHON:-python}"
+PYTHON_MODE="direct"
+
+if ! "$PYTHON_BIN" -c "import fastapi, uvicorn" >/dev/null 2>&1; then
+  # Windows의 bash.exe(WSL 호환 환경)는 Linux Python을 먼저 찾는다. 반면
+  # 프로젝트 의존성이 Windows Python에 설치된 경우가 흔하므로 PowerShell을
+  # 명시적인 브리지로 사용한다. 사용자가 MEDIAL_PYTHON을 지정했다면 그 값을
+  # 존중하며 다른 환경으로 자동 전환하지 않는다.
+  if [ -z "${MEDIAL_PYTHON:-}" ] \
+    && command -v powershell.exe >/dev/null 2>&1 \
+    && powershell.exe -NoProfile -Command "python -c \"import fastapi, uvicorn\"" >/dev/null 2>&1; then
+    PYTHON_MODE="powershell"
+  else
+    echo "시뮬레이터 서버 의존성이 없습니다:"
+    echo "  python -m pip install -r server/requirements-sim.txt"
+    echo "  다른 Python을 쓰려면 MEDIAL_PYTHON=/path/to/python ./run.sh"
+    exit 1
+  fi
+fi
+
+if [ "$PYTHON_MODE" = "powershell" ]; then
+  echo "Windows Python 환경을 사용합니다."
 fi
 
 # --- 정리 ---------------------------------------------------------------------
@@ -76,12 +136,14 @@ web_pid=""
 cleanup() {
   echo
   [ "$started_api" = 1 ] && [ -n "$api_pid" ] && {
-    echo "서버 정리 (PID $api_pid)"
-    taskkill //F //T //PID "$api_pid" >/dev/null 2>&1 || kill -9 "$api_pid" 2>/dev/null
+    running_pid="$(pid_on "$API_PORT")"
+    echo "서버 정리 (PID ${running_pid:-$api_pid})"
+    stop_pid "${running_pid:-$api_pid}"
   }
   [ "$started_web" = 1 ] && [ -n "$web_pid" ] && {
-    echo "개발 서버 정리 (PID $web_pid)"
-    taskkill //F //T //PID "$web_pid" >/dev/null 2>&1 || kill -9 "$web_pid" 2>/dev/null
+    running_pid="$(pid_on "$WEB_PORT")"
+    echo "개발 서버 정리 (PID ${running_pid:-$web_pid})"
+    stop_pid "${running_pid:-$web_pid}"
   }
   exit 0
 }
@@ -93,7 +155,7 @@ trap cleanup INT TERM
 if [ -f server/.env ]; then
   set -a
   # shellcheck disable=SC1091
-  . ./server/.env
+  . <(sed 's/\r$//' ./server/.env)
   set +a
   if [ -n "${ANTHROPIC_API_KEY:-}" ] || [ -n "${OPENAI_API_KEY:-}" ]; then
     echo "server/.env 읽음 · 온라인 어댑터를 고를 수 있는 키가 있습니다 (rule 어댑터는 모델을 부르지 않습니다)"
@@ -107,14 +169,18 @@ if listening "$API_PORT"; then
   echo "서버: 이미 $API_PORT 에서 돌고 있습니다. 그대로 씁니다."
 else
   echo "서버 시작 ... (로그: $API_LOG)"
-  MEDIAL_SIM_PORT="$API_PORT" python server/sim_main.py >"$API_LOG" 2>&1 &
+  if [ "$PYTHON_MODE" = "powershell" ]; then
+    MEDIAL_SIM_PORT="$API_PORT" powershell.exe -NoProfile -Command "python server/sim_main.py" >"$API_LOG" 2>&1 &
+  else
+    MEDIAL_SIM_PORT="$API_PORT" "$PYTHON_BIN" server/sim_main.py >"$API_LOG" 2>&1 &
+  fi
   api_pid=$!
   started_api=1
 fi
 
 # 준비될 때까지 기다린다. 그냥 sleep 하면 느린 첫 기동에서 브라우저가 먼저 뜬다.
 for _ in $(seq 1 60); do
-  if curl -fs "http://127.0.0.1:$API_PORT/api/sim/health" >/dev/null 2>&1; then break; fi
+  if http_ok "http://127.0.0.1:$API_PORT/api/sim/health"; then break; fi
   if [ "$started_api" = 1 ] && ! kill -0 "$api_pid" 2>/dev/null; then
     echo "서버가 시작하자마자 죽었습니다. $API_LOG 를 보세요:"
     tail -20 "$API_LOG"
@@ -123,14 +189,20 @@ for _ in $(seq 1 60); do
   sleep 0.5
 done
 
-if ! curl -fs "http://127.0.0.1:$API_PORT/api/sim/health" >/dev/null 2>&1; then
+if ! http_ok "http://127.0.0.1:$API_PORT/api/sim/health"; then
   echo "서버가 30초 안에 응답하지 않습니다. $API_LOG 를 보세요."
   cleanup
 fi
 
 # 원자료를 읽었는지 합성 마을로 도는지 여기서 알려 준다. 화면 배지와 같은 값이다.
-source_kind="$(curl -fs "http://127.0.0.1:$API_PORT/api/sim/village" 2>/dev/null |
-  python -c 'import json,sys; v=json.load(sys.stdin); print(v.get("dataSource","?"))' 2>/dev/null)"
+if command -v curl >/dev/null 2>&1; then
+  source_kind="$(http_body "http://127.0.0.1:$API_PORT/api/sim/village" |
+    python -c 'import json,sys; v=json.load(sys.stdin); print(v.get("dataSource","?"))' 2>/dev/null)"
+else
+  source_kind="$(powershell.exe -NoProfile -Command \
+    "(Invoke-RestMethod -Uri 'http://127.0.0.1:$API_PORT/api/sim/village').dataSource" \
+    2>/dev/null | tr -d '\r')"
+fi
 echo "서버 준비됨 · http://127.0.0.1:$API_PORT · 데이터: ${source_kind:-확인 못 함}"
 
 # --- 프런트 --------------------------------------------------------------------
@@ -144,7 +216,7 @@ else
 fi
 
 for _ in $(seq 1 60); do
-  if curl -fs "http://localhost:$WEB_PORT/" >/dev/null 2>&1; then break; fi
+  if http_ok "http://localhost:$WEB_PORT/"; then break; fi
   if [ "$started_web" = 1 ] && ! kill -0 "$web_pid" 2>/dev/null; then
     echo "개발 서버가 시작하자마자 죽었습니다. $WEB_LOG 를 보세요:"
     tail -20 "$WEB_LOG"

@@ -10,9 +10,8 @@ discipline:
 * a review item that carries an assessment other than ``unknown`` must cite at
   least one event the actor actually experienced. "I did not experience this"
   is ``unknown``, never a complaint;
-* a ``ChangeProposal`` carries the *exact* before and after value. The before is
-  checked against the base revision before the patch is applied, so a proposal
-  written against a stale revision is refused instead of silently overwriting.
+* a ``ChangeSet`` carries meaningful Quest/Task before and after rules plus exact
+  internal bindings. Stale before-values are refused instead of overwritten.
 """
 from __future__ import annotations
 
@@ -171,64 +170,85 @@ class ReviewSynthesis(Base):
     disclaimer: str = DISCLAIMER
 
 
-# ------------------------------------------------------------- change proposal
-class PatchOp(Base):
-    op: Literal["replace"] = "replace"
-    #: RFC 6901-style path into the policy revision, e.g. ``/params/retryCount``.
-    path: str
+# ---------------------------------------------------------------- change set
+class ImprovementTarget(str, Enum):
+    quest_completion_escalation = "quest_completion_escalation"
+    task_composition_flow = "task_composition_flow"
+    task_assignment_refusal = "task_assignment_refusal"
+    timing_burden = "timing_burden"
+    explanation_disclosure = "explanation_disclosure"
+
+
+class ChangeScope(str, Enum):
+    quest = "quest"
+    task = "task"
+
+
+class ExecutionBinding(Base):
+    """Collapsed engine detail implementing one meaningful Quest/Task rule."""
+
+    key: str
     before: Any = None
     after: Any = None
 
 
-class ProposalValidation(str, Enum):
+class RuleChange(Base):
+    scope: ChangeScope
+    target: ImprovementTarget
+    questId: str
+    taskIds: list[str] = Field(default_factory=list)
+    field: str
+    beforeRule: str
+    afterRule: str
+    executionBindings: list[ExecutionBinding] = Field(default_factory=list)
+
+
+class ChangeSetValidation(str, Enum):
     pending = "pending"
     valid = "valid"
     rejected = "rejected"
-    #: The change is coherent but the engine has no handler for it. Recorded as a
-    #: design suggestion and never executed.
     requires_implementation = "requires_implementation"
 
 
-class ProposalSelection(str, Enum):
-    pending = "pending"
-    selected = "selected"
-    branch = "branch"
-    dominated = "dominated"
-    rejected = "rejected"
+class ChangeSetConfirmation(str, Enum):
+    draft = "draft"
+    confirmed = "confirmed"
+    declined = "declined"
+    superseded = "superseded"
     not_run = "not_run"
 
 
-class ChangeProposal(Base):
+class ChangeSet(Base):
     id: str
     sessionId: str
     generationIndex: int
     baseRevisionId: str
     label: str
-    #: Which review items this is trying to answer. A proposal with none of these
-    #: is not review-driven and the validator says so.
     reviewItemRefs: list[str] = Field(default_factory=list)
     issueRefs: list[str] = Field(default_factory=list)
+    eventRefs: list[str] = Field(default_factory=list)
+    evidenceRefs: list[str] = Field(default_factory=list)
     mechanism: str
-    patch: list[PatchOp] = Field(default_factory=list)
+    changes: list[RuleChange] = Field(default_factory=list)
     expectedEffects: list[str] = Field(default_factory=list)
     possibleRegressions: list[str] = Field(default_factory=list)
+    unknowns: list[str] = Field(default_factory=list)
     assumptionRefs: list[str] = Field(default_factory=list)
     affectedActors: list[str] = Field(default_factory=list)
-    #: Engine capabilities the change needs. Anything unsupported puts the
-    #: proposal into ``requires_implementation``.
     requiredCapabilities: list[str] = Field(default_factory=list)
     watchNext: list[str] = Field(default_factory=list)
-    validationStatus: ProposalValidation = ProposalValidation.pending
+    author: Literal["rule_draft", "ai_draft", "researcher_hypothesis"] = "rule_draft"
+    validationStatus: ChangeSetValidation = ChangeSetValidation.pending
     validationErrors: list[str] = Field(default_factory=list)
-    selectionStatus: ProposalSelection = ProposalSelection.pending
+    confirmationStatus: ChangeSetConfirmation = ChangeSetConfirmation.draft
+    confirmationReason: str = ""
+    confirmedAt: str | None = None
     resultingPolicyRevisionId: str | None = None
     resultingAttemptId: str | None = None
     adapter: Literal["rule", "llm", "scripted"] = "rule"
     model: dict[str, Any] | None = None
     createdAt: str
-    #: Stable hash of the patch, used to notice a session proposing the same
-    #: change over and over instead of making progress.
-    patchHash: str = ""
+    changeHash: str = ""
 
 
 class NoSupportedChange(Base):
@@ -248,7 +268,7 @@ class Criterion(Base):
     key: str
     label: str
     direction: Literal["lower_better", "higher_better"]
-    #: A hard constraint. A candidate that breaks it is excluded regardless of
+    #: A hard constraint. A revision that breaks it is flagged regardless of
     #: how the other numbers look.
     required: bool = False
     maxValue: float | None = None
@@ -265,8 +285,6 @@ class CriteriaRevision(Base):
     id: str
     label: str
     criteria: list[Criterion] = Field(default_factory=list)
-    #: Order used only when the designer asked for automatic tie-breaking.
-    priorityOrder: list[str] = Field(default_factory=list)
     note: str = "지표 방향과 필수 조건은 iteration 시작 시 고정된다."
 
 
@@ -288,11 +306,10 @@ class SessionStatus(str, Enum):
     synthesizing = "synthesizing"
     proposing_changes = "proposing_changes"
     validating_changes = "validating_changes"
-    evaluating_candidates = "evaluating_candidates"
-    selecting_next = "selecting_next"
+    executing_revision = "executing_revision"
+    awaiting_confirmation = "awaiting_confirmation"
     # terminal / blocked
     ready_for_designer = "ready_for_designer"
-    needs_decision = "needs_decision"
     budget_exhausted = "budget_exhausted"
     no_valid_change = "no_valid_change"
     stalled = "stalled"
@@ -309,13 +326,12 @@ RUNNING_STATES = frozenset({
     SessionStatus.synthesizing,
     SessionStatus.proposing_changes,
     SessionStatus.validating_changes,
-    SessionStatus.evaluating_candidates,
-    SessionStatus.selecting_next,
+    SessionStatus.executing_revision,
 })
 
 TERMINAL_STATES = frozenset({
     SessionStatus.ready_for_designer,
-    SessionStatus.needs_decision,
+    SessionStatus.awaiting_confirmation,
     SessionStatus.budget_exhausted,
     SessionStatus.no_valid_change,
     SessionStatus.stalled,
@@ -327,10 +343,10 @@ TERMINAL_STATES = frozenset({
 #: success, and a model outage is not a resident declining.
 STOP_REASON_TEXT: dict[str, str] = {
     "reached_max_generations": "설정한 세대 수를 모두 실행했다. 최종 선택은 디자이너가 한다.",
-    "needs_decision": "후보들이 서로 다른 것을 좋게/나쁘게 만든다. 자동으로 고르지 않고 멈춘다.",
+    "awaiting_confirmation": "검증된 Change Set 초안이 있다. 연구자가 확정하기 전에는 실행하지 않는다.",
     "budget_exhausted": "모델 호출 예산이 끝났다. 완료가 아니라 중단이다.",
     "no_valid_change": "허용 범위 안에서 실행 가능한 개선안이 없다.",
-    "stalled": "같은 patch가 반복되거나 새 발견이 없다. 반복을 멈춘다.",
+    "stalled": "같은 Change Set이 반복되거나 새 발견이 없다. 반복을 멈춘다.",
     "model_failure": "모델 호출이 실패했다. 주민의 거절이나 unknown 평가와 다르다.",
     "cancelled": "사용자가 중단했다.",
 }
@@ -357,12 +373,10 @@ class IterationSession(Base):
     control: SessionControl = SessionControl.bounded_auto
     basePolicyRevisionId: str
     maxGenerations: int = Field(default=3, ge=1, le=10)
-    maxCandidatesPerGeneration: int = Field(default=2, ge=1, le=4)
+    maxChangeSetsPerGeneration: int = Field(default=2, ge=1, le=4)
     callBudget: int = Field(default=0, ge=0)
     tokenBudget: int = Field(default=0, ge=0)
     timeBudgetMs: int = Field(default=0, ge=0)
-    allowedPatchPaths: list[str] = Field(default_factory=list)
-    selectionRule: Literal["pareto_then_stop", "designer_priority"] = "pareto_then_stop"
     #: ``rule`` everywhere, or resident behaviour by rule with reviews and
     #: improvement by model. The second is reported as *hybrid*, never as
     #: "the residents are an LLM".
@@ -380,22 +394,6 @@ class IterationSession(Base):
     tokensUsed: int = 0
     createdAt: str
     updatedAt: str
-
-    #: Policy paths a proposal may touch at all. Everything else is refused by
-    #: :mod:`validation`, including things that are not policy in the first
-    #: place (personas, memories, decks, rubrics, world facts, staffing).
-    DEFAULT_ALLOWED_PATHS: ClassVar[tuple[str, ...]] = (
-        "/contactStrategy",
-        "/params/retryCount",
-        "/params/retryIntervalMin",
-        "/params/quietWindowMin",
-        "/params/helperContactCap",
-        "/params/disclosure",
-        "/params/escalateToInstitutionAfterMin",
-        "/params/allowHeadContact",
-        "/params/rideCandidateOrder",
-        "/params/maxRideDetourMin",
-    )
 
     @property
     def adapter_mode_label(self) -> str:
@@ -427,15 +425,12 @@ class Generation(Base):
     attemptIds: list[str] = Field(default_factory=list)
     reviewIds: list[str] = Field(default_factory=list)
     synthesisId: str | None = None
-    proposalIds: list[str] = Field(default_factory=list)
-    #: Candidates that were run but not carried forward. Kept, never deleted:
-    #: the branch is part of the record even when it lost.
-    branchGenerationIds: list[str] = Field(default_factory=list)
+    changeSetIds: list[str] = Field(default_factory=list)
     comparisonId: str | None = None
     outcome: GenerationOutcome = GenerationOutcome.pending
-    selectedProposalId: str | None = None
-    selectedBy: Literal["auto", "designer", "none"] = "none"
-    selectionReason: str = ""
+    appliedChangeSetId: str | None = None
+    confirmedBy: Literal["researcher", "none"] = "none"
+    confirmationReason: str = ""
     metrics: dict[str, Any] = Field(default_factory=dict)
     createdAt: str
 

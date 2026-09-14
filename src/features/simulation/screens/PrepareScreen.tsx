@@ -179,7 +179,6 @@ export default function PrepareScreen({
   const [maxCandidates, setMaxCandidates] = useState(2);
   const [reviewAdapter, setReviewAdapter] = useState('rule');
   const [improvementAdapter, setImprovementAdapter] = useState('rule');
-  const [selectionRule, setSelectionRule] = useState('pareto_then_stop');
   // The server contract is callBudget=0 == no ceiling, and that contract is not
   // being changed here. For a rule-only run there are no calls to bound, so 0
   // is honest; the moment a model adapter is picked the screen asks for a real
@@ -301,7 +300,7 @@ export default function PrepareScreen({
               />
             </Field>
             <Field>
-              버전당 개선 후보 수
+              버전당 Change Set 초안 수
               <Input
                 type="number"
                 min={1}
@@ -309,13 +308,6 @@ export default function PrepareScreen({
                 value={maxCandidates}
                 onChange={(e) => setMaxCandidates(Number(e.target.value))}
               />
-            </Field>
-            <Field>
-              후보가 서로 낫고 나쁠 때
-              <Select value={selectionRule} onChange={(e) => setSelectionRule(e.target.value)}>
-                <option value="pareto_then_stop">멈추고 내가 고른다</option>
-                <option value="designer_priority">미리 정한 우선순위로 자동 선택</option>
-              </Select>
             </Field>
           </Grid>
 
@@ -383,20 +375,18 @@ export default function PrepareScreen({
             </Sub>
           )}
 
-          <SubHead>개선안이 스스로 바꿔도 되는 범위</SubHead>
+          <SubHead>Change Set이 다룰 수 있는 범위</SubHead>
           <Body>
-            개선 에이전트는 <strong>연락 순서와 시간·횟수·공개 범위·인계 기한</strong> 같은 운영
-            조건만 바꿉니다. 페르소나, 인터뷰 근거, 초기 기억, 시나리오, 외생 사건, 평가 기준, 세계
-            사실, 인력·차량 증원은 바꿀 수 없고 서버가 코드로 거부합니다.
+            주민 평가와 연결된 <strong>Quest 완료·인계, Task 흐름·배정·거절, 시간·부담,
+            설명·정보 공개</strong> 규칙만 다룹니다. 페르소나, 인터뷰 근거, 초기 기억, 시나리오,
+            외생 사건, 평가 기준, 세계 사실, 인력·차량 증원은 바꾸지 않습니다.
           </Body>
           <Disclosure>
-            <summary>실제 허용 필드 경로 {capabilities.editablePolicyPaths.length}개</summary>
+            <summary>지원하는 Quest·Task·규칙 범위</summary>
             <PathList>
-              {capabilities.editablePolicyPaths.map((path) => (
-                <li key={path}>
-                  <Mono>{path}</Mono>
-                </li>
-              ))}
+              <li>Quest: {capabilities.supportedQuestIds.join(', ')}</li>
+              <li>Task: {capabilities.supportedTaskIds.join(', ')}</li>
+              <li>규칙: {capabilities.supportedRuleFields.join(', ')}</li>
             </PathList>
           </Disclosure>
 
@@ -467,11 +457,10 @@ export default function PrepareScreen({
                 developmentDeckRefs: decks,
                 resourceRevisionId: resourceId,
                 maxGenerations,
-                maxCandidatesPerGeneration: maxCandidates,
+                maxChangeSetsPerGeneration: maxCandidates,
                 callBudget,
                 reviewAdapter,
                 improvementAdapter,
-                selectionRule,
               })
             }
           >

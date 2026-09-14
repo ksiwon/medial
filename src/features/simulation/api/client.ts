@@ -163,11 +163,10 @@ export const api = {
       developmentDeckRefs: string[];
       resourceRevisionId: string;
       maxGenerations: number;
-      maxCandidatesPerGeneration?: number;
+      maxChangeSetsPerGeneration?: number;
       callBudget?: number;
       reviewAdapter?: string;
       improvementAdapter?: string;
-      selectionRule?: string;
     }) =>
       request<SessionDetail>('/iteration/sessions', {
         method: 'POST',

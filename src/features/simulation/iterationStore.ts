@@ -66,11 +66,10 @@ export interface StartRequest {
   developmentDeckRefs: string[];
   resourceRevisionId: string;
   maxGenerations: number;
-  maxCandidatesPerGeneration: number;
+  maxChangeSetsPerGeneration: number;
   callBudget: number;
   reviewAdapter: string;
   improvementAdapter: string;
-  selectionRule: string;
 }
 
 /** What happened to the last single-press start, kept explicit so create
@@ -117,7 +116,8 @@ interface IterationState {
   openSession: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
   send: (name: string, payload?: Record<string, unknown>) => Promise<void>;
-  selectProposal: (proposalId: string, reason: string) => Promise<void>;
+  confirmChangeSet: (changeSetId: string, reason: string) => Promise<void>;
+  saveResearcherChangeSet: (body: Record<string, unknown>) => Promise<void>;
   decide: (body: {
     disposition: 'adopt_for_field_review' | 'hold' | 'reject';
     generationId: string | null;
@@ -312,12 +312,16 @@ export const useIterationStore = create<IterationState>((set, get) => ({
     }
   },
 
-  selectProposal: async (proposalId, reason) => {
-    await get().send('select_proposal', { proposalId, reason });
+  confirmChangeSet: async (changeSetId, reason) => {
+    await get().send('confirm_change_set', { changeSetId, reason });
     set({
-      notice:
-        '디자이너가 고른 후보로 다음 세대를 이어갑니다. 선택하지 않은 후보도 분기로 남습니다.',
+      notice: '연구자가 확정한 Change Set 하나로 새 MEDial revision을 실행합니다.',
     });
+  },
+
+  saveResearcherChangeSet: async (body) => {
+    await get().send('save_researcher_change_set', body);
+    set({ notice: '연구자 수정본을 새 Change Set으로 저장했습니다. 원본 기록은 유지됩니다.' });
   },
 
   decide: async (body) => {
@@ -397,10 +401,8 @@ export const useIterationStore = create<IterationState>((set, get) => ({
  * Default the comparison to a pair that is actually comparable.
  *
  * "Newest against oldest" looked right and read badly: the highest index is
- * often a *branch* that was never advanced, so the default view opened on two
- * versions with no parent relationship and correctly announced that it could
- * not attribute the difference to anything. The default is now the newest
- * version the loop actually carried forward, against the version it came from,
+ * may be a draft that was never executed. The default is the newest confirmed
+ * version, against the version it came from,
  * which is the one pair where "same day, one condition changed" holds.
  *
  * Newest is not "best" and is never labelled as one. Both sides stay
@@ -416,7 +418,7 @@ function seedCompareSides(
   const state = get();
   const known = new Set(ordered.map((g) => g.id));
 
-  // A generation the loop kept: it has a parent and was not shelved as a branch.
+  // A generation exists only after researcher confirmation; use the newest child.
   const advanced = [...ordered]
     .reverse()
     .find((g) => g.outcome !== 'blocked' && g.parentGenerationId != null);

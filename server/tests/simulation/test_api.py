@@ -232,15 +232,17 @@ def test_the_whole_loop_over_http():
     assert started.status_code == 200, started.text
     session = started.json()["session"]
     assert session["stopReason"], "왜 멈췄는지 항상 남는다"
+    assert session["status"] == "awaiting_confirmation"
 
     generations = api.get("/api/sim/iteration/sessions/%s/generations"
                           % session_id).json()
-    assert sorted({g["index"] for g in generations["generations"]}) == [0, 1, 2]
+    assert sorted({g["index"] for g in generations["generations"]}) == [0]
     assert generations["criteria"]["criteria"], "고정된 비교 기준이 함께 나온다"
 
     detail = api.get("/api/sim/iteration/sessions/%s" % session_id).json()
     root = next(g for g in detail["generations"] if g["index"] == 0)
-    assert root["reviews"] and root["synthesis"] and root["proposals"]
+    assert root["reviews"] and root["synthesis"] and root["changeSets"]
+    assert all(item["resultingPolicyRevisionId"] is None for item in root["changeSets"])
     assert detail["modelCalls"] == [], "rule 어댑터는 모델을 호출하지 않는다"
 
 

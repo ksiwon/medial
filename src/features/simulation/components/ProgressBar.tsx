@@ -51,7 +51,7 @@ const Spacer = styled.span`
 
 /** The loop's four stages, in the order the engine runs them. Read-only. */
 const STEPS: { label: string; statuses: string[] }[] = [
-  { label: '하루 실행', statuses: ['running_cycle', 'evaluating_candidates'] },
+  { label: '하루 실행', statuses: ['running_cycle', 'executing_revision'] },
   { label: '주민 리뷰', statuses: ['collecting_reviews'] },
   { label: '개선안', statuses: ['synthesizing', 'proposing_changes', 'validating_changes'] },
   { label: '다음 실행', statuses: ['selecting_next'] },
@@ -137,13 +137,7 @@ export default function ProgressBar({
 
       <Tag
         $kind={
-          running
-            ? 'neutral'
-            : session.status === 'needs_decision'
-              ? 'warn'
-              : session.status === 'failed'
-                ? 'error'
-                : 'unknown'
+          running ? 'neutral' : session.status === 'failed' ? 'error' : 'unknown'
         }
       >
         {running ? '실행 중' : STATUS_LABELS[session.status]}
