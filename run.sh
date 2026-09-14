@@ -181,7 +181,7 @@ if [ -f server/.env ]; then
   # shellcheck disable=SC1091
   . <(sed 's/\r$//' ./server/.env)
   set +a
-  if [ -n "${ANTHROPIC_API_KEY:-}" ] || [ -n "${OPENAI_API_KEY:-}" ]; then
+  if [ -n "${GOOGLE_API_KEY:-}" ]; then
     echo "server/.env 읽음 · 온라인 어댑터를 고를 수 있는 키가 있습니다 (rule 어댑터는 모델을 부르지 않습니다)"
   else
     echo "server/.env 읽음 · 온라인 어댑터용 키는 없습니다 (규칙 어댑터로 전체 흐름이 돕니다)"

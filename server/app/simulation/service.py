@@ -344,7 +344,7 @@ class SimulationService:
         if self.provider is None or not getattr(self.provider, "available", True):
             raise ValueError(
                 "llm 어댑터를 골랐지만 서버에 모델 키가 없다. server/.env 에 GOOGLE_API_KEY "
-                "(또는 다른 공급자 키)와 MEDIAL_LLM_PROVIDER를 두거나 rule 어댑터로 실행한다. "
+                "를 두거나 rule 어댑터로 실행한다. "
                 "실패를 규칙 결과로 대체하지 않는다.")
         policy = self.model_policy.model_copy(update={"mode": "record"})
         if not self._models_verified and hasattr(self.provider, "verify_models"):

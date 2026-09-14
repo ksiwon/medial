@@ -1,4 +1,4 @@
-"""Provider-neutral model access for the review and improvement roles.
+"""Model access for the review and improvement roles - Gemini only.
 
 Three rules are enforced here rather than trusted to the caller:
 
@@ -11,11 +11,12 @@ Three rules are enforced here rather than trusted to the caller:
   response content hashes, token usage, latency, and whether the response
   validated. The bodies themselves stay out of the public export.
 
-The HTTP calls are made directly against the providers' documented REST
-endpoints rather than through a vendor SDK, so the code does not drift when an
-SDK's major version changes. Anyone wiring a new provider or a new model id
-should check the provider's current documentation first: model names change more
-often than this file does.
+The HTTP calls go straight to Gemini's OpenAI-compatible chat endpoint (it
+accepts ``response_format: json_schema``), not through a vendor SDK, so the code
+does not drift when an SDK's major version changes. There is one provider on
+purpose: a second one was more to keep straight than it was worth (2026-09-15),
+and adding one back is a small, separate change. Model names change more often
+than this file does - check Google's current list before changing a default.
 """
 from __future__ import annotations
 
@@ -30,32 +31,22 @@ from typing import Any
 #: Bumped whenever a role prompt changes in a way that could change the output.
 PROMPT_VERSION = "medial-prompts/1.0.0"
 
-ANTHROPIC_VERSION = "2023-06-01"
 DEFAULT_TIMEOUT_S = 60.0
 DEFAULT_MAX_TOKENS = 2048
 
-#: Defaults only. Model ids move; ``MEDIAL_LLM_MODEL`` overrides this and the
+PROVIDER = "google"
+
+#: Default only. Model ids move; ``MEDIAL_LLM_MODEL`` overrides this and the
 #: health endpoint reports whichever one is actually configured. Checked against
-#: each provider's model list on 2026-09-11.
+#: Google's model list on 2026-09-15.
 #:
 #: The mid tier is the default on purpose. A generation asks for one review per
 #: actor (13) plus a synthesis and a proposal round, so a cycle is tens of calls,
 #: and the work is grounded extraction - read these events, grade these six
-#: dimensions, cite the event ids - rather than open-ended reasoning. The
-#: flagship tier (``gpt-6-astra``, ``claude-opus-5``) is a MEDIAL_LLM_MODEL away
-#: when a run needs it.
-DEFAULT_MODELS = {
-    "anthropic": "claude-sonnet-5",
-    "openai": "gpt-5.6-terra",
-    "google": "gemini-3.8-flash",
-}
+#: dimensions, cite the event ids - rather than open-ended reasoning.
+DEFAULT_MODEL = "gemini-3.8-flash"
 
-#: Which wire format a provider speaks. Google is reached through its
-#: OpenAI-compatible endpoint, which accepts the same ``response_format``
-#: json_schema this client already sends, so no third request shape is needed.
-WIRE = {"anthropic": "anthropic", "openai": "openai", "google": "openai"}
-
-GOOGLE_OPENAI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai"
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
 
 
 class ModelNotConfigured(RuntimeError):
@@ -116,14 +107,14 @@ class ModelResult:
 class LlmClient:
     """One client, several roles. Roles differ by prompt and schema, not by key."""
 
-    def __init__(self, provider: str | None = None, model: str | None = None,
-                 api_key: str | None = None, base_url: str | None = None,
-                 timeout_s: float = DEFAULT_TIMEOUT_S, max_retries: int = 2) -> None:
-        self.provider = provider or ""
-        self.wire = WIRE.get(self.provider, self.provider)
+    provider = PROVIDER
+
+    def __init__(self, model: str | None = None, api_key: str | None = None,
+                 base_url: str | None = None, timeout_s: float = DEFAULT_TIMEOUT_S,
+                 max_retries: int = 2) -> None:
         self.model = model or ""
         self._api_key = api_key
-        self.base_url = base_url or ""
+        self.base_url = base_url or GEMINI_BASE_URL
         self.timeout_s = timeout_s
         self.max_retries = max_retries
 
@@ -131,45 +122,20 @@ class LlmClient:
     @classmethod
     def from_env(cls, env: dict[str, str] | None = None) -> "LlmClient":
         env = dict(env if env is not None else os.environ)
-        provider = (env.get("MEDIAL_LLM_PROVIDER") or "").strip().lower()
-        key = None
-        base = env.get("MEDIAL_LLM_BASE_URL") or ""
-
-        if provider in ("gemini",):
-            provider = "google"
-
-        if not provider:
-            if env.get("ANTHROPIC_API_KEY"):
-                provider = "anthropic"
-            elif env.get("OPENAI_API_KEY"):
-                provider = "openai"
-            elif env.get("GOOGLE_API_KEY"):
-                provider = "google"
-
-        if provider == "anthropic":
-            key = env.get("ANTHROPIC_API_KEY")
-            base = base or env.get("ANTHROPIC_BASE_URL") or "https://api.anthropic.com"
-        elif provider == "openai":
-            key = env.get("OPENAI_API_KEY")
-            base = base or env.get("OPENAI_BASE_URL") or "https://api.openai.com/v1"
-        elif provider == "google":
-            key = env.get("GOOGLE_API_KEY")
-            base = base or GOOGLE_OPENAI_BASE
-
-        model = (env.get("MEDIAL_LLM_MODEL")
-                 or DEFAULT_MODELS.get(provider, ""))
+        key = env.get("GOOGLE_API_KEY") or None
+        base = env.get("MEDIAL_LLM_BASE_URL") or GEMINI_BASE_URL
+        model = env.get("MEDIAL_LLM_MODEL") or DEFAULT_MODEL
         timeout = float(env.get("MEDIAL_LLM_TIMEOUT_S") or DEFAULT_TIMEOUT_S)
-        return cls(provider=provider, model=model, api_key=key, base_url=base,
-                   timeout_s=timeout)
+        return cls(model=model, api_key=key, base_url=base, timeout_s=timeout)
 
     @property
     def available(self) -> bool:
-        return bool(self.provider and self._api_key and self.model)
+        return bool(self._api_key and self.model)
 
     def describe(self) -> dict[str, Any]:
         """Safe to serve to a browser: says whether a key is present, never what."""
         return {
-            "provider": self.provider or None,
+            "provider": self.provider,
             "model": self.model or None,
             "configured": self.available,
             "promptVersion": PROMPT_VERSION,
@@ -177,9 +143,7 @@ class LlmClient:
             "note": ("키는 서버 환경변수에서만 읽고 응답·로그·문서에 포함하지 않는다. "
                      "키가 없으면 온라인 어댑터를 선택할 수 없고, 실패를 scripted 성공으로 "
                      "대체하지 않는다."),
-            "envKeys": ["ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY",
-                        "MEDIAL_LLM_PROVIDER", "MEDIAL_LLM_MODEL",
-                        "MEDIAL_LLM_BASE_URL"],
+            "envKeys": ["GOOGLE_API_KEY", "MEDIAL_LLM_MODEL", "MEDIAL_LLM_BASE_URL"],
         }
 
     # -- the call ---------------------------------------------------------
@@ -202,8 +166,8 @@ class LlmClient:
         if not self.available:
             raise ModelNotConfigured(
                 "온라인 어댑터를 선택했지만 모델 키·모델 id가 설정되지 않았다. "
-                "서버 환경변수(ANTHROPIC_API_KEY · OPENAI_API_KEY · GOOGLE_API_KEY 중 하나와 "
-                "MEDIAL_LLM_MODEL)를 설정하거나 rule/scripted 어댑터로 실행한다.")
+                "서버 환경변수 GOOGLE_API_KEY(그리고 필요하면 MEDIAL_LLM_MODEL)를 "
+                "설정하거나 rule/scripted 어댑터로 실행한다.")
 
         request_body = {"system": system, "payload": payload, "schema": schema_name}
         request_hash = content_hash(request_body)
@@ -238,63 +202,32 @@ class LlmClient:
             "%s 역할의 모델 호출이 %d회 시도 후 실패했다: %s"
             % (role, self.max_retries + 1, last_error))
 
-    # -- providers --------------------------------------------------------
+    # -- the wire ---------------------------------------------------------
     def _post(self, system: str, payload: dict[str, Any], schema: dict[str, Any],
               schema_name: str, max_tokens: int) -> tuple[Any, dict[str, int]]:
         import httpx  # imported lazily: the offline path must not need it
 
         user = json.dumps(payload, ensure_ascii=False)
-        if self.wire == "anthropic":
-            body = {
-                "model": self.model,
-                "max_tokens": max_tokens,
-                "system": system,
-                "messages": [{"role": "user", "content": user}],
-                # A tool call is how the Messages API is asked for a structured
-                # object; the schema is the contract, not a suggestion in prose.
-                "tools": [{"name": schema_name,
-                           "description": "Return the result in this shape.",
-                           "input_schema": schema}],
-                "tool_choice": {"type": "tool", "name": schema_name},
-            }
-            response = httpx.post(
-                self.base_url.rstrip("/") + "/v1/messages", json=body,
-                timeout=self.timeout_s,
-                headers={"x-api-key": self._api_key or "",
-                         "anthropic-version": ANTHROPIC_VERSION,
-                         "content-type": "application/json"})
-            response.raise_for_status()
-            data = response.json()
-            usage = {"input": (data.get("usage") or {}).get("input_tokens", 0),
-                     "output": (data.get("usage") or {}).get("output_tokens", 0)}
-            for block in data.get("content", []):
-                if block.get("type") == "tool_use":
-                    return block.get("input"), usage
-            return None, usage
-
-        if self.wire == "openai":
-            body = {
-                "model": self.model,
-                "messages": [{"role": "system", "content": system},
-                             {"role": "user", "content": user}],
-                "response_format": {
-                    "type": "json_schema",
-                    "json_schema": {"name": schema_name, "schema": schema},
-                },
-            }
-            response = httpx.post(
-                self.base_url.rstrip("/") + "/chat/completions", json=body,
-                timeout=self.timeout_s,
-                headers={"Authorization": "Bearer %s" % (self._api_key or ""),
-                         "content-type": "application/json"})
-            response.raise_for_status()
-            data = response.json()
-            usage = {"input": (data.get("usage") or {}).get("prompt_tokens", 0),
-                     "output": (data.get("usage") or {}).get("completion_tokens", 0)}
-            text = (data.get("choices") or [{}])[0].get("message", {}).get("content")
-            return (json.loads(text) if text else None), usage
-
-        raise ModelNotConfigured("알 수 없는 provider: %r" % self.provider)
+        body = {
+            "model": self.model,
+            "messages": [{"role": "system", "content": system},
+                         {"role": "user", "content": user}],
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {"name": schema_name, "schema": schema},
+            },
+        }
+        response = httpx.post(
+            self.base_url.rstrip("/") + "/chat/completions", json=body,
+            timeout=self.timeout_s,
+            headers={"Authorization": "Bearer %s" % (self._api_key or ""),
+                     "content-type": "application/json"})
+        response.raise_for_status()
+        data = response.json()
+        usage = {"input": (data.get("usage") or {}).get("prompt_tokens", 0),
+                 "output": (data.get("usage") or {}).get("completion_tokens", 0)}
+        text = (data.get("choices") or [{}])[0].get("message", {}).get("content")
+        return (json.loads(text) if text else None), usage
 
 
 def _retryable(exc: Exception) -> bool:

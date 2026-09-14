@@ -56,31 +56,25 @@ Ctrl+C 는 **이 스크립트가 띄운 것만** 정리합니다. 직접 띄우�
 git-ignored 이며 `run.sh` 가 서버를 띄우기 전에 읽어 넣습니다. 양식은 `server/.env.example`.
 직접 띄울 때는 `set -a; . server/.env; set +a; python server/sim_main.py`.
 
-**어느 모델을 쓰는가 (2026-09-11 기준).** 한 세대가 주민 12명 + 기관 담당자 리뷰 13건에 종합과
+**공급자는 Gemini 하나입니다 (2026-09-15).** 전에는 Anthropic·OpenAI 경로도 있었지만 헷갈리기만
+해서 걷어냈습니다. 다시 필요해지면 그때 새로 붙입니다 (`iteration/llm.py` 의 `_post` 하나가
+요청 형태입니다). Gemini는 OpenAI 호환 엔드포인트(`/v1beta/openai`)로 붙고 거기서
+`response_format: json_schema` 를 받습니다.
+
+**어느 모델을 쓰는가.** 리뷰·개선은 한 세대가 주민 12명 + 기관 담당자 리뷰 13건에 종합과
 개선 후보까지 요청하므로 한 cycle이 수십 번의 호출이고, 하는 일은 열린 추론이 아니라 **근거가
 정해진 추출**입니다 — 이 사건들을 읽고, 여섯 차원을 등급 매기고, 인용한 사건 id를 대라. 그래서
-기본값을 각 provider의 **중간 등급**으로 둡니다.
+`gemini-3.8-flash` 를 기본으로 둡니다. 마을을 모델로 돌릴 때는 두 층입니다 (아래 3단계).
 
-| provider | 기본 모델 | 키 | 비고 |
-|---|---|---|---|
-| `google` (기본) | `gemini-3.8-flash` | `GOOGLE_API_KEY` | OpenAI 호환 엔드포인트로 붙습니다 |
-| `openai` | `gpt-5.6-terra` | `OPENAI_API_KEY` | 지능과 비용의 균형 등급 |
-| `anthropic` | `claude-sonnet-5` | `ANTHROPIC_API_KEY` | 이 파일에는 키가 없습니다 |
+| 변수 | 기본값 | 쓰임 |
+|---|---|---|
+| `GOOGLE_API_KEY` | — | 유일한 키. 없으면 온라인 어댑터를 고를 수 없습니다 |
+| `MEDIAL_LLM_MODEL` | `gemini-3.8-flash` | 리뷰·종합·개선 |
+| `MEDIAL_LLM_HEAD_MODEL` · `MEDIAL_LLM_RESIDENT_MODEL` | `gemini-3.8-flash` · `gemini-3.1-flash-lite` | MEDial 머리 · 주민 |
+| `MEDIAL_LLM_BASE_URL` · `MEDIAL_LLM_TIMEOUT_S` · `MEDIAL_LLM_TEMPERATURE` · `MEDIAL_LLM_MAX_RETRIES` | Gemini 엔드포인트 · 60s · 0.2 · 6 | |
 
-더 어려운 판단이 필요하면 `MEDIAL_LLM_MODEL` 로 `gpt-6-astra` · `claude-opus-5` ·
-`gemini-3.8-flash` 상위 등급을 지정합니다. **모델 id는 코드보다 자주 바뀌므로** 기본값은 기본값일
-뿐이고, health 응답은 실제로 설정된 id를 그대로 보고합니다.
-
-**Gemini는 새 provider 코드를 쓰지 않습니다.** Google이 OpenAI 호환 엔드포인트
-(`/v1beta/openai`)를 제공하고 거기서 `response_format: json_schema` 를 받으므로, 이미 있는
-OpenAI 요청 형태를 그대로 보냅니다. `provider` 는 표시용 이름이고 `wire` 가 요청 형태입니다 —
-둘을 다시 합치면 `GOOGLE_API_KEY` 가 **설정된 것처럼 보이면서 동작하지 않는** 상태가 되므로,
-`test_each_provider_is_reachable_from_its_own_key_alone` 이 그것을 고정합니다.
-
-| 그 밖의 변수 | 쓰임 |
-|---|---|
-| `MEDIAL_LLM_PROVIDER` | 비우면 있는 키로 정합니다 (anthropic → openai → google). `gemini` 는 `google` 의 별칭 |
-| `MEDIAL_LLM_MODEL` · `MEDIAL_LLM_BASE_URL` · `MEDIAL_LLM_TIMEOUT_S` | 온라인 어댑터 설정 |
+**모델 id는 코드보다 자주 바뀌므로** 기본값은 기본값일 뿐이고, health 응답은 실제로 설정된 id를
+그대로 보고합니다. llm 실행 전에 공급자의 모델 목록으로 두 id를 확인하고 없으면 시작하지 않습니다.
 | `MEDIAL_SIM_PORT` · `MEDIAL_SIM_DB` · `MEDIAL_VILLAGE_PATH` · `MEDIAL_PERSONA_PATH` | 서버 설정 |
 
 키가 있어도 **rule 어댑터를 고르면 모델을 한 번도 부르지 않습니다.** 키가 없으면 온라인
@@ -526,10 +520,10 @@ npm run build                                     # tsc + vite, 통과
 - `scripted` — 고정 리뷰로 흐름만 확인. 모델 결과가 아닙니다.
 
 ### 실제 LLM 어댑터
-- provider 중립 HTTP 클라이언트(Anthropic Messages / OpenAI 호환 chat completions)를
-  구현했습니다. 구조화 출력은 각각 tool input_schema / json_schema로 강제합니다.
-- 키는 **서버 환경변수에서만** 읽습니다(`ANTHROPIC_API_KEY` 또는 `OPENAI_API_KEY`,
-  `MEDIAL_LLM_MODEL`, `MEDIAL_LLM_BASE_URL`). 응답·로그·문서·health 어디에도 키가 없습니다.
+- Gemini(OpenAI 호환 chat completions) HTTP 클라이언트 하나. 구조화 출력은 json_schema로
+  강제합니다. (2026-09-15에 Anthropic·OpenAI 경로를 걷어냈습니다.)
+- 키는 **서버 환경변수에서만** 읽습니다(`GOOGLE_API_KEY`, `MEDIAL_LLM_MODEL`,
+  `MEDIAL_LLM_BASE_URL`). 응답·로그·문서·health 어디에도 키가 없습니다.
 - 호출마다 provider·model·prompt 버전·요청/응답 content hash·토큰·지연·검증 결과를
   기록합니다. 본문은 저장하지 않습니다.
 - **키가 없으면 온라인 어댑터를 선택할 수 없습니다**(session 생성 400). 온라인 호출이 실패하면
@@ -1266,9 +1260,16 @@ MEDial 머리 (3.8-flash)                          주민 (3.1-flash-lite × 12)
 | 3.8-flash 머리, `decide` | 503 "high demand" 반복 → 이후 **429: 무료 등급 하루 20회** (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`, quotaValue 20). 오늘 소진 |
 | 양쪽 3.1-flash-lite | read·decide·wait 재판단까지 흐름 확인. 첫 실행에서 `wait`에 깨우는 장치가 없던 것을 발견해 고침(D084). 두 번째 실행은 wait 뒤 재판단에서 503 |
 
-그래서 **3.8-flash로 하루를 끝까지 돌린 기록은 아직 없다.** 배관은 가짜 모델로 16건, 실제
-모델로는 머리의 read 한 번과 flash-lite의 read→decide→wait→재판단까지 확인했다. 무료 등급이면
-3.8-flash는 하루 20회라 한 실행(머리 3~5회)을 몇 번 못 돌린다 — 유료 전환이나 quota 확인이 필요하다.
+| 새 키, 3.8-flash 머리 + flash-lite 주민 (1차) | read·decide 성공 → P9 수락 → 집 방문, 부재 → **P9에게 "어디 있을지"를 물었는데 P9는 아는 곳이 없어** 빈 답 → 어댑터 실패. 엔진이 지역 지식이 없는 사람에게 그 질문을 던진 것이 원인 |
+| 같은 조건 (2차, 고친 뒤) | **끝까지 돎.** read → decide(P9·P10·P11 순, retryCount 0이라 재연락 없음을 스스로 언급) → P9 수락 → 부재 → 확인처 근거 없음으로 미해결. 호출 3회, 실패 0 |
+
+고친 것: 자택 부재 뒤 "어디 있을지"는 그 사람의 일과를 장소 단위로 아는 사람(지금은 이장)에게만
+묻는다. 모르는 사람에게는 묻지 않고 바로 "근거 없음"으로 간다
+(`test_only_someone_who_knows_the_persons_day_is_asked_where_they_would_be`).
+
+2차 실행이 **3.8-flash로 하루를 끝까지 돌린 첫 기록**이다. 한 번이고 합성 마을이다 — 여러 번
+돌려 흔들림을 본 것은 아니다. 무료 등급이면 3.8-flash는 하루 20회라 한 실행(머리 3~5회)을 몇 번
+못 돌린다.
 
 ### 아직 안 한 것
 
@@ -1339,8 +1340,8 @@ MEDial 머리 (3.8-flash)                          주민 (3.1-flash-lite × 12)
   프런트(`src/{App.tsx,components,screens,store,styles,hooks,config,data,types}`),
   `requirements.txt`, `GPU_SETUP.md`, Pretendard 폰트와 아바타 이미지, 관련 문서가 대상입니다.
   전부 커밋 `dafb5e6` 에 들어 있으므로 `git show dafb5e6:<경로>` 로 되살릴 수 있습니다.
-  `.env` 도 그 데모용 설정(STT·TTS·RAG·wav2lip)이었고, **`GOOGLE_API_KEY` 와
-  `OPENAI_API_KEY` 값만 남기고** 나머지는 지웠습니다.
+  `.env` 도 그 데모용 설정(STT·TTS·RAG·wav2lip)이었고, **`GOOGLE_API_KEY` 값만 남기고**
+  나머지는 지웠습니다 (OpenAI 키는 2026-09-15에 마저 지웠습니다).
 
 ## 읽는 순서
 

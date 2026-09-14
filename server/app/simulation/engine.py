@@ -966,6 +966,14 @@ class Engine:
                           path="neighbour_visit", by=actor_id)
             return
 
+        # "Where would they be?" is only a question for someone who holds
+        # place-level knowledge of this person's day. Asking anyone else
+        # invites a made-up place - a model resident with an empty
+        # localKnowledge list answered with none and was failed for it - and a
+        # question whose only legal answer is "I don't know" is not asked.
+        if not self._local_knowledge(actor_id, at_ms):
+            self._unresolved(at_ms, request, "자택에 없었고 다음 확인처에 대한 근거가 없다")
+            return
         proposals = self._ask(actor_id, at_ms,
                               [ProposalAction.report_observation, ProposalAction.decline])
         if not proposals or proposals[0].action is not ProposalAction.report_observation:

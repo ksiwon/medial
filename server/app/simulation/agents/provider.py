@@ -23,23 +23,13 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ..contracts import ModelPolicy
-from ..iteration.llm import (
-    DEFAULT_MODELS,
-    GOOGLE_OPENAI_BASE,
-    LlmClient,
-    ModelNotConfigured,
-    _retryable,
-)
+from ..iteration.llm import LlmClient, ModelNotConfigured, _retryable
 
-#: What the two tiers default to. Checked against the provider's model list on
+#: What the two tiers default to. Checked against Google's model list on
 #: 2026-09-15 with the project key; ``MEDIAL_LLM_HEAD_MODEL`` and
 #: ``MEDIAL_LLM_RESIDENT_MODEL`` override them.
-DEFAULT_HEAD_MODEL = {"google": "gemini-3.8-flash",
-                      "openai": "gpt-5.6-terra",
-                      "anthropic": "claude-sonnet-5"}
-DEFAULT_RESIDENT_MODEL = {"google": "gemini-3.1-flash-lite",
-                          "openai": "gpt-5.6-terra",
-                          "anthropic": "claude-haiku-4-5-20251001"}
+DEFAULT_HEAD_MODEL = "gemini-3.8-flash"
+DEFAULT_RESIDENT_MODEL = "gemini-3.1-flash-lite"
 
 
 @dataclass
@@ -65,12 +55,9 @@ def policy_from_env(env: dict[str, str] | None = None,
                     mode: str = "record") -> ModelPolicy:
     """The model policy the server would run an ``llm`` attempt under."""
     env = dict(env if env is not None else os.environ)
-    client = LlmClient.from_env(env)
-    provider = client.provider or "none"
-    head = env.get("MEDIAL_LLM_HEAD_MODEL") or DEFAULT_HEAD_MODEL.get(provider, "none")
-    resident = (env.get("MEDIAL_LLM_RESIDENT_MODEL")
-                or DEFAULT_RESIDENT_MODEL.get(provider, "none"))
-    return ModelPolicy(provider=provider, headModelId=head, residentModelId=resident,
+    head = env.get("MEDIAL_LLM_HEAD_MODEL") or DEFAULT_HEAD_MODEL
+    resident = env.get("MEDIAL_LLM_RESIDENT_MODEL") or DEFAULT_RESIDENT_MODEL
+    return ModelPolicy(provider=LlmClient.provider, headModelId=head, residentModelId=resident,
                        temperature=float(env.get("MEDIAL_LLM_TEMPERATURE") or 0.2),
                        mode=mode)
 
@@ -96,12 +83,12 @@ class ModelProvider:
 
     @property
     def available(self) -> bool:
-        return self._base.available or bool(self._base.provider and self._base._api_key)
+        return self._base.available or bool(self._base._api_key)
 
     def describe(self, policy: ModelPolicy) -> dict[str, Any]:
         """Safe for a browser: which models, whether a key exists, never the key."""
         return {
-            "provider": self._base.provider or None,
+            "provider": self._base.provider,
             "configured": self.available,
             "headModel": policy.headModelId,
             "residentModel": policy.residentModelId,
@@ -113,16 +100,9 @@ class ModelProvider:
 
     # -- the pre-flight check -------------------------------------------
     def verify_models(self, policy: ModelPolicy) -> list[str]:
-        """Names the provider does not offer. Empty means both tiers exist.
-
-        Only the Google/OpenAI wire exposes a model list this way; on any
-        other provider the check is skipped rather than guessed, and the first
-        real call is the check.
-        """
+        """Names Google does not offer. Empty means both tiers exist."""
         if not self.available:
             return [policy.headModelId, policy.residentModelId]
-        if self._base.wire != "openai":
-            return []
         import httpx  # lazy: the offline path must not need it
 
         url = self._base.base_url.rstrip("/") + "/models"
@@ -141,9 +121,8 @@ class ModelProvider:
         client = self._clients.get(model_id)
         if client is None:
             b = self._base
-            client = LlmClient(provider=b.provider, model=model_id, api_key=b._api_key,
-                               base_url=b.base_url, timeout_s=b.timeout_s,
-                               max_retries=b.max_retries)
+            client = LlmClient(model=model_id, api_key=b._api_key, base_url=b.base_url,
+                               timeout_s=b.timeout_s, max_retries=b.max_retries)
             self._clients[model_id] = client
         return client
 
@@ -182,4 +161,4 @@ class ModelProvider:
 
 
 __all__ = ["CallSpec", "ModelProvider", "policy_from_env", "DEFAULT_HEAD_MODEL",
-           "DEFAULT_RESIDENT_MODEL", "DEFAULT_MODELS", "GOOGLE_OPENAI_BASE"]
+           "DEFAULT_RESIDENT_MODEL"]

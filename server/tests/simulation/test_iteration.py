@@ -479,7 +479,7 @@ def test_the_call_budget_stops_the_loop_and_is_not_reported_as_finished():
         def available(self):  # noqa: D401 - configured, so the session is allowed
             return True
 
-    client = Exhausted(provider="anthropic", model="test", api_key="x",
+    client = Exhausted(model="test", api_key="x",
                        base_url="https://example.invalid")
     service = iteration(llm=client)
     session = service.create_session(
@@ -504,7 +504,7 @@ def test_a_model_failure_is_a_failure_not_a_set_of_unknown_reviews():
         def complete_json(self, **kwargs):
             raise ModelCallError("provider returned 503")
 
-    client = Broken(provider="anthropic", model="test", api_key="x",
+    client = Broken(model="test", api_key="x",
                     base_url="https://example.invalid")
     service = iteration(llm=client)
     session = service.create_session(
@@ -535,40 +535,24 @@ def test_an_unconfigured_client_refuses_to_pretend():
 
 
 def test_the_model_description_never_carries_the_key():
-    client = LlmClient(provider="anthropic", model="m", api_key="super-secret",
+    client = LlmClient(model="m", api_key="super-secret",
                        base_url="https://example.invalid")
     described = client.describe()
     assert "super-secret" not in repr(described)
     assert described["configured"] is True
 
 
-def test_each_provider_is_reachable_from_its_own_key_alone():
-    """A key on its own is enough to configure a client.
-
-    Google is the one that is easy to break: it has no request shape of its own
-    here, it is reached through its OpenAI-compatible endpoint. A refactor that
-    keys the request builder off `provider` instead of `wire` leaves
-    GOOGLE_API_KEY configured-looking and unusable.
-    """
-    cases = {
-        "ANTHROPIC_API_KEY": ("anthropic", "anthropic"),
-        "OPENAI_API_KEY": ("openai", "openai"),
-        "GOOGLE_API_KEY": ("google", "openai"),
-    }
-    for env_key, (provider, wire) in cases.items():
-        client = LlmClient.from_env({env_key: "k"})
-        assert client.provider == provider
-        assert client.wire == wire
-        assert client.model, "%s has no default model" % provider
-        assert client.base_url.startswith("https://")
-        assert client.available
-
-    # The alias people actually type.
-    assert LlmClient.from_env(
-        {"GOOGLE_API_KEY": "k", "MEDIAL_LLM_PROVIDER": "gemini"}).provider == "google"
-    # And a key for one provider does not configure another.
-    assert not LlmClient.from_env({"GOOGLE_API_KEY": "k",
-                                   "MEDIAL_LLM_PROVIDER": "openai"}).available
+def test_a_google_key_alone_configures_the_client_and_nothing_else_does():
+    """One provider, on purpose (2026-09-15). GOOGLE_API_KEY is the whole
+    configuration; the base URL is Gemini's OpenAI-compatible endpoint."""
+    client = LlmClient.from_env({"GOOGLE_API_KEY": "k"})
+    assert client.provider == "google"
+    assert client.model == "gemini-3.8-flash"
+    assert client.base_url.startswith("https://generativelanguage.googleapis.com/")
+    assert client.available
+    # Keys for providers this code no longer knows do nothing.
+    assert not LlmClient.from_env({"OPENAI_API_KEY": "k"}).available
+    assert not LlmClient.from_env({"ANTHROPIC_API_KEY": "k"}).available
 
 
 # ============================================================ restart behaviour

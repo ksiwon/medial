@@ -1,6 +1,6 @@
 {
  "attempt": {
-  "id": "att-C-v1-2a7470326624",
+  "id": "att-C-v1-b4f92fc558bf",
   "parentId": null,
   "parentSeq": null,
   "lineage": "root",
@@ -18,14 +18,16 @@
   "environmentRevisionId": "env-v3",
   "dayRealizationId": "day-58d7f0c850257455",
   "modelPolicy": {
-   "modelId": "none",
+   "provider": "none",
+   "headModelId": "none",
+   "residentModelId": "none",
    "temperature": 0.0,
-   "maxOutputTokens": 512,
-   "promptRevisionId": "prompt-v1",
+   "maxOutputTokens": 1024,
+   "promptRevisionId": "prompt-v2",
    "mode": "off"
   },
   "relationRevisionId": "rel-v1",
-  "createdAt": "2026-09-14T15:26:33+00:00",
+  "createdAt": "2026-09-14T16:30:44+00:00",
   "cursorSeq": 0,
   "eventCount": 20,
   "dataSource": "synthetic",
@@ -36,7 +38,7 @@
    "resources": "fa080f60dffd5e61",
    "environment": "93fe4eaa98c3eed7",
    "day": "day-58d7f0c850257455",
-   "modelPolicy": "97d384f1a98978bf",
+   "modelPolicy": "22bdc065aa6bf722",
    "relations": "62ade898153f86df",
    "persona": "persona-synthetic-b7889f7457bde193",
    "personaSource": "synthetic"
@@ -1157,10 +1159,12 @@
   },
   "modelCalls": {
    "policy": {
-    "modelId": "none",
+    "provider": "none",
+    "headModelId": "none",
+    "residentModelId": "none",
     "temperature": 0.0,
-    "maxOutputTokens": 512,
-    "promptRevisionId": "prompt-v1",
+    "maxOutputTokens": 1024,
+    "promptRevisionId": "prompt-v2",
     "mode": "off"
    },
    "total": 0,
@@ -6040,7 +6044,7 @@
  "decisions": [
   {
    "id": "dec-1",
-   "attemptId": "att-C-v1-2a7470326624",
+   "attemptId": "att-C-v1-b4f92fc558bf",
    "simTimeMs": 34200000,
    "policyId": "policy-C-v1",
    "question": "응답이 없는 상태를 누가 어떻게 확인할 것인가",
@@ -6121,7 +6125,7 @@
  "reviews": [
   {
    "id": "rev-1",
-   "attemptId": "att-C-v1-2a7470326624",
+   "attemptId": "att-C-v1-b4f92fc558bf",
    "actorId": "P1",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6160,7 +6164,7 @@
   },
   {
    "id": "rev-10",
-   "attemptId": "att-C-v1-2a7470326624",
+   "attemptId": "att-C-v1-b4f92fc558bf",
    "actorId": "P7",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6175,7 +6179,7 @@
   },
   {
    "id": "rev-11",
-   "attemptId": "att-C-v1-2a7470326624",
+   "attemptId": "att-C-v1-b4f92fc558bf",
    "actorId": "P8",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6190,7 +6194,7 @@
   },
   {
    "id": "rev-12",
-   "attemptId": "att-C-v1-2a7470326624",
+   "attemptId": "att-C-v1-b4f92fc558bf",
    "actorId": "P9",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6234,7 +6238,7 @@
   },
   {
    "id": "rev-13",
-   "attemptId": "att-C-v1-2a7470326624",
+   "attemptId": "att-C-v1-b4f92fc558bf",
    "actorId": "HC_NURSE",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6249,7 +6253,7 @@
   },
   {
    "id": "rev-2",
-   "attemptId": "att-C-v1-2a7470326624",
+   "attemptId": "att-C-v1-b4f92fc558bf",
    "actorId": "P10",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6288,7 +6292,7 @@
   },
   {
    "id": "rev-3",
-   "attemptId": "att-C-v1-2a7470326624",
+   "attemptId": "att-C-v1-b4f92fc558bf",
    "actorId": "P11",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6327,7 +6331,7 @@
   },
   {
    "id": "rev-4",
-   "attemptId": "att-C-v1-2a7470326624",
+   "attemptId": "att-C-v1-b4f92fc558bf",
    "actorId": "P12",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6342,7 +6346,7 @@
   },
   {
    "id": "rev-5",
-   "attemptId": "att-C-v1-2a7470326624",
+   "attemptId": "att-C-v1-b4f92fc558bf",
    "actorId": "P2",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6357,7 +6361,7 @@
   },
   {
    "id": "rev-6",
-   "attemptId": "att-C-v1-2a7470326624",
+   "attemptId": "att-C-v1-b4f92fc558bf",
    "actorId": "P3",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6372,7 +6376,7 @@
   },
   {
    "id": "rev-7",
-   "attemptId": "att-C-v1-2a7470326624",
+   "attemptId": "att-C-v1-b4f92fc558bf",
    "actorId": "P4",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6387,7 +6391,7 @@
   },
   {
    "id": "rev-8",
-   "attemptId": "att-C-v1-2a7470326624",
+   "attemptId": "att-C-v1-b4f92fc558bf",
    "actorId": "P5",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6402,7 +6406,7 @@
   },
   {
    "id": "rev-9",
-   "attemptId": "att-C-v1-2a7470326624",
+   "attemptId": "att-C-v1-b4f92fc558bf",
    "actorId": "P6",
    "source": "simulated",
    "scope": "day_end_retrospective",

@@ -119,6 +119,23 @@ def _of(result, etype):
 
 
 # --------------------------------------------------------------- two tiers
+def test_only_someone_who_knows_the_persons_day_is_asked_where_they_would_be():
+    # Live run, 2026-09-15: P9 went to the house, found it empty, and was
+    # offered "say where they would be" with an empty localKnowledge. The model
+    # answered with no place and the run failed as if it had invented one.
+    # The question belongs to the person who holds that knowledge.
+    village = Village(head_orders=[["P9"], ["P9"], ["P9"]])
+    result = _run(village, policy_id="policy-C-v1")
+    asked = [c for role, c in village.calls if role == "resident" and c["actorId"] == "P9"]
+    # Asked once, to go; not asked again to guess a place he has no knowledge of.
+    assert len(asked) == 1
+    assert "report_observation" not in asked[0]["allowedActions"]
+    failures = [e for e in _of(result, EventType.medial_waiting)
+                if e.payload.get("reason") == "adapter_error"]
+    assert failures == []
+    assert result.metrics["requests"]["unresolved"] == 1
+
+
 def test_the_head_and_the_residents_are_asked_on_their_own_models():
     village = Village()
     result = _run(village)
