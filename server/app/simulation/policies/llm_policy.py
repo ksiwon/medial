@@ -41,7 +41,7 @@ from .rule_policies import (
     PolicyContext,
 )
 
-PROMPT_REVISION = "prompt-v3"
+PROMPT_REVISION = "prompt-v4"
 MIN_MS = 60_000
 
 HEAD_SYSTEM = """당신은 MEDial입니다. 한국의 작은 시골 마을에서 어르신들의 안부를 살피고, 필요하면 이웃·이장·보건소에 도움을 요청하는 돌봄 조율 시스템입니다.
@@ -113,6 +113,17 @@ ABSENT_SCHEMA: dict[str, Any] = {
         "action": {"type": "string", "enum": ["continue_check", "handoff", "wait"]},
         "rationale": {"type": "string"},
         "message": {"type": "string"},
+    },
+    "required": ["action", "rationale", "message"],
+    "additionalProperties": False,
+}
+
+NO_LEAD_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "action": {"type": "string", "enum": ["ask_whereabouts", "handoff", "stop"]},
+        "rationale": {"type": "string"},
+        "message": {"type": "string", "description": "ask_whereabouts·handoff일 때 실제로 보낼 말"},
     },
     "required": ["action", "rationale", "message"],
     "additionalProperties": False,
@@ -273,6 +284,53 @@ class LlmMedialPolicy(MedialPolicy):
             return (self._decision(ctx, question, candidates, HEALTH_STAFF,
                                    str(data["rationale"])), [intent])
         return (self._decision(ctx, question, candidates, None, str(data["rationale"])), [])
+
+    def on_absent_no_lead(self, ctx: PolicyContext, checker: str,
+                          already_asked: list[str]) -> tuple[DecisionRecord, list[Intent]]:
+        head = self.village_head_id
+        events = self._events_for(ctx.request_id)
+        payload = self._base_payload(ctx, "no_lead", events)
+        payload["situation"] = self._readings.get(ctx.request_id)
+        payload["report"] = {
+            "checkedBy": checker,
+            "note": "%s가 자택에 가 봤으나 대상자가 없었고, 어디 있을지 짐작할 근거가 없다" % checker}
+        payload["villageHead"] = {
+            "actorId": head, "alreadyAsked": head == checker or head in already_asked,
+            "knows": "마을 사람들의 평소 일과를 장소 단위로 안다 (MEDial은 모른다)"}
+        payload["policy"] = self._policy_words(ctx)
+        payload["allowedActions"] = ["ask_whereabouts", "handoff", "stop"]
+        spec = CallSpec(role="head", system=HEAD_SYSTEM, schema=NO_LEAD_SCHEMA,
+                        schema_name="after_no_lead", max_tokens=self._max_tokens)
+
+        def problems(data: dict[str, Any]) -> list[str]:
+            out = []
+            action = data.get("action")
+            if action not in ("ask_whereabouts", "handoff", "stop"):
+                out.append("action은 ask_whereabouts · handoff · stop 중 하나다")
+            if action in ("ask_whereabouts", "handoff") and not str(data.get("message") or "").strip():
+                out.append("message가 비어 있다. 실제로 보낼 말을 적는다")
+            if action == "ask_whereabouts":
+                if not self.revision.params.allowHeadContact:
+                    out.append("allowHeadContact=false: 이장(%s)에게 물을 수 없다" % head)
+                if head == checker or head in already_asked:
+                    out.append("이장(%s)에게는 이미 이 건을 물었다" % head)
+            return out
+
+        data = self._ask_checked(payload, spec, problems)
+        question = "자택에 없고 짐작 가는 곳도 없을 때 누구에게 물을 것인가"
+        rationale = str(data.get("rationale") or "")
+        message = str(data.get("message") or "").strip()
+        if data["action"] == "ask_whereabouts":
+            return (self._decision(ctx, question, [Candidate(
+                actorId=head, included=True, reason="평소 일과를 장소 단위로 안다")],
+                head, rationale), [Intent("ask_whereabouts", {
+                    "toActorId": head, "requestId": ctx.request_id,
+                    "disclosure": self.disclosure_to("neighbour", ctx), "message": message})])
+        if data["action"] == "handoff":
+            intent = self._handoff_intent(ctx)
+            intent.payload["message"] = message
+            return (self._decision(ctx, question, [], HEALTH_STAFF, rationale), [intent])
+        return (self._decision(ctx, question, [], None, rationale), [])
 
     # -- the fence ----------------------------------------------------------
     def _fence(self, data: dict[str, Any], ctx: PolicyContext) -> list[str]:

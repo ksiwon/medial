@@ -21,8 +21,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 #: because the code changed are reported as *not* a controlled comparison rather
 #: than as a policy effect. 0.2.0: observation projection, institution desk,
 #: transport reservations, standing escalation deadline. 0.3.0: the retry runs first
-#: under every contact order, by phone; relation_first.
-ENGINE_VERSION = "medial-sim/0.3.0"
+#: under every contact order, by phone; relation_first. 0.4.0: an empty house with
+#: no lead asks the village head where to look instead of ending the request.
+ENGINE_VERSION = "medial-sim/0.4.0"
 
 MEDIAL = "MEDial"
 HEALTH_DIRECTOR = "HC_DIRECTOR"
@@ -790,7 +791,7 @@ class ModelPolicy(Base):
     #: Which prompt build this ran under. Bumped whenever the payload sent to the
     #: model changes shape, because an identical prompt hash across a prompt
     #: change would make two different questions look like the same one.
-    promptRevisionId: str = "prompt-v3"
+    promptRevisionId: str = "prompt-v4"
     #: ``record`` calls the provider and writes every call down. ``replay`` calls
     #: nothing: a prompt with no recorded answer is an adapter failure, never a
     #: quiet fresh call. ``off`` is the rule/scripted path, where no model exists.

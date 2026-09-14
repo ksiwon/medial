@@ -104,7 +104,7 @@ def test_p1s_only_recorded_tie_is_the_head_and_the_decision_says_so():
     assert asks[0] == "P6"
     decided = next(e for e in result.events if e.type is EventType.medial_decided
                    and e.payload["chosen"] == "P6")
-    assert "기록된 가까운 관계 중" in decided.payload["rationale"]
+    assert "기록된 가까운 관계는 이장 한 사람뿐" in decided.payload["rationale"]
 
 
 def test_relation_first_puts_recorded_ties_before_the_head_and_nobody_else():
@@ -146,3 +146,41 @@ def test_a_retry_is_a_phone_call():
     channels = [e.payload["channel"] for e in result.events
                 if e.type is EventType.contact_attempted and e.actorId != "HC_NURSE"]
     assert channels == [Channel.home_device.value, Channel.phone.value, Channel.phone.value]
+
+
+# ------------------------------------------------- an empty house, no lead
+def _whereabouts_trace(result):
+    out = []
+    for e in result.events:
+        if e.type is EventType.request_offered:
+            out.append((e.payload.get("purpose", "check"), e.payload["toActorId"]))
+        elif e.type is EventType.task_check_performed:
+            out.append((e.actorId, e.payload["place"], e.payload["outcome"]))
+    return out
+
+
+def test_a_neighbour_finding_the_house_empty_sends_medial_to_the_head_for_where_to_look():
+    result = _run(POLICIES["policy-C-v1"])
+    trace = _whereabouts_trace(result)
+    empty = trace.index(("P9", "HOME:P1", "subject_absent"))
+    assert trace[empty + 1] == ("whereabouts", "P6")
+    assert trace[empty + 2] == ("P6", "FARM", "subject_found_well")
+    assert result.metrics["requests"]["resolved"] == 1
+    decided = [e for e in result.events if e.type is EventType.medial_decided
+               and e.payload["question"].startswith("자택에 없고")]
+    assert decided and decided[0].payload["chosen"] == "P6"
+
+
+def test_without_permission_to_ask_the_head_the_empty_house_is_where_it_ends():
+    result = _run(_with("policy-C-v1", allowHeadContact=False))
+    assert ("whereabouts", "P6") not in _whereabouts_trace(result)
+    assert result.metrics["requests"]["unresolved"] == 1
+    decided = next(e for e in result.events if e.type is EventType.medial_decided
+                   and e.payload["question"].startswith("자택에 없고"))
+    assert decided.payload["chosen"] is None
+    assert "이장에게 묻지 않는다" in decided.payload["rationale"]
+
+
+def test_the_head_who_already_went_is_not_asked_again():
+    result = _run(POLICIES["policy-A-v1"])
+    assert [t for t in _whereabouts_trace(result) if t[0] == "whereabouts"] == []

@@ -70,6 +70,10 @@ class Village:
                     "locationStatus": "unconfirmed", "clinicalStatus": "unconfirmed",
                     "evidenceEventIds": [], "emergencyEvidenceEventIds": [],
                     "rationale": "응답이 없다는 것 외에는 아는 것이 없다."}
+        if prompt["stage"] == "no_lead":
+            return {"action": "ask_whereabouts", "rationale": "평소 일과를 아는 이장에게 묻는다.",
+                    "message": "%s 어르신이 댁에 안 계셨어요. 이 시간이면 어디 계실지 아세요?"
+                               % prompt["subjectId"]}
         if prompt["stage"] == "absent":
             return {"action": "continue_check", "rationale": "이장이 제안한 곳을 보자.",
                     "message": "말씀하신 곳도 한번 봐 주시겠어요?"}
@@ -123,17 +127,23 @@ def test_only_someone_who_knows_the_persons_day_is_asked_where_they_would_be():
     # Live run, 2026-09-15: P9 went to the house, found it empty, and was
     # offered "say where they would be" with an empty localKnowledge. The model
     # answered with no place and the run failed as if it had invented one.
-    # The question belongs to the person who holds that knowledge.
+    # The question belongs to the person who holds that knowledge - so P9 is
+    # not asked it, and MEDial's head decides to phone the village head.
     village = Village(head_orders=[["P9"], ["P9"], ["P9"]])
     result = _run(village, policy_id="policy-C-v1")
-    asked = [c for role, c in village.calls if role == "resident" and c["actorId"] == "P9"]
-    # Asked once, to go; not asked again to guess a place he has no knowledge of.
-    assert len(asked) == 1
-    assert "report_observation" not in asked[0]["allowedActions"]
+    p9 = [c for role, c in village.calls if role == "resident" and c["actorId"] == "P9"]
+    assert len(p9) == 1
+    assert "report_observation" not in p9[0]["allowedActions"]
+    stages = [c["stage"] for role, c in village.calls if role == "head"]
+    assert "no_lead" in stages
+    head = [c for role, c in village.calls if role == "resident" and c["actorId"] == "P6"]
+    assert head and head[0]["allowedActions"] == ["report_observation", "decline"]
+    asked = [e for e in _of(result, EventType.request_offered) if e.payload["toActorId"] == "P6"]
+    assert asked[0].payload["purpose"] == "whereabouts"
     failures = [e for e in _of(result, EventType.medial_waiting)
                 if e.payload.get("reason") == "adapter_error"]
     assert failures == []
-    assert result.metrics["requests"]["unresolved"] == 1
+    assert result.metrics["requests"]["resolved"] == 1
 
 
 def test_the_head_and_the_residents_are_asked_on_their_own_models():

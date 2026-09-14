@@ -59,6 +59,10 @@ test('관찰: 이웃 우선 정책에서 누가 거절했고 왜인지가 읽힌
     await expect(page.getByText(row.reason).first()).toBeVisible();
   }
   await expect(page.getByText('persona_condition')).toHaveCount(0);
+  // The house was empty and P9 had no lead: MEDial phoned the head for where
+  // to look, and his answer closes his row. No place key on screen.
+  await expect(page.getByText('어디 있을지 답함').first()).toBeVisible();
+  await expect(page.getByText('FARM')).toHaveCount(0);
   await shot(page, 'observe-researcher');
   // The panels scroll inside themselves, so the list is photographed on its
   // own after being brought into view.
@@ -72,6 +76,33 @@ test('관찰: 이웃 우선 정책에서 누가 거절했고 왜인지가 읽힌
   await expect(page.getByText(refusals[0].reason).first()).toBeVisible();
   await expect(page.getByText('MEDial은 모름')).toHaveCount(0);
   await shot(page, 'observe-medial');
+});
+
+test('관찰: 정책 D는 재연락을 먼저 하고, 이장에게 가는 이유를 관계 기록으로 말한다', async ({ page }) => {
+  const created = await page.request.post('/api/sim/attempts', {
+    data: {
+      policyId: 'policy-D-v1',
+      scenarioDeckId: 'deck-p1-no-response-v1',
+      resourceRevisionId: 'assumed-resources-v1',
+    },
+  });
+  expect(created.ok()).toBeTruthy();
+
+  await page.goto('/');
+  await page.getByRole('button', { name: '마을 관찰' }).click();
+  await expect(page.getByText('MEDial · 조율 현황')).toBeVisible();
+  await seekToEnd(page);
+  await page.getByLabel('관찰 시점', { exact: true }).selectOption('medial');
+  // The retry is a phone call, before anyone else is asked.
+  await expect(page.getByText(/전화로 연락했습니다 \(2번째\)/).first()).toBeVisible();
+  // The head is last in this order; he is first here because the record has no one else.
+  await expect(page.getByText(/기록된 가까운 관계는 이장 한 사람뿐/).first()).toBeVisible();
+  // No engine key reaches a sentence.
+  await expect(page.getByText(/neighbour_visit|PATROL|FARM/)).toHaveCount(0);
+  await shot(page, 'observe-policy-d');
+  const reasons = page.getByText('이렇게 정한 이유');
+  await reasons.scrollIntoViewIfNeeded();
+  await reasons.locator('xpath=..').screenshot({ path: resolve(SHOTS, 'observe-policy-d-reasons.png') });
 });
 
 test('준비 → 실행 → 비교: 어느 하루였나와 누가 거절했나가 표에 있다', async ({ page }) => {
@@ -97,5 +128,8 @@ test('준비 → 실행 → 비교: 어느 하루였나와 누가 거절했나�
   // A version that just ran has a day; only an old stored run may lack one.
   await expect(page.getByText('하루 기록 없음')).toHaveCount(0);
   await expect(page.getByText('미수집')).toHaveCount(0);
+  // Only v0 exists: the screen says there is nothing to compare yet, not that
+  // the comparison is uncontrolled.
+  await expect(page.getByText('통제 비교가 아닙니다')).toHaveCount(0);
   await shot(page, 'compare');
 });

@@ -221,9 +221,12 @@ def test_asking_the_neighbours_first_touches_more_people_than_asking_the_head():
 
     assert touched(head) == {"P6"}
     assert len(touched(neighbours)) > len(touched(head))
-    # And it is not free: the head's day closed, the neighbours' did not.
+    # And it is not free. Both days close - since 0.4.0 an empty house sends
+    # MEDial to the head for where to look - but the neighbour-first day asked
+    # the head anyway, after three neighbours had been asked and one had walked.
     assert head.metrics["requests"]["resolved"] == 1
-    assert neighbours.metrics["requests"]["unresolved"] == 1
+    assert neighbours.metrics["requests"]["resolved"] == 1
+    assert "P6" in touched(neighbours)
 
 
 def test_the_same_policy_reaches_different_people_in_the_two_worlds():

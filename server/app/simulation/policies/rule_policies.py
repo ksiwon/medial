@@ -49,6 +49,10 @@ NO_EMERGENCY_EVIDENCE_NOTE = (
 
 CLASSIFICATION = "unconfirmed_wellbeing"
 
+#: The places local knowledge can name (engine ``_local_knowledge``), in the
+#: words a decision's rationale is read in. The key stays on the event payload.
+PLACE_WORDS = {"FARM": "밭", "PORT": "항구", "SEA": "바다"}
+
 
 @dataclass
 class Intent:
@@ -213,12 +217,7 @@ class MedialPolicy:
                                "이장에게도 부탁할 수 없다."),
                 ), [])
             chosen = order[0]
-            related = [a for a in order if a != self.village_head_id]
-            rationale = (("기록된 가까운 관계(%s)에게 먼저 부탁하고, 마지막에 이장에게 간다."
-                          % ", ".join(related)) if related else
-                         ("이 사람에게 기록된 가까운 관계 중 지금 부탁할 수 있는 사람이 없어 "
-                          "이장에게 간다. 이장에게 부담이 몰리는 것은 이 순서의 결과이지 "
-                          "정책이 이장을 고른 것이 아니다."))
+            rationale = self._relation_rationale(ctx, candidates, order)
             intents = [Intent("offer_request", {
                 "toActorId": chosen,
                 "fallbackOrder": order[1:],
@@ -263,6 +262,47 @@ class MedialPolicy:
                        % params.retryCount),
         ), [self._handoff_intent(ctx)])
 
+    # -- nobody home, and the person who went has no lead -------------------
+    def on_absent_no_lead(self, ctx: PolicyContext, checker: str,
+                          already_asked: list[str]) -> tuple[DecisionRecord, list[Intent]]:
+        """Ask the person who knows this village's days where they would be.
+
+        Until 2026-09-15 a neighbour finding the house empty ended the request,
+        with the village head - who knows the subject's usual places - never
+        asked. That is not a result of the neighbour-first order; it was a gap.
+        The head is asked by phone, and only if this policy allows asking him
+        and he has not already been asked on this request.
+        """
+        params = self.revision.params
+        head = self.village_head_id
+        question = "자택에 없고 짐작 가는 곳도 없을 때 누구에게 물을 것인가"
+        if not params.allowHeadContact:
+            reason = "이 정책은 이장에게 묻지 않는다"
+        elif head == checker or head in already_asked:
+            reason = "이장에게는 이미 이 건을 물었다"
+        else:
+            return (self._decision(
+                ctx, question=question,
+                candidates=[Candidate(
+                    actorId=head, included=True,
+                    reason=("마을 사람들의 평소 일과를 장소 단위로 아는 사람으로 등록되어 있다. "
+                            "MEDial은 그 지식을 갖고 있지 않다"))],
+                chosen=head,
+                rationale=("%s는 자택에 없다는 것만 확인했고 어디 있을지 짐작할 근거가 없다. "
+                           "없다는 것도 위치나 상태를 확정하지 않으므로, 평소 일과를 아는 이장에게 "
+                           "어디 있을지 전화로 묻는다." % checker),
+            ), [Intent("ask_whereabouts", {
+                "toActorId": head,
+                "requestId": ctx.request_id,
+                "disclosure": self.disclosure_to("neighbour", ctx),
+            })])
+        return (self._decision(
+            ctx, question=question,
+            candidates=[Candidate(actorId=head, included=False, reason=reason)],
+            chosen=None,
+            rationale="자택에 없었고 어디 있을지 물을 사람이 없다: %s." % reason,
+        ), [])
+
     # -- the head reports the subject was not at home ---------------------
     def on_absent_report(self, ctx: PolicyContext,
                          suggested_place: str, basis: str) -> tuple[DecisionRecord, list[Intent]]:
@@ -277,7 +317,8 @@ class MedialPolicy:
             chosen=self.village_head_id,
             rationale=("자택에서 확인되지 않았다는 것도 위치와 상태 어느 쪽도 확정하지 않는다. "
                        "이장이 제안한 확인처(%s)는 MEDial이 갖고 있지 않던 지역 지식이며 "
-                       "근거는 %s이다." % (suggested_place, basis)),
+                       "근거는 %s이다." % (PLACE_WORDS.get(suggested_place, suggested_place),
+                                          basis)),
         ), [Intent("continue_check", {
             "requestId": ctx.request_id,
             "toActorId": self.village_head_id,
@@ -417,6 +458,28 @@ class MedialPolicy:
             out.append(c.model_copy(update={
                 "reason": "%s · 기록된 관계: %s" % (c.reason, tie.get("reason") or tie.get("kind"))}))
         return out
+
+    def _relation_rationale(self, ctx: PolicyContext, candidates: list[Candidate],
+                            order: list[str]) -> str:
+        """Why the order is what it is, keeping two cases apart that read alike:
+        nobody recorded besides the head, and recorded people who cannot be
+        asked right now. The first is a fact about the record; the second is a
+        fact about this hour."""
+        head = self.village_head_id
+        related = [a for a in order if a != head]
+        others = [r["actorId"] for r in ctx.relations if r["actorId"] != head]
+        tail = "마지막에 이장에게 간다." if head in order else "이장에게는 묻지 않는다."
+        if related:
+            return "기록된 가까운 관계(%s)에게 먼저 부탁하고, %s" % (", ".join(related), tail)
+        if not others:
+            recorded = ("기록된 가까운 관계는 이장 한 사람뿐" if any(
+                r["actorId"] == head for r in ctx.relations) else "기록된 가까운 관계가 없음")
+            return ("%s: %s이라 %s 이장에게 부담이 몰리는 것은 관계 기록의 결과이지 정책이 "
+                    "이장을 고른 것이 아니다." % (ctx.subject_id, recorded, tail))
+        why = {c.actorId: c.reason for c in candidates}
+        return ("기록된 가까운 관계(%s)가 있지만 지금은 부탁할 수 없다 (%s). %s" % (
+            ", ".join(others), "; ".join("%s: %s" % (a, why.get(a, "후보 아님")) for a in others),
+            tail))
 
     def _relation_order(self, ctx: PolicyContext, candidates: list[Candidate]) -> list[str]:
         """Recorded relations who may be asked, then the head, within the limit."""

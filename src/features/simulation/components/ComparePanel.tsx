@@ -1,6 +1,7 @@
 import styled from 'styled-components';
 import type { Comparison } from '../api/types';
 import { formatClock } from '../positions';
+import { pathWord } from '../selectors/story';
 
 // Condition difference → decision difference → outcome difference, in that order
 // and never collapsed into a score.
@@ -248,7 +249,7 @@ export default function ComparePanel({ comparison }: { comparison: Comparison })
             <Row
               label="해결 경로"
               ids={ids}
-              value={(row) => row.resolutionPaths.join(', ') || '없음'}
+              value={(row) => row.resolutionPaths.map(pathWord).join(', ') || '없음'}
               comparison={comparison}
             />
             <Row

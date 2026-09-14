@@ -219,18 +219,23 @@ class RuleVillageHeadAdapter(RuleResidentAdapter):
 
     def propose(self, view: ActorView,
                 allowed: Sequence[ProposalAction]) -> list[ActionProposal]:
-        absent = view.latest("task.check_performed")
-        if absent is not None and absent.payload.get("outcome") == "subject_absent":
-            guess = self._where_would_they_be(view, absent.subjectId)
-            if guess is not None and ProposalAction.report_observation in allowed:
+        if ProposalAction.report_observation in allowed:
+            # Asked where the subject would be: either he went to the house
+            # himself, or MEDial phoned him after someone else found it empty.
+            absent = view.latest("task.check_performed")
+            asked = view.latest("request.offered")
+            source = (absent if absent is not None
+                      and absent.payload.get("outcome") == "subject_absent" else asked)
+            guess = self._where_would_they_be(view, source.subjectId) if source else None
+            if guess is not None:
                 return [self.factory.make(
                     view.actor_id, view.sim_time_ms, ProposalAction.report_observation,
-                    requestId=absent.payload.get("requestId"),
+                    requestId=source.payload.get("requestId"),
                     params={"suggestedPlace": guess["place"],
                             "basis": guess["basis"],
                             "provenance": "actor-local-knowledge"},
                     utterance="이 시간이면 밭에 있을 겁니다. 가 보겠습니다.",
-                    observationIds=[absent.id],
+                    observationIds=[source.id],
                     uncertainty="본인이 직접 본 것이 아니라 평소 일과에 근거한 추정",
                 )]
         return super().propose(view, allowed)

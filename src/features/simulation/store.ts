@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api, ApiError, type PolicyEdit } from './api/client';
+import { learnPlaces } from './selectors/story';
 import type {
   AttemptDetail,
   Catalog,
@@ -170,6 +171,7 @@ export const useSimStore = create<SimState>((set, get) => ({
         api.catalog(),
         api.personas(),
       ]);
+      learnPlaces(Object.fromEntries(Object.entries(village.places).map(([k, v]) => [k, v.label])));
       set({ village, catalog, personas, findings: catalog.findings, status: 'ready' });
       // Loading the workspace *reads*. It does not run experiments: the old
       // bootstrap started policy A and policy B whenever the log happened to be

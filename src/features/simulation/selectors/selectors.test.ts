@@ -347,6 +347,20 @@ describe('askedPeople', () => {
     expect(rows[0].rule).toBe('persona_condition');
     expect(rows.every((r) => r.seenByMedial)).toBe(true);
   });
+
+  it('closes the head row with what he said when asked where the person would be', () => {
+    const flow = requestFlows([
+      event({ type: 'request.raised', payload: {} }),
+      event({ type: 'request.offered', payload: { toActorId: 'P9' } }),
+      event({ type: 'request.accepted', actorId: 'P9' }),
+      event({ type: 'request.offered', payload: { toActorId: 'P6', purpose: 'whereabouts' } }),
+      event({ type: 'medial.observed', actorId: 'P6',
+              payload: { observationKind: 'local_knowledge', suggestedPlace: 'FARM' } }),
+    ])[0];
+    const rows = askedPeople(flow);
+    expect(rows.map((r) => [r.actorId, r.answer])).toEqual([['P9', 'accepted'], ['P6', 'told']]);
+    expect(rows[1].reason).toBe('밭에 있을 것');
+  });
 });
 
 describe('storyRows for a hand-off', () => {

@@ -76,7 +76,7 @@ def test_the_key_is_the_content_and_not_the_clock():
 @pytest.mark.parametrize(("field", "value"), [
     ("residentModelId", "other-model"),
     ("temperature", 0.7),
-    ("promptRevisionId", "prompt-v4"),
+    ("promptRevisionId", "prompt-v99"),
 ])
 def test_asking_a_different_model_is_a_different_call(field, value):
     prompt = {"actorId": "P1"}

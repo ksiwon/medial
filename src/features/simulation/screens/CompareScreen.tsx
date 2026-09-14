@@ -430,7 +430,21 @@ export default function CompareScreen({
           </div>
         </Sides>
 
-        {diff && (
+        {left.id === right.id ? (
+          // One version against itself is not a comparison at all, and the
+          // lineage check read it as "not parent and child" - an uncontrolled
+          // comparison warning on a screen that compared nothing.
+          <Callout $tone="info">
+            <div>
+              <strong>같은 버전을 양쪽에 골랐습니다</strong>
+              <div style={{ marginTop: 4 }}>
+                {generations.length > 1
+                  ? '비교하려면 한쪽을 다른 버전으로 바꾸세요.'
+                  : '아직 비교할 다음 버전이 없습니다. 개선안을 확정하면 다음 버전이 실행됩니다.'}
+              </div>
+            </div>
+          </Callout>
+        ) : diff && (
           <Callout $tone={diff.controlled ? 'info' : 'warn'}>
             <div>
               <strong>{diff.controlled ? '같은 하루, 운영 조건만 다름' : '통제 비교가 아닙니다'}</strong>

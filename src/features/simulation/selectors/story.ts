@@ -1,6 +1,45 @@
 import type { DomainEvent } from '../api/types';
 import { formatClock } from '../positions';
 
+/**
+ * A place key as words, for sentences.
+ *
+ * The event log speaks in the world's keys (`FARM`, `PATROL`, `HOME:P1`), and
+ * the story printed them: "이장이 PATROL에서 FARM로 떠났습니다". The village's
+ * own labels are learned once when the village loads (`learnPlaces`), so the
+ * synthetic village says its synthetic names and the source village its own;
+ * the few words below are only for a sentence written before that.
+ */
+const FALLBACK_PLACE: Record<string, string> = {
+  FARM: '밭', PORT: '항구', SEA: '바다', PATROL: '순찰길', HALL: '마을회관',
+};
+const learnedPlaces = new Map<string, string>();
+
+export function learnPlaces(labels: Record<string, string>): void {
+  learnedPlaces.clear();
+  for (const [key, label] of Object.entries(labels)) learnedPlaces.set(key, label);
+}
+
+/** How a request was closed, in words. The keys are the engine's
+ *  `resolutionPath`; an unknown key is printed as it is. */
+const PATH_WORD: Record<string, string> = {
+  neighbour_visit: '이웃·이장이 직접 가서 확인',
+  subject_answered_retry: '본인이 다시 건 연락에 응답',
+  institution_followup_call: '보건소 담당자의 전화에 본인이 응답',
+  institution_home_visit: '보건소 담당자가 방문해 확인',
+  neighbour_ride: '이웃의 차로 이동',
+};
+
+export const pathWord = (path: string | null | undefined): string =>
+  path ? (PATH_WORD[path] ?? path) : '경로 미기록';
+
+export const placeWord = (place: string | null | undefined): string => {
+  if (!place) return '어딘가';
+  const home = /^HOME:(.+)$/.exec(place);
+  if (home) return `${personName(home[1])}의 집`;
+  return learnedPlaces.get(place) ?? FALLBACK_PLACE[place] ?? place;
+};
+
 // Events, in sentences a person can read.
 //
 // This is a *presentation* mapper only. The stored log is untouched: every row
@@ -166,9 +205,10 @@ export const subj = (id: string | null | undefined) => withParticle(personName(i
 export const obj = (id: string | null | undefined) => withParticle(personName(id), 'object');
 
 
+/** How a contact went, as an adverb: "전화로 연락했습니다". */
 const channelOf = (c: unknown): string =>
-  ({ home_device: '안내 시계', phone: '전화', in_person: '직접 찾아가서' })[String(c)] ??
-  String(c ?? '연락');
+  ({ home_device: '안내 시계로', phone: '전화로', in_person: '직접 찾아가서' })[String(c)] ??
+  String(c ?? '');
 
 /** One readable sentence per event, or null when the event has nothing to say
  *  to a reader and belongs under the technical disclosure instead. */
@@ -218,10 +258,17 @@ export function sentenceFor(event: DomainEvent): { text: string; tone: StoryTone
       // Deliberately neutral about *what* was asked of them: the same decision
       // covers re-contacting the person themselves and asking a neighbour, and
       // "부탁하기로" is wrong for the first.
+      // The question is said too: the same "이장" answers "who checks?" and
+      // "keep looking at the place he named?", and without it two decisions
+      // read as one repeated.
       return {
         text: str(p.chosen)
-          ? `MEDial이 다음 상대로 ${obj(str(p.chosen))} 골랐습니다.`
-          : 'MEDial이 연락할 사람을 찾지 못했습니다.',
+          ? `MEDial의 판단 — ${str(p.question) ?? '다음 상대'}: ${
+              str(p.chosen) === str(p.subjectId)
+                ? `${personName(str(p.chosen))} 본인에게 다시 연락`
+                : personName(str(p.chosen))
+            }`
+          : `MEDial의 판단 — ${str(p.question) ?? '다음 상대'}: 연락할 사람 없음`,
         tone: str(p.chosen) ? 'plain' : 'attention',
       };
     case 'medial.waiting': {
@@ -234,12 +281,21 @@ export function sentenceFor(event: DomainEvent): { text: string; tone: StoryTone
       };
     }
     case 'medial.observed':
-      return {
-        text: `이장이 ${subject}는 ${str(p.suggestedPlace) ?? '어딘가'}에 있을 것이라고 알려주었습니다.`,
-        tone: 'plain',
-      };
+      return p.observationKind === 'no_local_knowledge'
+        ? {
+            text: `${withParticle(who, 'subject')} ${withParticle(subject, 'subject')} 이 시간에 어디 있을지 짐작 가는 곳이 없다고 했습니다.`,
+            tone: 'attention',
+          }
+        : {
+            text: `${withParticle(who, 'subject')} ${withParticle(subject, 'topic')} ${placeWord(str(p.suggestedPlace))}에 있을 것이라고 알려주었습니다.`,
+            tone: 'plain',
+          };
     case 'request.offered':
-      return { text: `${to}에게 ${subject} 확인을 부탁했습니다.`, tone: 'plain' };
+      // Two different asks: go and look, or - after the house was empty -
+      // say where they would be. The second costs a phone call, not a walk.
+      return p.purpose === 'whereabouts'
+        ? { text: `집이 비어 있어, ${to}에게 ${withParticle(subject, 'subject')} 어디 있을지 물었습니다.`, tone: 'plain' }
+        : { text: `${to}에게 ${subject} 확인을 부탁했습니다.`, tone: 'plain' };
     case 'request.accepted':
       return { text: `${withParticle(who, 'subject')} 하겠다고 했습니다.`, tone: 'good' };
     case 'request.declined':
@@ -276,19 +332,19 @@ export function sentenceFor(event: DomainEvent): { text: string; tone: StoryTone
     case 'task.travel_started': {
       const minutes = num(p.durationMs);
       return {
-        text: `${withParticle(who, 'subject')} ${str(p.from) ?? '출발지'}에서 ${str(p.to) ?? '목적지'}로 떠났습니다${
+        text: `${withParticle(who, 'subject')} ${str(p.from) ? placeWord(str(p.from)) : '출발지'}에서 ${str(p.to) ? placeWord(str(p.to)) : '목적지'}(으)로 떠났습니다${
           minutes ? ` (약 ${Math.round(minutes / 60000)}분)` : ''
         }.`,
         tone: 'plain',
       };
     }
     case 'task.travel_arrived':
-      return { text: `${withParticle(who, 'subject')} ${str(p.place) ?? '목적지'}에 도착했습니다.`, tone: 'plain' };
+      return { text: `${withParticle(who, 'subject')} ${str(p.place) ? placeWord(str(p.place)) : '목적지'}에 도착했습니다.`, tone: 'plain' };
     case 'task.check_performed':
       return str(p.outcome) === 'subject_found_well'
-        ? { text: `${withParticle(who, 'subject')} ${str(p.place) ?? '그곳'}에서 ${withParticle(subject, 'object')} 만났습니다.`, tone: 'good' }
+        ? { text: `${withParticle(who, 'subject')} ${str(p.place) ? placeWord(str(p.place)) : '그곳'}에서 ${withParticle(subject, 'object')} 만났습니다.`, tone: 'good' }
         : {
-            text: `${withParticle(who, 'subject')} 갔지만 ${str(p.place) ?? '그곳'}에 ${withParticle(subject, 'topic')} 없었습니다.`,
+            text: `${withParticle(who, 'subject')} 갔지만 ${str(p.place) ? placeWord(str(p.place)) : '그곳'}에 ${withParticle(subject, 'topic')} 없었습니다.`,
             tone: 'bad',
           };
     case 'task.completed':
@@ -312,14 +368,14 @@ export function sentenceFor(event: DomainEvent): { text: string; tone: StoryTone
       };
     case 'transport.pickup':
       return {
-        text: `${subj(str(p.riderId))} ${str(p.place) ?? '약속 장소'}에서 ${person(
+        text: `${subj(str(p.riderId))} ${str(p.place) ? placeWord(str(p.place)) : '약속 장소'}에서 ${person(
           str(p.driverId),
         )}의 차를 탔습니다.`,
         tone: 'plain',
       };
     case 'transport.dropoff':
       return {
-        text: `${subj(str(p.riderId))} ${str(p.place) ?? '목적지'}에서 내렸습니다.`,
+        text: `${subj(str(p.riderId))} ${str(p.place) ? placeWord(str(p.place)) : '목적지'}에서 내렸습니다.`,
         tone: 'plain',
       };
     case 'handoff.requested':
@@ -341,7 +397,7 @@ export function sentenceFor(event: DomainEvent): { text: string; tone: StoryTone
         tone: 'plain',
       };
     case 'need.resolved':
-      return { text: `문제가 종료되었습니다 (${str(p.resolutionPath) ?? '경로 미기록'}).`, tone: 'good' };
+      return { text: `요청이 끝났습니다 (${pathWord(str(p.resolutionPath))}).`, tone: 'good' };
     case 'need.unresolved':
       return {
         text: `해결되지 않은 채 끝났습니다 (${reasonText(p.reason)}).`,

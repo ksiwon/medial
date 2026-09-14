@@ -6,6 +6,7 @@ import {
   currentSentence,
   institutionsInvolved,
   latestReasoning,
+  reasonsInOrder,
   type AskedRow,
   type RequestFlow,
 } from '../selectors/requests';
@@ -173,6 +174,7 @@ const ANSWER: Record<AskedRow['answer'], { text: string; kind: TagKind }> = {
   declined: { text: '거절', kind: 'negative' },
   deferred: { text: '나중에', kind: 'warn' },
   relayed: { text: '다른 사람에게 넘김', kind: 'warn' },
+  told: { text: '어디 있을지 답함', kind: 'positive' },
   pending: { text: '답 기다리는 중', kind: 'unknown' },
 };
 
@@ -225,6 +227,7 @@ export default function OrchestratorPanel({
 }: Props) {
   const flow = flows.find((f) => f.id === selectedId) ?? flows[0] ?? null;
   const reasoning = flow ? latestReasoning(flow, decisions) : null;
+  const earlier = flow ? reasonsInOrder(flow).slice(0, -1) : [];
   const asked = flow ? askedPeople(flow) : [];
 
   return (
@@ -301,6 +304,16 @@ export default function OrchestratorPanel({
                 <SectionTitle>이렇게 정한 이유</SectionTitle>
                 {reasoning ? (
                   <>
+                    {earlier.length > 0 && (
+                      <Facts>
+                        {earlier.map((row) => (
+                          <li key={row.seq}>
+                            {formatClock(row.atMs)} · {row.question} →{' '}
+                            {row.chosen ? personName(row.chosen) : '없음'}: {row.rationale}
+                          </li>
+                        ))}
+                      </Facts>
+                    )}
                     <Sentence>{reasoning.rationale || '기록된 근거 문장이 없습니다.'}</Sentence>
                     <Disclosure>
                       <summary>

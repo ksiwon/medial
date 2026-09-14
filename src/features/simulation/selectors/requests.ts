@@ -1,5 +1,5 @@
 import type { DecisionRecord, DomainEvent } from '../api/types';
-import { personName, withParticle, reasonText } from './story';
+import { pathWord, personName, placeWord, withParticle, reasonText } from './story';
 
 // One request at a time, never all of them averaged into a single progress bar.
 //
@@ -225,7 +225,7 @@ export function currentSentence(flow: RequestFlow): string {
 
   switch (last.type) {
     case 'need.resolved':
-      return `${who}의 요청이 종료되었습니다 (경로: ${str(p.resolutionPath) ?? '기록 없음'}).`;
+      return `${who}의 요청이 끝났습니다 (${pathWord(str(p.resolutionPath))}).`;
     case 'need.unresolved':
       return `${who}의 요청이 해결되지 않은 채 끝났습니다 (${reasonText(p.reason)}).`;
     case 'request.offered':
@@ -258,7 +258,9 @@ export function currentSentence(flow: RequestFlow): string {
     case 'medial.classified':
       return `${who}의 상황을 분류했습니다.`;
     case 'medial.observed':
-      return `${who}의 위치에 대한 이장의 추정을 전달받았습니다.`;
+      return p.observationKind === 'no_local_knowledge'
+        ? `${who}가 어디 있을지 물었지만 짐작 가는 곳이 없다는 답을 들었습니다.`
+        : `${who}의 위치에 대한 이장의 추정을 전달받았습니다.`;
     case 'transport.need_raised':
       return `${who}의 이동 요청이 접수되었습니다.`;
     case 'transport.reservation_made':
@@ -332,11 +334,33 @@ export function latestReasoning(
   };
 }
 
+/** Every judgement on this request, oldest first, each with its own reason.
+ *  The panel showed only the latest, so a relation-first run displayed "keep
+ *  looking at the field" and hid why the head was asked in the first place. */
+export function reasonsInOrder(
+  flow: RequestFlow,
+): { seq: number; atMs: number; question: string; chosen: string | null; rationale: string }[] {
+  return flow.events
+    .filter((event) => event.type === 'medial.decided')
+    .map((event) => {
+      const p = asRecord(event);
+      return {
+        seq: event.seq,
+        atMs: event.simTimeMs,
+        question: str(p.question) ?? '',
+        chosen: str(p.chosen),
+        rationale: str(p.rationale) ?? '',
+      };
+    });
+}
+
 export interface AskedRow {
   actorId: string;
   /** MEDial, or the neighbour who handed it on. */
   askedBy: string;
-  answer: 'accepted' | 'declined' | 'deferred' | 'relayed' | 'pending';
+  /** `told`: asked where the subject would be, and answered (with a place or
+   *  with "no idea"). Not an acceptance - nobody agreed to go anywhere. */
+  answer: 'accepted' | 'declined' | 'deferred' | 'relayed' | 'told' | 'pending';
   /** The sentence the person gave, already in Korean; null when they said
    *  nothing or have not answered yet. */
   reason: string | null;
@@ -424,6 +448,17 @@ export function askedPeople(flow: RequestFlow): AskedRow[] {
         const table = p.ruleTableSaid as { action?: string } | undefined;
         row.tableSaid =
           p.agreesWithRuleTable === false && table?.action ? String(table.action) : null;
+        row.seenByMedial = row.seenByMedial && seen;
+        break;
+      }
+      case 'medial.observed': {
+        const row = open(event.actorId);
+        if (!row) break;
+        row.answer = 'told';
+        row.reason =
+          p.observationKind === 'no_local_knowledge'
+            ? '짐작 가는 곳이 없다'
+            : (str(p.utterance) ?? `${placeWord(str(p.suggestedPlace))}에 있을 것`);
         row.seenByMedial = row.seenByMedial && seen;
         break;
       }

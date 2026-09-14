@@ -592,6 +592,9 @@ class Engine:
             self._offer_ride(at_ms, request, data["toActorId"], data["disclosure"])
         elif intent.kind == "handoff":
             self._handoff(at_ms, request, data["toActorId"], data["disclosure"])
+        elif intent.kind == "ask_whereabouts":
+            self._ask_whereabouts(at_ms, request, data["toActorId"], data["disclosure"],
+                                  data.get("message"))
         elif intent.kind == "continue_check":
             self._start_check(at_ms, request, data["toActorId"], data["place"])
         else:
@@ -966,19 +969,101 @@ class Engine:
                           path="neighbour_visit", by=actor_id)
             return
 
-        # "Where would they be?" is only a question for someone who holds
-        # place-level knowledge of this person's day. Asking anyone else
-        # invites a made-up place - a model resident with an empty
-        # localKnowledge list answered with none and was failed for it - and a
-        # question whose only legal answer is "I don't know" is not asked.
-        if not self._local_knowledge(actor_id, at_ms):
+        # The person at the door may know where else to look (the head does).
+        answer = self._whereabouts(at_ms, request, actor_id, asked=False)
+        if answer in ("continued", "stopped"):
+            return
+        # Nobody at the house and no lead from the person who went. MEDial was
+        # told the house was empty only if it was addressed on the visit; a
+        # relayed visit ends here as it always has.
+        if MEDIAL not in audience:
             self._unresolved(at_ms, request, "자택에 없었고 다음 확인처에 대한 근거가 없다")
             return
+        ctx = self._context(at_ms, subject, request, request["contactAttempts"])
+        question = "자택에 없고 짐작 가는 곳도 없을 때 누구에게 물을 것인가"
+        decision, intents = self._decide(
+            at_ms, request, question,
+            lambda: self.policy.on_absent_no_lead(
+                ctx, actor_id, list(self.relay_chains.get(request["id"], []))))
+        if decision is None:
+            return
+        self._commit_decision(at_ms, decision, request)
+        if not intents:
+            self._unresolved(at_ms, request, "자택에 없었고 다음 확인처에 대한 근거가 없다")
+            return
+        for intent in intents:
+            self._apply_intent(at_ms, intent, request)
+
+    def _ask_whereabouts(self, at_ms: int, request: dict[str, Any], to_actor: str,
+                         disclosure: dict[str, Any], message: str | None) -> None:
+        """MEDial asks someone who knows the subject's day where they would be.
+
+        A phone question, not a visit: it costs the person a contact, which the
+        burden ledger counts, and the walk only if they then go and look.
+        """
+        subject = request["subjectId"]
+        self.world.actors[to_actor].asked_by_medial += 1
+        self.world.actors[to_actor].contacts_received += 1
+        self.relay_chains.setdefault(request["id"], []).append(to_actor)
+        offered = self._emit(at_ms, EventType.request_offered, MEDIAL, request["id"],
+                             [MEDIAL, to_actor],
+                             {"requestId": request["id"], "toActorId": to_actor,
+                              "need": request["need"], "subjectId": subject,
+                              "purpose": "whereabouts", "disclosure": disclosure,
+                              **({"message": message} if message else {})})
+        self._record_disclosure(disclosure, to_actor)
+        self.obs.record(self.attempt.id, to_actor, offered, "request.offered",
+                        subject_id=subject,
+                        payload={"requestId": request["id"], "need": request["need"],
+                                 "purpose": "whereabouts", "fromActorId": MEDIAL,
+                                 "message": message or ("%s 님이 자택에 안 계셨습니다. 이 시간이면 "
+                                                        "어디 계실지 아시나요?" % subject),
+                                 "disclosedFields": disclosure.get("fields", [])})
+        if self._whereabouts(at_ms, request, to_actor, asked=True) == "unknown":
+            self._unresolved(at_ms, request,
+                             "자택에 없었고, 물어본 사람도 짐작 가는 곳이 없다고 했다")
+
+    def _whereabouts(self, at_ms: int, request: dict[str, Any], actor_id: str,
+                     asked: bool) -> str:
+        """Ask one person where the subject would be, and act on the answer.
+
+        ``continued``: they named a place and MEDial decided what to do next.
+        ``stopped``: something ended the turn (a head failure, a refusal).
+        ``unknown``: they have no place-level knowledge of this person's day.
+
+        "Where would they be?" is only put to someone who holds that knowledge.
+        Asking anyone else invites a made-up place - a model resident with an
+        empty localKnowledge list answered with none and was failed for it - so
+        when MEDial did ask (``asked``), the empty answer is written down as
+        what it is: they did not know.
+        """
+        subject = request["subjectId"]
+        if not self._local_knowledge(actor_id, at_ms):
+            if asked:
+                told = self._emit(at_ms, EventType.medial_observed, actor_id, request["id"],
+                                  [MEDIAL, actor_id],
+                                  {"observationKind": "no_local_knowledge", "subjectId": subject,
+                                   "note": "이 시간에 어디 있을지 짐작할 근거가 없다고 답했다."})
+                self.obs.record(self.attempt.id, MEDIAL, told, "no_local_knowledge",
+                                subject_id=subject, payload={"requestId": request["id"]})
+            return "unknown"
         proposals = self._ask(actor_id, at_ms,
                               [ProposalAction.report_observation, ProposalAction.decline])
-        if not proposals or proposals[0].action is not ProposalAction.report_observation:
-            self._unresolved(at_ms, request, "자택에 없었고 다음 확인처에 대한 근거가 없다")
-            return
+        if not proposals:
+            return "stopped" if asked else "unknown"
+        if proposals[0].action is not ProposalAction.report_observation:
+            if asked:
+                declined = proposals[0]
+                self._emit(at_ms, EventType.request_declined, actor_id, request["id"],
+                           [MEDIAL, actor_id],
+                           {"requestId": request["id"],
+                            "rule": declined.params.get("rule"),
+                            "reason": declined.params.get("reason", "unspecified"),
+                            "utterance": declined.utterance,
+                            "note": "어디 있을지 묻는 질문에 답하지 않았다."})
+                self._unresolved(at_ms, request, "어디 있을지 물었으나 답을 듣지 못했다")
+                return "stopped"
+            return "unknown"
 
         proposal = proposals[0]
         suggested = proposal.params["suggestedPlace"]
@@ -999,10 +1084,11 @@ class Engine:
             lambda: self.policy.on_absent_report(
                 ctx, suggested, proposal.params.get("basis", "unknown")))
         if decision is None:
-            return
+            return "stopped"
         self._commit_decision(at_ms, decision, request)
         for intent in intents:
             self._apply_intent(at_ms, intent, request)
+        return "continued"
 
     # -- institution ---------------------------------------------------------
     def _handoff(self, at_ms: int, request: dict[str, Any], to_actor: str,
@@ -1719,6 +1805,7 @@ class Engine:
         self._emit(at_ms, EventType.medial_decided, MEDIAL, request["id"], [MEDIAL],
                    {"decisionId": decision.id, "question": decision.question,
                     "chosen": decision.chosen, "rationale": decision.rationale,
+                    "subjectId": request["subjectId"],
                     "policyId": self.policy_revision.id,
                     "excluded": [c.model_dump() for c in decision.candidates
                                  if not c.included]})
