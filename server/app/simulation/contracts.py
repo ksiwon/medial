@@ -58,6 +58,13 @@ class EventType(str, Enum):
     #: Why a call was or was not picked up. The *reason* lives in the world, so
     #: it is researcher-only; the actor who called learns "no answer", nothing more.
     world_reachability_resolved = "world.reachability_resolved"
+    #: Who else was standing there. Researcher-only: being seen together is a
+    #: fact about the world, and MEDial has no sensor in the village.
+    world_copresence = "world.copresence"
+    #: Who actually did a relayed piece of work. Researcher-only for the same
+    #: reason the reachability reason is: MEDial was told the request was
+    #: accepted, and it never learns that somebody else went instead.
+    world_relay_resolved = "world.relay_resolved"
     # channels
     contact_attempted = "contact.attempted"
     contact_no_response = "contact.no_response"
@@ -73,6 +80,9 @@ class EventType(str, Enum):
     request_accepted = "request.accepted"
     request_declined = "request.declined"
     request_deferred = "request.deferred"
+    #: One resident handing a request to another. Addressed to the two of them
+    #: and the researcher - never to MEDial. See ``relations.py``.
+    request_relayed = "request.relayed"
     # transport coordination (T004)
     transport_need_raised = "transport.need_raised"
     transport_reservation_made = "transport.reservation_made"
@@ -108,6 +118,9 @@ EVENT_PAYLOAD_REQUIRED: dict[EventType, tuple[str, ...]] = {
     EventType.world_actor_moved: ("from", "to", "mode"),
     EventType.world_actor_arrived: ("place",),
     EventType.world_reachability_resolved: ("toActorId", "channel", "answered", "worldReason"),
+    EventType.world_copresence: ("place", "actorIds"),
+    EventType.world_relay_resolved: ("requestId", "reportedBy", "performedBy"),
+    EventType.request_relayed: ("requestId", "fromActorId", "toActorId", "hop", "basis"),
     EventType.contact_attempted: ("channel", "toActorId", "purpose", "disclosure"),
     EventType.contact_no_response: ("channel", "toActorId"),
     EventType.contact_answered: ("channel", "toActorId", "reply"),
@@ -266,6 +279,9 @@ class ProposalAction(str, Enum):
     wait = "wait"
     report_observation = "report_observation"
     resolve = "resolve"
+    #: "I cannot go, but I will ask someone myself." The neighbour is named in
+    #: ``targetActorId`` and the engine checks the relation before committing.
+    relay = "relay"
 
 
 class ActionProposal(Base):
@@ -471,6 +487,83 @@ class RoutineVariation(Base):
     assumptions: list[str] = Field(default_factory=list)
 
 
+class RelationEdge(Base):
+    """Two people with a recorded working connection.
+
+    Symmetric on purpose. The edge says "these two deal with each other", not
+    "A serves B" - who can drive whom is a persona fact and is checked
+    separately. Making it directed here would encode a hierarchy the interviews
+    do not describe.
+    """
+
+    a: str
+    b: str
+    kind: Literal["companion", "kin", "ride", "errand", "check"]
+    provenance: Literal["source-adapted", "researcher-assumption"]
+    reason: str
+
+    def pair(self) -> tuple[str, str]:
+        return (self.a, self.b) if self.a <= self.b else (self.b, self.a)
+
+
+class RelationRevision(Base):
+    """Who, in this village, would actually ask whom.
+
+    Fixed case input, like the environment and the model policy. A Change Set
+    that could add an edge would let MEDial succeed by giving a lonely person a
+    friend, which is not MEDial improving - it is the case being deleted.
+
+    The registry only records each resident's *group*, which is not the same
+    thing: ``cousin`` is a group of one whose meaning is an edge to the village
+    head, and the ``solo`` residents have no group yet the recorded quests show
+    P3 driving P9 and carrying medicine to P11. So the edges are listed here,
+    each with the recorded thing it comes from.
+    """
+
+    EDITABLE_BY_CHANGE_SET: ClassVar[bool] = False
+
+    id: str
+    label: str
+    edges: list[RelationEdge] = Field(default_factory=list)
+    assumptions: list[str] = Field(default_factory=list)
+
+    def neighbours(self, actor_id: str) -> list[RelationEdge]:
+        return [e for e in self.edges if actor_id in (e.a, e.b)]
+
+    def other(self, edge: RelationEdge, actor_id: str) -> str:
+        return edge.b if edge.a == actor_id else edge.a
+
+    def edge_between(self, a: str, b: str) -> RelationEdge | None:
+        for edge in self.edges:
+            if {edge.a, edge.b} == {a, b}:
+                return edge
+        return None
+
+
+class InteractionRules(Base):
+    """How far residents may act on each other, and how long it takes.
+
+    This is the boundary that keeps the simulation from turning into free
+    resident chat, which doc 19 excludes by name. Residents may hand work along
+    a recorded relation and may notice who is standing next to them. They may
+    not converse, invent errands, or form new ties.
+    """
+
+    relayEnabled: bool = True
+    #: A relayed request may not be relayed on. One hop is the difference
+    #: between "the village head got someone to go" and an unbounded chain that
+    #: nothing in the interviews supports.
+    maxRelayHops: int = Field(default=1, ge=0, le=3)
+    #: Asking a neighbour is not instantaneous. The base offer still resolves in
+    #: zero simulated time - a known flaw, see DEVELOPMENT.md - but a relay chain
+    #: would otherwise put three people in one millisecond.
+    relayDelayMin: int = Field(default=10, ge=0, le=120)
+    #: Whether being in the same place is offered to an adapter as a reason to
+    #: name somebody. Off means a relay must be justified by the relation alone.
+    copresenceEnabled: bool = True
+    assumptions: list[str] = Field(default_factory=list)
+
+
 class EnvironmentRevision(Base):
     """The world's rules, as a versioned artifact rather than module constants.
 
@@ -493,6 +586,7 @@ class EnvironmentRevision(Base):
     scheduling: dict[str, int]
     reachability: list[ReachabilityRule]
     variation: RoutineVariation = Field(default_factory=RoutineVariation)
+    interaction: InteractionRules = Field(default_factory=InteractionRules)
     assumptions: list[str] = Field(default_factory=list)
 
     def priority(self, kind: str) -> int:
@@ -701,6 +795,9 @@ class Attempt(Base):
     #: Which model, asked how. Defaulted to the ``off`` policy so that attempts
     #: stored before this existed still load: they all ran on rules.
     modelPolicy: ModelPolicy = Field(default_factory=ModelPolicy)
+    #: Which relation graph this run used. Defaulted so that attempts stored
+    #: before residents could involve each other still load.
+    relationRevisionId: str = "rel-v1"
     createdAt: str
     cursorSeq: int = 0
     eventCount: int = 0

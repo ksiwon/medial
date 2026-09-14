@@ -58,6 +58,7 @@ from .contracts import (
     validate_proposal,
 )
 from .environment import get_environment, resolve_place
+from .relations import get_relations
 from .institution import Desk, ShiftExhausted
 from .observations import ActorView, ObservationLog, home_window, shared_routine
 from .policies.rule_policies import Intent, MedialPolicy, PolicyContext
@@ -116,7 +117,8 @@ class Engine:
                  policy_switch: dict[str, Any] | None = None,
                  environment: Any | None = None,
                  model_calls: Any | None = None,
-                 provider: Any | None = None) -> None:
+                 provider: Any | None = None,
+                 relations: Any | None = None) -> None:
         self.attempt = attempt
         #: World rules as data. The attempt records which revision it ran on so
         #: that changing an assumption shows up as a different input rather than
@@ -162,6 +164,13 @@ class Engine:
         #: Records or replays every model call. Built here rather than inside the
         #: adapters because the recording belongs to the attempt, not to one
         #: actor - a fork replays the parent's calls across all of them.
+        #: Who may hand work to whom. Fixed case input like the environment: an
+        #: edge that is not in the source is not created, so a resident with no
+        #: recorded relation simply has nobody to pass a request to.
+        self.relations = relations or get_relations(attempt.relationRevisionId)
+        #: ``{requestId: [actorId, ...]}`` - everyone a request has passed
+        #: through, so it cannot loop back to someone who already had it.
+        self.relay_chains: dict[str, list[str]] = {}
         self.model_calls = model_calls or ModelCallLog(attempt.id, attempt.modelPolicy)
         self._provider = provider
         self._adapters = self._build_adapters(script)
@@ -338,6 +347,7 @@ class Engine:
             ("reaction", "missed"): self._on_missed,
             ("reaction", "answered"): self._on_answered,
             ("arrival", ""): self._on_arrival,
+            ("relay", ""): self._on_relay,
             ("institution", "escalate"): self._on_escalation_due,
             ("institution", "review_start"): self._on_review_start,
             ("institution", "review_done"): self._on_review_done,
@@ -497,6 +507,8 @@ class Engine:
 
     def _offer(self, at_ms: int, request: dict[str, Any], to_actor: str,
                disclosure: dict[str, Any]) -> None:
+        self.world.actors[to_actor].asked_by_medial += 1
+        self.relay_chains.setdefault(request["id"], []).append(to_actor)
         offered = self._emit(at_ms, EventType.request_offered, MEDIAL, request["id"],
                              [MEDIAL, to_actor],
                              {"requestId": request["id"], "toActorId": to_actor,
@@ -508,13 +520,17 @@ class Engine:
                         subject_id=request["subjectId"],
                         payload={"requestId": request["id"], "need": request["need"]})
 
-        proposals = self._ask(to_actor, at_ms,
-                              [ProposalAction.accept, ProposalAction.decline,
-                               ProposalAction.defer])
+        allowed = [ProposalAction.accept, ProposalAction.decline, ProposalAction.defer]
+        if self._can_relay(request, to_actor):
+            allowed.append(ProposalAction.relay)
+        proposals = self._ask(to_actor, at_ms, allowed)
         if not proposals:
             self._unresolved(at_ms, request, "요청을 받은 사람이 응답을 만들지 못했다")
             return
         proposal = proposals[0]
+        if proposal.action is ProposalAction.relay:
+            self._relay(at_ms, request, to_actor, proposal)
+            return
         if proposal.action is ProposalAction.accept:
             self._emit(at_ms, EventType.request_accepted, to_actor, request["id"],
                        [MEDIAL, to_actor],
@@ -541,7 +557,183 @@ class Engine:
                         "note": "거절은 신뢰 하락으로 계산하지 않는다."})
             self._unresolved(at_ms, request, "요청이 거절되었고 이 정책에는 대안 후보가 없다")
 
+    # -- one resident hands work to another ---------------------------------
+    def _can_relay(self, request: dict[str, Any], actor_id: str) -> bool:
+        """Whether this person has anyone left to hand this request to.
+
+        False is a result, not a gap. P1 has one recorded relation and P2 has
+        one; when that person already holds the request there is nobody else,
+        and the interviews say so rather than the model being incomplete.
+        """
+        rules = self.environment.interaction
+        if not rules.relayEnabled:
+            return False
+        if int(request.get("relayHop", 0)) >= rules.maxRelayHops:
+            return False
+        return bool(self._relay_candidates(request, actor_id))
+
+    def _relay_candidates(self, request: dict[str, Any], actor_id: str) -> list[str]:
+        """Everyone this person could hand the request to, and nobody else.
+
+        Excluded: the subject of the check (asking someone to check on
+        themselves is not a check), and anyone the request already passed
+        through (a request that circles back is a loop, not a village).
+        """
+        held = set(self.relay_chains.get(request["id"], []))
+        out = []
+        for edge in self.relations.neighbours(actor_id):
+            other = self.relations.other(edge, actor_id)
+            if other == request["subjectId"] or other in held:
+                continue
+            if other not in self.world.actors:
+                continue
+            out.append(other)
+        return sorted(out)
+
+    def _relay(self, at_ms: int, request: dict[str, Any], from_actor: str,
+               proposal: Any) -> None:
+        """Commit a hand-off, and tell MEDial only that the request was accepted.
+
+        This is the point of the whole mechanism. MEDial asked one person and was
+        told yes; a different person goes. MEDial's ledger and the village's
+        actual burden come apart, and that gap is what the evaluation screen has
+        to be able to show. The researcher sees both sides; MEDial sees one.
+        """
+        target = proposal.targetActorId or proposal.params.get("targetActorId")
+        allowed = self._relay_candidates(request, from_actor)
+        if target not in allowed:
+            # An adapter fault, like any other unusable proposal. It is never
+            # written down as the resident having done something strange.
+            self.rejected_proposals.append({
+                "actorId": from_actor, "atMs": at_ms,
+                "error": ("%s에게 넘기려 했으나 원자료에 두 사람의 왕래 기록이 없다 "
+                          "(가능한 상대: %s)" % (target, allowed or "없음"))})
+            self._emit(at_ms, EventType.medial_waiting, MEDIAL, request["id"],
+                       [MEDIAL, RESEARCHER],
+                       {"reason": "proposal_rejected", "untilMs": at_ms,
+                        "actorId": from_actor,
+                        "detail": "기록되지 않은 관계로 일을 넘기려 했다",
+                        "note": "검증에 실패한 제안이며 주민의 행동으로 기록하지 않는다."})
+            self._unresolved(at_ms, request, "넘길 상대가 원자료의 관계에 없다")
+            return
+
+        edge = self.relations.edge_between(from_actor, target)
+        hop = int(request.get("relayHop", 0)) + 1
+
+        # What MEDial hears: it asked this person, and this person said yes.
+        self._emit(at_ms, EventType.request_accepted, from_actor, request["id"],
+                   [MEDIAL, from_actor],
+                   {"requestId": request["id"], "params": {},
+                    "utterance": proposal.utterance,
+                    "evidenceRefs": proposal.evidenceRefs})
+
+        # What actually happens. MEDial is not in this list.
+        relayed = self._emit(
+            at_ms, EventType.request_relayed, from_actor, request["id"],
+            [from_actor, target, RESEARCHER],
+            {"requestId": request["id"], "fromActorId": from_actor,
+             "toActorId": target, "hop": hop,
+             "basis": proposal.params.get("basis", "recorded_relation"),
+             "relationKind": edge.kind if edge else None,
+             "relationReason": edge.reason if edge else None,
+             "utterance": proposal.utterance,
+             "note": ("MEDial은 이 전달을 보지 못한다. MEDial의 장부에는 부탁받은 사람이 "
+                      "수락한 것으로 남는다.")})
+        # Both ends remember it: the one who handed it on, and the one who now
+        # holds it. Without the second, the neighbour is asked a question they
+        # have no record of being asked.
+        for observer in (from_actor, target):
+            self.obs.record(self.attempt.id, observer, relayed, "request.relayed",
+                            subject_id=request["subjectId"],
+                            payload={"requestId": request["id"],
+                                     "fromActorId": from_actor, "toActorId": target,
+                                     "need": request["need"]})
+
+        if self.environment.interaction.copresenceEnabled:
+            place = self.world.place_of(from_actor, at_ms)
+            together = self.world.actors_at(place, at_ms)
+            if target in together:
+                self._emit(at_ms, EventType.world_copresence, ENGINE, request["id"],
+                           [RESEARCHER],
+                           {"place": place, "actorIds": together,
+                            "note": ("연구자 전용. 같이 있었다는 것은 세계의 사실이고 "
+                                     "MEDial에게는 마을을 보는 감각이 없다.")})
+
+        request["relayHop"] = hop
+        request["reportedBy"] = request.get("reportedBy") or from_actor
+        self.relay_chains.setdefault(request["id"], []).append(target)
+        self.world.actors[target].asked_by_neighbour += 1
+        self.world.actors[target].contacts_received += 1
+
+        delay = self.environment.interaction.relayDelayMin * MIN_MS
+        self._schedule(at_ms + delay, "relay",
+                       {"requestId": request["id"], "fromActorId": from_actor,
+                        "toActorId": target, "hop": hop})
+
+    def _on_relay(self, at_ms: int, payload: dict[str, Any]) -> None:
+        """The neighbour, some minutes later, answers the person who asked them."""
+        request = self.requests[payload["requestId"]]
+        if request.get("closed"):
+            return
+        target = payload["toActorId"]
+        from_actor = payload["fromActorId"]
+
+        allowed = [ProposalAction.accept, ProposalAction.decline, ProposalAction.defer]
+        if self._can_relay(request, target):
+            allowed.append(ProposalAction.relay)
+        proposals = self._ask(target, at_ms, allowed)
+        if not proposals:
+            self._unresolved(at_ms, request, "수락 이후 확인이 완료되지 않았다")
+            return
+        proposal = proposals[0]
+
+        if proposal.action is ProposalAction.relay:
+            self._relay(at_ms, request, target, proposal)
+            return
+        if proposal.action is ProposalAction.accept:
+            request["relayedTo"] = target
+            self._emit(at_ms, EventType.request_accepted, target, request["id"],
+                       [from_actor, target, RESEARCHER],
+                       {"requestId": request["id"], "params": proposal.params,
+                        "utterance": proposal.utterance,
+                        "evidenceRefs": proposal.evidenceRefs,
+                        "note": "이웃을 통해 받은 부탁에 대한 수락이며 MEDial은 보지 못한다."})
+            self._start_check(at_ms, request, target, "HOME:" + request["subjectId"])
+            return
+
+        # Declined or deferred. MEDial still believes the first person accepted,
+        # so the request is now open with nobody on it - which is precisely the
+        # failure this mechanism exists to make visible.
+        etype = (EventType.request_declined if proposal.action is ProposalAction.decline
+                 else EventType.request_deferred)
+        extra = ({"reason": proposal.params.get("reason", "unspecified")}
+                 if proposal.action is ProposalAction.decline
+                 else {"untilMs": at_ms, "reason": proposal.params.get("reason")})
+        self._emit(at_ms, etype, target, request["id"],
+                   [from_actor, target, RESEARCHER],
+                   {"requestId": request["id"], **extra,
+                    "utterance": proposal.utterance,
+                    "evidenceRefs": proposal.evidenceRefs,
+                    "note": ("MEDial은 이 거절을 보지 못한다. MEDial의 장부에는 "
+                             "여전히 수락으로 남아 있다.")})
+        # The reason MEDial is given must be the one MEDial could reach on its
+        # own. It was told the request was accepted and then nothing happened;
+        # it cannot know a second person was involved. The true reason is in the
+        # decline event above, which MEDial is not addressed on.
+        self._unresolved(at_ms, request, "수락 이후 확인이 완료되지 않았다")
+
     # -- neighbour task -----------------------------------------------------
+    def _task_audience(self, request: dict[str, Any], actor_id: str) -> list[str]:
+        """Who sees this person doing the work.
+
+        For a relayed task MEDial is not on the list. It has no sensor in the
+        village; it was told the request was accepted, and nothing after that
+        reaches it until somebody reports. The researcher always sees.
+        """
+        if request.get("relayedTo") == actor_id:
+            return [RESEARCHER, actor_id]
+        return [MEDIAL, actor_id]
+
     def _start_check(self, at_ms: int, request: dict[str, Any], actor_id: str,
                      target_place: str) -> None:
         actor = self.world.actors[actor_id]
@@ -561,16 +753,17 @@ class Engine:
         on_site = Segment(travel.end_ms, travel.end_ms + CHECK_ON_SITE_MS, "stay", "task",
                           "안부 확인", place=target_place, request_id=request["id"])
         change = self.world.divert(actor_id, at_ms, [travel, on_site], "안부 확인 요청 수락")
+        audience = self._task_audience(request, actor_id)
 
         self._emit(at_ms, EventType.plan_modified, actor_id, request["id"],
-                   [RESEARCHER, actor_id, MEDIAL],
+                   sorted({RESEARCHER, actor_id, *audience}),
                    {"actorId": actor_id, "change": change["reason"],
                     "insertedSegments": change["insertedSegments"],
                     "resumeSegments": change["resumeSegments"]})
         self._emit(at_ms, EventType.task_started, actor_id, request["id"],
-                   [MEDIAL, actor_id], {"requestId": request["id"]})
+                   audience, {"requestId": request["id"]})
         self._emit(at_ms, EventType.task_travel_started, actor_id, request["id"],
-                   [MEDIAL, actor_id],
+                   audience,
                    {"requestId": request["id"], "from": travel.from_place,
                     "to": target_place, "mode": "walk",
                     "distanceM": round(metres, 1), "durationMs": duration,
@@ -587,13 +780,14 @@ class Engine:
         place = payload["place"]
         subject = request["subjectId"]
 
+        audience = self._task_audience(request, actor_id)
         self._emit(at_ms, EventType.task_travel_arrived, actor_id, request["id"],
-                   [MEDIAL, actor_id], {"requestId": request["id"], "place": place})
+                   audience, {"requestId": request["id"], "place": place})
 
         found = self.world.place_of(subject, at_ms) == place
         outcome = "subject_found_well" if found else "subject_absent"
         # When the subject is actually there, they experience the visit too.
-        visibility = [MEDIAL, actor_id] + ([subject] if found else [])
+        visibility = list(audience) + ([subject] if found else [])
         performed = self._emit(
             at_ms, EventType.task_check_performed, actor_id, request["id"], visibility,
             {"requestId": request["id"], "subjectId": subject, "place": place,
@@ -606,7 +800,7 @@ class Engine:
                                      "place": place})
         if found:
             self._emit(at_ms, EventType.task_completed, actor_id, request["id"],
-                       [MEDIAL, actor_id], {"requestId": request["id"]})
+                       audience, {"requestId": request["id"]})
             self._resolve(at_ms, request, outcome="no_issue_found",
                           path="neighbour_visit", by=actor_id)
             return
@@ -1212,11 +1406,26 @@ class Engine:
         request["resolvedMs"] = at_ms
         request["outcome"] = outcome
         request["resolutionPath"] = path
-        visibility = [MEDIAL, request["subjectId"], RESEARCHER] + ([by] if by else [])
+        # When the work was relayed, MEDial is told by the person it asked. That
+        # is not a distortion of the log - it is what MEDial actually hears - and
+        # the researcher-only event below names who really went.
+        relayed_to = request.get("relayedTo")
+        reported_by = request.get("reportedBy") if relayed_to == by else None
+        credited = reported_by or by
+        visibility = sorted({MEDIAL, request["subjectId"], RESEARCHER,
+                             *([credited] if credited else []),
+                             *([by] if by else [])})
         self._emit(at_ms, EventType.need_resolved, MEDIAL, request["id"], visibility,
                    {"requestId": request["id"], "subjectId": request["subjectId"],
-                    "outcome": outcome, "resolutionPath": path, "byActorId": by,
+                    "outcome": outcome, "resolutionPath": path, "byActorId": credited,
                     "note": "확인이 끝났다는 뜻이며 건강 문제가 없다는 임상 판정이 아니다."})
+        if reported_by is not None and by is not None and reported_by != by:
+            self._emit(at_ms, EventType.world_relay_resolved, ENGINE, request["id"],
+                       [RESEARCHER],
+                       {"requestId": request["id"], "reportedBy": reported_by,
+                        "performedBy": by, "chain": self.relay_chains.get(request["id"], []),
+                        "note": ("연구자 전용. MEDial은 부탁받은 사람이 했다고 알고 있고, "
+                                 "실제로 간 사람은 다른 사람이다.")})
 
     def _unresolved(self, at_ms: int, request: dict[str, Any], reason: str) -> None:
         if request.get("closed"):
@@ -1378,6 +1587,15 @@ class Engine:
             shared_routine=self.routines.get(actor_id, {}),
             contacts_received_today=runtime.contacts_received if runtime else 0,
             local_knowledge=self._local_knowledge(actor_id, at_ms),
+            # The health-centre worker is not a villager and has no position on
+            # the map, so there is nobody standing next to them.
+            nearby=(self.world.actors_at(runtime.place_at(at_ms), at_ms,
+                                         exclude=actor_id)
+                    if runtime is not None
+                    and self.environment.interaction.copresenceEnabled else []),
+            relations=[{"actorId": self.relations.other(e, actor_id),
+                        "kind": e.kind, "reason": e.reason}
+                       for e in self.relations.neighbours(actor_id)],
             persona=persona.model_dump(mode="json") if persona is not None else {},
             reservations=[r.model_dump(mode="json")
                           for r in self.book.held_for(actor_id)],

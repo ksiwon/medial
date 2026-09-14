@@ -23,6 +23,7 @@ from typing import Any
 
 from .day import apply_realization, realize_day
 from .environment import get_environment
+from .relations import get_relations
 from .contracts import (
     ENGINE_VERSION,
     Attempt,
@@ -65,9 +66,11 @@ def build_attempt(attempt_id: str, label: str, policy: PolicyRevision, deck: Sce
                   persona_source: str | None = None,
                   environment: Any | None = None,
                   day: Any | None = None,
-                  model_policy: Any | None = None) -> Attempt:
+                  model_policy: Any | None = None,
+                  relations: Any | None = None) -> Attempt:
     environment = environment or get_environment()
     model_policy = model_policy or ModelPolicy()
+    relations = relations or get_relations()
     return Attempt(
         id=attempt_id,
         parentId=parent_id,
@@ -87,6 +90,7 @@ def build_attempt(attempt_id: str, label: str, policy: PolicyRevision, deck: Sce
         environmentRevisionId=environment.id,
         dayRealizationId=day.id if day is not None else None,
         modelPolicy=model_policy,
+        relationRevisionId=relations.id,
         createdAt=datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         dataSource=village.data_source,
         inputHashes={
@@ -107,6 +111,10 @@ def build_attempt(attempt_id: str, label: str, policy: PolicyRevision, deck: Sce
             # without this the two are indistinguishable on the comparison
             # screen. The engine version already covers code changes.
             "modelPolicy": _hash(model_policy.model_dump()),
+            # Who may hand work to whom. Adding one edge changes who ends up
+            # carrying the day, so two runs that disagree about the village's
+            # relations are not a controlled pair.
+            "relations": _hash(relations.model_dump()),
             "persona": persona_revision or "none",
             "personaSource": persona_source or "none",
         },
@@ -126,7 +134,8 @@ def run_attempt(attempt_id: str, policy_id: str, deck_id: str, resource_id: str,
                 environment_id: str | None = None,
                 model_policy: Any | None = None,
                 inherited_model_calls: Any | None = None,
-                provider: Any | None = None) -> RunResult:
+                provider: Any | None = None,
+                relation_id: str | None = None) -> RunResult:
     """``policy`` overrides the built-in registry so that an edited revision,
     which only exists in the service, can be executed without being registered
     globally."""
@@ -136,6 +145,7 @@ def run_attempt(attempt_id: str, policy_id: str, deck_id: str, resource_id: str,
     resources = RESOURCE_SETS[resource_id]
     profiles, provenance = personas(persona_path)
     env = get_environment(environment_id)
+    relations = get_relations(relation_id)
     model_policy = model_policy or ModelPolicy()
     # The day is drawn before anything runs, from (village, environment, seed)
     # alone. A rerun and a fork inherit the parent's seed, so they land on this
@@ -148,14 +158,15 @@ def run_attempt(attempt_id: str, policy_id: str, deck_id: str, resource_id: str,
                             lineage=lineage,
                             persona_revision=provenance.get("revisionId"),
                             persona_source=provenance.get("dataSource"),
-                            environment=env, day=day, model_policy=model_policy)
+                            environment=env, day=day, model_policy=model_policy,
+                            relations=relations)
     # A fork is handed its parent's recorded calls. Along the shared prefix the
     # prompts are identical, so the keys match and the child replays the parent's
     # answers; after the checkpoint they diverge, and what diverges is the policy.
     log = ModelCallLog(attempt.id, model_policy, inherited=inherited_model_calls or [])
     engine = Engine(attempt, policy, deck, resources, village, script=script,
                     personas=profiles, policy_switch=policy_switch, environment=env,
-                    model_calls=log, provider=provider)
+                    model_calls=log, provider=provider, relations=relations)
     result = engine.run()
     result.attempt.status = AttemptStatus.completed
     result.attempt.eventCount = len(result.events)

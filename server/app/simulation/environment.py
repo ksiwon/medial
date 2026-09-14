@@ -17,13 +17,22 @@ Two rules of the house:
 """
 from __future__ import annotations
 
-from .contracts import Channel, EnvironmentRevision, ReachabilityRule, RoutineVariation
+from .contracts import (
+    Channel,
+    EnvironmentRevision,
+    InteractionRules,
+    ReachabilityRule,
+    RoutineVariation,
+)
 
 #: Order in which same-timestamp work is drained. Previously ``engine.PRIORITY``.
 SCHEDULING = {
     "scenario": 10,
     "contact": 20,
     "reaction": 30,
+    # Between a reaction and an arrival: a hand-off is settled before anyone
+    # gets anywhere, but after the reaction that caused it.
+    "relay": 35,
     "arrival": 40,
     "institution": 50,
     "transport": 60,
@@ -98,6 +107,20 @@ ENV_V1 = EnvironmentRevision(
             "새 목적지는 생성하지 않는다. 반복 외출은 본인 baseline에 이미 있는 장소로만 간다.",
             "baseline이 한 단계뿐인 주민(P9·P10·P11)은 변이 대상에서 제외한다. "
             "원자료에 일과 기록이 없어 흔들면 창작이 된다.",
+        ],
+    ),
+    interaction=InteractionRules(
+        relayEnabled=True,
+        maxRelayHops=1,
+        relayDelayMin=10,
+        copresenceEnabled=True,
+        assumptions=[
+            "주민은 기록된 관계를 따라 일을 넘길 수 있을 뿐 자유롭게 대화하지 않는다. "
+            "doc 19가 '자유 주민 채팅'과 '완전 자율 행동 LLM'을 배제한 경계를 그대로 지킨다.",
+            "홉 상한 1은 연구자 설정이다. 원자료에는 이장이 한 번 넘긴 장면까지만 있고 "
+            "그 이상의 연쇄를 뒷받침하는 기록이 없다.",
+            "이웃에게 말을 전하는 데 걸리는 10분도 연구자 설정이다. 원자료에는 "
+            "전가에 걸린 시간이 기록되어 있지 않다.",
         ],
     ),
     assumptions=[

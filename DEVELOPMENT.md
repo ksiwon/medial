@@ -913,6 +913,90 @@ LLM을 붙여도 에이전트 하나가 한 번 대답할 뿐입니다.** 4·5·
 **남은 단계:** 3 2단계 의사결정과 LLM 실제 연결 / 4 주민 간 상호작용 / 5 보건소 다건·소장 /
 6 119 5단계 / 7 감도 분석 / 8 문서 19·23 경계 갱신.
 
+## 2026-09-14 · MAS 재구축 4단계 — 주민이 주민에게 일을 넘긴다
+
+doc 19이 **'자유 주민 채팅'과 '완전 자율 행동 LLM'을 이름으로 배제**하고 있습니다
+([19_RESIDENT_AGENTS_AS_EVALUATORS.md:131](docs/research/19_RESIDENT_AGENTS_AS_EVALUATORS.md:131)).
+그래서 이 단계는 대화가 아닙니다. 원자료의 5개 퀘스트에는 주민 간 대화가 하나도 없고
+**일의 이동**만 있습니다 — 동행, 태워 줌, 가는 김에, 곁에 있어서. 이번에는 그중
+**전가(relay)와 동석(notice)** 둘을 구현했습니다.
+
+**왜 필요한가** — 주민이 말단 노드였습니다. `_offer`는 accept / decline / defer 세
+갈래뿐이고 decline이면 곧장 `_unresolved`였습니다. 그런데 doc 19이 사례 1을 정의하며
+쓴 말이 **"확인 업무의 전가"**이고 사례 2는 **"반복 부탁, 이웃 부담의 충돌"**입니다.
+**연구 질문이 이름 붙인 현상을 엔진이 표현조차 못 하고 있었습니다.**
+
+- **구현됨:** `RelationEdge`·`RelationRevision`·`InteractionRules` 계약,
+  `relations.py`의 `rel-v1`, `ProposalAction.relay`, `request.relayed` /
+  `world.copresence` / `world.relay_resolved` 이벤트, 엔진의 `_relay`·`_on_relay`,
+  `ActorView.nearby`·`relations`, `Attempt.relationRevisionId`와
+  `inputHashes["relations"]`.
+- **MEDial은 전가를 보지 못합니다.** `request.relayed`의 visibility는
+  `[넘긴 사람, 받은 사람, RESEARCHER]`입니다. MEDial이 듣는 것은 부탁받은 사람의
+  `request.accepted` 하나뿐이고, 이후의 `task.*`도 보지 못합니다. 연구자 전용
+  `world.relay_resolved`가 `reportedBy`와 `performedBy`를 따로 남깁니다.
+  이미 있던 `world.reachability_resolved`("연구자 전용, 연락한 쪽은 '응답 없음'만
+  안다")와 같은 관용구입니다.
+- **부담 장부를 쪼갰습니다.** `asked_by_medial` / `asked_by_neighbour`.
+  하나로 뭉쳐 있으면 "MEDial이 이웃 부담을 줄였다"가 거짓인 경우를 볼 수 없습니다.
+- **관계 그래프는 고정 사례 입력입니다.** registry에는 `group` 소속만 있고 간선이
+  없습니다. `cousin`은 **혼자 있는 그룹**이며 그 뜻인 P6–P12 간선을 데이터는 말하지
+  않고, `solo`인 P3는 원자료에서 P9를 태워 주고 P11에게 약을 전달합니다. 13개 간선을
+  전부 동행군 또는 5개 퀘스트 채록에 붙였고 `provenance`는 모두 `source-adapted`입니다.
+  `FIXED_INPUT_PREFIXES`에 `relation`·`edge`·`interaction`을 추가했습니다 — Change Set이
+  외로운 사람에게 친구를 만들어 주면 퀘스트는 닫히고 MEDial은 안 좋아집니다.
+- **지어내지 않는 선:** 원자료에 간선이 없으면 넘길 수 없습니다. P1의 상대는 P6
+  하나, P2는 P5 하나뿐이고 **그것은 모델의 공백이 아니라 원자료가 기록한 그대로입니다.**
+  자기 자신에게, 이미 거쳐 간 사람에게, 확인 대상 본인에게는 넘길 수 없습니다.
+  홉 상한 1이며 초과하면 제안 자체가 허용 목록에 오르지 않습니다.
+- **검증:** `python -m pytest server/tests -q` 300 passed(신규 `test_relations.py` 24개),
+  `npm test -- --run` 42 passed, 빌드·`git diff --check` 통과.
+
+**실제로 돌려 본 장면 (14:00, subject P9, MEDial이 P12에게 부탁)**
+
+```
+14:00  request.offered    MEDial → P12    vis=MEDial,P12
+14:00  request.accepted   P12             vis=MEDial,P12        ← MEDial이 듣는 전부
+14:00  request.relayed    P12 → P6 (kin)  vis=P12,P6,RESEARCHER
+14:10  request.accepted   P6              vis=P12,P6,RESEARCHER
+14:21  task.check_performed  P6           vis=P6,P9,RESEARCHER  ← MEDial 없음
+14:21  need.resolved                      byActorId=P12         ← MEDial은 P12가 했다고 안다
+14:21  world.relay_resolved  reportedBy=P12 performedBy=P6  vis=RESEARCHER
+```
+
+12:30에 P6에게 부탁하면 다릅니다. 점심 시간에 **기록된 4인 동행군이 실제로 같은
+장소에 있고**(`world.copresence` = P4·P6·P7·P8), P6는 동석자에게 넘깁니다
+(`basis: copresent`). 그런데 그 사람도 점심 중이라 못 가고, **MEDial의 장부에는
+수락으로 남은 채 아무도 가지 않습니다.** 이때 MEDial에게 주는 이유는
+"수락 이후 확인이 완료되지 않았다"입니다 — MEDial이 스스로 도달할 수 있는 결론까지만.
+
+**작업 중 발견한 것 두 가지**
+
+| 발견 | 내용 | 조치 |
+|---|---|---|
+| **현재 두 덱에서는 전가가 한 번도 일어나지 않는다** | 정책 넷 모두 09:30에 이장 P6에게만 부탁하고, 그 시각 P6는 순찰 중(끼어들 수 있음)이라 **본인이 간다**. `relayed=0`. 전가는 12:30이나 14:00처럼 **다른 시각**이거나 **다른 사람**에게 부탁할 때만 발화한다 | 고치지 않았다. 메커니즘은 엔진 수준 검사로 고정했고, 실제 시나리오에서 보려면 덱/정책이 부탁하는 시각이나 대상이 달라져야 한다. 그건 사례 입력 변경이라 연구자 결정이다 |
+| **집에 있는 사람은 아무도 끼어들 수 없게 되어 있다** | `INTERRUPTIBLE_PLACES = {"HOME", "PATROL", "HALL", "FARM"}`인데 체류 구간의 `place`는 `HOME:P1` 형태라 **`"HOME"` 항목은 영원히 매칭되지 않는다**. 결과적으로 순찰 중인 이장 말고는 사실상 아무도 수락할 수 없다 | **고치지 않았다.** 이전부터 있던 결함이고, 고치면 14:00에 P3·P9·P10·P11이 모두 가용해져 기존 모든 실행이 달라진다. 원자료의 "배정 가능 7인데 갈 수 있는 사람은 이장 하나"와 결과가 우연히 일치하지만 **이유가 다르다**(장소가 아니라 페르소나여야 한다). 사용자 판단이 필요하다 |
+
+**아직 안 한 것**
+
+- **동행(accompany)·가는 김에(piggyback)** 는 구현하지 않았습니다. 사용자가 이번
+  범위를 relay + notice로 정했습니다.
+- **동석(notice)은 절반입니다.** `ActorView.nearby`와 `world.copresence`는 있지만,
+  근접이 *스스로* 무언가를 시작하게 하지는 않습니다. P7이 P8에게 2분 만에 간 Q4는
+  6단계(119)에서 덱이 생겨야 표현됩니다.
+- **전가가 화면에 보이지 않습니다.** `world.relay_resolved`와 부담 장부는 기록되지만
+  비교·평가 화면이 읽지 않습니다. "MEDial은 1명에게 부탁했고 2명이 움직였다"가 아직
+  연구자에게 보이지 않습니다. 1b의 `metrics["dayRealization"]`와 함께 묶어야 합니다.
+- **기본 제안은 여전히 0초에 해결됩니다.** `_offer`는 같은 밀리초에 묻고 답을 받고
+  출발합니다. 이번에는 전가 구간에만 10분 지연을 넣었습니다(연쇄가 한 밀리초에
+  일어나는 것을 막기 위해). 기본 응답 지연은 별도 변경입니다.
+
+**남은 단계:** 3 2단계 의사결정과 LLM 실제 연결 / 5 보건소 다건·소장 / 6 119 5단계 /
+7 감도 분석 / 8 문서 19·23 경계 갱신.
+
+**주의:** doc 19은 4·5·6을 "연구 질문이 요구하기 전에는 확장하지 않을 것"으로 두고
+있습니다. 사용자 지시로 여는 것이며, 8단계에서 문서를 함께 고쳐야 어긋나지 않습니다.
+
 ### 1:1:1 작업 중 검사로 발견해 고친 것
 
 | 발견 | 문제 | 조치 |

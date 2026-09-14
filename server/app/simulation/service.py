@@ -69,7 +69,8 @@ class SimulationService:
                  persona_path: str | None = None,
                  environment_id: str | None = None,
                  model_policy: ModelPolicy | None = None,
-                 provider: Any | None = None) -> None:
+                 provider: Any | None = None,
+                 relation_id: str | None = None) -> None:
         self.store = store or Store()
         self.village = village or load_village()
         self.persona_path = persona_path
@@ -84,6 +85,10 @@ class SimulationService:
         #: ``(prompt, policy) -> raw text``. None in this build; without one a
         #: ``record`` run fails loudly rather than pretending it asked.
         self.provider = provider
+        #: Who may hand work to whom, pinned per service for the same reason as
+        #: the environment: two attempts that disagreed about the village's
+        #: relations are not a controlled pair.
+        self.relation_id = relation_id
         self.policies: dict[str, PolicyRevision] = dict(POLICIES)
         self._runs: dict[str, Any] = {}
         self._restore_policies()
@@ -303,6 +308,7 @@ class SimulationService:
                            lineage=lineage, policy_switch=policy_switch,
                            persona_path=self.persona_path,
                            environment_id=self.environment_id,
+                           relation_id=self.relation_id,
                            model_policy=self.model_policy,
                            inherited_model_calls=self._inherited_calls(inherit_calls_from),
                            provider=self.provider)

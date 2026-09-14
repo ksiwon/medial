@@ -264,6 +264,12 @@ class ActorRuntime:
     realized: list[Segment]
     plan_changes: list[dict[str, Any]] = field(default_factory=list)
     contacts_received: int = 0
+    #: Split from ``contacts_received`` on purpose. When a neighbour hands work
+    #: along, MEDial's ledger says it asked one person while three were actually
+    #: involved, and "MEDial reduced the burden" is false. One counter could not
+    #: show that.
+    asked_by_medial: int = 0
+    asked_by_neighbour: int = 0
     task_ms: int = 0
     task_metres: float = 0.0
     interruptions: int = 0
@@ -295,6 +301,16 @@ class WorldState:
             )
 
     # -- queries -------------------------------------------------------
+    def actors_at(self, place: str, t_ms: int, exclude: str | None = None) -> list[str]:
+        """Who else is standing there right now.
+
+        Ground truth, and therefore researcher-only when it is published. MEDial
+        has no sensor in the village; a resident knows it because they are there.
+        """
+        return sorted(
+            actor_id for actor_id in self.actors
+            if actor_id != exclude and self.place_of(actor_id, t_ms) == place)
+
     def place_of(self, actor_id: str, t_ms: int) -> str:
         return self.actors[actor_id].place_at(t_ms)
 

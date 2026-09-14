@@ -37,6 +37,9 @@ FIXED_INPUT_PREFIXES = (
     # improving the model, not MEDial, and the comparison would read it as a
     # policy effect.
     "model", "modelpolicy", "prompt", "temperature",
+    # Giving a lonely person a friend closes the quest without MEDial having
+    # improved at all.
+    "relation", "relations", "edge", "interaction",
     "village", "persona", "baseline", "routine", "deck", "scenario",
     "resource", "review", "evaluation",
 )

@@ -11,7 +11,9 @@ conversion of a decline into a relationship penalty.
 Also deliberately absent: whether a phone is answered in a given place. That is
 a fact about the world, not about this person, and it lives in
 ``EnvironmentRevision`` so that swapping this adapter for a model cannot make a
-phone start ringing in a field.
+phone start ringing in a field. The same goes for who this person could hand
+work to: that is ``RelationRevision``, and the adapter only ever chooses among
+the neighbours the engine already put in the view.
 """
 from __future__ import annotations
 
@@ -39,7 +41,7 @@ class RuleResidentAdapter:
         if ride is not None:
             return self._on_ride_offer(view, ride, allowed)
 
-        offer = view.latest("request.offered")
+        offer = view.latest("request.offered") or view.latest("request.relayed")
         if offer is None or ProposalAction.accept not in allowed:
             return []
 
@@ -58,6 +60,13 @@ class RuleResidentAdapter:
             )]
 
         if not view.own_interruptible:
+            # Being tied up is where the interviews show work moving sideways
+            # rather than stopping: P3 was already on his own errand and took
+            # the medicine along anyway. So before deferring, ask whether there
+            # is somebody this person actually deals with.
+            handed = self._hand_it_on(view, offer, request_id, allowed)
+            if handed:
+                return handed
             return [self.factory.make(
                 view.actor_id, view.sim_time_ms, ProposalAction.defer,
                 requestId=request_id,
@@ -75,6 +84,42 @@ class RuleResidentAdapter:
             utterance="지금 순찰 중이니 들러 보겠습니다."
             if view.own_place == "PATROL" else "가 보겠습니다.",
             observationIds=[offer.id],
+        )]
+
+    def _hand_it_on(self, view: ActorView, offer, request_id: str | None,
+                    allowed: Sequence[ProposalAction]) -> list[ActionProposal]:
+        """Pass the request to a neighbour, preferring whoever is standing here.
+
+        Two rules, and both are about not inventing anything. The candidate must
+        be one of this person's recorded relations - the engine hands them over
+        in the view and refuses anything else - and being in the same place wins,
+        because that is how it happened in the source: the four of them were
+        already at lunch together when the afternoon got arranged.
+
+        Nothing here models willingness, closeness or obligation. There is no
+        trust score in this simulator and this does not add one.
+        """
+        if ProposalAction.relay not in allowed:
+            return []
+        candidates = [r for r in view.relations if r.get("actorId")]
+        if not candidates:
+            return []
+        here = [r for r in candidates if r["actorId"] in view.nearby]
+        chosen = (here or candidates)[0]
+        basis = "copresent" if here else "recorded_relation"
+        return [self.factory.make(
+            view.actor_id, view.sim_time_ms, ProposalAction.relay,
+            requestId=request_id,
+            targetActorId=chosen["actorId"],
+            params={"targetActorId": chosen["actorId"], "basis": basis,
+                    "relationKind": chosen.get("kind"),
+                    "activity": view.own_activity,
+                    "provenance": "researcher-assumption"},
+            utterance=("지금 같이 있으니 내가 말해 두겠습니다."
+                       if here else "내가 못 가니 아는 사람한테 부탁해 보겠습니다."),
+            observationIds=[offer.id],
+            uncertainty=("누구에게 넘길지 고르는 방식은 연구자 설정이다. "
+                         "원자료는 이장이 한 번 넘긴 장면까지만 기록한다."),
         )]
 
     # -- T004: someone asks for a lift ------------------------------------

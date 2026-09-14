@@ -76,6 +76,14 @@ class ActorView:
     shared_routine: dict[str, Any] = field(default_factory=dict)
     contacts_received_today: int = 0
     local_knowledge: list[dict[str, Any]] = field(default_factory=list)
+    #: Who is standing in the same place right now. This is what lets a resident
+    #: name somebody without inventing a relationship: in the source the four of
+    #: them were already at lunch together. Empty when co-presence is switched
+    #: off in the environment.
+    nearby: list[str] = field(default_factory=list)
+    #: Recorded relations this actor has, as ``{actorId, kind, reason}``. The
+    #: only people they may hand work to.
+    relations: list[dict[str, Any]] = field(default_factory=list)
     persona: dict[str, Any] = field(default_factory=dict)
     reservations: list[dict[str, Any]] = field(default_factory=list)
     policy: dict[str, Any] = field(default_factory=dict)
