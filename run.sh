@@ -72,6 +72,30 @@ http_ok() {
     return 1
   fi
 }
+# 000 = 아직 안 떴다(연결 자체가 안 됨). 그 밖에는 뜬 채로 그 코드를 돌려준 것이다.
+# 둘을 구분해야 "기다린다"와 "터졌으니 로그를 보여 준다"를 나눌 수 있다.
+http_status() {
+  if command -v curl >/dev/null 2>&1; then
+    curl -s -o /dev/null -m 5 -w '%{http_code}' "$1" 2>/dev/null || echo 000
+  elif command -v powershell.exe >/dev/null 2>&1; then
+    powershell.exe -NoProfile -Command \
+      "try { (Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 -Uri '$1').StatusCode }
+       catch { if (\$_.Exception.Response) { [int]\$_.Exception.Response.StatusCode } else { 0 } }" \
+      2>/dev/null | tr -d '\r' | tr -d ' ' | head -1
+  else
+    echo 000
+  fi
+}
+
+# 로그 끝을 보여 주고 끝낸다. 원인이 이미 파일에 적혀 있는데 "로그를 보세요"로
+# 끝내면 사용자가 한 단계 더 움직여야 한다.
+die_with_log() {
+  echo "$1"
+  echo "----- $2 (마지막 25줄) -----"
+  tail -25 "$2" 2>/dev/null || echo "(로그가 없습니다)"
+  echo "---------------------------------"
+}
+
 http_body() {
   if command -v curl >/dev/null 2>&1; then
     curl -fs "$1" 2>/dev/null
@@ -179,20 +203,36 @@ else
 fi
 
 # 준비될 때까지 기다린다. 그냥 sleep 하면 느린 첫 기동에서 브라우저가 먼저 뜬다.
+#
+# 세 가지를 구분한다. 프로세스가 죽었다 / 아직 안 떴다 / 떴는데 요청이 터진다.
+# 세 번째를 30초 동안 말없이 기다린 적이 있는데, 그때 원인은 이미 로그 끝에
+# 적혀 있었다(스키마 충돌). 뜬 서버가 5xx를 주면 그 자리에서 로그를 보여 준다.
+api_health="http://127.0.0.1:$API_PORT/api/sim/health"
+api_status=000
 for _ in $(seq 1 60); do
-  if http_ok "http://127.0.0.1:$API_PORT/api/sim/health"; then break; fi
+  api_status="$(http_status "$api_health")"
+  case "$api_status" in
+    2*) break ;;
+    000) : ;;   # 아직 안 떴다
+    *)
+      die_with_log "서버는 떴는데 $api_health 가 $api_status 를 돌려줍니다." "$API_LOG"
+      cleanup
+      ;;
+  esac
   if [ "$started_api" = 1 ] && ! kill -0 "$api_pid" 2>/dev/null; then
-    echo "서버가 시작하자마자 죽었습니다. $API_LOG 를 보세요:"
-    tail -20 "$API_LOG"
+    die_with_log "서버가 시작하자마자 죽었습니다." "$API_LOG"
     exit 1
   fi
   sleep 0.5
 done
 
-if ! http_ok "http://127.0.0.1:$API_PORT/api/sim/health"; then
-  echo "서버가 30초 안에 응답하지 않습니다. $API_LOG 를 보세요."
-  cleanup
-fi
+case "$api_status" in
+  2*) : ;;
+  *)
+    die_with_log "서버가 30초 안에 응답하지 않습니다." "$API_LOG"
+    cleanup
+    ;;
+esac
 
 # 원자료를 읽었는지 합성 마을로 도는지 여기서 알려 준다. 화면 배지와 같은 값이다.
 if command -v curl >/dev/null 2>&1; then
@@ -215,11 +255,16 @@ else
   started_web=1
 fi
 
+web_status=000
 for _ in $(seq 1 60); do
-  if http_ok "http://localhost:$WEB_PORT/"; then break; fi
+  web_status="$(http_status "http://localhost:$WEB_PORT/")"
+  case "$web_status" in
+    2*) break ;;
+    000) : ;;
+    *) die_with_log "개발 서버가 $web_status 를 돌려줍니다." "$WEB_LOG"; cleanup ;;
+  esac
   if [ "$started_web" = 1 ] && ! kill -0 "$web_pid" 2>/dev/null; then
-    echo "개발 서버가 시작하자마자 죽었습니다. $WEB_LOG 를 보세요:"
-    tail -20 "$WEB_LOG"
+    die_with_log "개발 서버가 시작하자마자 죽었습니다." "$WEB_LOG"
     cleanup
   fi
   sleep 0.5
