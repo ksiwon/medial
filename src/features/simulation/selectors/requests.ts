@@ -342,6 +342,10 @@ export interface AskedRow {
   reason: string | null;
   /** Machine key of the decline-table line, for the technical disclosure. */
   rule: string | null;
+  /** For a model resident: what the source-backed table would have answered,
+   *  when that differs from what they did. Null when they agree or no table
+   *  verdict was recorded. */
+  tableSaid: string | null;
   /** Who they handed it to, when the answer is `relayed`. */
   passedTo: string | null;
   /** False for anything MEDial was not addressed on: a hand-off, or a refusal
@@ -375,6 +379,7 @@ export function askedPeople(flow: RequestFlow): AskedRow[] {
           answer: 'pending',
           reason: null,
           rule: null,
+          tableSaid: null,
           passedTo: null,
           seenByMedial: seen,
           seq: event.seq,
@@ -396,6 +401,7 @@ export function askedPeople(flow: RequestFlow): AskedRow[] {
           answer: 'pending',
           reason: null,
           rule: null,
+          tableSaid: null,
           passedTo: null,
           seenByMedial: seen,
           seq: event.seq,
@@ -415,6 +421,9 @@ export function askedPeople(flow: RequestFlow): AskedRow[] {
               : 'deferred';
         row.reason = str(p.reason) ? reasonText(p.reason) : null;
         row.rule = str(p.rule);
+        const table = p.ruleTableSaid as { action?: string } | undefined;
+        row.tableSaid =
+          p.agreesWithRuleTable === false && table?.action ? String(table.action) : null;
         row.seenByMedial = row.seenByMedial && seen;
         break;
       }

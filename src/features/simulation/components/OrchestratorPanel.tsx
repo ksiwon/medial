@@ -162,6 +162,12 @@ const AskedLine = styled.li`
   flex-wrap: wrap;
 `;
 
+const TABLE_WORD: Record<string, string> = {
+  accept: '수락',
+  decline: '거절',
+  relay_or_defer: '넘기거나 미룸',
+};
+
 const ANSWER: Record<AskedRow['answer'], { text: string; kind: TagKind }> = {
   accepted: { text: '수락', kind: 'positive' },
   declined: { text: '거절', kind: 'negative' },
@@ -189,6 +195,11 @@ function AskedList({ rows }: { rows: AskedRow[] }) {
             </Tag>
             {row.reason && <span>{row.reason}</span>}
             {row.rule && !row.reason && <span>{ruleName(row.rule)}</span>}
+            {row.tableSaid && (
+              <Tag $kind="warn" title="원자료 조건으로 만든 거절 표는 이렇게 답했을 것입니다">
+                규칙표라면 {TABLE_WORD[row.tableSaid] ?? row.tableSaid}
+              </Tag>
+            )}
             {!row.seenByMedial && <Tag $kind="unknown">MEDial은 모름</Tag>}
           </AskedLine>
         );

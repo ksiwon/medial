@@ -165,6 +165,7 @@ export const api = {
       maxGenerations: number;
       maxChangeSetsPerGeneration?: number;
       callBudget?: number;
+      behaviourAdapter?: string;
       reviewAdapter?: string;
       improvementAdapter?: string;
     }) =>

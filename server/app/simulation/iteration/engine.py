@@ -222,6 +222,10 @@ class IterationEngine:
                     label="%s · %s" % (generation.label, DECKS[deck_id].label),
                     adapter=self.session.behaviourAdapter)
                 attempt_ids.append(detail["attempt"]["id"])
+                # The village's own model calls count against the same budget
+                # as the reviews. Replayed calls cost nothing and are not counted.
+                calls = (detail.get("metrics") or {}).get("modelCalls") or {}
+                self.session.callsUsed += int(calls.get("total", 0)) - int(calls.get("replayed", 0))
             generation.attemptIds = attempt_ids
             generation.outcome = GenerationOutcome.running
             self.store.update_generation(generation)

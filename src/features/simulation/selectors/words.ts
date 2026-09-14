@@ -70,6 +70,7 @@ const RULE: Record<string, string> = {
   cannot_leave_here: '지금 자리를 못 비움',
   asked_too_often: '오늘 부탁을 너무 많이 받음',
   too_far: '너무 멀어서',
+  llm_judgement: '본인 판단 (모델)',
 };
 
 export const ruleName = (rule: string): string => RULE[rule] ?? rule;

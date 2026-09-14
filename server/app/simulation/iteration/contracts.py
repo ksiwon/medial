@@ -380,7 +380,7 @@ class IterationSession(Base):
     #: ``rule`` everywhere, or resident behaviour by rule with reviews and
     #: improvement by model. The second is reported as *hybrid*, never as
     #: "the residents are an LLM".
-    behaviourAdapter: Literal["rule", "scripted"] = "rule"
+    behaviourAdapter: Literal["rule", "scripted", "llm"] = "rule"
     reviewAdapter: Literal["rule", "llm", "scripted"] = "rule"
     improvementAdapter: Literal["rule", "llm", "scripted"] = "rule"
     status: SessionStatus = SessionStatus.created
@@ -397,11 +397,13 @@ class IterationSession(Base):
 
     @property
     def adapter_mode_label(self) -> str:
+        """``llm`` only when the village itself ran on models. Models used
+        for review or proposal over a rule-driven village are ``hybrid``."""
+        if self.behaviourAdapter == "llm":
+            return "llm"
         if self.reviewAdapter == "rule" and self.improvementAdapter == "rule":
             return "rule" if self.behaviourAdapter == "rule" else "scripted"
-        if self.behaviourAdapter in ("rule", "scripted"):
-            return "hybrid"
-        return "llm"
+        return "hybrid"
 
 
 class GenerationOutcome(str, Enum):

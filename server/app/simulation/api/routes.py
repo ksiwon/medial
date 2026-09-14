@@ -31,7 +31,13 @@ _service: SimulationService | None = None
 def get_service() -> SimulationService:
     global _service
     if _service is None:
-        set_service(SimulationService())
+        # The real server reads its model configuration from the environment
+        # (server/.env via run.sh). Tests inject a service with no provider.
+        from ..agents.provider import ModelProvider, policy_from_env
+        provider = ModelProvider.from_env()
+        set_service(SimulationService(
+            provider=provider if provider.available else None,
+            model_policy=policy_from_env(mode="off")))
     return _service  # type: ignore[return-value]
 
 

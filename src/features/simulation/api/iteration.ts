@@ -1,3 +1,5 @@
+import type { Catalog } from './types';
+
 // Mirrors server/app/simulation/iteration/*. Hand-written for the same reason as
 // types.ts: this file is where a server contract change has to be noticed.
 //
@@ -393,6 +395,7 @@ export interface Capabilities {
     envKeys: string[];
   };
   adapterModes: Record<string, string>;
+  villageModel: Catalog['adapters']['model'] | null;
 }
 
 export interface SessionStatusPayload {

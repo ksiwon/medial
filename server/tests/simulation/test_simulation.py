@@ -632,17 +632,23 @@ def test_comparison_reports_three_kinds_of_difference():
 
 # --------------------------------------------------------- adapter failure paths
 def test_model_failure_is_not_recorded_as_a_resident_action():
+    """No provider, ``llm`` adapter: the head cannot read the situation and
+    cannot decide, so MEDial does nothing - visibly - and nobody is written
+    down as having refused. Nothing falls back to the rule policy."""
     result = run("policy-A-v1", "att-llm", adapter="llm")
     assert result.metrics["adapterFailures"] > 0
     for event in result.events:
         assert event.type is not EventType.request_declined
+        assert event.type is not EventType.request_offered, "no rule fallback"
     waiting = [e for e in result.events
                if e.type is EventType.medial_waiting
                and e.payload.get("reason") == "adapter_error"]
     assert waiting, "an adapter failure must be visible as an engine fault"
+    assert waiting[0].payload["actorId"] == "MEDial"
+    classified = [e for e in result.events if e.type is EventType.medial_classified]
+    assert classified and classified[0].payload.get("source") == "adapter_error"
     unresolved = [e for e in result.events if e.type is EventType.need_unresolved]
     assert unresolved
-    assert "응답을 만들지 못했다" in unresolved[0].payload["reason"]
 
 
 def test_llm_prompt_carries_only_the_actor_own_context():

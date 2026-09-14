@@ -68,6 +68,8 @@ export interface StartRequest {
   maxGenerations: number;
   maxChangeSetsPerGeneration: number;
   callBudget: number;
+  /** Who runs the village: rules, or MEDial's head and every resident as models. */
+  behaviourAdapter: string;
   reviewAdapter: string;
   improvementAdapter: string;
 }

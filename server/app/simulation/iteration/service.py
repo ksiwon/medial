@@ -89,8 +89,11 @@ class IterationService:
             "adapterModes": {
                 "rule": "주민 행동·리뷰·개선 모두 규칙. 모델 호출 없음.",
                 "hybrid": "주민 행동은 규칙, 리뷰/개선만 모델. 전체 주민 판단이 LLM이 아니다.",
+                "llm": "MEDial 머리와 주민 전원이 모델. 호출은 전부 기록되고 재실행은 재생한다.",
                 "scripted": "고정된 리뷰로 흐름만 확인한다. 모델 결과가 아니다.",
             },
+            # The village's own models, when the server has a key for them.
+            "villageModel": self.sim.catalog()["adapters"].get("model"),
         }
 
     # -- sessions ---------------------------------------------------------
@@ -121,6 +124,10 @@ class IterationService:
                 "온라인 어댑터를 선택했지만 모델 키가 서버에 설정되어 있지 않다. "
                 "rule 또는 scripted 로 실행하거나 서버 환경변수를 설정한다. "
                 "실패를 scripted 성공으로 대체하지 않는다.")
+        if behaviour_adapter == "llm":
+            # Fails here, before a session exists, for the same reasons an
+            # attempt would: no key, or a model id the provider does not offer.
+            self.sim._model_policy_for("llm")
 
         village = self.sim.village
         persona = self.sim.personas_payload()["provenance"]

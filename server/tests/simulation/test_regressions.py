@@ -472,7 +472,8 @@ def test_the_llm_prompt_cites_resolvable_observation_ids():
     view = ActorView(actor_id="P6", sim_time_ms=0, observations=[obs])
     payload = build_prompt_payload(view, [ProposalAction.accept])
     assert payload["observations"][0]["id"] == "obs-1"
-    assert "usedObservationIds" in payload["responseSchema"]
+    from app.simulation.agents.llm import RESIDENT_SCHEMA
+    assert "usedObservationIds" in RESIDENT_SCHEMA["properties"]
 
 
 # ================================================================ R08 · validation

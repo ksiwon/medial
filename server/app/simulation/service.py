@@ -81,10 +81,14 @@ class SimulationService:
         #: Which model, asked how. Pinned per service for the same reason as the
         #: environment: a session that compared two attempts run against
         #: different models would be reading a model swap as a policy effect.
+        #: The model policy an ``llm`` attempt runs under. Rule attempts keep
+        #: the ``off`` default so their input hash does not move with the
+        #: server's environment.
         self.model_policy = model_policy or ModelPolicy()
-        #: ``(prompt, policy) -> raw text``. None in this build; without one a
-        #: ``record`` run fails loudly rather than pretending it asked.
+        #: ``(prompt, policy, spec) -> raw text``. None means no model: an
+        #: ``llm`` attempt then fails loudly rather than pretending it asked.
         self.provider = provider
+        self._models_verified = False
         #: Who may hand work to whom, pinned per service for the same reason as
         #: the environment: two attempts that disagreed about the village's
         #: relations are not a controlled pair.
@@ -104,6 +108,19 @@ class SimulationService:
     # -- catalogue -------------------------------------------------------
     def catalog(self) -> dict[str, Any]:
         data = catalog()
+        online = self.provider is not None and getattr(self.provider, "available", False)
+        describe = getattr(self.provider, "describe", None)
+        data["adapters"] = {
+            "available": ["rule", "scripted"] + (["llm"] if online else []),
+            "unavailable": [] if online else ["llm"],
+            "model": describe(self.model_policy) if (online and describe) else None,
+            "note": ("llm 어댑터는 MEDial 머리와 주민 전원을 모델로 돌린다. 호출은 전부 "
+                     "기록되고 재실행·분기는 기록을 재생한다. 키가 없으면 고를 수 없고, "
+                     "모델 실패를 규칙 결과로 대체하지 않는다."
+                     if online else
+                     "LLM 어댑터는 서버에 모델 키가 없어 고를 수 없다. 규칙·scripted 어댑터는 "
+                     "키가 필요 없다."),
+        }
         data["policies"] = [p.model_dump(mode="json") for p in self.policies.values()]
         data["attempts"] = [r["attempt"] for r in self.store.list_attempts()]
         data["findings"] = self.store.list_findings()
@@ -301,6 +318,7 @@ class SimulationService:
         running_policy = policy
         if policy_switch is not None and policy.parentId in self.policies:
             running_policy = self.policies[policy.parentId]
+        model_policy = self._model_policy_for(adapter)
         return run_attempt(attempt_id, running_policy.id, deck_id, resource_id,
                            label=label, seed=seed, adapter=adapter,
                            village=self.village, parent_id=parent_id,
@@ -309,9 +327,34 @@ class SimulationService:
                            persona_path=self.persona_path,
                            environment_id=self.environment_id,
                            relation_id=self.relation_id,
-                           model_policy=self.model_policy,
+                           model_policy=model_policy,
                            inherited_model_calls=self._inherited_calls(inherit_calls_from),
                            provider=self.provider)
+
+    def _model_policy_for(self, adapter: str) -> ModelPolicy:
+        """Which model policy this attempt is hashed under.
+
+        ``llm`` records live calls under the service's policy; anything else
+        runs with no model at all. The first ``llm`` attempt also checks that
+        the provider actually offers both model ids, so a run does not fail on
+        its fortieth call because a model name moved.
+        """
+        if adapter != "llm":
+            return ModelPolicy()
+        if self.provider is None or not getattr(self.provider, "available", True):
+            raise ValueError(
+                "llm 어댑터를 골랐지만 서버에 모델 키가 없다. server/.env 에 GOOGLE_API_KEY "
+                "(또는 다른 공급자 키)와 MEDIAL_LLM_PROVIDER를 두거나 rule 어댑터로 실행한다. "
+                "실패를 규칙 결과로 대체하지 않는다.")
+        policy = self.model_policy.model_copy(update={"mode": "record"})
+        if not self._models_verified and hasattr(self.provider, "verify_models"):
+            missing = self.provider.verify_models(policy)
+            if missing:
+                raise ValueError(
+                    "공급자 %s 에 없는 모델이다: %s. MEDIAL_LLM_HEAD_MODEL / "
+                    "MEDIAL_LLM_RESIDENT_MODEL 을 확인한다." % (policy.provider, ", ".join(missing)))
+            self._models_verified = True
+        return policy
 
     def _inherited_calls(self, attempt_id: str | None) -> list[ModelCallRecord]:
         """The parent's recorded model calls, for a fork to replay.

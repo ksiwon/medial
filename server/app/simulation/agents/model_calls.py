@@ -42,17 +42,20 @@ class MissingModelCall(AdapterError):
 
 
 def call_key(policy: ModelPolicy, actor_id: str, call_index: int,
-             prompt: dict[str, Any]) -> str:
+             prompt: dict[str, Any], role: str = "resident") -> str:
     """Content address of one call.
 
     ``call_index`` is in the key on purpose. Two content-identical prompts from
     the same actor are two questions, and at any temperature above zero they may
     have two different answers; collapsing them would make a recording that
     cannot reproduce the run it came from.
+
+    The model id is the one for ``role``: the head and a resident asked the
+    same bytes are two different questions to two different models.
     """
     payload = json.dumps(prompt, ensure_ascii=False, sort_keys=True, default=str)
     material = "|".join([
-        policy.modelId,
+        policy.model_for(role),
         "%.6f" % policy.temperature,
         policy.promptRevisionId,
         actor_id,
@@ -94,11 +97,14 @@ class ModelCallLog:
 
     # -- the gate -------------------------------------------------------
     def resolve(self, actor_id: str, sim_time_ms: int, prompt: dict[str, Any],
-                provider: Any | None = None) -> ModelCallRecord:
+                provider: Any | None = None, role: str = "resident",
+                spec: Any | None = None) -> ModelCallRecord:
         """Answer one prompt, from the recording or from the provider.
 
-        ``provider`` is a callable taking ``(prompt, policy)`` and returning raw
-        text. It is only ever reached in ``record`` mode.
+        ``provider`` is a callable taking ``(prompt, policy, spec)`` and
+        returning raw text; ``spec`` is whatever the adapter wants the provider
+        to know that is *not* part of the content address (system prompt,
+        response schema). It is only ever reached in ``record`` mode.
         """
         policy = self.policy
         if policy.mode == "off":
@@ -107,7 +113,7 @@ class ModelCallLog:
                 "LLM 어댑터를 쓰려면 record 또는 replay로 실행해야 한다.")
 
         index = self.next_index(actor_id)
-        key = call_key(policy, actor_id, index, prompt)
+        key = call_key(policy, actor_id, index, prompt, role)
 
         found = self.inherited.get(key)
         if found is not None:
@@ -128,7 +134,8 @@ class ModelCallLog:
                 "record 모드인데 모델 공급자가 연결되어 있지 않다. 이 빌드는 아직 "
                 "모델을 호출하지 않으며, 기록된 호출을 재생하는 것만 가능하다.")
 
-        record = self._call(provider, key, actor_id, index, sim_time_ms, prompt)
+        record = self._call(provider, key, actor_id, index, sim_time_ms, prompt,
+                            role, spec)
         self._bump(actor_id)
         self.records.append(record)
         if record.status == "error":
@@ -136,7 +143,8 @@ class ModelCallLog:
         return record
 
     def _call(self, provider: Any, key: str, actor_id: str, index: int,
-              sim_time_ms: int, prompt: dict[str, Any]) -> ModelCallRecord:
+              sim_time_ms: int, prompt: dict[str, Any], role: str,
+              spec: Any) -> ModelCallRecord:
         import time
         from datetime import datetime, timezone
 
@@ -144,14 +152,14 @@ class ModelCallLog:
         started = time.monotonic()
         base = {
             "key": key, "attemptId": self.attempt_id, "actorId": actor_id,
-            "callIndex": index, "simTimeMs": sim_time_ms,
-            "modelId": policy.modelId, "temperature": policy.temperature,
+            "callIndex": index, "simTimeMs": sim_time_ms, "role": role,
+            "modelId": policy.model_for(role), "temperature": policy.temperature,
             "promptRevisionId": policy.promptRevisionId, "prompt": prompt,
             "createdAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
             "origin": "live",
         }
         try:
-            text = provider(prompt, policy)
+            text = provider(prompt, policy, spec)
         except Exception as exc:  # noqa: BLE001 - recorded, then re-raised by the caller
             # A failed call is written down too. A run that quietly dropped the
             # calls it could not make would report fewer decisions than it

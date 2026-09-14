@@ -205,12 +205,14 @@ export function sentenceFor(event: DomainEvent): { text: string; tone: StoryTone
     case 'contact.answered':
       return { text: `${withParticle(to, 'subject')} 응답했습니다.`, tone: 'good' };
     case 'medial.classified':
+      // A model head writes its own reading; a rule head has one fixed one.
       return {
-        text:
-          p.locationStatus === undefined
+        text: str(p.summary)
+          ? `MEDial의 상황 읽기: ${str(p.summary)}`
+          : p.locationStatus === undefined
             ? 'MEDial이 상황을 분류했습니다 (이 기록에는 위치·임상 상태 항목이 없습니다).'
             : `MEDial은 어디 있는지도 몸 상태도 확인하지 못한 상태로 판단했습니다.`,
-        tone: 'plain',
+        tone: str(p.source) === 'adapter_error' ? 'bad' : 'plain',
       };
     case 'medial.decided':
       // Deliberately neutral about *what* was asked of them: the same decision
@@ -365,7 +367,10 @@ export function storyRows(events: DomainEvent[]): StoryRow[] {
       clock: formatClock(event.simTimeMs),
       text: sentence.text,
       tone: sentence.tone,
-      utterance: str((event.payload as Record<string, unknown>).utterance),
+      utterance:
+        str((event.payload as Record<string, unknown>).utterance) ??
+        // What MEDial said when it asked. Only a model head writes one.
+        str((event.payload as Record<string, unknown>).message),
     });
   }
   return rows;

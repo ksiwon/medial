@@ -41,7 +41,8 @@ from app.simulation.village import load_village  # noqa: E402
 SYNTHETIC = str(REPO_ROOT / "fixtures" / "synthetic" / "village.synthetic.json")
 PERSONAS = str(REPO_ROOT / "fixtures" / "synthetic" / "personas.synthetic.json")
 
-RECORD = ModelPolicy(modelId="test-model", temperature=0.0, mode="record")
+RECORD = ModelPolicy(provider="test", headModelId="test-head",
+                     residentModelId="test-model", temperature=0.0, mode="record")
 REPLAY = RECORD.model_copy(update={"mode": "replay"})
 
 FENCED = '```json\n{"action": "accept", "usedObservationIds": ["o1"]}\n```'
@@ -54,7 +55,7 @@ class Provider:
         self.reply = reply
         self.calls: list[dict] = []
 
-    def __call__(self, prompt, policy):
+    def __call__(self, prompt, policy, spec=None):
         self.calls.append(prompt)
         return self.reply
 
@@ -73,14 +74,26 @@ def test_the_key_is_the_content_and_not_the_clock():
 
 
 @pytest.mark.parametrize(("field", "value"), [
-    ("modelId", "other-model"),
+    ("residentModelId", "other-model"),
     ("temperature", 0.7),
-    ("promptRevisionId", "prompt-v2"),
+    ("promptRevisionId", "prompt-v3"),
 ])
 def test_asking_a_different_model_is_a_different_call(field, value):
     prompt = {"actorId": "P1"}
     other = RECORD.model_copy(update={field: value})
     assert call_key(RECORD, "P1", 0, prompt) != call_key(other, "P1", 0, prompt)
+
+
+def test_the_head_and_a_resident_asked_the_same_bytes_are_two_calls():
+    """Two tiers: the key carries the model of the role that asked."""
+    prompt = {"same": "prompt"}
+    assert call_key(RECORD, "MEDial", 0, prompt, "head") != call_key(
+        RECORD, "MEDial", 0, prompt, "resident")
+    other_head = RECORD.model_copy(update={"headModelId": "other-head"})
+    assert call_key(RECORD, "MEDial", 0, prompt, "head") != call_key(
+        other_head, "MEDial", 0, prompt, "head")
+    # And changing the head model leaves every resident recording valid.
+    assert call_key(RECORD, "P1", 0, prompt) == call_key(other_head, "P1", 0, prompt)
 
 
 def test_two_actors_and_two_turns_are_four_calls():
@@ -136,7 +149,7 @@ def test_the_same_prompt_twice_is_two_recordings():
 
 
 def test_a_provider_failure_is_written_down_and_raised():
-    def broken(prompt, policy):
+    def broken(prompt, policy, spec=None):
         raise RuntimeError("429")
 
     log = ModelCallLog("att-1", RECORD)
@@ -262,7 +275,7 @@ def test_a_model_swap_is_reported_as_a_different_input():
     hotter = RECORD.model_copy(update={"temperature": 0.9})
     b = _run(hotter, provider=Provider(), attempt_id="att-m2")
     assert a.attempt.inputHashes["modelPolicy"] != b.attempt.inputHashes["modelPolicy"]
-    assert a.attempt.modelPolicy.modelId == "test-model"
+    assert a.attempt.modelPolicy.residentModelId == "test-model"
 
 
 def test_the_rule_path_still_reports_a_model_policy():

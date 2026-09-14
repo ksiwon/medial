@@ -769,17 +769,27 @@ class ModelPolicy(Base):
 
     EDITABLE_BY_CHANGE_SET: ClassVar[bool] = False
 
-    modelId: str = "none"
+    provider: str = "none"
+    #: Two tiers on purpose. MEDial's head reads a whole situation - every event
+    #: it was addressed on, the shared routines, what each person answered - and
+    #: chooses whom to ask; that is the call worth the larger model. A resident
+    #: answers one question about their own afternoon from their own view, and
+    #: twelve of them are asked a day, so the light model is the right size.
+    headModelId: str = "none"
+    residentModelId: str = "none"
     temperature: float = 0.0
-    maxOutputTokens: int = 512
+    maxOutputTokens: int = 1024
     #: Which prompt build this ran under. Bumped whenever the payload sent to the
     #: model changes shape, because an identical prompt hash across a prompt
     #: change would make two different questions look like the same one.
-    promptRevisionId: str = "prompt-v1"
+    promptRevisionId: str = "prompt-v2"
     #: ``record`` calls the provider and writes every call down. ``replay`` calls
     #: nothing: a prompt with no recorded answer is an adapter failure, never a
     #: quiet fresh call. ``off`` is the rule/scripted path, where no model exists.
     mode: Literal["off", "record", "replay"] = "off"
+
+    def model_for(self, role: str) -> str:
+        return self.headModelId if role == "head" else self.residentModelId
 
 
 class ModelCallRecord(Base):
@@ -797,6 +807,9 @@ class ModelCallRecord(Base):
     actorId: str
     callIndex: int
     simTimeMs: int
+    #: ``head`` (MEDial) or ``resident``. Part of the key through the prompt
+    #: payload, and kept here so a recording says which tier answered.
+    role: str = "resident"
     modelId: str
     temperature: float
     promptRevisionId: str

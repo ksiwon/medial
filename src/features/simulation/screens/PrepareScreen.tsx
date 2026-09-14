@@ -182,6 +182,7 @@ export default function PrepareScreen({
   );
   const [maxGenerations, setMaxGenerations] = useState(3);
   const [maxCandidates, setMaxCandidates] = useState(2);
+  const [behaviourAdapter, setBehaviourAdapter] = useState('rule');
   const [reviewAdapter, setReviewAdapter] = useState('rule');
   const [improvementAdapter, setImprovementAdapter] = useState('rule');
   // The server contract is callBudget=0 == no ceiling, and that contract is not
@@ -191,7 +192,9 @@ export default function PrepareScreen({
   const [callBudget, setCallBudget] = useState(0);
 
   const online = capabilities.model.configured;
-  const usesModel = reviewAdapter === 'llm' || improvementAdapter === 'llm';
+  const villageOnline = Boolean(capabilities.villageModel?.configured);
+  const usesModel =
+    behaviourAdapter === 'llm' || reviewAdapter === 'llm' || improvementAdapter === 'llm';
   const policy = policies.find((p) => p.id === basePolicyId);
   const effectiveLabel = label.trim() || question.trim().slice(0, 40) || '이름 없는 실험';
 
@@ -208,6 +211,7 @@ export default function PrepareScreen({
   const summary = [
     `초기안 포함 최대 ${maxGenerations}개 버전`,
     `시나리오 ${decks.length}개`,
+    behaviourAdapter === 'rule' ? '규칙 기반 마을' : 'LLM 마을',
     reviewAdapter === 'rule' ? '규칙 기반 리뷰' : 'LLM 리뷰',
     improvementAdapter === 'rule' ? '규칙 기반 개선' : 'LLM 개선',
     usesModel ? (callBudget > 0 ? `모델 호출 ${callBudget}회 상한` : '모델 호출 무제한') : '모델 호출 없음',
@@ -334,13 +338,28 @@ export default function PrepareScreen({
             ))}
           </Row>
 
-          <SubHead>리뷰와 개선을 무엇이 쓰는가</SubHead>
+          <SubHead>무엇을 모델이 하는가</SubHead>
           <Sub>
-            주민의 <strong>행동</strong>은 어떤 설정에서도 규칙 어댑터입니다. 리뷰와 개선만 모델을
-            쓰면 화면에 hybrid로 표시하며, 주민 판단 전체가 LLM이라고 쓰지 않습니다. 모델 호출이
-            실패하면 규칙 결과로 갈아치우지 않고 그대로 실패로 멈춥니다.
+            마을을 모델로 돌리면 MEDial 머리와 주민 전원이 모델입니다
+            {capabilities.villageModel
+              ? ` (머리 ${capabilities.villageModel.headModel} · 주민 ${capabilities.villageModel.residentModel})`
+              : ''}
+            . 리뷰와 개선만 모델을 쓰면 hybrid로 표시합니다. 모델 호출이 실패하면 규칙 결과로
+            갈아치우지 않고 그대로 실패로 남깁니다. 호출은 전부 기록되고 재실행은 기록을 재생합니다.
           </Sub>
           <Grid style={{ marginTop: 12 }}>
+            <Field>
+              마을의 행동 (MEDial 머리 + 주민)
+              <Select
+                value={behaviourAdapter}
+                onChange={(e) => setBehaviourAdapter(e.target.value)}
+              >
+                <option value="rule">규칙 기반 (모델 호출 없음)</option>
+                <option value="llm" disabled={!villageOnline}>
+                  LLM (실제 모델 호출)
+                </option>
+              </Select>
+            </Field>
             <Field>
               주민 리뷰
               <Select value={reviewAdapter} onChange={(e) => setReviewAdapter(e.target.value)}>
@@ -464,6 +483,7 @@ export default function PrepareScreen({
                 maxGenerations,
                 maxChangeSetsPerGeneration: maxCandidates,
                 callBudget,
+                behaviourAdapter,
                 reviewAdapter,
                 improvementAdapter,
               })

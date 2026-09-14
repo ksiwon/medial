@@ -548,7 +548,21 @@ export interface Catalog {
     strategies: string[];
     note: string;
   };
-  adapters: { available: string[]; unavailable: string[]; note: string };
+  adapters: {
+    available: string[];
+    unavailable: string[];
+    /** The two tiers an ``llm`` attempt would run on; null without a key. */
+    model: {
+      provider: string | null;
+      configured: boolean;
+      headModel: string;
+      residentModel: string;
+      temperature: number;
+      promptRevision: string;
+      note: string;
+    } | null;
+    note: string;
+  };
   attempts: Attempt[];
   findings: DesignFinding[];
 }

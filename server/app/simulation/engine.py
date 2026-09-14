@@ -61,6 +61,8 @@ from .environment import get_environment, resolve_place
 from .relations import get_relations
 from .institution import Desk, ShiftExhausted
 from .observations import ActorView, ObservationLog, home_window, shared_routine
+from .agents.provider import CallSpec
+from .policies.llm_policy import LlmMedialPolicy, parse_head_reply
 from .policies.rule_policies import Intent, MedialPolicy, PolicyContext
 from .transport import TransportBook
 from .village import Village
@@ -130,7 +132,6 @@ class Engine:
         self.village = village
         self.world = WorldState(village, deck.horizonMs)
         self.obs = ObservationLog()
-        self.policy = MedialPolicy(policy, VILLAGE_HEAD_ID)
         self.factory = ProposalFactory(attempt.id)
         self.personas = personas or {}
 
@@ -174,6 +175,70 @@ class Engine:
         self.model_calls = model_calls or ModelCallLog(attempt.id, attempt.modelPolicy)
         self._provider = provider
         self._adapters = self._build_adapters(script)
+        self.policy = self._make_policy(policy)
+
+    def _make_policy(self, revision: PolicyRevision) -> MedialPolicy:
+        """MEDial's head: rules, or the model, under the same policy revision.
+
+        One switch for the whole village (``attempt.adapter``): when residents
+        are models, so is the head. The designer sees one choice, not two.
+        """
+        if self.attempt.adapter != "llm":
+            return MedialPolicy(revision, VILLAGE_HEAD_ID)
+        return LlmMedialPolicy(
+            revision, VILLAGE_HEAD_ID, ask=self._ask_head,
+            events_for=self._medial_events,
+            resident_ids=[r["id"] for r in self.village.residents],
+            max_tokens=self.attempt.modelPolicy.maxOutputTokens)
+
+    def _ask_head(self, prompt: dict[str, Any], spec: CallSpec) -> dict[str, Any]:
+        """One head call through the same log every resident call goes through."""
+        record = self.model_calls.resolve(MEDIAL, int(prompt.get("simTimeMs", 0)), prompt,
+                                          provider=self._provider, role="head", spec=spec)
+        return parse_head_reply(record.response)
+
+    def _medial_events(self, request_id: str) -> list[dict[str, Any]]:
+        """What MEDial was addressed on for this request, as the head reads it.
+
+        The visibility list is the only gate. A hand-off between neighbours,
+        a refusal further down one, the world's reason for an unanswered phone:
+        none of it is here, because MEDial was not on the list.
+        """
+        keep = ("toActorId", "fromActorId", "utterance", "reason", "rule", "outcome",
+                "place", "channel", "untilMs", "message", "resolutionPath",
+                "suggestedPlace", "attemptNumber", "chosen", "summary")
+        rows = []
+        for event in self.events:
+            if event.correlationId != request_id or MEDIAL not in event.visibility:
+                continue
+            row: dict[str, Any] = {"id": event.id, "seq": event.seq,
+                                   "clock": _clock(event.simTimeMs),
+                                   "type": event.type.value, "actorId": event.actorId}
+            for key in keep:
+                if key in event.payload and event.payload[key] is not None:
+                    row[key] = event.payload[key]
+            rows.append(row)
+        return rows
+
+    def _decide(self, at_ms: int, request: dict[str, Any], question: str,
+                call: Any) -> tuple[DecisionRecord | None, list[Intent]]:
+        """Run one head decision, and treat a head failure as a failure.
+
+        A model that would not answer within the designer's conditions has
+        not decided anything; MEDial does nothing this turn and the log says
+        why. It is never replaced by the rule policy's answer.
+        """
+        try:
+            return call()
+        except AdapterError as exc:
+            self.adapter_failures.append({"actorId": MEDIAL, "atMs": at_ms,
+                                          "error": str(exc)})
+            self._emit(at_ms, EventType.medial_waiting, MEDIAL, request["id"],
+                       [MEDIAL, RESEARCHER],
+                       {"reason": "adapter_error", "untilMs": at_ms, "actorId": MEDIAL,
+                        "detail": str(exc), "question": question,
+                        "note": "MEDial 머리(모델)의 실패이며 규칙 결과로 갈아치우지 않는다."})
+            return None, []
 
     # -- setup -----------------------------------------------------------
     def _build_routines(self) -> dict[str, dict[str, dict[str, Any]]]:
@@ -203,9 +268,14 @@ class Engine:
         """
         actor_ids = [r["id"] for r in self.village.residents] + [HEALTH_STAFF]
         if self.attempt.adapter == "llm":
-            return {actor_id: LlmAdapter(self.factory, actor_id, self.model_calls,
-                                         provider=self._provider)
-                    for actor_id in actor_ids}
+            # The health centre stays a rule adapter: doc 19 keeps the
+            # institution's procedure fixed, and step 5 is where it grows.
+            adapters = {actor_id: LlmAdapter(self.factory, actor_id, self.model_calls,
+                                             provider=self._provider,
+                                             interaction=self.environment.interaction)
+                        for actor_id in actor_ids if actor_id != HEALTH_STAFF}
+            adapters[HEALTH_STAFF] = RuleHealthStaffAdapter(self.factory)
+            return adapters
         if self.attempt.adapter == "scripted":
             # A copy each: the script is matched by actorId anyway, so splitting
             # changes no behaviour, and it stops one actor's consumed entries
@@ -293,7 +363,7 @@ class Engine:
         new_policy: PolicyRevision = self._switch["policy"]
         old_id = self.policy_revision.id
         self.policy_revision = new_policy
-        self.policy = MedialPolicy(new_policy, VILLAGE_HEAD_ID)
+        self.policy = self._make_policy(new_policy)
         self._switched = True
         self._emit(at_ms, EventType.policy_switched, ENGINE, "fork", [RESEARCHER],
                    {"fromPolicyId": old_id, "toPolicyId": new_policy.id,
@@ -465,9 +535,15 @@ class Engine:
         retries_left = attempt_number <= self.policy_revision.params.retryCount
         if (self.policy_revision.contactStrategy is ContactStrategy.retry_then_clinic
                 and not retries_left):
-            decision, intents = self.policy.on_retry_exhausted(ctx)
+            decision, intents = self._decide(
+                at_ms, request, "연락이 계속 닿지 않을 때 다음 담당자는 누구인가",
+                lambda: self.policy.on_retry_exhausted(ctx))
         else:
-            decision, intents = self.policy.on_unanswered_checkin(ctx)
+            decision, intents = self._decide(
+                at_ms, request, "응답이 없는 상태를 누가 어떻게 확인할 것인가",
+                lambda: self.policy.on_unanswered_checkin(ctx))
+        if decision is None:
+            return
         self._commit_decision(at_ms, decision, request)
         for intent in intents:
             self._apply_intent(at_ms, intent, request)
@@ -495,8 +571,22 @@ class Engine:
                 "correlation": request["id"]})
             self._emit(at_ms, EventType.medial_waiting, MEDIAL, request["id"], [MEDIAL],
                        {"reason": "retry_scheduled", "untilMs": int(data["atMs"])})
+        elif intent.kind == "wait":
+            # The head chose to do nothing for now. That is a decision with a
+            # clock on it, not an end: the same question comes back at ``atMs``
+            # with everything that happened in between on the record.
+            until = int(data["atMs"])
+            self._emit(at_ms, EventType.medial_waiting, MEDIAL, request["id"],
+                       [MEDIAL, RESEARCHER],
+                       {"reason": "head_wait", "untilMs": until,
+                        "note": "MEDial 머리가 지금은 아무에게도 부탁하지 않고 기다리기로 했다."})
+            self._schedule(until, "reaction:missed",
+                           {"subject": request["subjectId"], "correlation": request["id"],
+                            "attemptNumber": int(data.get("attemptNumber", 1)),
+                            "purpose": "welfare_check", "from": MEDIAL})
         elif intent.kind == "offer_request":
             request["fallbackOrder"] = list(data.get("fallbackOrder") or [])
+            request["message"] = data.get("message")
             self._offer(at_ms, request, data["toActorId"], data["disclosure"])
         elif intent.kind == "offer_ride":
             self._offer_ride(at_ms, request, data["toActorId"], data["disclosure"])
@@ -511,17 +601,24 @@ class Engine:
                disclosure: dict[str, Any]) -> None:
         self.world.actors[to_actor].asked_by_medial += 1
         self.relay_chains.setdefault(request["id"], []).append(to_actor)
+        # What MEDial actually says. A rule head says nothing beyond the
+        # disclosure fields; a model head writes the ask, and the person asked
+        # reads those words and no others.
+        message = request.get("message")
         offered = self._emit(at_ms, EventType.request_offered, MEDIAL, request["id"],
                              [MEDIAL, to_actor],
                              {"requestId": request["id"], "toActorId": to_actor,
                               "need": request["need"], "subjectId": request["subjectId"],
-                              "disclosure": disclosure})
+                              "disclosure": disclosure,
+                              **({"message": message} if message else {})})
         self._record_disclosure(disclosure, to_actor)
         self.world.actors[to_actor].contacts_received += 1
         self.obs.record(self.attempt.id, to_actor, offered, "request.offered",
                         subject_id=request["subjectId"],
                         payload={"requestId": request["id"], "need": request["need"],
                                  "fromActorId": MEDIAL,
+                                 "message": message,
+                                 "disclosedFields": disclosure.get("fields", []),
                                  "travelMinutes": self._errand_minutes(
                                      to_actor, at_ms, "HOME:" + request["subjectId"])})
 
@@ -548,6 +645,7 @@ class Engine:
                        [MEDIAL, to_actor],
                        {"requestId": request["id"], "untilMs": at_ms,
                         "rule": proposal.params.get("rule"),
+                        **_yardstick(proposal.params),
                         "reason": proposal.params.get("reason"),
                         "utterance": proposal.utterance,
                         "evidenceRefs": proposal.evidenceRefs})
@@ -560,6 +658,7 @@ class Engine:
                        [MEDIAL, to_actor],
                        {"requestId": request["id"],
                         "rule": proposal.params.get("rule"),
+                        **_yardstick(proposal.params),
                         "reason": proposal.params.get("reason", "unspecified"),
                         "utterance": proposal.utterance,
                         "evidenceRefs": proposal.evidenceRefs,
@@ -700,6 +799,7 @@ class Engine:
                             payload={"requestId": request["id"],
                                      "fromActorId": from_actor, "toActorId": target,
                                      "need": request["need"],
+                                     "message": proposal.utterance,
                                      # From where they will be when they are
                                      # actually asked, not where they are now.
                                      "travelMinutes": self._errand_minutes(
@@ -769,6 +869,7 @@ class Engine:
                  if proposal.action is ProposalAction.decline
                  else {"untilMs": at_ms, "reason": proposal.params.get("reason")})
         extra["rule"] = proposal.params.get("rule")
+        extra.update(_yardstick(proposal.params))
         self._emit(at_ms, etype, target, request["id"],
                    [from_actor, target, RESEARCHER],
                    {"requestId": request["id"], **extra,
@@ -885,8 +986,12 @@ class Engine:
                         confidence="reported")
 
         ctx = self._context(at_ms, subject, request, request["contactAttempts"])
-        decision, intents = self.policy.on_absent_report(
-            ctx, suggested, proposal.params.get("basis", "unknown"))
+        decision, intents = self._decide(
+            at_ms, request, "자택에 없을 때 확인을 계속할 것인가",
+            lambda: self.policy.on_absent_report(
+                ctx, suggested, proposal.params.get("basis", "unknown")))
+        if decision is None:
+            return
         self._commit_decision(at_ms, decision, request)
         for intent in intents:
             self._apply_intent(at_ms, intent, request)
@@ -969,7 +1074,11 @@ class Engine:
         if reason is None:
             return
         request["escalated"] = True
-        decision, intents = self.policy.on_unanswered_checkin(ctx)
+        decision, intents = self._decide(
+            at_ms, request, "응답이 없는 상태를 누가 어떻게 확인할 것인가",
+            lambda: self.policy.on_unanswered_checkin(ctx))
+        if decision is None:
+            return
         self._commit_decision(at_ms, decision, request)
         for intent in intents:
             self._apply_intent(at_ms, intent, request)
@@ -1190,6 +1299,7 @@ class Engine:
             self._emit(at_ms, etype, to_actor, request["id"], [MEDIAL, to_actor],
                        {"requestId": request["id"],
                         "rule": proposal.params.get("rule"),
+                        **_yardstick(proposal.params),
                         "reason": proposal.params.get("reason", "unspecified"),
                         "utterance": proposal.utterance,
                         "evidenceRefs": proposal.evidenceRefs,
@@ -1542,7 +1652,18 @@ class Engine:
                    "lastContactMs": at_ms}
         self.requests[request_id] = request
 
-        classified = self.policy.classify(self._context(at_ms, subject, request, 1))
+        try:
+            classified = self.policy.classify(self._context(at_ms, subject, request, 1))
+        except AdapterError as exc:
+            # The head could not read the situation. The request still exists
+            # - a missed check-in is a fact - and the reading is recorded as
+            # the failure it was, never as "unconfirmed, all fine".
+            self.adapter_failures.append({"actorId": MEDIAL, "atMs": at_ms,
+                                          "error": str(exc)})
+            classified = MedialPolicy(self.policy_revision, VILLAGE_HEAD_ID).classify(
+                self._context(at_ms, subject, request, 1))
+            classified["rationale"] = "MEDial 머리(모델)가 상황을 읽지 못했다: %s" % exc
+            classified["source"] = "adapter_error"
         self._emit(at_ms, EventType.medial_classified, MEDIAL, request_id, [MEDIAL],
                    {"classification": classified["classification"],
                     "rationale": classified["rationale"],
@@ -1550,7 +1671,9 @@ class Engine:
                     "locationStatus": classified["locationStatus"],
                     "emergencyEvidence": classified["emergencyEvidence"],
                     "emergencyEvidenceNote": classified["emergencyEvidenceNote"],
-                    "subjectId": subject})
+                    "subjectId": subject,
+                    **({"summary": classified["summary"]} if classified.get("summary") else {}),
+                    **({"source": classified["source"]} if classified.get("source") else {})})
         self._emit(at_ms, EventType.request_raised, MEDIAL, request_id,
                    [MEDIAL, RESEARCHER],
                    {"requestId": request_id, "subjectId": subject, "need": "welfare_check"})
@@ -1698,6 +1821,20 @@ class Engine:
             "subjectId": disclosure.get("subjectId"),
             "fieldCount": len(fields),
             "fields": list(fields)})
+
+
+def _yardstick(params: dict[str, Any]) -> dict[str, Any]:
+    """What the source-backed decline table would have said, when a model
+    resident answered. Recorded beside the answer, never applied (D082)."""
+    if "ruleTableSaid" not in params:
+        return {}
+    return {"ruleTableSaid": params["ruleTableSaid"],
+            "agreesWithRuleTable": params.get("agreesWithRuleTable")}
+
+
+def _clock(ms: int) -> str:
+    total = max(0, ms // MIN_MS)
+    return "%02d:%02d" % (total // 60, total % 60)
 
 
 def _known_facts(subject: str, request: dict[str, Any], attempt_number: int) -> list[str]:

@@ -1207,6 +1207,75 @@ D080. 실제 마을에서 기본(env-v2)으로 돌리면 하루가 거의 매번
 v2는 이름으로 남아 있고(저장된 실행의 뜻을 바꾸지 않는다), 외출이 빠진 하루를 보고 싶으면
 v2를 골라야 하며 그 쌍은 통제 비교가 아니다.
 
+## 2026-09-15 · MAS 재구축 3단계 — 마을이 모델로 말한다
+
+연구자 결정 (D082–D085): MEDial 머리는 `gemini-3.8-flash`, 주민은 `gemini-3.1-flash-lite`.
+머리는 후보까지 직접 고르고, 주민은 LLM이 전부 정하며 거절 표는 기록만 한다.
+
+### 어디서 누가 말하나
+
+```
+MEDial 머리 (3.8-flash)                          주민 (3.1-flash-lite × 12)
+① read  : 관측 → 상황 읽기 (confirmed엔 사건 id 필수)   ③ 부탁을 받음: 내 일과·내 인터뷰 조건·
+② decide: 후보 전원 판정 + askOrder + 부탁 말          부탁 말(message) → accept/decline/defer/
+   ↳ 울타리 검사, 어기면 1회 되돌림                      relay/report_observation + 한마디
+        │ message ────────▶ request.offered.payload.message ──▶ 주민 observation
+        ◀── utterance ───── request.accepted/declined.payload.utterance ◀── 주민의 답
+```
+
+말은 전부 **사건에 실려** 오간다. 옆길 채팅은 없다(문서 19의 "자유 주민 채팅 제외"는 그대로다).
+머리의 다음 `read`는 MEDial이 수신자였던 사건만(`_medial_events`) 본다 — 전가·아래쪽 거절·
+세계의 이유는 visibility 필터 하나로 걸러진다.
+
+| 자리 | 코드 | 모델 |
+|---|---|---|
+| 상황 읽기·다음 행동·자택 부재 뒤 | `policies/llm_policy.py` | 머리 |
+| 주민의 답 | `agents/llm.py` | 주민 |
+| 재연락 예산 소진 뒤 인계, 이동(동승) 요청, 보건소 담당자 | 규칙 그대로 | — |
+| 인계 기한(`escalateToInstitutionAfterMin`) | 코드가 먼저 본다. 머리에게 "기한을 지킬지" 묻지 않는다 | — |
+
+### 울타리 — 노브는 고른 뒤에 검사한다
+
+`_fence()`: 후보 목록에 전원이 있는가 · 본인에게 부탁하지 않았는가 · 이장은 `allowHeadContact`일 때만 ·
+`neighbourAskLimit` 이하 · `head_first`면 첫 사람이 이장 · `retry_then_clinic`이면 이웃 부탁 금지 ·
+`schedule_contact`는 `retryCount` 안에서 · `wait`는 `waitMinutes` 5~120, 한 건 두 번까지.
+어기면 `rejected.problems`를 붙여 한 번 다시 묻고, 두 번째도 어기면 `medial.waiting adapter_error`
+(actorId=MEDial). **규칙 정책의 답으로 갈아치우지 않는다.**
+
+### 기록·재생
+
+`ModelPolicy`에 `headModelId`·`residentModelId`가 따로 있고 호출 키는 역할별 모델로 만든다.
+머리 모델을 바꿔도 주민 기록은 그대로 재생된다. 분기는 체크포인트 앞의 머리·주민 호출을 모두
+재생한다(`test_a_fork_replays_both_tiers_without_asking_again`). 마을의 호출은 반복 루프의
+`callsUsed`에도 합산된다(재생분 제외).
+
+### 설정과 켜는 곳
+
+- `server/.env`: `MEDIAL_LLM_HEAD_MODEL` / `MEDIAL_LLM_RESIDENT_MODEL` (기본값이 위 둘),
+  `MEDIAL_LLM_TEMPERATURE`(0.2), `MEDIAL_LLM_MAX_RETRIES`(6). 첫 llm 실행 전에 공급자 모델 목록으로
+  두 id를 확인하고 없으면 시작하지 않는다.
+- 화면: 실험 준비 → "마을의 행동 (MEDial 머리 + 주민)" 하나. 키가 없으면 비활성. 새 노브 없음.
+- 관찰 화면: `medial.classified`에 머리의 `summary`가 있으면 "MEDial의 상황 읽기: …"로, 부탁 말은
+  인용으로, 표와 어긋난 주민 답에는 `규칙표라면 수락` 태그.
+
+### 실제로 돌려 본 것 — 합성 마을, 실제 Gemini (`python scripts/llm_smoke.py`)
+
+| 시도 | 결과 |
+|---|---|
+| 3.8-flash 머리, `read` | **성공** (10.7s). "1회 연락 시도, 응답 없음. 위치·건강 상태를 확인할 근거 없음 → 모두 unconfirmed." 원칙대로 |
+| 3.8-flash 머리, `decide` | 503 "high demand" 반복 → 이후 **429: 무료 등급 하루 20회** (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`, quotaValue 20). 오늘 소진 |
+| 양쪽 3.1-flash-lite | read·decide·wait 재판단까지 흐름 확인. 첫 실행에서 `wait`에 깨우는 장치가 없던 것을 발견해 고침(D084). 두 번째 실행은 wait 뒤 재판단에서 503 |
+
+그래서 **3.8-flash로 하루를 끝까지 돌린 기록은 아직 없다.** 배관은 가짜 모델로 16건, 실제
+모델로는 머리의 read 한 번과 flash-lite의 read→decide→wait→재판단까지 확인했다. 무료 등급이면
+3.8-flash는 하루 20회라 한 실행(머리 3~5회)을 몇 번 못 돌린다 — 유료 전환이나 quota 확인이 필요하다.
+
+### 아직 안 한 것
+
+- 이동(동승) 요청과 보건소 담당자는 규칙. 5단계에서 보건소를 키울 때 같이 본다.
+- 머리가 `adapter_error`로 넘어지면 그 건은 그대로 끝난다. 시간을 두고 다시 묻는 장치는 없다 — "실패는 실패"를 지키기 위해 일부러 두지 않았다.
+- 문서 19의 "주민의 완전 자율 행동 LLM 제외"는 유지된다: 주민 LLM은 허용된 제안 안에서만 답한다(자유 이동·자유 대화 없음). 8단계에서 문구를 손본다.
+
 ### 1:1:1 작업 중 검사로 발견해 고친 것
 
 | 발견 | 문제 | 조치 |
