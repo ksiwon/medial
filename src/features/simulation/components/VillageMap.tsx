@@ -60,6 +60,11 @@ function projector(view: View, box: { width: number; height: number }) {
 /** Marker geometry, in screen pixels, exactly as doc 15 section 5 specifies. */
 const FACE_D = 24;
 const FACE_R = FACE_D / 2;
+// A marker for one person: a smaller face, and a pill that stops just after
+// the name (이장 · P10-P12 are the widest labels) instead of a fixed 62.
+const SOLO_FACE_R = 10;
+const SOLO_LEFT = SOLO_FACE_R + 3;
+const SOLO_W = SOLO_LEFT + SOLO_FACE_R + 4 + 20 + 4;
 
 const Frame = styled.div`
   position: relative;
@@ -919,8 +924,12 @@ function ClusterMark({
 }) {
   const lead = cluster.members[0];
   const driver = cluster.members.find((m) => m.mode === 'drive' || m.mode === 'boat');
-  const r = FACE_R * k;
   const faces = cluster.members.slice(0, 3);
+  const alone = cluster.members.length === 1;
+  // A lone face is smaller and the pill ends just after the name; a group's
+  // faces spread to the same edges whether there are two of them or three.
+  const r = (alone ? SOLO_FACE_R : FACE_R) * k;
+  const step = faces.length === 2 ? 2 * FACE_R * k : FACE_R * k;
   const extra = cluster.members.length - faces.length;
   const icon = activityKind(lead);
   const ring = cluster.members.some((m) => m.onTask)
@@ -967,9 +976,9 @@ function ClusterMark({
         </>
       )}
 
-      {/* 62 rather than 53 wide: 이장 and P10-P12 touched the right edge. */}
-      <rect x={x - (faces.length > 1 ? 28 : 16) * k} y={y - 16*k}
-        width={(faces.length > 1 ? 56 : 62)*k} height={32*k} rx={16*k}
+      <rect x={x - (alone ? SOLO_LEFT : 28) * k} y={y - (alone ? 13 : 16) * k}
+        width={(alone ? SOLO_W : 56) * k} height={(alone ? 26 : 32) * k}
+        rx={(alone ? 13 : 16) * k}
         fill={selected || hovered ? '#edf5ec' : '#fffffff5'}
         stroke={selected || hovered ? '#8eaf98' : '#d6e1d3'} strokeWidth={1.2*k}
         style={{filter:'drop-shadow(0 1px 2px #304c3926)'}} />
@@ -987,7 +996,7 @@ function ClusterMark({
       {/* Up to three faces, stacked; the rest become a count. */}
       {faces
         .map((member, i) => (
-          <g key={member.id} transform={`translate(${x + (i - (faces.length - 1) / 2) * r} ${y})`}>
+          <g key={member.id} transform={`translate(${x + (i - (faces.length - 1) / 2) * step} ${y})`}>
             <FaceMark
               id={member.id}
               r={r}
@@ -1001,13 +1010,13 @@ function ClusterMark({
       {extra > 0 && (
         <>
           <circle
-            cx={x + (faces.length / 2) * r + 3 * k}
+            cx={x + (faces.length / 2) * step + 3 * k}
             cy={y - r * 0.6}
             r={7.5 * k}
             fill={colour.text}
           />
           <text
-            x={x + (faces.length / 2) * r + 3 * k}
+            x={x + (faces.length / 2) * step + 3 * k}
             y={y - r * 0.6 + 3.6 * k}
             fontSize={9 * k}
             textAnchor="middle"
@@ -1020,14 +1029,16 @@ function ClusterMark({
       )}
 
       {icon && (
-        <g transform={`translate(${x + r * 1.05} ${y - r * 0.9}) scale(${k})`}>
+        <g transform={`translate(${x + r * (alone ? 0.85 : 1.05)} ${
+          y - (alone ? r + 2 * k : r * 0.9)
+        }) scale(${k})`}>
           <circle cx={0} cy={0} r={7} fill="#ffffff" stroke={colour.border} />
           <ActivityIcon kind={icon} />
         </g>
       )}
 
-      {cluster.members.length === 1 && <text
-        x={x + 17*k} y={y + 3.5*k} fontSize={10*k}
+      {alone && <text
+        x={x + (SOLO_FACE_R + 4) * k} y={y + 3.5*k} fontSize={10*k}
         textAnchor="start" fill="#496054"
         fontWeight={selected || hovered ? 650 : 500}
         style={{pointerEvents:'none'}}>
