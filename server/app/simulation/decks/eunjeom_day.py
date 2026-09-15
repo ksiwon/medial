@@ -17,12 +17,10 @@ results and stay out.
              expressed as P11 having to get to town - an adaptation, marked.
   Q3  09:30  the routine check-in that P1 does not answer (source: request
              at 14:00, confirmed in the field at 15:35 - a false alarm).
-  Q4  20:30  P8's emergency (source: P7 there in 2 minutes, ambulance in 22).
-             NOT IN THIS DECK. The engine has no emergency flow - no 119
-             intake, dispatch or handover (``notImplemented`` in the
-             capabilities) - and a scenario event nobody can act on would be
-             an incident the log silently drops. It is listed here so the gap
-             is on the record rather than in a comment.
+  Q4  20:30  P8's emergency, reported by P7 (source: P7 there in 2 minutes,
+             ambulance in 22, handover 20:56). The deck fixes the report -
+             who, about whom, from where, in what words. 119's answer, the
+             crew's time and whether P7 stays are the run.
 """
 from __future__ import annotations
 
@@ -35,13 +33,14 @@ Q1_MS = 8 * HOUR_MS                       # 08:00 - P9 to town
 Q3_MS = 9 * HOUR_MS + 30 * MIN_MS         # 09:30 - P1 check-in, unanswered
 Q2_MS = 10 * HOUR_MS + 40 * MIN_MS        # 10:40 - P11's medicine
 Q5_RETURN_AFTER_MIN = 262                 # so the way home starts about 12:55, as recorded
+Q4_MS = 20 * HOUR_MS + 30 * MIN_MS        # 20:30 - P7 reports P8
 HORIZON_MS = 22 * HOUR_MS
 
 DECK_ID = "deck-eunjeom-day-v1"
 
 DECK = ScenarioDeck(
     id=DECK_ID,
-    label="은점마을의 하루 · 원자료 5퀘스트 (Q1·Q2·Q3·Q5)",
+    label="은점마을의 하루 · 원자료 5퀘스트",
     classification="source_adapted",
     horizonMs=HORIZON_MS,
     assumptions=[
@@ -51,7 +50,8 @@ DECK = ScenarioDeck(
         "운전자가 달랐다 - 그 결과를 미리 넣지 않는다.",
         "Q2는 원자료에서 P3가 약을 받아다 준 심부름이다. 엔진에 심부름 흐름이 없어 "
         "'P11이 읍내에 가야 한다'로 바꿔 넣었다. 이 변환은 실험 가정이다.",
-        "Q4(20:30 위급)는 이 deck에 없다. 엔진에 119 접수·출동·인계 흐름이 아직 없다.",
+        "Q4의 신고자·시각·장소는 원자료다. 구급대 출동 소요(자원 가정 22분)는 원자료의 관측 "
+        "하나이지 구급 통계가 아니며, 환자 상태·이송은 시뮬레이터 밖이다.",
         "09:30 정기 안부 문진이 발송된다는 것은 실험 가정이다. 실제 운영 시각이 아니다.",
         "차량 좌석 수·기관 근무시간은 원자료에 없다. ResourceRevision의 가정값을 쓴다.",
     ],
@@ -114,6 +114,26 @@ DECK = ScenarioDeck(
             prohibitedInferences=[
                 "두 요청을 같은 차량에 자동으로 합치지 말 것",
                 "가게를 비울 수 없는 부부의 사정을 MEDial이 아는 것으로 처리하지 말 것",
+            ],
+        ),
+        ScenarioEvent(
+            id="exo-day-q4-emergency-p8",
+            simTimeMs=Q4_MS,
+            type=EventType.emergency_reported,
+            subjectId="P8",
+            initiallyVisibleTo=[MEDIAL, "P7", "P8"],
+            payload={
+                "requestId": "req-P8-emergency",
+                "subjectId": "P8",
+                "reporterId": "P7",
+                "place": "HOME:P8",
+                "channel": "phone",
+                "report": "형이 갑자기 쓰러졌어요. 지금 집이에요. 빨리 와 주세요.",
+            },
+            hiddenTruth="원본(Q4)에서는 P7이 2분 만에 도착하고 구급대가 22분 뒤 인계받았다. 그 결과를 미리 넣지 않는다.",
+            prohibitedInferences=[
+                "신고 내용에서 진단명을 만들지 말 것",
+                "구급대 도착 전에 상황이 끝난 것으로 표시하지 말 것",
             ],
         ),
     ],

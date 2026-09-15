@@ -336,7 +336,7 @@ export default function ObserveScreen({
   // one being read, unless the researcher picked another.
   const newest = visibleEvents[visibleEvents.length - 1];
   useEffect(() => {
-    if (!newest || newest.correlationId === 'world') return;
+    if (!newest || newest.correlationId === 'world' || newest.correlationId === 'report') return;
     setRequestId((current) =>
       current && flows.some((f) => f.id === current) ? current : newest.correlationId,
     );

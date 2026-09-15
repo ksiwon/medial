@@ -211,18 +211,33 @@ export default function PrepareScreen({
   const [maxGenerations, setMaxGenerations] = useState(2);
   const [maxCandidates, setMaxCandidates] = useState(2);
   const [behaviourAdapter, setBehaviourAdapter] = useState('rule');
+  // The institutions default to the model when a key is present (the
+  // researcher's ask, 2026-09-15): two calls a day, the head tier. Without a
+  // key the procedure runs and nothing pretends otherwise.
+  const [institutionAdapter, setInstitutionAdapter] = useState(
+    capabilities.villageModel?.configured ? 'llm' : 'rule',
+  );
   const [reviewAdapter, setReviewAdapter] = useState('rule');
   const [improvementAdapter, setImprovementAdapter] = useState('rule');
   // The server contract is callBudget=0 == no ceiling, and that contract is not
   // being changed here. For a rule-only run there are no calls to bound, so 0
   // is honest; the moment a model adapter is picked the screen asks for a real
   // number rather than recording an invented one as the researcher's choice.
-  const [callBudget, setCallBudget] = useState(0);
+  // A ceiling is required whenever a model is in the loop. With a key present
+  // the institutions start as models, so a working default is set here rather
+  // than blocking the start button on an empty field: two calls a day for the
+  // institutions, and room for the reviews if those are switched on too.
+  const [callBudget, setCallBudget] = useState(
+    capabilities.villageModel?.configured ? 30 : 0,
+  );
 
   const online = capabilities.model.configured;
   const villageOnline = Boolean(capabilities.villageModel?.configured);
   const usesModel =
-    behaviourAdapter === 'llm' || reviewAdapter === 'llm' || improvementAdapter === 'llm';
+    behaviourAdapter === 'llm' ||
+    institutionAdapter === 'llm' ||
+    reviewAdapter === 'llm' ||
+    improvementAdapter === 'llm';
   const policy = policies.find((p) => p.id === basePolicyId);
   const effectiveLabel = label.trim() || question.trim().slice(0, 40) || '이름 없는 실험';
 
@@ -240,6 +255,7 @@ export default function PrepareScreen({
     maxGenerations <= 2 ? '초기안과 수정안 한 쌍' : `초기안 포함 최대 ${maxGenerations}개 버전`,
     `시나리오 ${decks.length}개`,
     behaviourAdapter === 'rule' ? '규칙 기반 마을' : 'LLM 마을',
+    institutionAdapter === 'rule' ? '절차 기반 기관' : 'LLM 기관',
     reviewAdapter === 'rule' ? '규칙 기반 리뷰' : 'LLM 리뷰',
     improvementAdapter === 'rule' ? '규칙 기반 개선' : 'LLM 개선',
     usesModel ? (callBudget > 0 ? `모델 호출 ${callBudget}회 상한` : '모델 호출 무제한') : '모델 호출 없음',
@@ -413,6 +429,18 @@ export default function PrepareScreen({
               </Select>
             </Field>
             <Field>
+              기관 (보건소 · 119)
+              <Select
+                value={institutionAdapter}
+                onChange={(e) => setInstitutionAdapter(e.target.value)}
+              >
+                <option value="rule">절차 기반 (모델 호출 없음)</option>
+                <option value="llm" disabled={!villageOnline}>
+                  LLM (실제 모델 호출)
+                </option>
+              </Select>
+            </Field>
+            <Field>
               주민 리뷰
               <Select value={reviewAdapter} onChange={(e) => setReviewAdapter(e.target.value)}>
                 <option value="rule">규칙 기반 (모델 호출 없음)</option>
@@ -541,6 +569,7 @@ export default function PrepareScreen({
                 maxChangeSetsPerGeneration: maxCandidates,
                 callBudget,
                 behaviourAdapter,
+                institutionAdapter,
                 reviewAdapter,
                 improvementAdapter,
               })

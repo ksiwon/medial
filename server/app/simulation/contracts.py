@@ -105,6 +105,16 @@ class EventType(str, Enum):
     institution_queued = "institution.queued"
     institution_review_started = "institution.review_started"
     institution_review_completed = "institution.review_completed"
+    #: MEDial's end-of-day report to the health centre: per resident, what it
+    #: observed today. The centre answers with what it will do about each.
+    institution_report_sent = "institution.report_sent"
+    institution_report_reviewed = "institution.report_reviewed"
+    # emergency (Q4): a neighbour's report, 119's dispatch, the crew's arrival
+    # and the handover. Not a clinical judgement anywhere in the chain.
+    emergency_reported = "emergency.reported"
+    ems_dispatched = "ems.dispatched"
+    ems_arrived = "ems.arrived"
+    ems_handover = "ems.handover"
     #: A checkpoint fork swapped the policy mid-run. Researcher-only: it is a
     #: fact about the experiment, not about the village.
     policy_switched = "policy.switched"
@@ -154,6 +164,12 @@ EVENT_PAYLOAD_REQUIRED: dict[EventType, tuple[str, ...]] = {
     EventType.institution_queued: ("requestId", "queueDepth"),
     EventType.institution_review_started: ("requestId",),
     EventType.institution_review_completed: ("requestId", "outcome"),
+    EventType.institution_report_sent: ("toActorId", "subjects"),
+    EventType.institution_report_reviewed: ("actions",),
+    EventType.emergency_reported: ("subjectId", "reporterId", "place", "report"),
+    EventType.ems_dispatched: ("requestId", "etaMinutes"),
+    EventType.ems_arrived: ("requestId", "place"),
+    EventType.ems_handover: ("requestId", "subjectId"),
     EventType.policy_switched: ("fromPolicyId", "toPolicyId", "atSeq"),
     EventType.need_resolved: ("requestId", "subjectId", "outcome", "resolutionPath"),
     EventType.need_unresolved: ("requestId", "subjectId", "reason"),
@@ -281,6 +297,9 @@ class ProposalAction(str, Enum):
     wait = "wait"
     report_observation = "report_observation"
     resolve = "resolve"
+    #: An institution answering a report with what it will do: one entry per
+    #: subject in ``params["actions"]``. Never a clinical judgement.
+    plan_actions = "plan_actions"
     #: "I cannot go, but I will ask someone myself." The neighbour is named in
     #: ``targetActorId`` and the engine checks the relation before committing.
     relay = "relay"
@@ -458,6 +477,12 @@ class ResourceRevision(Base):
     #: this for anybody, so it is an experiment assumption and is reported as one
     #: everywhere a reservation is shown.
     assumedVehicleSeats: int = Field(default=3, ge=1, le=8)
+    #: 119: minutes from dispatch to arrival at a village house. The source
+    #: recorded 22 minutes for Q4; it is a single observation, not a rate.
+    emsResponseMinutes: int = Field(default=22, ge=1, le=120)
+    #: When MEDial sends the health centre its daily report, or None for
+    #: never. 17:00 leaves an hour of shift for a follow-up call.
+    dailyReportAtMs: int | None = 17 * 60 * 60 * 1000
     assumptions: list[str] = Field(default_factory=list)
 
 
@@ -798,7 +823,9 @@ class ModelPolicy(Base):
     mode: Literal["off", "record", "replay"] = "off"
 
     def model_for(self, role: str) -> str:
-        return self.headModelId if role == "head" else self.residentModelId
+        # An institution reads a day's report or an emergency and decides
+        # what its service does: the larger tier, like MEDial's head.
+        return self.headModelId if role in ("head", "institution") else self.residentModelId
 
 
 class ModelCallRecord(Base):
@@ -869,6 +896,10 @@ class Attempt(Base):
     status: AttemptStatus = AttemptStatus.created
     engineVersion: str = ENGINE_VERSION
     adapter: Literal["rule", "scripted", "llm"] = "rule"
+    #: Who plays the health centre and 119: a fixed procedure, or a model. Kept
+    #: apart from ``adapter`` so "model residents, rule institutions" and the
+    #: reverse are both expressible and both visible in the record.
+    institutionAdapter: Literal["rule", "llm"] = "rule"
     #: Which world rules this run used. Defaulted so that attempts stored before
     #: the environment was extracted still load; they all ran on ``env-v1``.
     environmentRevisionId: str = "env-v1"  # noqa: E501 - stored runs predate env-v2

@@ -252,3 +252,9 @@ npm run e2e                         # 6 passed (Chromium · 합성 마을 · .ru
 ## 후속 · 원자료의 하루 덱 (같은 날 · D104)
 
 `deck-eunjeom-day-v1`: Q1·Q3·Q2·Q5를 한 하루에. 준비 화면 기본값이 이 덱이라 v0가 곧 마을의 하루다. Q4(위급)는 엔진에 흐름이 없어 **넣지 않았고** 덱 assumptions와 D104에 그렇게 적었다. 조율 화면의 안부 연락 흐름은 확인 요청으로 넘어가면 닫히고, '지금 일어난 일'은 조용한 시간을 조용하다고 말한다.
+
+## 후속 · 보건소·119 에이전트와 Q4 (같은 날 · D105)
+
+- `agents/institutions.py`: 119 상황실·보건소의 절차 버전과 모델 버전(Gemini, head 계층). 엔진에 `emergency.reported → handoff → ems.dispatched → ems.arrived → ems.handover` 흐름과 17:00 `institution.report_sent → institution.report_reviewed`(+ 그날의 전화 확인) 추가. 하루 덱에 Q4 포함 — 이제 원자료 5퀘스트 전부가 한 하루에 돈다.
+- 검사: pytest 428(신규 10) · vitest 63 · e2e 6 · Gemini 실제 호출 2회로 하루 실행 1회(119 "관할 구급대 즉시 출동", 보건소 12명 조치).
+- 하지 않은 것: 119 출동 이후(이송·응급실), 보건소의 다음 날 방문 실행(하루 단위라 계획으로만), 구급차를 지도에 그리기.

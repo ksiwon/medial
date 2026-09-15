@@ -81,6 +81,8 @@ export interface StartRequest {
   callBudget: number;
   /** Who runs the village: rules, or MEDial's head and every resident as models. */
   behaviourAdapter: string;
+  /** The health centre and 119: a fixed procedure, or the head-tier model. */
+  institutionAdapter: string;
   reviewAdapter: string;
   improvementAdapter: string;
 }

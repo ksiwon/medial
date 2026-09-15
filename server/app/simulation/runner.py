@@ -70,7 +70,8 @@ def build_attempt(attempt_id: str, label: str, policy: PolicyRevision, deck: Sce
                   day: Any | None = None,
                   model_policy: Any | None = None,
                   relations: Any | None = None,
-                  ledger: Any | None = None) -> Attempt:
+                  ledger: Any | None = None,
+                  institution_adapter: str = "rule") -> Attempt:
     environment = environment or get_environment()
     model_policy = model_policy or ModelPolicy()
     relations = relations or get_relations()
@@ -93,6 +94,7 @@ def build_attempt(attempt_id: str, label: str, policy: PolicyRevision, deck: Sce
         status=AttemptStatus.created,
         engineVersion=ENGINE_VERSION,
         adapter=adapter,  # type: ignore[arg-type]
+        institutionAdapter=institution_adapter,  # type: ignore[arg-type]
         environmentRevisionId=environment.id,
         dayRealizationId=day.id if day is not None else None,
         modelPolicy=model_policy,
@@ -147,7 +149,8 @@ def run_attempt(attempt_id: str, policy_id: str, deck_id: str, resource_id: str,
                 inherited_model_calls: Any | None = None,
                 provider: Any | None = None,
                 relation_id: str | None = None,
-                ledger: Any | None = None) -> RunResult:
+                ledger: Any | None = None,
+                institution_adapter: str = "rule") -> RunResult:
     """``policy`` overrides the built-in registry so that an edited revision,
     which only exists in the service, can be executed without being registered
     globally."""
@@ -191,7 +194,7 @@ def run_attempt(attempt_id: str, policy_id: str, deck_id: str, resource_id: str,
     attempt = build_attempt(attempt_id, label or policy.label, policy, deck, resources,
                             village, seed=seed, adapter=adapter,
                             parent_id=parent_id, parent_seq=parent_seq,
-                            lineage=lineage,
+                            lineage=lineage, institution_adapter=institution_adapter,
                             persona_revision=provenance.get("revisionId"),
                             persona_source=provenance.get("dataSource"),
                             environment=env, day=day, model_policy=model_policy,

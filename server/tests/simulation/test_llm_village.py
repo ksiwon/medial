@@ -205,7 +205,13 @@ def test_a_second_bad_choice_is_a_failure_and_nothing_falls_back_to_the_rules():
                 if e.payload.get("reason") == "adapter_error"]
     assert failures and failures[0].payload["actorId"] == MEDIAL
     assert "두 번" in failures[0].payload["detail"]
-    assert result.metrics["requests"]["unresolved"] == 1
+    # Nothing MEDial did closed the request. What did close it, hours later,
+    # is the health centre's own follow-up call after the 17:00 daily report
+    # (2026-09-15) - the institution acting on what it was told, not the rule
+    # head standing in for the model head.
+    closed = _of(result, EventType.need_resolved)
+    assert [e.payload["resolutionPath"] for e in closed] in ([], ["institution_followup_call"])
+    assert all(e.simTimeMs >= 17 * 3600_000 for e in closed)
 
 
 @pytest.mark.parametrize(("policy_id", "order", "expect"), [

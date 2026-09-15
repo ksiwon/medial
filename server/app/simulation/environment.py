@@ -36,6 +36,8 @@ SCHEDULING = {
     "relay": 35,
     "arrival": 40,
     "institution": 50,
+    # A crew's arrival is an arrival: settled with the others, before rides.
+    "ems": 45,
     "transport": 60,
     "finalize": 90,
 }

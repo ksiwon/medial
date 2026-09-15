@@ -58,6 +58,7 @@ class CreateAttemptBody(BaseModel):
     label: str | None = None
     seed: int = 17
     adapter: str = "rule"
+    institutionAdapter: str = "rule"
 
 
 class CommandBody(BaseModel):
@@ -157,7 +158,8 @@ def create_attempt(body: CreateAttemptBody) -> dict[str, Any]:
     try:
         return get_service().create_attempt(
             body.policyId, body.scenarioDeckId, body.resourceRevisionId,
-            label=body.label, seed=body.seed, adapter=body.adapter)
+            label=body.label, seed=body.seed, adapter=body.adapter,
+            institution_adapter=body.institutionAdapter)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

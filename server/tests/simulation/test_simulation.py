@@ -647,8 +647,14 @@ def test_model_failure_is_not_recorded_as_a_resident_action():
     assert waiting[0].payload["actorId"] == "MEDial"
     classified = [e for e in result.events if e.type is EventType.medial_classified]
     assert classified and classified[0].payload.get("source") == "adapter_error"
-    unresolved = [e for e in result.events if e.type is EventType.need_unresolved]
-    assert unresolved
+    # MEDial itself never closed it. The one thing that may is the health
+    # centre's follow-up call after the 17:00 daily report (2026-09-15): that
+    # is the institution acting on the report, not a rule fallback.
+    closed = [e for e in result.events if e.type is EventType.need_resolved]
+    assert all(e.payload["resolutionPath"] == "institution_followup_call"
+               and e.simTimeMs >= 17 * 3600_000 for e in closed)
+    if not closed:
+        assert [e for e in result.events if e.type is EventType.need_unresolved]
 
 
 def test_llm_prompt_carries_only_the_actor_own_context():

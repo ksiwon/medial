@@ -115,7 +115,8 @@ class IterationService:
             },
             "notImplemented": [
                 "다일(longitudinal) 기억 - 하루 단위만 실행한다",
-                "119 접수·출동·인계",
+                "119 출동 이후 (이송·응급실). 접수·출동·인계까지만 기록한다",
+                "보건소의 다음 날 방문 (하루 단위 실행이라 계획으로만 기록한다)",
                 "보건소장의 배정·우선순위",
                 "지원 목록 밖의 서비스 절차 (사전 가능 시간 확인, 종료 통지 등)",
             ],
@@ -140,6 +141,7 @@ class IterationService:
                        mode: str = "controlled_iteration",
                        control: str = "bounded_auto",
                        behaviour_adapter: str = "rule",
+                       institution_adapter: str = "rule",
                        review_adapter: str = "rule",
                        improvement_adapter: str = "rule") -> IterationSession:
         if base_policy_id not in self.sim.policies:
@@ -169,7 +171,7 @@ class IterationService:
                 "온라인 어댑터를 선택했지만 모델 키가 서버에 설정되어 있지 않다. "
                 "rule 또는 scripted 로 실행하거나 서버 환경변수를 설정한다. "
                 "실패를 scripted 성공으로 대체하지 않는다.")
-        if behaviour_adapter == "llm":
+        if "llm" in (behaviour_adapter, institution_adapter):
             # Fails here, before a session exists, for the same reasons an
             # attempt would: no key, or a model id the provider does not offer.
             self.sim._model_policy_for("llm")
@@ -202,6 +204,7 @@ class IterationService:
             maxGenerations=max_generations, maxChangeSetsPerGeneration=max_change_sets,
             callBudget=call_budget, tokenBudget=token_budget,
             behaviourAdapter=behaviour_adapter,  # type: ignore[arg-type]
+            institutionAdapter=institution_adapter,  # type: ignore[arg-type]
             reviewAdapter=review_adapter,  # type: ignore[arg-type]
             improvementAdapter=improvement_adapter,  # type: ignore[arg-type]
             createdAt=now_iso(), updatedAt=now_iso())

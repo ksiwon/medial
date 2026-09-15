@@ -55,6 +55,7 @@ class CreateSessionBody(BaseModel):
     mode: str = "controlled_iteration"
     control: str = "bounded_auto"
     behaviourAdapter: str = "rule"
+    institutionAdapter: str = "rule"
     reviewAdapter: str = "rule"
     improvementAdapter: str = "rule"
 
@@ -144,6 +145,7 @@ def create_session(body: CreateSessionBody) -> dict[str, Any]:
             call_budget=body.callBudget, token_budget=body.tokenBudget,
             mode=body.mode,
             control=body.control, behaviour_adapter=body.behaviourAdapter,
+            institution_adapter=body.institutionAdapter,
             review_adapter=body.reviewAdapter,
             improvement_adapter=body.improvementAdapter)
     except KeyError as exc:

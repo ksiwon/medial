@@ -221,7 +221,8 @@ class IterationEngine:
                     generation.policyRevisionId, deck_id,
                     self.session.resourceRevisionId,
                     label="%s · %s" % (generation.label, DECKS[deck_id].label),
-                    adapter=self.session.behaviourAdapter)
+                    adapter=self.session.behaviourAdapter,
+                    institution_adapter=self.session.institutionAdapter)
                 attempt_ids.append(detail["attempt"]["id"])
                 # The village's own model calls count against the same budget
                 # as the reviews. Replayed calls cost nothing and are not counted.
@@ -416,7 +417,8 @@ class IterationEngine:
                 detail = self.service.create_attempt(
                     revision.id, deck_id, self.session.resourceRevisionId,
                     label="%s · %s" % (child.label, DECKS[deck_id].label),
-                    adapter=self.session.behaviourAdapter)
+                    adapter=self.session.behaviourAdapter,
+                    institution_adapter=self.session.institutionAdapter)
                 attempt_ids.append(detail["attempt"]["id"])
             child.attemptIds = attempt_ids
             self.store.update_generation(child)

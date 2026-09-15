@@ -448,6 +448,8 @@ class IterationSession(Base):
     #: improvement by model. The second is reported as *hybrid*, never as
     #: "the residents are an LLM".
     behaviourAdapter: Literal["rule", "scripted", "llm"] = "rule"
+    #: The health centre and 119: procedure, or a model (the head tier).
+    institutionAdapter: Literal["rule", "llm"] = "rule"
     reviewAdapter: Literal["rule", "llm", "scripted"] = "rule"
     improvementAdapter: Literal["rule", "llm", "scripted"] = "rule"
     status: SessionStatus = SessionStatus.created
@@ -468,7 +470,8 @@ class IterationSession(Base):
         for review or proposal over a rule-driven village are ``hybrid``."""
         if self.behaviourAdapter == "llm":
             return "llm"
-        if self.reviewAdapter == "rule" and self.improvementAdapter == "rule":
+        if (self.reviewAdapter == "rule" and self.improvementAdapter == "rule"
+                and self.institutionAdapter == "rule"):
             return "rule" if self.behaviourAdapter == "rule" else "scripted"
         return "hybrid"
 

@@ -237,12 +237,14 @@ class SimulationService:
     # -- attempts ---------------------------------------------------------
     def create_attempt(self, policy_id: str, deck_id: str, resource_id: str,
                        label: str | None = None, seed: int = 17,
-                       adapter: str = "rule") -> dict[str, Any]:
+                       adapter: str = "rule",
+                       institution_adapter: str = "rule") -> dict[str, Any]:
         if policy_id not in self.policies:
             raise KeyError("unknown policy %s" % policy_id)
         attempt_id = "att-%s-%s" % (policy_id.replace("policy-", "")[:16], _short_id())
         return self._execute(attempt_id, policy_id, deck_id, resource_id, label, seed,
-                             adapter, lineage=AttemptLineage.root)
+                             adapter, lineage=AttemptLineage.root,
+                             institution_adapter=institution_adapter)
 
     def rerun_attempt(self, attempt_id: str, changes: dict[str, Any], reason: str,
                       label: str | None = None) -> dict[str, Any]:
@@ -320,7 +322,8 @@ class SimulationService:
              parent_id: str | None = None, parent_seq: int | None = None,
              lineage: AttemptLineage = AttemptLineage.root,
              policy_switch: dict[str, Any] | None = None,
-             inherit_calls_from: str | None = None) -> Any:
+             inherit_calls_from: str | None = None,
+             institution_adapter: str = "rule") -> Any:
         policy = self.policies[policy_id]
         if deck_id not in DECKS:
             raise KeyError("unknown deck %s" % deck_id)
@@ -331,9 +334,11 @@ class SimulationService:
         running_policy = policy
         if policy_switch is not None and policy.parentId in self.policies:
             running_policy = self.policies[policy.parentId]
-        model_policy = self._model_policy_for(adapter)
+        model_policy = self._model_policy_for(
+            "llm" if "llm" in (adapter, institution_adapter) else adapter)
         return run_attempt(attempt_id, running_policy.id, deck_id, resource_id,
                            label=label, seed=seed, adapter=adapter,
+                           institution_adapter=institution_adapter,
                            village=self.village, parent_id=parent_id,
                            parent_seq=parent_seq, policy=running_policy,
                            lineage=lineage, policy_switch=policy_switch,
@@ -396,10 +401,11 @@ class SimulationService:
                  label: str | None, seed: int, adapter: str,
                  parent_id: str | None = None,
                  parent_seq: int | None = None,
-                 lineage: AttemptLineage = AttemptLineage.root) -> dict[str, Any]:
+                 lineage: AttemptLineage = AttemptLineage.root,
+                 institution_adapter: str = "rule") -> dict[str, Any]:
         result = self._run(attempt_id, policy_id, deck_id, resource_id, label, seed,
                            adapter, parent_id=parent_id, parent_seq=parent_seq,
-                           lineage=lineage)
+                           lineage=lineage, institution_adapter=institution_adapter)
         return self._store_and_return(result, self.policies[policy_id])
 
     def get_attempt(self, attempt_id: str) -> dict[str, Any]:

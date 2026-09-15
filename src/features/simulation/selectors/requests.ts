@@ -38,8 +38,12 @@ const STAGE_OF: Record<string, StageKey> = {
   'request.declined': 'coordinate',
   'request.deferred': 'coordinate',
   'request.relayed': 'coordinate',
+  'emergency.reported': 'observe',
   'handoff.requested': 'coordinate',
   'handoff.accepted': 'coordinate',
+  'ems.dispatched': 'coordinate',
+  'ems.arrived': 'result',
+  'ems.handover': 'result',
   'institution.queued': 'coordinate',
   'institution.review_started': 'coordinate',
   'transport.reservation_made': 'coordinate',
@@ -95,6 +99,9 @@ export function requestFlows(visible: DomainEvent[]): RequestFlow[] {
     // "world" is the engine's own bookkeeping stream (day started, attempt
     // completed). It is not a request and must not be shown as one.
     if (!key || key === 'world') continue;
+    // The daily report to the health centre is MEDial's own correspondence,
+    // not a request about anyone; it is read in the day's events instead.
+    if (key === 'report') continue;
     // A `world.*` event carries a request's correlation id but is a fact of the
     // world, not of the request: `world.reachability_resolved` says *why* a
     // phone went unanswered, which is researcher-only knowledge the caller

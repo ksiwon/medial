@@ -23,6 +23,7 @@ export function learnPlaces(labels: Record<string, string>): void {
 /** How a request was closed, in words. The keys are the engine's
  *  `resolutionPath`; an unknown key is printed as it is. */
 const PATH_WORD: Record<string, string> = {
+  ems_handover: '구급대에 인계',
   neighbour_visit: '이웃·이장이 직접 가서 확인',
   subject_answered_retry: '본인이 다시 건 연락에 응답',
   institution_followup_call: '보건소 담당자의 전화에 본인이 응답',
@@ -99,7 +100,11 @@ export const personName = (id: string | null | undefined): string =>
         ? '이장'
         : id === 'HC_NURSE'
           ? '보건소 담당자'
-          : id;
+          : id === 'EMS_DISPATCH'
+            ? '119 상황실'
+            : id === 'EMS_CREW'
+              ? '구급대'
+              : id;
 
 /** A list of actors, named the way every other panel names them. The synthesis
  *  and proposal payloads carry raw ids, and printing them straight made the
@@ -396,6 +401,47 @@ export function sentenceFor(event: DomainEvent): { text: string; tone: StoryTone
         }.`,
         tone: 'plain',
       };
+    case 'emergency.reported':
+      return {
+        text: `${withParticle(who, 'subject')} ${withParticle(person(str(p.subjectId)), 'topic')} 위급하다고 알렸습니다${
+          str(p.report) ? ` — “${str(p.report)}”` : ''
+        }`,
+        tone: 'bad',
+      };
+    case 'ems.dispatched':
+      return {
+        text: `119가 접수했고 구급대가 출동합니다 (도착까지 약 ${String(p.etaMinutes ?? '?')}분).`,
+        tone: 'attention',
+      };
+    case 'ems.arrived':
+      return { text: `구급대가 ${placeWord(str(p.place))}에 도착했습니다.`, tone: 'good' };
+    case 'ems.handover':
+      return {
+        text: `${withParticle(person(str(p.subjectId)), 'object')} 구급대에 인계했습니다.`,
+        tone: 'good',
+      };
+    case 'institution.report_sent':
+      return {
+        text: `MEDial이 보건소에 오늘의 보고를 보냈습니다 (주민 ${
+          Array.isArray(p.subjects) ? p.subjects.length : '?'
+        }명).`,
+        tone: 'plain',
+      };
+    case 'institution.report_reviewed': {
+      const actions = Array.isArray(p.actions) ? (p.actions as { action: string }[]) : [];
+      const calls = actions.filter((a) => a.action === 'followup_call').length;
+      const visits = actions.filter((a) => a.action === 'home_visit').length;
+      const notes = actions.filter((a) => a.action === 'note').length;
+      const parts = [
+        calls ? `전화 확인 ${calls}명` : '',
+        visits ? `방문 확인 ${visits}명` : '',
+        notes ? `기록만 ${notes}명` : '',
+      ].filter(Boolean);
+      return {
+        text: `보건소가 보고를 읽고 조치를 정했습니다${parts.length ? ` — ${parts.join(' · ')}` : ' — 할 일 없음'}.`,
+        tone: 'plain',
+      };
+    }
     case 'need.resolved':
       return { text: `요청이 끝났습니다 (${pathWord(str(p.resolutionPath))}).`, tone: 'good' };
     case 'need.unresolved':

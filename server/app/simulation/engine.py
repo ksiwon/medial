@@ -32,6 +32,11 @@ from typing import Any
 from .agents.base import AdapterError, ProposalFactory
 from .agents.llm import LlmAdapter
 from .agents.model_calls import ModelCallLog
+from .agents.institutions import (
+    LlmInstitutionAdapter,
+    RuleEmsDispatchAdapter,
+    RuleHealthCentreAdapter,
+)
 from .agents.rule_agents import (
     RuleHealthStaffAdapter,
     RuleResidentAdapter,
@@ -40,10 +45,13 @@ from .agents.rule_agents import (
 from .agents.scripted import ScriptedAdapter
 from .contracts import (
     ENGINE,
+    EMS_CREW,
+    EMS_DISPATCH,
     HEALTH_STAFF,
     MEDIAL,
     RESEARCHER,
     Attempt,
+    Candidate,
     Channel,
     ContactStrategy,
     DecisionRecord,
@@ -296,30 +304,44 @@ class Engine:
         isolates what each actor may *see* - see ``observations`` - and this is
         the same isolation on the side that does the talking.
         """
-        actor_ids = [r["id"] for r in self.village.residents] + [HEALTH_STAFF]
-        if self.attempt.adapter == "llm":
-            # The health centre stays a rule adapter: doc 19 keeps the
-            # institution's procedure fixed, and step 5 is where it grows.
-            adapters = {actor_id: LlmAdapter(self.factory, actor_id, self.model_calls,
-                                             provider=self._provider,
-                                             interaction=self.environment.interaction)
-                        for actor_id in actor_ids if actor_id != HEALTH_STAFF}
-            adapters[HEALTH_STAFF] = RuleHealthStaffAdapter(self.factory)
-            return adapters
+        resident_ids = [r["id"] for r in self.village.residents]
+        institution_ids = [HEALTH_STAFF, EMS_DISPATCH]
         if self.attempt.adapter == "scripted":
             # A copy each: the script is matched by actorId anyway, so splitting
             # changes no behaviour, and it stops one actor's consumed entries
             # from being bookkeeping the others share.
             return {actor_id: ScriptedAdapter(self.factory, list(script or []))
-                    for actor_id in actor_ids}
-        rules = self.environment.interaction
+                    for actor_id in resident_ids + institution_ids}
+
         adapters: dict[str, Any] = {}
-        for resident in self.village.residents:
-            adapters[resident["id"]] = (
-                RuleVillageHeadAdapter(self.factory, rules) if resident["isVillageHead"]
-                else RuleResidentAdapter(self.factory, rules)
-            )
-        adapters[HEALTH_STAFF] = RuleHealthStaffAdapter(self.factory)
+        if self.attempt.adapter == "llm":
+            adapters.update({actor_id: LlmAdapter(self.factory, actor_id, self.model_calls,
+                                                  provider=self._provider,
+                                                  interaction=self.environment.interaction)
+                             for actor_id in resident_ids})
+        else:
+            rules = self.environment.interaction
+            for resident in self.village.residents:
+                adapters[resident["id"]] = (
+                    RuleVillageHeadAdapter(self.factory, rules) if resident["isVillageHead"]
+                    else RuleResidentAdapter(self.factory, rules)
+                )
+
+        # The institutions are chosen separately from the residents (Attempt.
+        # institutionAdapter): "model villagers, procedural centre" and the
+        # reverse are both real conditions. The hand-off intake stays the
+        # procedure either way; the model is asked only where there is a
+        # judgement to make - the daily report and an emergency.
+        intake = RuleHealthStaffAdapter(self.factory)
+        if self.attempt.institutionAdapter == "llm":
+            adapters[HEALTH_STAFF] = LlmInstitutionAdapter(
+                self.factory, HEALTH_STAFF, self.model_calls, provider=self._provider,
+                fallback_handoff=intake)
+            adapters[EMS_DISPATCH] = LlmInstitutionAdapter(
+                self.factory, EMS_DISPATCH, self.model_calls, provider=self._provider)
+        else:
+            adapters[HEALTH_STAFF] = RuleHealthCentreAdapter(self.factory, intake)
+            adapters[EMS_DISPATCH] = RuleEmsDispatchAdapter(self.factory)
         return adapters
 
     # -- event plumbing --------------------------------------------------
@@ -359,6 +381,9 @@ class Engine:
         for scenario_event in self.deck.events:
             self._schedule(scenario_event.simTimeMs, "scenario", {"event": scenario_event})
         self._schedule(self.deck.horizonMs, "finalize", {})
+        report_at = self.resources.dailyReportAtMs
+        if report_at is not None and DAY_START_MS < report_at < self.deck.horizonMs:
+            self._schedule(report_at, "institution:report", {})
 
         while self._queue:
             pending = heapq.heappop(self._queue)
@@ -454,6 +479,9 @@ class Engine:
             ("institution", "review_done"): self._on_review_done,
             ("institution", "call"): self._on_institution_call,
             ("institution", "visit_arrival"): self._on_visit_arrival,
+            ("institution", "report"): self._on_daily_report,
+            ("institution", "followup_call"): self._on_followup_call,
+            ("ems", "arrival"): self._on_ems_arrival,
             ("transport", "pickup"): self._on_pickup,
             ("transport", "dropoff"): self._on_dropoff,
             ("transport", "return"): self._on_return_trip,
@@ -475,6 +503,9 @@ class Engine:
             return
         if scenario_event.type is EventType.transport_need_raised:
             self._raise_transport_need(at_ms, scenario_event)
+            return
+        if scenario_event.type is EventType.emergency_reported:
+            self._raise_emergency(at_ms, scenario_event)
             return
         raise ValueError("deck event type %s is not supported in this slice"
                          % scenario_event.type.value)
@@ -1706,9 +1737,265 @@ class Engine:
         self._resolve(at_ms, request, outcome="ride_completed",
                       path="neighbour_ride", by=reservation.driverId)
 
+    # -- Q4: an emergency ------------------------------------------------------
+    def _raise_emergency(self, at_ms: int, scenario_event: Any) -> None:
+        """A neighbour reports an emergency about somebody.
+
+        Fixed by the deck: who reported, about whom, from where, in what
+        words. Everything after - whether 119 takes it, how long the crew
+        takes, whether the reporter stays - is the run. MEDial does two things
+        at once and neither is a judgement about the person's condition: it
+        hands the report to 119 as it was given, and asks the reporter to stay
+        with the person until the crew arrives.
+        """
+        payload = dict(scenario_event.payload)
+        subject = scenario_event.subjectId
+        reporter = payload.get("reporterId") or scenario_event.subjectId
+        place = payload.get("place") or self.world.place_of(subject, at_ms)
+        request_id = payload.get("requestId") or ("req-%s-emergency" % subject)
+        request = {"id": request_id, "subjectId": subject, "need": "emergency",
+                   "raisedMs": at_ms, "contactAttempts": 0, "closed": False,
+                   "lastContactMs": at_ms, "reporterId": reporter, "place": place}
+        self.requests[request_id] = request
+
+        reported = self._emit(at_ms, EventType.emergency_reported, reporter, request_id,
+                              sorted({MEDIAL, EMS_DISPATCH, reporter, subject, RESEARCHER}),
+                              {"subjectId": subject, "reporterId": reporter, "place": place,
+                               "report": payload.get("report", ""),
+                               "channel": payload.get("channel", Channel.phone.value),
+                               "scenarioEventId": scenario_event.id,
+                               "note": "신고자의 말 그대로. 상태 판정이 아니다."})
+        self.obs.record(self.attempt.id, MEDIAL, reported, "emergency.reported",
+                        subject_id=subject,
+                        payload={"reporterId": reporter, "place": place,
+                                 "report": payload.get("report", "")})
+        self._emit(at_ms, EventType.request_raised, MEDIAL, request_id,
+                   [MEDIAL, RESEARCHER],
+                   {"requestId": request_id, "subjectId": subject, "need": "emergency"})
+
+        decision = DecisionRecord(
+            id="dec-0", attemptId="", simTimeMs=at_ms, policyId=self.policy_revision.id,
+            question="위급 신고를 누구에게 넘길 것인가",
+            candidates=[Candidate(actorId=EMS_DISPATCH, included=True,
+                                  reason="위급 신고는 판단 없이 즉시 119로 넘긴다"),
+                        Candidate(actorId=reporter, included=True,
+                                  reason="신고자에게 구급대가 올 때까지 곁에 있어 달라고 부탁한다")],
+            chosen=EMS_DISPATCH,
+            rationale=("위급 신고는 MEDial이 상태를 읽지 않고 신고 내용 그대로 119에 넘긴다. "
+                       "이웃 조율은 구급대 도착까지의 시간을 메우는 것이지 대체가 아니다."),
+            observationIds=[reported.id])
+        self._commit_decision(at_ms, decision, request)
+
+        # 119 first.
+        disclosure = {"subjectId": subject, "fields": ["위치", "신고 내용"],
+                      "recipientClass": "emergency_service"}
+        requested = self._emit(at_ms, EventType.handoff_requested, MEDIAL, request_id,
+                               [MEDIAL, EMS_DISPATCH],
+                               {"requestId": request_id, "toActorId": EMS_DISPATCH,
+                                "disclosure": disclosure, "place": place,
+                                "note": "인계는 업무 이전이며 완료가 아니다."})
+        self._record_disclosure(disclosure, EMS_DISPATCH)
+        self.obs.record(self.attempt.id, EMS_DISPATCH, requested, "handoff.requested",
+                        subject_id=subject,
+                        payload={"requestId": request_id, "place": place})
+        self.obs.record(self.attempt.id, EMS_DISPATCH, reported, "emergency.reported",
+                        subject_id=subject,
+                        payload={"reporterId": reporter, "place": place,
+                                 "report": payload.get("report", "")})
+        self.obs.record(self.attempt.id, EMS_DISPATCH, reported, "emergency.reported",
+                        subject_id=subject,
+                        payload={"reporterId": reporter, "place": place,
+                                 "report": payload.get("report", "")}) \
+            if EMS_DISPATCH in reported.visibility else None
+
+        proposals = self._ask(EMS_DISPATCH, at_ms,
+                              [ProposalAction.accept, ProposalAction.defer,
+                               ProposalAction.decline])
+        answer = proposals[0] if proposals else None
+        if answer is None or answer.action is not ProposalAction.accept:
+            reason = "119가 접수하지 못했다"
+            if answer is not None:
+                reason += " (%s)" % answer.params.get("reason", "unspecified")
+                self._emit(at_ms, EventType.request_declined if answer.action is ProposalAction.decline
+                           else EventType.request_deferred, EMS_DISPATCH, request_id,
+                           [MEDIAL, EMS_DISPATCH, RESEARCHER],
+                           {"requestId": request_id, "reason": str(answer.params.get("reason")),
+                            "untilMs": at_ms, "utterance": answer.utterance,
+                            "rule": answer.params.get("rule", answer.params.get("reason"))})
+            self._unresolved(at_ms, request, reason)
+            return
+
+        eta_min = int(answer.params.get("etaMinutes") or self.resources.emsResponseMinutes)
+        self._emit(at_ms, EventType.handoff_accepted, EMS_DISPATCH, request_id,
+                   [MEDIAL, EMS_DISPATCH], {"requestId": request_id})
+        self._emit(at_ms, EventType.ems_dispatched, EMS_DISPATCH, request_id,
+                   [MEDIAL, EMS_DISPATCH, reporter, RESEARCHER],
+                   {"requestId": request_id, "etaMinutes": eta_min, "place": place,
+                    "utterance": answer.utterance,
+                    "basis": ("출동 소요 시간은 자원 가정(원자료 Q4의 22분 관측 하나)이며 "
+                              "구급 통계가 아니다.")})
+        self._schedule(at_ms + eta_min * MIN_MS, "ems:arrival", {"requestId": request_id})
+
+        # Then the reporter: stay until the crew is there. A resident's own
+        # answer, through their adapter like any other ask.
+        if reporter in self._adapters and reporter != subject:
+            offered = self._emit(at_ms, EventType.request_offered, MEDIAL, request_id,
+                                 [MEDIAL, reporter],
+                                 {"requestId": request_id, "toActorId": reporter,
+                                  "fromActorId": MEDIAL, "purpose": "stay_with",
+                                  "subjectId": subject, "place": place,
+                                  "disclosure": {"subjectId": subject, "fields": [],
+                                                 "recipientClass": "neighbour"}})
+            self.obs.record(self.attempt.id, reporter, offered, "request.offered",
+                            subject_id=subject,
+                            payload={"requestId": request_id, "purpose": "stay_with",
+                                     "fromActorId": MEDIAL, "place": place})
+            replies = self._ask(reporter, at_ms, [ProposalAction.accept, ProposalAction.decline])
+            reply = replies[0] if replies else None
+            if reply is not None and reply.action is ProposalAction.accept:
+                self._emit(at_ms, EventType.request_accepted, reporter, request_id,
+                           [MEDIAL, reporter, RESEARCHER],
+                           {"requestId": request_id, "utterance": reply.utterance,
+                            "purpose": "stay_with"})
+                # Walk there first (next door, in the source: two minutes), then
+                # stay until the crew has arrived. Nobody teleports.
+                from .world import leg
+
+                here = self.world.place_of(reporter, at_ms) or place
+                pieces: list[Segment] = []
+                arrive_ms = at_ms
+                if here != place:
+                    try:
+                        walk = leg(self.village, reporter, at_ms, here, place, False, None,
+                                   "task", "환자에게 이동", request_id=request_id)
+                        pieces.append(walk)
+                        arrive_ms = walk.end_ms
+                    except ValueError:
+                        pass
+                stay_until = max(arrive_ms, at_ms + eta_min * MIN_MS)
+                pieces.append(Segment(arrive_ms, stay_until, "stay", "task",
+                                      "환자 곁에서 대기", place=place, request_id=request_id))
+                self.world.divert(reporter, at_ms, pieces, "위급 신고 후 곁에서 대기")
+                self._emit(at_ms, EventType.task_started, reporter, request_id,
+                           [MEDIAL, reporter, RESEARCHER],
+                           {"requestId": request_id, "task": "stay_with", "place": place,
+                            "arrivesAtMs": arrive_ms})
+            elif reply is not None:
+                self._emit(at_ms, EventType.request_declined, reporter, request_id,
+                           [MEDIAL, reporter, RESEARCHER],
+                           {"requestId": request_id,
+                            "reason": str(reply.params.get("reason", "unspecified")),
+                            "utterance": reply.utterance,
+                            "rule": reply.params.get("rule", reply.params.get("reason"))})
+
+    def _on_ems_arrival(self, at_ms: int, payload: dict[str, Any]) -> None:
+        request = self.requests[payload["requestId"]]
+        if request.get("closed"):
+            return
+        subject = request["subjectId"]
+        place = request.get("place") or self.world.place_of(subject, at_ms)
+        reporter = request.get("reporterId")
+        audience = sorted({MEDIAL, EMS_DISPATCH, subject, RESEARCHER,
+                           *([reporter] if reporter else [])})
+        self._emit(at_ms, EventType.ems_arrived, EMS_CREW, request["id"], audience,
+                   {"requestId": request["id"], "place": place,
+                    "note": "구급대 도착. 이후는 구급대의 판단이며 이 기록의 밖이다."})
+        self._emit(at_ms, EventType.ems_handover, EMS_CREW, request["id"], audience,
+                   {"requestId": request["id"], "subjectId": subject,
+                    "handedOverBy": reporter,
+                    "note": "인계 시각만 기록한다. 이송 여부·상태는 이 시뮬레이터가 다루지 않는다."})
+        if reporter in self._adapters:
+            self._emit(at_ms, EventType.task_completed, reporter, request["id"],
+                       [MEDIAL, reporter, RESEARCHER],
+                       {"requestId": request["id"], "task": "stay_with"})
+        self._resolve(at_ms, request, outcome="handed_to_ems", path="ems_handover",
+                      by=EMS_CREW, also=[reporter] if reporter else None)
+
+    # -- the daily report to the health centre ---------------------------------
+    def _on_daily_report(self, at_ms: int, payload: dict[str, Any]) -> None:
+        """MEDial tells the centre what it observed today, per resident, and the
+        centre says what it will do. Only MEDial's own observations go in - the
+        centre never sees where anyone actually was.
+        """
+        rows: dict[str, dict[str, Any]] = {
+            r["id"]: {"subjectId": r["id"], "requests": 0, "resolved": 0, "unresolved": 0,
+                      "noResponse": 0, "rides": 0, "emergencies": 0, "outcomes": []}
+            for r in self.village.residents}
+        for request in self.requests.values():
+            row = rows.get(request["subjectId"])
+            if row is None:
+                continue
+            row["requests"] += 1
+            if request["need"] == "transport":
+                row["rides"] += 1
+            if request["need"] == "emergency":
+                row["emergencies"] += 1
+            if request.get("closed") and request.get("outcome") not in (None, "unresolved"):
+                row["resolved"] += 1
+                row["outcomes"].append(str(request.get("outcome")))
+            elif request.get("closed"):
+                row["unresolved"] += 1
+            else:
+                row["unresolved"] += 1
+        for obs in self.obs.for_actor(MEDIAL, at_ms):
+            if obs.kind == "contact.no_response" and obs.subjectId in rows:
+                rows[obs.subjectId]["noResponse"] += 1
+        subjects = list(rows.values())
+
+        sent = self._emit(at_ms, EventType.institution_report_sent, MEDIAL, "report",
+                          [MEDIAL, HEALTH_STAFF],
+                          {"toActorId": HEALTH_STAFF, "subjects": subjects,
+                           "note": ("MEDial이 오늘 직접 관측한 것만 담는다. 실제 위치·상태는 "
+                                    "들어 있지 않다.")})
+        self.obs.record(self.attempt.id, HEALTH_STAFF, sent, "institution.report_sent",
+                        payload={"subjects": subjects})
+        self.contacts.append({"atMs": at_ms, "channel": "report", "to": HEALTH_STAFF,
+                              "purpose": "daily_report", "from": MEDIAL})
+
+        proposals = self._ask(HEALTH_STAFF, at_ms, [ProposalAction.plan_actions])
+        plan = proposals[0] if proposals else None
+        if plan is None:
+            self._emit(at_ms, EventType.institution_report_reviewed, HEALTH_STAFF, "report",
+                       [MEDIAL, HEALTH_STAFF, RESEARCHER],
+                       {"actions": [], "outcome": "no_plan",
+                        "note": "보건소가 보고서에 답하지 않았다 (어댑터 실패 또는 무응답)."})
+            return
+        actions = list(plan.params.get("actions") or [])
+        self._emit(at_ms, EventType.institution_report_reviewed, HEALTH_STAFF, "report",
+                   [MEDIAL, HEALTH_STAFF, RESEARCHER],
+                   {"actions": actions, "outcome": "planned",
+                    "provenance": plan.params.get("provenance", "procedure"),
+                    "uncertainty": plan.uncertainty})
+        # A follow-up call today is made today, as the centre's own call. A
+        # visit is planned, and this build runs one day, so it is recorded
+        # as next-day work rather than pretended.
+        for row in actions:
+            if row.get("action") != "followup_call":
+                continue
+            subject = row.get("subjectId")
+            if subject not in rows:
+                continue
+            try:
+                item = self.desk.schedule("call", "followup-%s" % subject, at_ms,
+                                          self.resources.callMinutes * MIN_MS)
+            except ShiftExhausted:
+                continue
+            self._schedule(item.start_ms, "institution:followup_call", {"subjectId": subject})
+
+    def _on_followup_call(self, at_ms: int, payload: dict[str, Any]) -> None:
+        subject = payload["subjectId"]
+        self._contact(at_ms, {
+            "toActorId": subject, "channel": Channel.phone.value,
+            "purpose": "daily_report_followup", "fromActorId": HEALTH_STAFF,
+            "disclosure": {"subjectId": subject, "fields": ["연락 경위"],
+                           "recipientClass": "subject"},
+        }, attempt_number=1, correlation="followup-%s" % subject)
+
     # -- closure --------------------------------------------------------------
     def _resolve(self, at_ms: int, request: dict[str, Any], outcome: str, path: str,
-                 by: str | None = None) -> None:
+                 by: str | None = None, also: list[str] | None = None) -> None:
+        """``also``: people who were there when it ended and so know it did -
+        the neighbour who stayed until the crew arrived."""
         if request.get("closed"):
             return
         request["closed"] = True
@@ -1723,7 +2010,7 @@ class Engine:
         credited = reported_by or by
         visibility = sorted({MEDIAL, request["subjectId"], RESEARCHER,
                              *([credited] if credited else []),
-                             *([by] if by else [])})
+                             *([by] if by else []), *(also or [])})
         self._emit(at_ms, EventType.need_resolved, MEDIAL, request["id"], visibility,
                    {"requestId": request["id"], "subjectId": request["subjectId"],
                     "outcome": outcome, "resolutionPath": path, "byActorId": credited,
