@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEDial 연구노트 — 마을이 모델로 말하고, 연락 순서를 다시 세우다 (2026-09-14~15)</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1d2129; --ink:#e8eaed; --muted:#9aa4b2;
+    --line:#2a2f3a; --accent:#6ea8fe; --accent2:#7bdcb5; --warn:#ffb454; --bad:#ff6b6b;
+    --chip:#232936; --venue:#c8a6ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:"Pretendard","Apple SD Gothic Neo","Segoe UI",system-ui,sans-serif;
+       line-height:1.7;font-size:15px}
+  .wrap{max-width:1040px;margin:0 auto;padding:48px 24px 96px}
+  header.hero{border:1px solid var(--line);border-radius:18px;
+       background:linear-gradient(135deg,#1a1f2b,#12151c);padding:36px 34px;margin-bottom:34px}
+  header.hero .kick{color:var(--accent);font-weight:700;letter-spacing:.12em;font-size:12px;text-transform:uppercase}
+  header.hero h1{margin:.35em 0 .2em;font-size:30px;line-height:1.25}
+  header.hero p{margin:.2em 0;color:var(--muted)}
+  .meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .chip{background:var(--chip);border:1px solid var(--line);border-radius:999px;
+        padding:5px 13px;font-size:12.5px;color:var(--muted)}
+  .chip b{color:var(--ink)}
+  h2{margin:46px 0 16px;font-size:21px;border-left:4px solid var(--accent);padding-left:12px}
+  h3{margin:26px 0 10px;font-size:16.5px;color:#cdd6e4}
+  p{margin:.55em 0}
+  .lead{color:var(--muted)}
+  .grid{display:grid;gap:16px}
+  .grid.two{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+  .paper{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px}
+  .paper .venue{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.06em;
+        color:#0f1115;background:var(--venue);border-radius:6px;padding:2px 9px;margin-bottom:8px}
+  .paper .venue.j{background:#ffd28a}
+  .paper .venue.g{background:var(--accent2)}
+  .paper h3{margin:.1em 0 .35em;font-size:16px}
+  .paper .auth{color:var(--muted);font-size:12.5px;margin:.1em 0 .5em}
+  .paper .says{margin:.5em 0}
+  .apply{margin-top:.7em;background:var(--panel2);border-left:3px solid var(--accent2);
+         border-radius:0 8px 8px 0;padding:10px 14px}
+  .apply b{color:var(--accent2)}
+  .tablewrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:#cdd6e4;font-weight:600}
+  td code,p code,li code,h4 code{background:#10131a;border:1px solid var(--line);border-radius:5px;
+        padding:1px 6px;font-family:"JetBrains Mono",Consolas,monospace;font-size:12.5px;color:#ffd5a8;
+        overflow-wrap:anywhere}
+  .formula{background:#10131a;border:1px solid var(--line);border-radius:10px;
+        padding:16px 18px;text-align:center;font-size:16px;margin:14px 0;color:#dfe7f2}
+  pre{background:#0b0e13;border:1px solid var(--line);border-radius:12px;padding:16px 18px;
+        overflow:auto;font-size:12.5px;line-height:1.6}
+  pre code{font-family:"JetBrains Mono",Consolas,monospace;color:#cfe3ff}
+  .flow{display:grid;gap:10px;margin:16px 0}
+  .step{display:grid;grid-template-columns:34px 1fr;gap:14px;align-items:start;
+        background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 16px}
+  .step .n{width:34px;height:34px;border-radius:9px;background:var(--accent);color:#0b0e13;
+        font-weight:800;display:grid;place-items:center;font-size:15px}
+  .step .n.new{background:var(--accent2)}
+  .step h4{margin:0 0 3px;font-size:14.5px}
+  .step p{margin:0;color:var(--muted);font-size:13px}
+  .note{background:rgba(255,180,84,.08);border:1px solid rgba(255,180,84,.35);
+        border-radius:12px;padding:14px 18px;margin:16px 0}
+  .note b{color:var(--warn)}
+  .gap{background:rgba(255,107,107,.07);border:1px solid rgba(255,107,107,.32);
+        border-radius:12px;padding:6px 18px;margin:16px 0}
+  .gap b{color:var(--bad)}
+  ul,ol{margin:.5em 0;padding-left:22px}
+  li{margin:.3em 0}
+  .pill{font-size:11.5px;font-weight:700;border-radius:6px;padding:1px 7px;white-space:nowrap}
+  .pill.ok{background:rgba(123,220,181,.15);color:var(--accent2)}
+  .pill.new{background:rgba(110,168,254,.15);color:var(--accent)}
+  .pill.bad{background:rgba(255,107,107,.15);color:var(--bad)}
+  .pill.warn{background:rgba(255,180,84,.15);color:var(--warn)}
+  .pill{background:var(--chip);color:var(--muted)}
+  footer{margin-top:54px;border-top:1px solid var(--line);padding-top:18px;color:var(--muted);font-size:12.5px}
+  footer code{background:#10131a;border:1px solid var(--line);border-radius:5px;padding:1px 6px;
+        font-family:"JetBrains Mono",Consolas,monospace;font-size:12px;color:#ffd5a8}
+  .toc{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin-bottom:8px}
+  .toc ol{columns:2;column-gap:30px;margin:0}
+  .toc a{color:#cdd6e4;text-decoration:none}
+  .toc a:hover{color:var(--accent)}
+  @media (max-width:640px){ .toc ol{columns:1} header.hero{padding:26px 20px} header.hero h1{font-size:24px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="kick">MEDial · Research Note · Resident Agents as Evaluators</div>
+  <h1>마을이 모델로 말하고, 연락 순서를 다시 세우다</h1>
+  <p>은점마을 시뮬레이터에서 <b>MEDial 머리와 주민을 실제 LLM으로</b> 붙이고, 실제 모델로 같은 하루를 반복해 돌리다가
+     드러난 구멍(재연락이 실행되지 않음 · 빈집에서 요청이 닫힘)을 고친 이틀의 기록이다. 각 로직이 <b>무엇을 하고</b>,
+     <b>왜 그렇게 정했고</b>, <b>무엇으로 확인했는지</b>를 결정 번호(D076–D089)와 함께 남긴다.</p>
+  <p><b>여기 나오는 주민은 모두 시뮬레이션 에이전트다.</b> 실제 참여자가 아니며, 실행은 전부 <b>합성 마을</b>
+     (<code>fixtures/synthetic/</code>)에서 했다. 주민의 말은 모델이 만든 출력이다.</p>
+  <div class="meta">
+    <span class="chip">기간 <b>2026-09-14 ~ 09-15</b></span>
+    <span class="chip">엔진 <b>medial-sim/0.4.0</b> · 프롬프트 <b>prompt-v4</b></span>
+    <span class="chip">모델 <b>gemini-3.8-flash</b>(머리) · <b>gemini-3.1-flash-lite</b>(주민)</span>
+    <span class="chip">결정 <b>D076–D089</b></span>
+    <span class="chip">검증 서버 <b>373</b> · 화면 <b>53</b> · Playwright <b>3</b></span>
+    <span class="chip">커밋 <b>68edebe → 57c89a2</b></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <ol>
+    <li><a href="#principles">지키는 원칙</a></li>
+    <li><a href="#flow">한 건의 흐름 (지금 엔진)</a></li>
+    <li><a href="#day">마을의 하루 — 같은 일과의 반복</a></li>
+    <li><a href="#decline">거절 — 규칙 목록, 점수 없음</a></li>
+    <li><a href="#llm">머리와 주민 — 두 층의 모델</a></li>
+    <li><a href="#replay">기록·재생과 공급자</a></li>
+    <li><a href="#retry">재연락 — 모든 순서의 첫 단계</a></li>
+    <li><a href="#order">연락 순서 네 가지와 정책 D</a></li>
+    <li><a href="#absent">빈집 다음 — 이장에게 어디 있을지</a></li>
+    <li><a href="#screen">화면 — 읽기만, 엔진 키 없이</a></li>
+    <li><a href="#results">실제 모델 실행 결과</a></li>
+    <li><a href="#findings">발견과 해석</a></li>
+    <li><a href="#open">아직 안 한 것 · 열린 질문</a></li>
+    <li><a href="#index">결정 색인 D076–D089</a></li>
+  </ol>
+</nav>
+
+<!-- ============================================================ 1 -->
+<section id="principles">
+<h2>1. 지키는 원칙</h2>
+<p class="lead">아래 로직은 전부 이 원칙들 안에서 정했다. 결정이 헷갈릴 때 되돌아오는 기준이다.</p>
+<div class="grid two">
+  <div class="paper">
+    <span class="venue">연구자 지시</span>
+    <h3>뒷단은 엄밀하게, 화면은 딱 직관적이게</h3>
+    <p class="says">내부 로직은 복잡해도 되지만, 디자이너가 보고 만지는 면은 단순하고 최소로. 화면에 새 노브를 늘리지 않는다.</p>
+    <div class="apply"><b>적용</b> 재연락·관계 우선·빈집 다음은 전부 엔진 안에서 해결하고, 화면은 그 결과를 문장으로 읽기만 한다.</div>
+  </div>
+  <div class="paper">
+    <span class="venue">연구 설계</span>
+    <h3>점수로 합치지 않는다</h3>
+    <p class="says">신뢰 점수·수락 확률·합산 점수를 두지 않는다. 합치면 "잰 것"과 "추측한 것"이 구분되지 않는다.</p>
+    <div class="apply"><b>적용</b> 거절은 순서 있는 규칙 목록(D076), 결과 비교는 사람별 시간·연락 횟수를 나란히.</div>
+  </div>
+  <div class="paper">
+    <span class="venue">연구 설계</span>
+    <h3>실패는 실패로 남긴다</h3>
+    <p class="says">모델이 조건을 어기거나 응답하지 않으면 규칙 답으로 바꿔치우지 않는다.</p>
+    <div class="apply"><b>적용</b> 한 번 되돌림 후에도 어기면 <code>adapter_error</code>. 규칙표는 옆에 기록만(D083).</div>
+  </div>
+  <div class="paper">
+    <span class="venue">자료 원칙</span>
+    <h3>지어내지 않는다</h3>
+    <p class="says">원자료에 없는 조건·관계·장소를 만들지 않는다. 기록이 비어 있으면 비어 있다고 말한다.</p>
+    <div class="apply"><b>적용</b> 관계 우선 정책은 기록된 관계만(D087). 짐작할 지식이 없는 사람에게는 "어디 있을까"를 묻지 않는다.</div>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================ 2 -->
+<section id="flow">
+<h2>2. 한 건의 흐름 — 지금 엔진(0.4.0)에서</h2>
+<p class="lead">덱 <code>deck-p1-no-response-v1</code>: 09:30 P1의 정기 안부 연락에 응답이 없다. 초록 번호가 이번에 새로 생긴 단계다.</p>
+<div class="flow">
+  <div class="step"><div class="n">1</div><div><h4>안내 시계로 연락 → 응답 없음</h4>
+    <p>MEDial은 "응답이 없다"만 안다. 왜인지(P1이 밭에 있다)는 연구자 전용 사건 <code>world.reachability_resolved</code>에만 있다.</p></div></div>
+  <div class="step"><div class="n">2</div><div><h4>상황 읽기 (<code>read</code>)</h4>
+    <p>위치·몸 상태 모두 <code>unconfirmed</code>. 확정하려면 근거 사건 id를 대야 한다. 응급 근거가 없다는 것은 "응급이 아니다"가 아니다.</p></div></div>
+  <div class="step"><div class="n new">3</div><div><h4>재연락 — <code>retryCount</code>만큼 전화로 <span class="pill ok">D086</span></h4>
+    <p>어떤 연락 순서든 먼저 실행된다. 코드가 하고, 모델 머리에게 할지 말지 묻지 않는다.</p></div></div>
+  <div class="step"><div class="n">4</div><div><h4>누구에게 부탁할지 (<code>decide</code>)</h4>
+    <p>정책의 연락 순서(이장 우선 · 이웃 우선 · <b>관계 우선</b> · 보건소)에 따라. 모델 머리는 후보까지 고르고, 코드가 울타리를 검사한다(D082).</p></div></div>
+  <div class="step"><div class="n">5</div><div><h4>부탁받은 사람의 답</h4>
+    <p>수락 · 거절 · 나중에 · 기록된 관계로 넘김. 거절하면 순서의 다음 사람에게, <code>neighbourAskLimit</code>까지.</p></div></div>
+  <div class="step"><div class="n">6</div><div><h4>집에 가 봄 → 있으면 해결</h4>
+    <p>"그 장소에 있는가"만 확인한다. 건강 상태 판정이 아니다.</p></div></div>
+  <div class="step"><div class="n new">7</div><div><h4>빈집이면 — 짐작 가는 곳을 아는가 <span class="pill ok">D088</span></h4>
+    <p>간 사람이 장소 단위 지식을 가졌으면(이장) 그가 말한다. 아니면 MEDial이 <b>이장에게 전화로 어디 있을지 묻는다</b>.</p></div></div>
+  <div class="step"><div class="n">8</div><div><h4>그곳으로 확인을 이어감 → 해결 / 미해결</h4>
+    <p>이장도 짐작이 없거나, 이장에게 물을 수 없는 정책이면 미해결로 닫는다(인계 기한이 남았으면 기다린다).</p></div></div>
+</div>
+</section>
+
+<!-- ============================================================ 3 -->
+<section id="day">
+<h2>3. 마을의 하루 — 같은 일과의 반복 <span class="pill">D080</span></h2>
+<p>연구자의 전제: <b>"시골 마을은 매일 똑같은 일상을 반복한다. 바리에이션은 약간뿐이다."</b></p>
+<div class="tablewrap"><table>
+  <tr><th>환경</th><th>출발 시각 흔들림</th><th>외출 생략</th><th>외출 반복</th><th>쓰임</th></tr>
+  <tr><td><code>env-v3</code> <span class="pill ok">기본</span></td><td>±10분</td><td>0</td><td>0</td><td>보통의 하루</td></tr>
+  <tr><td><code>env-v3-fixed</code></td><td>없음</td><td>0</td><td>0</td><td>메커니즘 테스트용 고정 하루</td></tr>
+  <tr><td><code>env-v2</code></td><td>±15분</td><td>0.15</td><td>0</td><td>이름으로 골라야만 쓰임</td></tr>
+</table></div>
+<div class="note"><b>왜 바꿨나:</b> v2의 외출 생략 확률 0.15는 12명 마을에서 거의 매번 "외출 하나가 다른 하루"를 만들어,
+  예외가 기본이 되어 있었다. 하루 변이는 <code>dayRealization</code>으로 기록되고 화면에 "기록된 시각이 조금 다른 하루"로 보인다.</div>
+</section>
+
+<!-- ============================================================ 4 -->
+<section id="decline">
+<h2>4. 거절 — 규칙 목록, 점수 없음 <span class="pill">D076</span> <span class="pill">D077</span> <span class="pill">D078</span></h2>
+<p>거절 사유는 <b>순서 있는 규칙 목록</b>이고, 먼저 걸리는 한 줄이 이유가 된다. 여러 줄이 동시에 걸려도 답은 하나다.</p>
+<div class="tablewrap"><table>
+  <tr><th>순서</th><th>규칙 키</th><th>화면 말</th><th>근거의 성격</th></tr>
+  <tr><td>1</td><td><code>persona_condition</code></td><td>본인이 말한 조건</td><td>인터뷰 (예: 영업 중 가게를 비울 수 없다)</td></tr>
+  <tr><td>2</td><td><code>cannot_leave_here</code></td><td>지금 자리를 못 비움</td><td>연구자 설정</td></tr>
+  <tr><td>3</td><td><code>asked_too_often</code></td><td>오늘 부탁을 너무 많이 받음</td><td>연구자 설정 (<code>helperContactCap</code>)</td></tr>
+  <tr><td>4</td><td><code>too_far</code></td><td>너무 멀어서</td><td>연구자 설정, 거리는 도로망에서 계산</td></tr>
+</table></div>
+<ul>
+  <li><b>수락 확률은 넣지 않는다(D077).</b> 변이는 이미 하루 실현에서 seed로 들어온다. 결정에까지 주사위를 넣으면 근거 없는 변이를 두 번 만든다.</li>
+  <li><b>이웃 우선 정책(D078)</b>: 한 명만 묻고 끝나면 "이장 대신 다른 한 명"일 뿐이라, 거절하면 다음 사람에게 <code>neighbourAskLimit</code>까지 묻는다. 몇 명의 하루를 건드렸는지가 곧 결과다.</li>
+  <li>거절은 <b>신뢰 하락으로 계산하지 않는다.</b></li>
+</ul>
+</section>
+
+<!-- ============================================================ 5 -->
+<section id="llm">
+<h2>5. 머리와 주민 — 두 층의 모델 <span class="pill">D082–D085</span></h2>
+<p class="lead">연구자 지시: "MEDial은 AI Care Orchestrator라 LLM이 컨텍스트를 최대한 이해해야 하고, 후보 고르는 것도 상황을 다 꿰고 있는 LLM이 해야 한다." 주민은 "LLM이 전부 정하고 표는 기록만".</p>
+
+<pre><code>MEDial 머리 (gemini-3.8-flash)                 주민 (gemini-3.1-flash-lite × 12)
+ read    : 관측 → 상황 읽기 (확정엔 사건 id)     부탁을 받음: 내 일과 · 내 인터뷰 조건 ·
+ decide  : 후보 전원 판정 + 순서 + 부탁 말          부탁 말 → 수락/거절/나중에/넘김 + 한마디
+ no_lead : 빈집·단서 없음 → 이장에게 물을까          (넘김은 기록된 관계 안에서만)
+ absent  : 이장이 댄 곳으로 계속할까              이장: 어디 있을지 → 평소 일과로 짐작한 곳
+    ↳ 고른 뒤 울타리 검사, 어기면 1회 되돌림
+        │ message ──────▶ request.offered.payload.message ──▶ 주민 observation
+        ◀── utterance ─── request.accepted/declined.payload.utterance</code></pre>
+
+<div class="grid two">
+  <div class="paper">
+    <span class="venue g">D082</span>
+    <h3>울타리 — 노브는 고른 뒤에 검사한다</h3>
+    <p class="says">머리가 후보·순서를 고르면 코드가 설계자 조건을 검사한다.</p>
+    <ul>
+      <li>전원을 후보표에 적었나 · 본인에게 부탁하지 않았나</li>
+      <li>이장은 <code>allowHeadContact</code>일 때만 · 인원은 <code>neighbourAskLimit</code> 이하</li>
+      <li><code>head_first</code> → 첫 사람이 이장 · <code>retry_then_clinic</code> → 이웃 금지</li>
+      <li><code>relation_first</code> → 기록된 관계만, 이장은 마지막 <span class="pill new">D087</span></li>
+      <li><code>wait</code>는 5~120분, 한 건에 두 번까지 <span class="pill">D084</span></li>
+    </ul>
+    <div class="apply"><b>어기면</b> 문제 목록을 붙여 한 번 다시 묻고, 두 번째도 어기면 <code>adapter_error</code>. 규칙 정책 답으로 대체하지 않는다.</div>
+  </div>
+  <div class="paper">
+    <span class="venue g">D083</span>
+    <h3>주민 — LLM이 정하고, 표는 옆에 적기만</h3>
+    <p class="says">같은 view로 거절 표가 냈을 답을 <code>ruleTableSaid</code> · <code>agreesWithRuleTable</code>로 사건 옆에 남긴다.</p>
+    <ul>
+      <li>거절 사건의 <code>rule</code>은 <code>llm_judgement</code>, <code>reason</code>은 본인 말</li>
+      <li>넘김(relay)은 기록된 관계 안에서만 — 엔진이 다시 검증</li>
+      <li>"어디 있을지"는 장소 단위 지식이 있는 사람에게만 묻는다</li>
+    </ul>
+    <div class="apply"><b>화면</b> 표와 어긋난 답에 <code>규칙표라면 수락</code> 태그. 표를 앞에 세우면 LLM 주민이 아니라 표에 말을 입힌 것이 된다.</div>
+  </div>
+  <div class="paper">
+    <span class="venue g">D084</span>
+    <h3><code>wait</code>는 시계가 달린 결정</h3>
+    <p class="says">실제 flash-lite 머리가 첫 판단에서 "40분 기다린다"를 골랐는데 깨우는 장치가 없어 하루가 그대로 끝났다.</p>
+    <div class="apply"><b>고침</b> <code>waitMinutes</code> 뒤 같은 질문이 돌아온다(<code>medial.waiting reason=head_wait untilMs</code>). 세 번째 wait은 실패.</div>
+  </div>
+  <div class="paper">
+    <span class="venue g">D085</span>
+    <h3>두 층의 모델</h3>
+    <p class="says">머리는 상황 전체를 읽고 후보를 고르는 한 번의 무거운 판단, 주민은 하루 열두 번의 가벼운 한 답.</p>
+    <div class="apply"><b>기록</b> <code>ModelPolicy</code>에 <code>headModelId</code>·<code>residentModelId</code>가 따로 있고 attempt 입력 해시에 들어간다. 머리 모델을 바꿔도 주민 기록은 그대로 재생된다.</div>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================ 6 -->
+<section id="replay">
+<h2>6. 기록·재생과 공급자</h2>
+<ul>
+  <li><b>잘 부탁하는 대신 받아 적고 재생한다.</b> temperature=0도 결정론이 아니다. 호출 키는 <code>모델 · 온도 · 프롬프트 판 · 행위자 · 몇 번째 호출 · 프롬프트 본문</code>의 내용 주소이고, 벽시계는 뺐다.</li>
+  <li>재생 모드에서 기록이 없는 프롬프트는 <code>MissingModelCall</code>로 <b>실패</b>한다. 조용히 다시 부르면 재생처럼 보이면서 결과가 달라진다.</li>
+  <li>분기(fork)는 체크포인트 앞의 머리·주민 호출을 모두 재생한다.</li>
+  <li>프롬프트 판: <code>prompt-v2</code>(두 층) → <code>v3</code>(재연락은 코드, <code>schedule_contact</code> 선택지 제거) → <code>v4</code>(<code>no_lead</code> 단계).</li>
+</ul>
+<div class="note"><b>공급자는 Gemini 하나 (2026-09-15, 연구자 지시).</b> OpenAI·Anthropic 경로와 <code>MEDIAL_LLM_PROVIDER</code>를 걷어냈다.
+  "괜히 헷갈린다. 필요하면 그때 새로 추가." 키는 <code>GOOGLE_API_KEY</code> 하나, OpenAI 호환 엔드포인트 + <code>json_schema</code>.
+  키는 서버 환경변수에서만 읽고 기록·로그·문서에 넣지 않는다. 같은 날 키를 교체했고 60회 이상 호출에 429가 없어 유료 등급으로 판단했다.</div>
+</section>
+
+<!-- ============================================================ 7 -->
+<section id="retry">
+<h2>7. 재연락 — 모든 연락 순서의 첫 단계 <span class="pill ok">D086</span></h2>
+<p><b>재연락</b>은 어르신이 응답하지 않을 때, 이웃이나 보건소를 부르기 전에 <b>본인에게 시간을 두고 다시 연락해 보는 것</b>이다.
+   <code>retryCount</code>(몇 번) · <code>retryIntervalMin</code>(몇 분 간격) · <code>quietWindowMin</code>(최소 간격)으로 정한다.</p>
+
+<h3>드러난 경위</h3>
+<div class="gap"><p><b>⚠ 실행되지 않는 변경이 "통과"로 확정됐다.</b> 실제 모델로 반복 루프를 돌리자, 1세대 개선안
+  "이웃 요청 전 1회 재호출"(<code>retryCount 0→1</code>)이 기계 검증을 통과해 확정됐는데 2세대 로그가 부모와 <b>한 글자도 다르지 않았다</b>.
+  재연락이 <code>retry_then_clinic</code>에서만 실행됐기 때문이다. 규칙 머리로 돌려도 똑같았다. 비교 화면은 "정책만 다르게 실행했다, 차이 0"을 보여 주었고,
+  디자이너는 <b>"재연락은 효과가 없다"</b>고 읽게 되어 있었다.</p></div>
+
+<h3>연구자와 정한 것</h3>
+<ul>
+  <li>순서는 <b>재연락 → 가까운 관계 → 이장</b>. 단, 이것은 고정 규칙이 아니라 <b>비교할 정책 하나</b>로 둔다(8장).</li>
+  <li>재연락 자체는 설계 선택이 아니라 <b>엔진 버그 수정</b>이다: 노브 하나가 모든 정책에서 같은 뜻을 가져야 한다.</li>
+</ul>
+
+<h3>로직</h3>
+<pre><code>MedialPolicy._retry_due(ctx)                   # 규칙 머리 · 모델 머리 공통
+  if ctx.attempt_number > retryCount: return None
+  at = max(now + retryIntervalMin, lastContact + quietWindowMin)
+  → schedule_contact(subject, at, channel=phone, attemptNumber+1)
+
+on_unanswered_checkin:  인계 기한 → 재연락 → 연락 순서
+engine._on_missed:      retry_then_clinic 이고 재연락이 남지 않았으면 → on_retry_exhausted(보건소)</code></pre>
+<ul>
+  <li><b>두 번째부터는 전화.</b> 안내 시계는 집에서만 닿으므로, 같은 기기로 다시 거는 것은 새 정보를 주지 않는다.</li>
+  <li>모델 머리의 <code>decide</code>는 재연락이 끝난 뒤에만 불리고, <code>policy.retriesAlreadyMade</code>로 그 사실을 안다.</li>
+</ul>
+
+<h3>예: 정책 B(재연락 2회, 40분) — 연구자 기록</h3>
+<div class="tablewrap"><table>
+  <tr><th>시각</th><th>MEDial이 한 것</th><th>결과</th><th>세계의 이유 (연구자만)</th></tr>
+  <tr><td>09:30</td><td>안내 시계로 연락</td><td>응답 없음</td><td>밭에 있음, 기기는 집에만</td></tr>
+  <tr><td>10:10</td><td>전화로 재연락 (2번째)</td><td>응답 없음</td><td>여전히 밭</td></tr>
+  <tr><td>10:50</td><td>전화로 재연락 (3번째) → 재연락 소진 → 보건소 인계</td><td>응답 없음</td><td>밭일 중엔 전화를 안 받음</td></tr>
+  <tr><td>12:12</td><td>보건소 담당자가 전화</td><td>받음 → 해결</td><td>집에 돌아와 있음</td></tr>
+</table></div>
+<div class="note"><b>재연락이 맞바꾸는 것:</b> 잠깐 자리를 비운 경우라면 이웃의 시간을 한 번도 쓰지 않고 풀린다. 정말 문제가 생긴 경우라면 확인이 늦어진다.
+  "누구의 시간으로"의 질문에서 <b>이웃의 시간 ↔ 확인까지 걸리는 시간</b>을 맞바꾸는 노브다.</div>
+<p>확인: <code>test_contact_order.py</code> — 이장 우선 정책에서 <code>retryCount 0→1</code>이면 10:10 전화가 끼고 이장 부탁이 정확히 40분 늦어진다. 모든 순서(A·C·D)에서 재연락이 먼저. 모델 머리의 첫 <code>decide</code>는 <code>attemptNumber=2</code>.</p>
+</section>
+
+<!-- ============================================================ 8 -->
+<section id="order">
+<h2>8. 연락 순서 네 가지와 정책 D <span class="pill ok">D087</span></h2>
+<div class="tablewrap"><table>
+  <tr><th>정책</th><th><code>contactStrategy</code></th><th>재연락</th><th>재연락 뒤</th></tr>
+  <tr><td>A 이장 우선</td><td><code>head_first</code></td><td>0</td><td>이장</td></tr>
+  <tr><td>B 재연락 후 보건소</td><td><code>retry_then_clinic</code></td><td>2 · 40분</td><td>보건소 담당자 (이웃 없음)</td></tr>
+  <tr><td>C 가까운 이웃 우선</td><td><code>neighbour_first</code></td><td>0</td><td>공개 일과상 지금 집에 있는 사람 → 거절 시 다음, 3명까지</td></tr>
+  <tr><td>D 가까운 관계 우선 <span class="pill new">신규</span></td><td><code>relation_first</code></td><td>1 · 40분</td><td>기록된 관계 → 이장은 마지막</td></tr>
+</table></div>
+
+<h3>"가까운 관계"는 무엇으로 정하나 — 기록된 것만</h3>
+<p>제안은 "바로 옆집이거나 자주 만나는 사람"이었다. 둘을 나눠서 봤다.</p>
+<ul>
+  <li><b>옆집(거리)</b>은 지도에서 계산할 수 있지만, <b>가깝게 산다고 가까운 사이는 아니다</b>. 거리 기준은 이미 정책 C다.</li>
+  <li><b>자주 만나는 사람(관계)</b>은 <code>relations.py</code>의 기록된 관계만 쓴다. 관계를 추가하는 Change Set은 허용하지 않는다 — 외로운 사람에게 친구를 만들어 주는 것은 MEDial의 개선이 아니라 사례를 지우는 것이다.</li>
+</ul>
+<div class="tablewrap"><table>
+  <tr><th>기록된 관계</th><th>종류</th><th>근거</th></tr>
+  <tr><td>P1 ↔ P6(이장)</td><td><code>check</code></td><td>Q3 안부 확인을 이장이 맡았고, 기존 절차도 "생활지원사 전화 → 무응답 → 이장 연락 → 이장 방문"</td></tr>
+  <tr><td>P4 · P6 · P7 · P8</td><td><code>companion</code></td><td>점심·저녁을 함께 다니는 4인 동행군</td></tr>
+  <tr><td>P2 ↔ P5</td><td><code>companion</code></td><td>정기적으로 서로 왕래하는 2인</td></tr>
+  <tr><td>P10 ↔ P11</td><td><code>companion</code></td><td>부부, 식당에서 종일 함께</td></tr>
+  <tr><td>P6 ↔ P12</td><td><code>kin</code></td><td>사촌</td></tr>
+  <tr><td>P9 ↔ P12, P3 ↔ P9</td><td><code>ride</code></td><td>Q1·Q5 병원 동행 때 태워 줌</td></tr>
+  <tr><td>P3 ↔ P11</td><td><code>errand</code></td><td>Q2 의약품 전달</td></tr>
+</table></div>
+
+<h3>로직</h3>
+<pre><code>_relation_order(ctx, candidates):
+  related = [c for c in candidates if c.included            # 공개 일과상 지금 부탁 가능
+                                  and c in ctx.relations     # 기록된 관계
+                                  and c != 이장]
+  if allowHeadContact: return related[:limit-1] + [이장]
+  else:                return related[:limit]
+
+_relation_rationale:   # 비슷해 보이는 두 경우를 나눠 말한다
+  관계가 있고 부탁 가능  → "기록된 가까운 관계(…)에게 먼저 부탁하고, 마지막에 이장에게 간다."
+  기록된 관계가 이장뿐   → "P1: 기록된 가까운 관계는 이장 한 사람뿐이라 … 부담이 몰리는 것은
+                          관계 기록의 결과이지 정책이 이장을 고른 것이 아니다."
+  관계는 있으나 지금 불가 → "기록된 가까운 관계(…)가 있지만 지금은 부탁할 수 없다 (사람별 이유)."</code></pre>
+<div class="note"><b>가정으로 적어 둔 것:</b> MEDial이 대상자의 관계를 안다는 것은 "가까운 연락처로 등록해 두었다"는 가정
+  (<code>assumption-registered-contacts</code>)이다. 실제로 이 등록을 받는 절차가 있는지는 확인하지 않았다.</div>
+<p>모델 머리에게는 <code>people[].recordedRelationToSubject</code>가 주어지고, 울타리가 "관계 없는 사람 금지 · 이장은 마지막"을 본다
+   (<code>test_the_model_head_may_not_ask_a_stranger_or_put_the_head_first_under_relation_first</code>).</p>
+</section>
+
+<!-- ============================================================ 9 -->
+<section id="absent">
+<h2>9. 빈집 다음 — 짐작 가는 곳이 없으면 이장에게 묻는다 <span class="pill ok">D088</span></h2>
+<div class="gap"><p><b>⚠ 정책 C가 늘 미해결로 끝난 것은 순서의 결과가 아니라 구멍이었다.</b> P9가 빈집을 확인하면 그 자리에서 요청이 닫혔고,
+  P1의 평소 일과를 아는 이장은 <b>한 번도 물어지지 않았다</b>. 앞선 실행 결과를 "이웃 우선은 해결하지 못한다"로 읽었다면 틀린 결론이었다.</p></div>
+
+<h3>순서대로 두 번 고쳤다</h3>
+<div class="tablewrap"><table>
+  <tr><th>단계</th><th>발견</th><th>조치</th></tr>
+  <tr><td>1 (db0b8e0)</td><td>실제 모델 실행: 빈집을 본 P9에게 빈 <code>localKnowledge</code>로 "어디 있을까"를 물어, 모델이 장소 없이 답했고 "지어낸 장소"로 실패 처리됐다</td><td>그 질문은 장소 단위 지식이 있는 사람에게만. 없으면 묻지 않는다</td></tr>
+  <tr><td>2 (57c89a2)</td><td>묻지 않게 되자 요청이 바로 닫혔다 — 아는 사람(이장)에게 넘기는 단계가 없었다</td><td><code>on_absent_no_lead</code> → <code>ask_whereabouts</code></td></tr>
+</table></div>
+
+<h3>로직</h3>
+<pre><code>_on_arrival: 빈집
+  answer = _whereabouts(간 사람, asked=False)        # 간 사람이 이장이면 여기서 장소를 말함
+  if continued/stopped: return
+  if MEDial이 이 방문의 수신자가 아님: 미해결       # 주민끼리 넘긴 일 — MEDial은 빈집을 모른다
+  decision = policy.on_absent_no_lead(ctx, 간 사람, 이미 물은 사람들)
+    규칙: allowHeadContact 이고 이장에게 아직 안 물었으면 → ask_whereabouts(이장)
+    모델: no_lead 단계 → ask_whereabouts | handoff | stop   (울타리: 같은 두 조건)
+
+_ask_whereabouts(이장):                              # 전화 한 통 — 연락 1회로 부담에 잡힘
+  request.offered(purpose="whereabouts") → _whereabouts(이장, asked=True)
+    지식 있음 → medial.observed(local_knowledge, 밭) → on_absent_report → 그곳으로
+    지식 없음 → medial.observed(no_local_knowledge) → 미해결</code></pre>
+<div class="grid two">
+  <div class="paper"><span class="venue">이장 우선(A)</span>
+    <p class="says">이장이 직접 갔으므로 다시 묻지 않는다(<code>test_the_head_who_already_went_is_not_asked_again</code>).</p></div>
+  <div class="paper"><span class="venue">이장 연락 금지</span>
+    <p class="says"><code>allowHeadContact=false</code>면 빈집에서 닫고, 판단 사유에 "이 정책은 이장에게 묻지 않는다"가 남는다.</p></div>
+</div>
+</section>
+
+<!-- ============================================================ 10 -->
+<section id="screen">
+<h2>10. 화면 — 읽기만, 엔진 키 없이 <span class="pill">D079</span> <span class="pill">D081</span> <span class="pill ok">D089</span></h2>
+<ul>
+  <li><b>D079</b> 거절 사유·전가·뽑힌 하루는 화면에서 읽기만 한다. "MEDial이 아는 것" 관점은 사건의 <code>visibility</code> 필터 한 곳에서만 정한다.</li>
+  <li><b>D081</b> 화면 확인은 Playwright(<code>npm run e2e</code>)로 실서버·실브라우저·합성 마을에서 하고, 캡처를 직접 열어 본다. jsdom 검사는 "던지지 않는다"까지만 본다.</li>
+</ul>
+<h3>이번에 캡처를 보고 고친 것 (D089)</h3>
+<div class="tablewrap"><table>
+  <tr><th>보인 것</th><th>고친 것</th></tr>
+  <tr><td>"이렇게 정한 이유"가 마지막 판단 하나뿐 — D에서 "밭에서 계속 확인"만 보이고 <b>왜 이장에게 갔는지</b>가 가려짐</td><td>한 요청의 판단 이유를 시간순으로 모두 (<code>reasonsInOrder</code>)</td></tr>
+  <tr><td>"다음 상대로 이장을 골랐습니다"가 질문이 달라도 두 번</td><td>"MEDial의 판단 — {질문}: {선택}", 재연락이면 "P1 본인에게 다시 연락"</td></tr>
+  <tr><td>"이장이 PATROL에서 FARM로 떠났습니다", "(neighbour_visit)", 사유 "확인처(FARM)"</td><td>장소는 마을의 이름(<code>learnPlaces</code> · <code>placeWord</code>), 경로는 말(<code>pathWord</code>, 비교 표 포함)</td></tr>
+  <tr><td>"안내 시계 연락했습니다", "P1는"</td><td>"안내 시계로/전화로 연락했습니다", 조사는 <code>withParticle</code></td></tr>
+  <tr><td>이장에게 어디 있을지 물은 줄이 "답 기다리는 중"으로 남음</td><td><code>told</code> — "어디 있을지 답함" + 이장의 말</td></tr>
+  <tr><td>버전이 하나뿐일 때 v0 대 v0를 "통제 비교가 아닙니다"로 경고</td><td>"같은 버전을 양쪽에 골랐습니다 · 아직 비교할 다음 버전이 없습니다"</td></tr>
+  <tr><td>실험 준비: <code>helperContactCap</code>(한 사람이 하루에 받는 부탁 상한)을 "이웃 최대 N명"으로 읽음</td><td>"한 사람이 하루에 받는 부탁은 N번까지입니다", 재연락을 먼저 말함</td></tr>
+</table></div>
+<p>Playwright 검사: 이웃 우선에서 거절 사유와 "어디 있을지 답함" · 정책 D에서 "전화로 연락했습니다 (2번째)"와 "기록된 가까운 관계는 이장 한 사람뿐" ·
+   화면 어디에도 <code>neighbour_visit|PATROL|FARM</code> 0건 · 비교 화면에 "통제 비교가 아닙니다" 0건.</p>
+</section>
+
+<!-- ============================================================ 11 -->
+<section id="results">
+<h2>11. 실제 모델 실행 결과</h2>
+<p class="lead">모두 합성 마을, seed 17(같은 하루), 머리 gemini-3.8-flash · 주민 gemini-3.1-flash-lite. 스크립트: <code>scripts/llm_smoke.py</code> · <code>llm_repeat.py</code> · <code>llm_iteration.py</code>. 원자료는 쓰지 않았다.</p>
+
+<h3>11.1 첫 끝까지 실행 (새 키, 고치기 전후)</h3>
+<ul>
+  <li>1차: read·decide 성공 → P9 수락 → 빈집 → 빈 지식으로 "어디 있을까" → 어댑터 실패 (9장 단계 1의 원인).</li>
+  <li>2차: read → decide(P9·P10·P11, "retryCount가 0이라 재연락 없음"을 스스로 언급) → P9 수락 → 빈집 → 미해결. 호출 3회, 실패 0.</li>
+</ul>
+
+<h3>11.2 같은 하루 15번 (A·B·C × 5) — 재연락·빈집 수정 <b>전</b></h3>
+<div class="tablewrap"><table>
+  <tr><th>정책</th><th>모델 머리</th><th>규칙 머리</th></tr>
+  <tr><td>A</td><td>5/5 이장 → 빈집 → 밭 → 해결. 첫 후보 명단은 <code>[P6]</code> 3회 등 흔들림, 한도 초과 1회(되돌림 후 통과)</td><td>같음</td></tr>
+  <tr><td>B</td><td>5/5 재연락 → 인계 → 보건소 전화에 본인 응답</td><td>같음</td></tr>
+  <tr><td>C</td><td>5/5 <b>P9를 먼저</b> → 빈집 → 미해결. 한도 초과 1회</td><td>P10 거절 → P11 거절 → P9 → 미해결</td></tr>
+</table></div>
+<p>어댑터 실패 0 · 되돌림 2회(둘 다 <code>neighbourAskLimit</code> 초과) · 주민 답이 규칙표와 어긋난 것 0(모두 수락한 하루). 3.8-flash 60회 이상에 429 없음 → 유료 등급.</p>
+
+<h3>11.3 반복 루프 2세대 (행동·리뷰·개선 모두 llm)</h3>
+<ul>
+  <li>끝까지 돎: 291초, 루프 호출 34 + 마을 호출 10, 실패 0. 확정은 스크립트가 첫 유효안으로 대신 했다(<b>연구자 판단 아님</b>).</li>
+  <li>리뷰는 겪은 사람(P1·P6)만 등급을 매겼고 나머지는 <code>no_experience</code>.</li>
+  <li>종합은 근거 없는 주장("왕래 없는 이웃")을 잡았지만, <b>근거 있는 것 하나(P6의 밭 제안 — <code>local_knowledge</code> 사건)도 근거 없음으로 잘못 분류</b>했다.</li>
+  <li>1세대 확정안 <code>retryCount 0→1</code>이 아무것도 바꾸지 않음 → 7장의 발견.</li>
+</ul>
+
+<h3>11.4 P1 사례 — 수정 <b>후</b> (engine 0.4.0)</h3>
+<div class="tablewrap"><table>
+  <tr><th>정책</th><th>규칙 머리 (같은 하루)</th><th>모델 머리 (3회)</th></tr>
+  <tr><td>A 이장 우선</td><td>09:30 이장 → 집 빈집 → 밭 09:38 해결. <b>이장 18.8분</b>, 연락 1명</td><td>3/3 같음</td></tr>
+  <tr><td>C 이웃 우선</td><td>P10 거절 · P11 거절 · P9 빈집(09:36) → <b>이장에게 전화</b> → 밭 09:42 해결. P9 11.7분 · 이장 10.5분, <b>연락 4명</b></td><td>3/3 P9 → 빈집 → 이장에게 물음 → 해결. P9 11.7분 · 이장 10.5분, <b>연락 2명</b></td></tr>
+  <tr><td>D 재연락 → 관계 → 이장</td><td>10:10 전화도 무응답 → 이장 → 빈집 → 밭 10:23 해결. <b>이장 23.0분</b></td><td>3/3 같음</td></tr>
+  <tr><td>B 재연락 후 보건소</td><td>09:30 · 10:10 · 10:50 무응답 → 인계 → 12:12 보건소 전화에 본인 응답. 주민 0분</td><td>—</td></tr>
+</table></div>
+</section>
+
+<!-- ============================================================ 12 -->
+<section id="findings">
+<h2>12. 발견과 해석</h2>
+<div class="grid">
+  <div class="paper">
+    <span class="venue j">발견 1</span>
+    <h3>P1에게는 어떤 순서를 짜도 이장에게 간다</h3>
+    <p class="says">D는 A와 같은 사람(이장)에게 간다. P1의 기록된 관계가 이장 하나뿐이기 때문이다. 달라진 것은 40분 늦은 확인과, 그 사이 P1이 더 멀리 가 있어 이장의 수고가 4.2분 늘어난 것(18.8 → 23.0분).</p>
+    <div class="apply"><b>해석</b> 이 사례에서 "누구의 시간으로"의 답은 연락 순서가 아니라 <b>P1의 관계가 이장 하나에 걸려 있다</b>는 기록이 정한다. 재연락이 이웃의 시간을 아끼려면 본인이 두 번째 전화를 받아야 하는데, 이 하루의 P1은 밭에 있어 받지 않는다.</div>
+  </div>
+  <div class="paper">
+    <span class="venue j">발견 2</span>
+    <h3>이장에게 몰리지 않게 하려던 C도 이장의 지식으로 끝난다</h3>
+    <p class="says">C는 이제 해결되지만, 이장 한 사람의 18.8분이 두 사람의 22.2분으로 나뉘었고 규칙 머리는 거절할 사람 둘에게도 물었다.</p>
+    <div class="apply"><b>해석</b> 이장의 <b>걷는 시간</b>은 줄일 수 있어도, 이장의 <b>아는 것</b>은 대체되지 않았다. 부담의 종류가 이동 노동에서 정보 제공으로 옮겨 갔을 뿐이다.</div>
+  </div>
+  <div class="paper">
+    <span class="venue j">발견 3</span>
+    <h3>모델 머리는 거절을 만들지 않았다</h3>
+    <p class="says">C에서 모델 머리는 가게를 비울 수 없는 P10·P11을 건너뛰고 P9에게 먼저 갔다(규칙 머리는 둘에게 물어 거절 두 번). 연락한 사람 4명 → 2명.</p>
+    <div class="apply"><b>주의</b> 합성 마을 한 하루, 모델 머리 3~5회 반복이다. 흔들림을 본 것은 아니고, "모델 머리가 낫다"는 일반화는 할 수 없다.</div>
+  </div>
+  <div class="paper">
+    <span class="venue j">방법론</span>
+    <h3>실제 모델로 돌려야 드러나는 구멍이 있었다</h3>
+    <p class="says">가짜 모델 테스트 16건이 모두 통과한 상태에서, 실제 실행이 네 가지를 드러냈다: 깨우지 않는 <code>wait</code>, 모르는 사람에게 던진 질문, 실행되지 않는 재연락, 빈집에서 닫히는 요청.</p>
+    <div class="apply"><b>적용</b> 새 로직마다 실제 모델 반복 실행과 Playwright 캡처 확인을 짝으로 둔다.</div>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================ 13 -->
+<section id="open">
+<h2>13. 아직 안 한 것 · 열린 질문</h2>
+<div class="gap">
+  <p><b>확인 못 한 것</b></p>
+  <ul>
+    <li>이장에게도 짐작이 없는 경우(<code>no_local_knowledge</code>)는 코드와 화면 문구만 있고, 이 덱에서는 일어나지 않아 실행으로 확인하지 못했다.</li>
+    <li>모델 머리가 D에서 "관계가 이장뿐"을 스스로 말하는지는 보지 않았다(화면 검사는 규칙 머리의 사유).</li>
+    <li>종합 역할이 근거 있는 주장을 근거 없음으로 잘못 분류한 문제(11.3)는 고치지 않았다.</li>
+  </ul>
+</div>
+<ul>
+  <li><b>이장의 헛걸음</b> — 이장은 장소를 알면서도 늘 집부터 간다. A·D의 이장 이동 시간에 그 헛걸음이 들어 있다. 규칙인지 사람의 행동인지 정해야 한다.</li>
+  <li><b>관계 등록 가정</b> — MEDial이 관계를 안다는 가정이 현장에서 성립하는지(등록 절차·동의)는 인터뷰로 확인할 일이다.</li>
+  <li><b>어르신이 원하는 순서</b> — 시뮬레이션은 순서마다 치르는 대가를 보여 줄 뿐, 선호를 답하지 않는다.</li>
+  <li><b>P9 접근성</b> — 원자료에는 "펜션이 오르막 끝, 본인 운전 안 함"이 있으나 페르소나 기록에 없다. 전사 확인 필요.</li>
+  <li><b>남은 단계</b> — 5 보건소 다건·소장 / 6 119 / 7 감도 분석 / 8 문서 19·23 경계 갱신. 이동(동승)과 보건소 담당자는 여전히 규칙이다.</li>
+  <li><b>여러 하루</b> — 지금은 seed 17 하나. 감도 분석(7단계)에서 하루를 바꿔 A·C·D의 차이가 유지되는지 봐야 한다.</li>
+</ul>
+</section>
+
+<!-- ============================================================ 14 -->
+<section id="index">
+<h2>14. 결정 색인 D076–D089</h2>
+<div class="tablewrap"><table>
+  <tr><th>번호</th><th>결정</th><th>근거</th><th>확인</th></tr>
+  <tr><td>D076</td><td>거절 사유는 순서 있는 규칙 목록, 먼저 걸리는 줄이 이유</td><td>합산하면 측정과 추측이 구분되지 않는다</td><td>줄마다 provenance, 하나씩 끌 수 있음</td></tr>
+  <tr><td>D077</td><td>수락 확률을 넣지 않는다</td><td>변이는 이미 하루 실현에서 들어온다</td><td>신뢰 점수·관계 감점 부재</td></tr>
+  <tr><td>D078</td><td>이웃 우선 정책, 거절 시 다음 사람에게 한도까지</td><td>연락 순서를 연구할 정책이 없었다</td><td>이장 1명 해결 ↔ 이웃 여러 명</td></tr>
+  <tr><td>D079</td><td>거절·전가·뽑힌 하루는 화면에서 읽기만, visibility 필터 하나</td><td>로그엔 있는데 화면이 읽지 않았다</td><td>조율 패널·비교 표</td></tr>
+  <tr><td>D080</td><td>기본 하루는 같은 일과의 반복(<code>env-v3</code>)</td><td>연구자 전제</td><td>시드 5개 모두 시각만 흔들림</td></tr>
+  <tr><td>D081</td><td>화면 확인은 Playwright</td><td>jsdom은 "안 던진다"까지만</td><td><code>e2e/screens.spec.ts</code></td></tr>
+  <tr><td>D082</td><td>머리가 후보까지 고르고, 코드가 울타리를 고른 뒤 검사</td><td>연구자: 상황을 꿰는 LLM이 골라야</td><td>되돌림 1회 → 실패</td></tr>
+  <tr><td>D083</td><td>주민은 LLM이 정하고 거절 표는 옆에 기록만</td><td>연구자 선택</td><td><code>ruleTableSaid</code></td></tr>
+  <tr><td>D084</td><td><code>wait</code>는 시계가 달린 결정, 두 번까지</td><td>실제 모델이 기다린 채 하루가 끝남</td><td><code>head_wait untilMs</code></td></tr>
+  <tr><td>D085</td><td>두 층 모델(3.8-flash / 3.1-flash-lite), 역할별 호출 키</td><td>무거운 판단 한 번 ↔ 가벼운 답 여럿</td><td>머리 교체 시 주민 기록 유효</td></tr>
+  <tr><td>D086</td><td>재연락은 모든 연락 순서의 첫 단계, 전화로, 코드가 실행</td><td>확정된 재연락 변경이 로그를 바꾸지 못함</td><td><code>test_contact_order.py</code>, 0.3.0</td></tr>
+  <tr><td>D087</td><td><code>relation_first</code> · 정책 D, 기록된 관계만, 이장 마지막</td><td>연구자 제안을 비교할 정책으로</td><td>규칙 D 이장 23.0분</td></tr>
+  <tr><td>D088</td><td>빈집 + 단서 없음 → 이장에게 어디 있을지 전화</td><td>C의 미해결은 구멍이었다</td><td>C 해결, 0.4.0 · prompt-v4</td></tr>
+  <tr><td>D089</td><td>판단 이유를 모두 시간순으로, 엔진 키 없이, 같은 버전 비교는 안내</td><td>D의 핵심 이유가 가려짐</td><td>Playwright 키 0건 검사</td></tr>
+</table></div>
+</section>
+
+<footer>
+  <b>근거 파일</b><br>
+  <code>server/app/simulation/policies/rule_policies.py</code> — <code>_retry_due</code> · <code>_relation_order</code> · <code>_relation_rationale</code> · <code>on_absent_no_lead</code><br>
+  <code>server/app/simulation/policies/llm_policy.py</code> — <code>_fence</code> · <code>on_absent_no_lead</code>(no_lead) · HEAD_SYSTEM<br>
+  <code>server/app/simulation/engine.py</code> — <code>_whereabouts</code> · <code>_ask_whereabouts</code> · <code>_on_missed</code> · <code>_context(relations)</code><br>
+  <code>server/app/simulation/agents/llm.py</code> · <code>agents/provider.py</code> · <code>iteration/llm.py</code>(Gemini 하나) · <code>relations.py</code> · <code>decks/p1_no_response.py</code>(POLICY_D)<br>
+  <code>server/tests/simulation/test_contact_order.py</code> · <code>test_llm_village.py</code> · <code>e2e/screens.spec.ts</code><br>
+  <code>scripts/llm_repeat.py</code> · <code>scripts/llm_iteration.py</code> · 실행 원본은 <code>.run/llm-repeat/</code> · <code>.run/llm-iteration/</code>(커밋하지 않음)<br>
+  <span style="color:var(--muted)">→ 상세 기록: <code>DEVELOPMENT.md</code> "MAS 재구축 3단계" 절 · 결정 원문: <code>docs/research/DECISIONS.md</code></span>
+  <p style="margin-top:14px">MEDial · Resident Agents as Evaluators — 연구노트 · 2026-09-15 · 시뮬레이션 주민은 실제 참여자가 아니다</p>
+</footer>
+
+</div>
+</body>
+</html>
