@@ -357,6 +357,8 @@ interface Props {
   seatsPerVehicle: number;
   highlight: MapHighlight | null;
   selectedCluster: string | null;
+  /** Colour per still-running request: the ring on whoever is doing it. */
+  taskColours?: Map<string, string>;
   selectedActor: string | null;
   /** One short line from the current scene for the selected person, or null.
    *  Never invented: the observe screen passes an actual event's words. */
@@ -375,6 +377,7 @@ export default function VillageMap({
   seatsPerVehicle,
   highlight,
   selectedCluster,
+  taskColours,
   selectedActor,
   title,
   onSelectCluster,
@@ -706,6 +709,7 @@ export default function VillageMap({
                 seats={seatsPerVehicle}
                 medial={medial}
                 dim={dim}
+                taskColours={taskColours}
                 selected={cluster.key === selectedCluster}
                 hovered={cluster.key === hovered}
                 onSelect={() =>
@@ -899,6 +903,7 @@ function ClusterMark({
   seats,
   medial,
   dim,
+  taskColours,
   selected,
   hovered,
   onSelect,
@@ -917,6 +922,7 @@ function ClusterMark({
   seats: number;
   medial: boolean;
   dim: boolean;
+  taskColours?: Map<string, string>;
   selected: boolean;
   hovered: boolean;
   onSelect: () => void;
@@ -932,11 +938,18 @@ function ClusterMark({
   const step = faces.length === 2 ? 2 * FACE_R * k : FACE_R * k;
   const extra = cluster.members.length - faces.length;
   const icon = activityKind(lead);
-  const ring = cluster.members.some((m) => m.onTask)
-    ? colour.primary
-    : cluster.members.some((m) => m.divergesFromBaseline)
-      ? colour.warn
-      : null;
+  // Whoever is on a running task is ringed in that task's colour - the same
+  // colour its lines carry in the event log and its row in MEDial's panel.
+  const taskRing = cluster.members
+    .map((m) => (m.onTask && m.requestId ? (taskColours?.get(m.requestId) ?? null) : null))
+    .find((c) => c !== null);
+  const ring = taskRing
+    ? taskRing
+    : cluster.members.some((m) => m.onTask)
+      ? colour.primary
+      : cluster.members.some((m) => m.divergesFromBaseline)
+        ? colour.warn
+        : null;
 
   return (
     <g
@@ -979,8 +992,9 @@ function ClusterMark({
       <rect x={x - (alone ? SOLO_LEFT : 28) * k} y={y - (alone ? 13 : 16) * k}
         width={(alone ? SOLO_W : 56) * k} height={(alone ? 26 : 32) * k}
         rx={(alone ? 13 : 16) * k}
-        fill={selected || hovered ? '#edf5ec' : '#fffffff5'}
-        stroke={selected || hovered ? '#8eaf98' : '#d6e1d3'} strokeWidth={1.2*k}
+        fill={taskRing ? `${taskRing}14` : selected || hovered ? '#edf5ec' : '#fffffff5'}
+        stroke={taskRing ?? (selected || hovered ? '#8eaf98' : '#d6e1d3')}
+        strokeWidth={(taskRing ? 1.8 : 1.2) * k}
         style={{filter:'drop-shadow(0 1px 2px #304c3926)'}} />
 
       {driver && (

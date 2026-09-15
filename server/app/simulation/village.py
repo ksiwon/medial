@@ -126,6 +126,17 @@ class Village:
         self.map_image: dict[str, Any] | None = data.get("mapImage")
         self.road_graph_provenance: dict[str, Any] = data.get("roadGraphProvenance", {})
         self.graph = RoadGraph(data["roadGraph"]["nodes"], data["roadGraph"]["adjacency"])
+        #: The roads as they are drawn on the map, traced out of the raster by
+        #: scripts/trace_map_roads.py, with every door snapped onto them. The
+        #: source's own graph is straight chords between buildings: good enough
+        #: to cost a trip, but people walking it crossed fields and the bay. When
+        #: this block is present it is what a journey follows; the source graph
+        #: stays for its distances and its provenance proof.
+        self.map_roads: dict[str, Any] | None = data.get("mapRoads")
+        self.map_graph: RoadGraph | None = (
+            RoadGraph(self.map_roads["graph"]["nodes"], self.map_roads["graph"]["adjacency"])
+            if self.map_roads else None
+        )
         self.by_id = {r["id"]: r for r in self.residents}
         self._patrol_cum = self._cumulative(self.patrol)
         #: Set by ``day.apply_realization`` on a village whose baselines were
@@ -199,6 +210,79 @@ class Village:
         return best
 
     # -- travel --------------------------------------------------------
+    def follows_map_roads(self) -> bool:
+        return self.map_graph is not None
+
+    def map_anchor_of_place(self, place_id: str, actor_id: str | None = None) -> str | None:
+        """Where this building meets the traced road, if it is on one at all."""
+        if self.map_roads is None:
+            return None
+        anchors = self.map_roads["anchors"]
+        if place_id == HOME_PLACE:
+            key = "HOME:%s" % actor_id
+        elif place_id.startswith("HOME:"):
+            key = place_id
+        else:
+            key = place_id
+        row = anchors.get(key)
+        return row["node"] if row else None
+
+    def path_between(self, origin_place: str, dest_place: str,
+                     actor_id: str | None = None) -> tuple[list[list[float]], float] | None:
+        """The way from one door to another, as a polyline and its metres.
+
+        Over the traced roads when both ends are on them: door -> the point on
+        the lane nearest the door -> the road -> the other door. The stub at
+        each end is the walk up the drive, and it is counted in the metres, so
+        a house set back from the lane is not free to reach.
+        """
+        a = self.position_of_place(origin_place, actor_id)
+        b = self.position_of_place(dest_place, actor_id)
+        m_per_px = self.geometry["frame"]["mPerPx"]
+
+        if self.map_graph is not None:
+            start = self.map_anchor_of_place(origin_place, actor_id)
+            goal = self.map_anchor_of_place(dest_place, actor_id)
+            if start and goal:
+                found = self.map_graph.path(start, goal)
+                if found is not None:
+                    chain, metres = found
+                    line = self.map_graph.polyline(chain)
+                    stub_px = (math.dist(a, line[0]) + math.dist(line[-1], b)) if line else 0.0
+                    polyline = [list(a)] + line + [list(b)]
+                    return (polyline, metres + stub_px * m_per_px)
+
+        route = self.route(self.anchor_of_place(origin_place, actor_id),
+                           self.anchor_of_place(dest_place, actor_id))
+        return route
+
+    def off_map_polyline(self, origin_place: str, dest_place: str,
+                         actor_id: str | None = None) -> list[list[float]]:
+        """The line for a trip that leaves the map: road first, then away.
+
+        The off-map end has no road under it by definition, so the line runs
+        from the last point on the map straight to wherever the registry puts
+        the place. Everything before that is the road out.
+        """
+        from .world import OFF_MAP_PLACES  # circular at module level
+
+        leaving = dest_place in OFF_MAP_PLACES
+        off_place = dest_place if leaving else origin_place
+        on_place = origin_place if leaving else dest_place
+        off_point = list(self.position_of_place(off_place, actor_id))
+        on_point = list(self.position_of_place(on_place, actor_id))
+
+        exit_place = self.places.get(off_place, {}).get("exitPlace") or "TOWNEXIT"
+        line: list[list[float]] = [on_point]
+        if exit_place in self.places and on_place != exit_place:
+            found = self.path_between(on_place, exit_place, actor_id)
+            if found is not None:
+                line = [list(p) for p in found[0]]
+        elif on_place == exit_place:
+            line = [on_point]
+        line.append(off_point)
+        return line if leaving else [list(p) for p in reversed(line)]
+
     def route(self, from_node: str, to_node: str) -> tuple[list[list[float]], float] | None:
         found = self.graph.path(from_node, to_node)
         if found is None:

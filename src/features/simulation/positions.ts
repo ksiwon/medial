@@ -60,6 +60,28 @@ function along(polyline: [number, number][], fraction: number): [number, number]
   return polyline[polyline.length - 1];
 }
 
+function cumulative(line: [number, number][]): number[] {
+  const cum = [0];
+  for (let i = 1; i < line.length; i += 1) {
+    cum.push(cum[i - 1] + Math.hypot(line[i - 1][0] - line[i][0], line[i - 1][1] - line[i][1]));
+  }
+  return cum;
+}
+
+/** On a trip to town the road part is still on the map: only the last run of
+ *  the polyline leaves it (the first, coming home). Before this, anyone headed
+ *  for town vanished from the map the moment they left their door. */
+function pastMapEdge(seg: Segment, atMs: number): boolean {
+  const line = seg.polyline ?? [];
+  if (line.length < 2) return true;
+  const cum = cumulative(line);
+  const total = cum[cum.length - 1];
+  if (total <= 0) return true;
+  const f = Math.max(0, Math.min(1, (atMs - seg.startMs) / Math.max(1, seg.endMs - seg.startMs)));
+  const travelled = f * total;
+  return seg.toPlace === 'TOWN' ? travelled >= cum[cum.length - 2] : travelled <= cum[1];
+}
+
 function poseFor(actor: TimelineActor, atMs: number): ActorPose {
   const realized = segmentAt(actor.realized, atMs);
   const baseline = segmentAt(actor.baseline, atMs);
@@ -80,7 +102,8 @@ function poseFor(actor: TimelineActor, atMs: number): ActorPose {
   const place = realized ? (realized.place ?? realized.toPlace) : null;
   const offMap =
     realized != null &&
-    (realized.place === 'TOWN' || (realized.kind === 'travel' && realized.toPlace === 'TOWN'));
+    (realized.place === 'TOWN' ||
+      (realized.kind === 'travel' && realized.mode === 'offmap' && pastMapEdge(realized, atMs)));
 
   return {
     id: actor.id,

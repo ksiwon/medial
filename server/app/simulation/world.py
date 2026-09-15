@@ -139,15 +139,18 @@ def leg(village: Village, actor_id: str, start_ms: int, origin_place: str, dest_
         duration = village.off_map_town_ms()
         metres = math.nan
         mode = "offmap"
-        polyline = [list(a), list(b)]
+        # Leaving the village is not a straight line out of one's own yard: you
+        # take the road to where it leaves the map, and only then are you off
+        # it. The clock is still the source's fixed 30 minutes to town - only
+        # the line the map draws changes.
+        polyline = village.off_map_polyline(origin_place, dest_place, actor_id)
     elif by_boat:
         metres = math.hypot(a[0] - b[0], a[1] - b[1]) * village.geometry["frame"]["mPerPx"]
         duration = max(2 * MIN_MS, int(metres / village.travel["boatMPerMin"] * MIN_MS))
         mode = "boat"
         polyline = [list(a), list(b)]
     else:
-        route = village.route(village.anchor_of_place(origin_place, actor_id),
-                             village.anchor_of_place(dest_place, actor_id))
+        route = village.path_between(origin_place, dest_place, actor_id)
         if route is None:
             raise ValueError("no road route between %s and %s" % (origin_place, dest_place))
         polyline, metres = route

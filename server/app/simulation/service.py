@@ -556,7 +556,8 @@ class SimulationService:
                 "requestId": None if realized is None else realized.get("requestId"),
                 "offMap": bool(realized and (
                     realized.get("place") == "TOWN"
-                    or (realized["kind"] == "travel" and realized.get("toPlace") == "TOWN"))),
+                    or (realized["kind"] == "travel" and realized["mode"] == "offmap"
+                        and _past_map_edge(realized, at_ms)))),
                 "baselineActivity": None if baseline is None else baseline["label"],
                 "divergesFromBaseline": bool(
                     realized and baseline and realized["label"] != baseline["label"]),
@@ -615,6 +616,30 @@ def _position(entry: dict[str, Any], segment: dict[str, Any] | None,
     if polyline:
         return (polyline[0][0], polyline[0][1])
     return (entry["homeXY"][0], entry["homeXY"][1])
+
+
+def _past_map_edge(segment: dict[str, Any], at_ms: int) -> bool:
+    """Whether a trip that leaves the map has actually left it yet.
+
+    The polyline now runs along the road to where it leaves the frame and only
+    then off it, so the road part is still on the map. Mirrors
+    ``pastMapEdge`` in src/features/simulation/positions.ts.
+    """
+    line = segment.get("polyline") or []
+    if len(line) < 2:
+        return True
+    cum = [0.0]
+    for a, b in zip(line, line[1:]):
+        cum.append(cum[-1] + math.hypot(a[0] - b[0], a[1] - b[1]))
+    total = cum[-1]
+    if total <= 0:
+        return True
+    span = max(1, segment["endMs"] - segment["startMs"])
+    fraction = max(0.0, min(1.0, (at_ms - segment["startMs"]) / span))
+    travelled = fraction * total
+    if segment.get("toPlace") == "TOWN":
+        return travelled >= cum[-2]
+    return travelled <= cum[1]
 
 
 def _along(polyline: list[list[float]], fraction: float) -> tuple[float, float]:
