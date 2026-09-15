@@ -367,7 +367,9 @@ export default function VillageMap({
   const [vx, vy, vw, vh] = village.geometry.viewBox;
   const home: View = useMemo(() => ({ x: vx, y: vy, w: vw, h: vh }), [vx, vy, vw, vh]);
   const [view, setView] = useState<View>(home);
-  const [fitMode, setFitMode] = useState<'fill' | 'all' | null>('fill');
+  // The whole village first; 채움 (fill the panel, cropping the edges) is the
+  // opt-in. It opened filled before, and the user asked to see everything.
+  const [fitMode, setFitMode] = useState<'fill' | 'all' | null>('all');
   const [box, setBox] = useState({ width: 1, height: 1 });
   const [hovered, setHovered] = useState<string | null>(null);
   /** The card Escape just closed. The marker keeps focus and often the pointer
@@ -382,7 +384,7 @@ export default function VillageMap({
   const frameRef = useRef<HTMLDivElement | null>(null);
   const drag = useRef<{ px: number; py: number; view: View } | null>(null);
 
-  useEffect(() => { setMapBroken(false); setFitMode('fill'); }, [home]);
+  useEffect(() => { setMapBroken(false); setFitMode('all'); }, [home]);
 
   useEffect(() => {
     const node = frameRef.current;
