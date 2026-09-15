@@ -1388,7 +1388,7 @@ P1 사례, 같은 하루, 고친 뒤:
 ### 시뮬레이터 검사 세 가지 — 노브·하루·모델 주민 (D091·D092)
 
 일반화 검토 ②③④. `server/app/simulation/audit.py`(순수 함수, 엔진 변경 없음) + `scripts/audit.py`
-(`.run/audit/`에 씀) + `scripts/llm_shadow.py` + `test_audit.py` 5건. 결과 표와 해석은 연구노트 15장.
+(`.run/audit/`에 씀) + `scripts/llm_shadow.py` + `test_audit.py` 5건. 결과 표와 해석은 연구노트 8장(발견은 9장).
 
 - **노브 효과** `knob_effects`: 지원 노브 10개 × 정책 6개, 값을 뒤집고 같은 하루(seed 17, env-v3-fixed)의
   로그 지문(`log_fingerprint`)을 비교. 정책 id는 그대로 두고 돌린다 — 로그의 `medial.decided`에 policyId가
@@ -1406,7 +1406,7 @@ P1 사례, 같은 하루, 고친 뒤:
   수락·관측 56/56 일치, 거절·유예·전달 26건 중 모델이 안 된다고 한 것 1건. D083 유지, prompt-v5는 연구자 결정.
 - **종합 오분류** `synthesis_sheet` → `.run/audit/synthesis-labels-<세션>.json`에 `humanLabel`/`draftLabel`.
   비율은 사람 라벨로만; AI 초안 기준 13개 중 2개(근거 없음 6 중 2가 사실은 근거 있음).
-- 연구노트의 결과 표마다 engine·prompt·마을 해시를 달았다(11.2·11.3은 engine 0.2.0·prompt-v2, 11.4·15장은
+- 연구노트의 결과 표마다 engine·prompt·마을 해시를 달았다(6.1·6.3은 engine 0.2.0·prompt-v2, 6.2·8장은
   0.4.0·prompt-v4).
 
 ### 아직 안 한 것
