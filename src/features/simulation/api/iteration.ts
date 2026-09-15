@@ -509,7 +509,7 @@ export interface Capabilities {
   supportedTaskIds: string[];
   supportedRuleFields: string[];
   supportedRules: RuleSpec[];
-  decks: { id: string; label: string; questId?: string | null }[];
+  decks: { id: string; label: string; questId?: string | null; questIds?: string[] }[];
   modes: Record<string, boolean>;
   notImplemented: string[];
   model: {

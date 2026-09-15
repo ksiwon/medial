@@ -104,7 +104,8 @@ class IterationService:
             # case; offering another community's would produce a session that
             # fails on its first step (found in a browser, 2026-09-15).
             "decks": [{"id": d.id, "label": d.label,
-                       "questId": semantic_rules.DECK_QUESTS.get(d.id)}
+                       "questId": semantic_rules.DECK_QUESTS.get(d.id),
+                       "questIds": sorted(semantic_rules.quests_of([d.id]))}
                       for d in DECKS.values()
                       if not ({e.subjectId for e in d.events} - set(case.resident_ids))],
             "modes": {

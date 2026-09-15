@@ -345,6 +345,20 @@ DECK_QUESTS: dict[str, str] = {
     "deck-p9-transport-v1": QUEST_TRANSPORT,
 }
 
+#: A day deck carries several quests. ``DECK_QUESTS`` keeps one quest per deck
+#: for the single-incident decks; this is the set every consumer should read.
+DECK_QUEST_SETS: dict[str, frozenset[str]] = {
+    **{deck: frozenset([quest]) for deck, quest in DECK_QUESTS.items()},
+    "deck-eunjeom-day-v1": frozenset([QUEST_WELFARE, QUEST_TRANSPORT]),
+}
+
+
+def quests_of(deck_ids: Any) -> set[str]:
+    out: set[str] = set()
+    for deck in deck_ids:
+        out |= DECK_QUEST_SETS.get(deck, frozenset())
+    return out
+
 
 def spec(rule_type: str) -> _Spec:
     try:
@@ -433,8 +447,7 @@ def catalog(active_decks: list[str] | None = None,
     run actually uses; ``active_decks`` marks which rules the session can
     exercise at all.
     """
-    active_quests = ({DECK_QUESTS[d] for d in active_decks if d in DECK_QUESTS}
-                     if active_decks is not None else None)
+    active_quests = quests_of(active_decks) if active_decks is not None else None
     rows = []
     for s in SPECS.values():
         row: dict[str, Any] = {

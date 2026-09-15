@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from . import eunjeom_day as day
 from . import iteration_start as it
 from . import p1_no_response as p1
 from . import p9_transport as p9
@@ -24,7 +25,7 @@ def _merge(name: str, *groups: Any) -> dict[str, Any]:
     return out
 
 
-DECKS = _merge("deck", [p1.DECK], [p9.DECK], [r1.DECK])
+DECKS = _merge("deck", [day.DECK], [p1.DECK], [p9.DECK], [r1.DECK])
 POLICIES = _merge("policy", [p1.POLICY_A, p1.POLICY_B, p1.POLICY_C, p1.POLICY_D],
                   [p9.POLICY_T_A, p9.POLICY_T_B],
                   [it.POLICY_ITER_V0])
@@ -45,6 +46,10 @@ def deck_subjects(deck_id: str) -> set[str]:
 
 
 DECK_DEFAULTS = {
+    # The source day needs the transport resources (seats, detour) and reads
+    # every knob the two single-incident decks read between them.
+    day.DECK.id: {"resourceRevisionId": p9.RESOURCES_T.id,
+                  "policyIds": [it.POLICY_ITER_V0.id]},
     p1.DECK.id: {"resourceRevisionId": p1.RESOURCES.id,
                  "policyIds": [p1.POLICY_A.id, p1.POLICY_B.id]},
     p9.DECK.id: {"resourceRevisionId": p9.RESOURCES_T.id,

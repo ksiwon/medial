@@ -192,7 +192,15 @@ export default function PrepareScreen({
     () => catalog.decks.filter((d) => capabilities.decks.some((row) => row.id === d.id)),
     [catalog.decks, capabilities.decks],
   );
-  const [decks, setDecks] = useState<string[]>(runnableDecks.map((d) => d.id));
+  // The source day (several quests in one deck) is the default case; the
+  // single-incident decks stay available for a narrower question. Running all
+  // three at once would show the same check-in twice in one generation.
+  const dayDecks = runnableDecks.filter(
+    (d) => (capabilities.decks.find((row) => row.id === d.id)?.questIds?.length ?? 0) > 1,
+  );
+  const [decks, setDecks] = useState<string[]>(
+    (dayDecks.length ? dayDecks : runnableDecks).map((d) => d.id),
+  );
   const [resourceId, setResourceId] = useState(
     catalog.resourceSets.find((r) => r.id.includes('transport'))?.id ??
       catalog.resourceSets[0]?.id ??

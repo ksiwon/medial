@@ -107,7 +107,7 @@ def change_set_to_policy_changes(policy: dict[str, Any], change_set: ChangeSet) 
 
 
 def active_quests_for(deck_ids: list[str]) -> set[str]:
-    return {semantic_rules.DECK_QUESTS[d] for d in deck_ids if d in semantic_rules.DECK_QUESTS}
+    return semantic_rules.quests_of(deck_ids)
 
 
 def _semantic_errors(change: RuleChange, policy: dict[str, Any],
