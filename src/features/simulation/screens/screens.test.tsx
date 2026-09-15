@@ -75,6 +75,7 @@ function observe(overrides: Partial<Parameters<typeof ObserveScreen>[0]> = {}) {
       eventCount={detail.attempt.eventCount}
       atMs={12 * 60 * 60 * 1000}
       playing={false}
+      speed={120}
       selectedCluster={null}
       selectedActor={null}
       detailActor="P1"
@@ -88,6 +89,9 @@ function observe(overrides: Partial<Parameters<typeof ObserveScreen>[0]> = {}) {
       onPlay={noop}
       onPause={noop}
       onSeek={noop}
+      onScrub={noop}
+      onScrubEnd={noop}
+      onSetSpeed={noop}
       onStep={noop}
       onStepBack={noop}
       onRestart={noop}
@@ -112,9 +116,14 @@ describe('ObserveScreen', () => {
 
   it('separates the recording from the run', () => {
     observe();
-    // The playback control says it is playing back a recording; the loop's own
-    // start/pause/stop live in the progress strip, which is not this component.
-    expect(screen.getByText(/기록 재생/)).toBeDefined();
+    // The playback control is a clock over the village day (05:00-22:00) with
+    // the residents' review at its end; the loop's own start/pause/stop live in
+    // the progress strip, which is not this component.
+    expect(screen.getByLabelText('시각')).toBeDefined();
+    expect(screen.getByText(/^\d\d:\d\d 주민 평가$/)).toBeDefined();
+    // Secondary controls sit behind the gear, not on the row.
+    expect(screen.getByLabelText('재생 설정')).toBeDefined();
+    expect(screen.getByText('새 사례 준비')).toBeDefined();
     expect(screen.queryByText('실행 중지')).toBeNull();
     expect(screen.queryByText('실행 일시정지')).toBeNull();
   });

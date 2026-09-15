@@ -17,6 +17,7 @@ import VillageMap, { type MapHighlight } from '../components/VillageMap';
 import { formatClock, type ActorPose, type MedialKnown } from '../positions';
 import { requestFlows } from '../selectors/requests';
 import { dayChangeLines, dayLabel } from '../selectors/words';
+import { DAY_END_MS, DAY_START_MS } from '../store';
 import { IconButton, Panel, PanelHead, PanelTitle, Select, Sub, Tag } from '../ui/primitives';
 import { colour, font, radius } from '../ui/theme';
 
@@ -112,6 +113,13 @@ const RightCol = styled.div`
   min-height: 0;
   min-width: 0;
   display: flex;
+  /* The board and the person panel are plain Panels; without this they took
+     their content width and the third column read narrower than the other two
+     (378px against 540px at 1440, seen in a capture). */
+  > * {
+    flex: 1;
+    min-width: 0;
+  }
 
   @media (max-width: 899px) {
     min-height: 480px;
@@ -124,8 +132,44 @@ const Transport = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 16px;
+  padding: 8px 16px 6px;
   min-height: 46px;
+`;
+
+/** The clock's track, 05:00 to 22:00, with the day's marks under it as in the
+ *  source diorama. The slider is time, not event number: the day runs through
+ *  whether or not anything happened, and ends where the residents review it. */
+const Track = styled.div`
+  flex: 1;
+  min-width: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+const Ticks = styled.div`
+  display: flex;
+  justify-content: space-between;
+  font-size: ${font.micro};
+  color: ${colour.unknown};
+  font-variant-numeric: tabular-nums;
+  padding: 0 2px;
+  > span:last-child {
+    color: ${colour.primary};
+  }
+`;
+
+const DayEnd = styled.div`
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 16px;
+  border-top: 1px solid ${colour.border};
+  background: ${colour.selected};
+  font-size: ${font.small};
+  color: ${colour.primary};
 `;
 
 const Clock = styled.span`
@@ -137,8 +181,8 @@ const Clock = styled.span`
 `;
 
 const Range = styled.input`
-  flex: 1;
-  min-width: 80px;
+  width: 100%;
+  margin: 0;
   accent-color: ${colour.primary};
   &:focus-visible {
     outline: 2px solid ${colour.primary};
@@ -146,32 +190,66 @@ const Range = styled.input`
   }
 `;
 
-const Extra = styled.details`
+/** Everything secondary to watching the day - speed, stepping one event, the
+ *  MEDial-only view, a new case - behind one gear. */
+const Settings = styled.details`
   position: relative;
-  font-size: ${font.small};
+  flex: none;
   > summary {
     cursor: pointer;
     list-style: none;
+    color: ${colour.secondary};
+    font-size: 16px;
+    line-height: 1;
+    padding: 6px;
+    border-radius: ${radius.control};
+    border: 1px solid transparent;
+  }
+  > summary:hover,
+  &[open] > summary {
     color: ${colour.primary};
-    padding: 4px 2px;
+    border-color: ${colour.border};
+    background: ${colour.surface};
   }
   > summary::-webkit-details-marker {
     display: none;
   }
+  > summary:focus-visible {
+    outline: 2px solid ${colour.primary};
+    outline-offset: 1px;
+  }
   > div {
     position: absolute;
     right: 0;
-    bottom: 28px;
+    bottom: 36px;
+    width: 232px;
     display: flex;
-    gap: 4px;
+    flex-direction: column;
+    gap: 10px;
     background: ${colour.surface};
     border: 1px solid ${colour.border};
     border-radius: ${radius.control};
-    padding: 4px;
+    padding: 12px;
     box-shadow: 0 4px 14px rgba(29, 41, 53, 0.14);
     z-index: 4;
+    font-size: ${font.small};
   }
 `;
+
+const SettingRow = styled.label`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: ${colour.secondary};
+  > select {
+    min-height: 28px;
+    font-size: ${font.small};
+    padding: 2px 6px;
+  }
+`;
+
+const SPEEDS = [30, 60, 120, 240] as const;
 
 interface Props {
   village: VillagePayload;
@@ -186,6 +264,8 @@ interface Props {
   eventCount: number;
   atMs: number;
   playing: boolean;
+  /** Simulated milliseconds per real millisecond. */
+  speed: number;
   selectedCluster: string | null;
   selectedActor: string | null;
   detailActor: string | null;
@@ -200,6 +280,10 @@ interface Props {
   onPlay: () => void;
   onPause: () => void;
   onSeek: (seq: number) => void;
+  /** Drag the clock. Local until onScrubEnd persists the cursor. */
+  onScrub: (atMs: number) => void;
+  onScrubEnd: () => void;
+  onSetSpeed: (speed: number) => void;
   onStep: () => void;
   onStepBack: () => void;
   onRestart: () => void;
@@ -223,6 +307,7 @@ export default function ObserveScreen({
   eventCount,
   atMs,
   playing,
+  speed,
   selectedCluster,
   selectedActor,
   detailActor,
@@ -234,6 +319,9 @@ export default function ObserveScreen({
   onPlay,
   onPause,
   onSeek,
+  onScrub,
+  onScrubEnd,
+  onSetSpeed,
   onStep,
   onStepBack,
   onRestart,
@@ -266,6 +354,10 @@ export default function ObserveScreen({
       for (const actor of Object.values(timeline.actors)) {
         if (!actorIds.has(actor.id)) continue;
         for (const segment of actor.realized) {
+          // An off-map leg's polyline is a straight line to a point outside
+          // the frame - it drew as a bar across the whole valley. The strip
+          // under the map already says who is out of the village.
+          if (segment.mode === 'offmap') continue;
           if (segment.requestId && segment.polyline?.length) routes.push(segment.polyline);
         }
       }
@@ -297,6 +389,9 @@ export default function ObserveScreen({
   // which meant the column always claimed to be about someone - usually P1,
   // whom nobody had asked about.
   const shownActor = detailActor;
+
+  const dayEnd = detail.timeline?.horizonMs ?? DAY_END_MS;
+  const dayOver = cursorSeq >= eventCount && eventCount > 0;
   const persona = shownActor
     ? (personas?.profiles.find((p) => p.subjectId === shownActor) ?? null)
     : null;
@@ -305,28 +400,9 @@ export default function ObserveScreen({
     <Layout>
       <Village>
         <MapPanel>
-          <PanelHead style={{ justifyContent: 'space-between' }}>
+          <PanelHead style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}>
             <PanelTitle>은점마을</PanelTitle>
-            {/* The map column is 460px wide and these five things do not fit
-                on one line there; left to shrink, the two buttons were rendered
-                as columns of single characters (seen in a browser). They wrap
-                instead. */}
-            <div
-              style={{
-                display: 'flex',
-                gap: 8,
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                justifyContent: 'flex-end',
-                minWidth: 0,
-              }}
-            >
-              {/* 실행이 끝나면 다음에 읽을 것은 주민 평가다 (doc 19 9장). 재생
-                  커서와는 다른 컨트롤이며, 재생을 멈추지 않는다. */}
-              {cursorSeq >= eventCount && eventCount > 0 && (
-                <IconButton onClick={onReadEvaluations}>주민 평가 읽기 →</IconButton>
-              )}
-              <IconButton onClick={onNewCase}>새 사례 준비</IconButton>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', minWidth: 0 }}>
               <Tag $kind={village.isSynthetic ? 'warn' : 'unknown'}>
                 {village.isSynthetic ? '합성 지도' : '원자료 지형'}
               </Tag>
@@ -349,15 +425,6 @@ export default function ObserveScreen({
                   {dayLabel(detail.metrics.dayRealization)}
                 </Tag>
               )}
-              <Select
-                aria-label="관찰 시점"
-                style={{ minHeight: 30, fontSize: font.small, padding: '3px 8px' }}
-                value={viewMode}
-                onChange={(e) => onSetViewMode(e.target.value as ViewMode)}
-              >
-                <option value="researcher">연구자 전체보기</option>
-                <option value="medial">MEDial이 아는 것</option>
-              </Select>
             </div>
           </PanelHead>
 
@@ -380,6 +447,16 @@ export default function ObserveScreen({
             onOpenDetail={onOpenDetail}
           />
 
+          {/* 실행이 끝나면 다음에 읽을 것은 주민 평가다 (doc 19 9장). 재생
+              커서와는 다른 컨트롤이며, 재생을 멈추지 않는다. Its own row: put
+              on the playback row it squeezed the clock's marks into each other. */}
+          {dayOver && (
+            <DayEnd>
+              <span>{formatClock(dayEnd)} · 하루가 끝났습니다</span>
+              <IconButton onClick={onReadEvaluations}>주민 평가 읽기 →</IconButton>
+            </DayEnd>
+          )}
+
           <Transport>
             {/* "기록 재생" and "연구 실행" are different things. This control
                 plays back a stored log; stopping it stops nothing on the
@@ -388,30 +465,64 @@ export default function ObserveScreen({
               {playing ? '⏸ 정지' : '▶ 재생'}
             </IconButton>
             <Clock>{formatClock(atMs)}</Clock>
-            <Range
-              type="range"
-              min={0}
-              max={eventCount}
-              step={1}
-              value={Math.min(cursorSeq, eventCount)}
-              onChange={(e) => onSeek(Number(e.target.value))}
-              aria-label="관찰 시점 (사건 번호)"
-            />
-            <Sub as="span" style={{ whiteSpace: 'nowrap' }}>
-              기록 재생 {cursorSeq}/{eventCount}
-            </Sub>
-            <Extra>
-              <summary>더</summary>
+            <Track>
+              <Range
+                type="range"
+                min={DAY_START_MS}
+                max={dayEnd}
+                step={60_000}
+                value={Math.min(Math.max(atMs, DAY_START_MS), dayEnd)}
+                onChange={(e) => onScrub(Number(e.target.value))}
+                onPointerUp={onScrubEnd}
+                onKeyUp={onScrubEnd}
+                aria-label="시각"
+              />
+              <Ticks aria-hidden>
+                <span>05:00</span>
+                <span>12:00</span>
+                <span>17:00</span>
+                <span>{formatClock(dayEnd)} 주민 평가</span>
+              </Ticks>
+            </Track>
+            <Settings>
+              <summary aria-label="재생 설정" title="재생 설정">⚙</summary>
               <div>
-                <IconButton onClick={onStepBack} disabled={cursorSeq === 0}>
-                  ← 한 사건
-                </IconButton>
-                <IconButton onClick={onStep} disabled={cursorSeq >= eventCount}>
-                  한 사건 →
-                </IconButton>
-                <IconButton onClick={onRestart}>처음으로</IconButton>
+                <SettingRow>
+                  배속
+                  <Select value={speed} onChange={(e) => onSetSpeed(Number(e.target.value))}>
+                    {SPEEDS.map((v) => (
+                      <option key={v} value={v}>
+                        {v}×
+                      </option>
+                    ))}
+                  </Select>
+                </SettingRow>
+                <SettingRow>
+                  보기
+                  <Select
+                    aria-label="관찰 시점"
+                    value={viewMode}
+                    onChange={(e) => onSetViewMode(e.target.value as ViewMode)}
+                  >
+                    <option value="researcher">연구자 전체</option>
+                    <option value="medial">MEDial이 아는 것</option>
+                  </Select>
+                </SettingRow>
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  <IconButton onClick={onStepBack} disabled={cursorSeq === 0}>
+                    ← 한 사건
+                  </IconButton>
+                  <IconButton onClick={onStep} disabled={cursorSeq >= eventCount}>
+                    한 사건 →
+                  </IconButton>
+                  <IconButton onClick={onRestart}>처음으로</IconButton>
+                </div>
+                <Sub as="span">
+                  사건 {cursorSeq}/{eventCount}
+                </Sub>
+                <IconButton onClick={onNewCase}>새 사례 준비</IconButton>
               </div>
-            </Extra>
+            </Settings>
           </Transport>
         </MapPanel>
       </Village>

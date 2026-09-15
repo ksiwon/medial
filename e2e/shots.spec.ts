@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { setView, toSetup } from './helpers';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -45,11 +46,7 @@ test('@shots A 사례와 서비스 경험', async ({ page }) => {
   await page.evaluate(() => document.fonts.ready);
   await page.getByRole('button', { name: '사례와 서비스 경험', exact: true }).click();
 
-  const newCase = page.getByRole('button', { name: '새 사례 준비', exact: true });
-  const start = page.getByRole('button', { name: '실험 시작', exact: true });
-  await expect(newCase.or(start).first()).toBeVisible({ timeout: 30_000 });
-  if (await newCase.count()) await newCase.click();
-  await expect(start).toBeEnabled({ timeout: 20_000 });
+  await toSetup(page);
 
   await shot(page, '01-case-setup');
 
@@ -59,7 +56,7 @@ test('@shots A 사례와 서비스 경험', async ({ page }) => {
   await shot(page, '02-case-setup-settings');
   await page.getByText('실험 설정').click();
 
-  await start.click();
+  await page.getByRole('button', { name: '실험 시작', exact: true }).click();
 
   // The loop runs a day, collects the evaluations and stops for the researcher.
   await expect(page.getByText('실행 중', { exact: true })).toHaveCount(0, { timeout: 180_000 });
@@ -75,7 +72,7 @@ test('@shots A 사례와 서비스 경험', async ({ page }) => {
   await page.getByText(/사건 근거 [0-9]+건 보기/).first().click();
   await page.getByText('그 장면 열기').first().click();
 
-  const range = page.getByLabel('관찰 시점 (사건 번호)', { exact: true });
+  const range = page.getByLabel('시각', { exact: true });
   await expect(range).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText('MEDial · 조율 현황')).toBeVisible();
   await shot(page, '03-observe');
@@ -103,10 +100,10 @@ test('@shots A 사례와 서비스 경험', async ({ page }) => {
   await crop(dayReviews.locator('xpath=ancestor::section[1]'), '08b-observe-day-reviews');
 
   // What MEDial itself was told, as opposed to what the world did.
-  await page.getByLabel('관찰 시점', { exact: true }).selectOption('medial');
+  await setView(page, 'medial');
   await expect(page.getByText('MEDial이 보고받은 위치만 표시 중')).toBeVisible();
   await shot(page, '09-observe-medial-view');
-  await page.getByLabel('관찰 시점', { exact: true }).selectOption('researcher');
+  await setView(page, 'researcher');
 
   // One resident's own day, opened from the board.
   await panel(page, '마을 사람들').getByText('P1', { exact: true }).first().click();

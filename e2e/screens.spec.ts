@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { seekToEnd, setView, toSetup } from './helpers';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,13 +22,6 @@ const shot = (page: Page, name: string) =>
 async function hint(page: Page, label: string) {
   await page.getByLabel(`${label} 설명`, { exact: true }).click();
   return page.getByRole('tooltip');
-}
-
-/** Move the playback cursor to the last event: End on the range input. */
-async function seekToEnd(page: Page) {
-  const range = page.getByLabel('관찰 시점 (사건 번호)', { exact: true });
-  await range.focus();
-  await range.press('End');
 }
 
 const DAY_LABEL: Record<string, string> = {
@@ -82,7 +76,7 @@ test('관찰: 이웃 우선 정책에서 누가 거절했고 왜인지가 읽힌
 
   // MEDial's own view. These refusals were addressed to MEDial, so they stay;
   // nothing is marked as hidden from it.
-  await page.getByLabel('관찰 시점', { exact: true }).selectOption('medial');
+  await setView(page, 'medial');
   await expect(page.getByText(refusals[0].reason).first()).toBeVisible();
   await expect(page.getByText('MEDial은 모름')).toHaveCount(0);
   await shot(page, 'observe-medial');
@@ -103,7 +97,7 @@ test('관찰: 정책 D는 재연락을 먼저 하고, 이장에게 가는 이유
   await page.getByRole('button', { name: '사례와 서비스 경험', exact: true }).click();
   await expect(page.getByText('MEDial · 조율 현황')).toBeVisible();
   await seekToEnd(page);
-  await page.getByLabel('관찰 시점', { exact: true }).selectOption('medial');
+  await setView(page, 'medial');
   // The retry is a phone call, before anyone else is asked.
   await expect(page.getByText(/전화로 연락했습니다 \(2번째\)/).first()).toBeVisible();
   // The head is last in this order; he is first here because the record has no one else.
@@ -123,14 +117,7 @@ test('사례 → 실행 → 주민 평가 → 개선과 확인: 한 바퀴가 �
   await page.getByRole('button', { name: '사례와 서비스 경험', exact: true }).click();
   // The earlier tests left runs in this database, so the case screen opens on
   // one of them; setting up a new case is an explicit step.
-  const newCase = page.getByRole('button', { name: '새 사례 준비', exact: true });
-  const start = page.getByRole('button', { name: '실험 시작', exact: true });
-  // Whichever of the two this database leads to has to be on screen before the
-  // choice is made; asking immediately after the click read an empty page and
-  // skipped the step.
-  await expect(newCase.or(start).first()).toBeVisible({ timeout: 30_000 });
-  if (await newCase.count()) await newCase.click();
-  await expect(start).toBeEnabled({ timeout: 20_000 });
+  await toSetup(page);
   await shot(page, 'case-setup');
   await page.getByRole('button', { name: '실험 시작', exact: true }).click();
 
@@ -323,7 +310,10 @@ test('키보드만으로 세 화면과 평가 근거에 닿는다', async ({ pag
   const reached: string[] = [];
   for (let i = 0; i < 12 && reached.length < 3; i += 1) {
     await page.keyboard.press('Tab');
-    const label = await page.evaluate(() => document.activeElement?.textContent ?? '');
+    // Each screen name is prefixed by its step number (1, 2, 3).
+    const label = await page.evaluate(
+      () => (document.activeElement?.textContent ?? '').replace(/^\d/, ''),
+    );
     if (['사례와 서비스 경험', '주민 평가', '개선과 확인'].includes(label)) reached.push(label);
   }
   expect(reached).toEqual(['사례와 서비스 경험', '주민 평가', '개선과 확인']);

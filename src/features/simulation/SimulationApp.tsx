@@ -82,14 +82,36 @@ const Brand = styled.div`
   letter-spacing: -0.3px;
 `;
 
+/* The three screens are one cycle, and the nav says so: numbered, joined by
+   arrows, and closed by a return arrow from the third back to the first. Three
+   unmarked words in a row read as tabs, and a reader could not tell they were
+   steps of a loop (the user, 2026-09-15). */
 const Nav = styled.nav`
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 2px;
 
   @media (max-width: 900px) {
     order: 3;
     width: 100%;
   }
+`;
+
+const Arrow = styled.span`
+  color: ${colour.unknown};
+  font-size: ${font.small};
+  padding: 0 4px;
+  user-select: none;
+`;
+
+/** The loop closing: after 개선과 확인 the confirmed change becomes the next
+ *  case. Drawn as the arrow going back, never as a fourth step. */
+const Return = styled.span`
+  color: ${colour.unknown};
+  font-size: ${font.small};
+  padding: 0 4px 0 2px;
+  white-space: nowrap;
+  user-select: none;
 `;
 
 const NavItem = styled.button<{ $active: boolean }>`
@@ -101,8 +123,11 @@ const NavItem = styled.button<{ $active: boolean }>`
   color: ${(p) => (p.$active ? colour.primary : colour.secondary)};
   font-weight: ${(p) => (p.$active ? 600 : 400)};
   border-radius: ${radius.control};
-  padding: 7px 14px;
+  padding: 6px 12px 6px 8px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   &:hover:not(:disabled) {
     color: ${colour.primary};
   }
@@ -114,6 +139,22 @@ const NavItem = styled.button<{ $active: boolean }>`
     opacity: 0.4;
     cursor: default;
   }
+`;
+
+const StepNo = styled.span<{ $active: boolean }>`
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: ${(p) => (p.$active ? colour.primary : 'transparent')};
+  color: ${(p) => (p.$active ? colour.surface : colour.secondary)};
+  border: 1px solid ${(p) => (p.$active ? colour.primary : colour.border)};
 `;
 
 const Notices = styled.div`
@@ -261,28 +302,36 @@ export default function SimulationApp() {
     <Root>
       <Header>
         <Brand>MEDial</Brand>
-        <Nav>
-          {NAV.map((item) => (
-            <NavItem
-              key={item.key}
-              $active={screen === item.key}
-              aria-current={screen === item.key ? 'page' : undefined}
-              disabled={
-                (item.key === 'evaluations' && !hasEvaluations) ||
-                (item.key === 'improve' && !it.detail)
-              }
-              title={
-                item.key === 'evaluations' && !hasEvaluations
-                  ? '아직 이 사례의 주민 평가가 없습니다'
-                  : item.key === 'improve' && !it.detail
-                    ? '먼저 사례를 하나 실행하세요'
-                    : undefined
-              }
-              onClick={() => it.setScreen(item.key)}
-            >
-              {item.label}
-            </NavItem>
+        <Nav aria-label="연구 순환">
+          {NAV.map((item, index) => (
+            <span key={item.key} style={{ display: 'contents' }}>
+              {index > 0 && <Arrow aria-hidden>→</Arrow>}
+              <NavItem
+                $active={screen === item.key}
+                aria-current={screen === item.key ? 'page' : undefined}
+                disabled={
+                  (item.key === 'evaluations' && !hasEvaluations) ||
+                  (item.key === 'improve' && !it.detail)
+                }
+                title={
+                  item.key === 'evaluations' && !hasEvaluations
+                    ? '아직 이 사례의 주민 평가가 없습니다'
+                    : item.key === 'improve' && !it.detail
+                      ? '먼저 사례를 하나 실행하세요'
+                      : undefined
+                }
+                onClick={() => it.setScreen(item.key)}
+              >
+                <StepNo $active={screen === item.key} aria-hidden>
+                  {index + 1}
+                </StepNo>
+                {item.label}
+              </NavItem>
+            </span>
           ))}
+          <Return title="확인된 개선안이 다음 사례가 됩니다. 3 → 1로 돌아가 다시 한 바퀴.">
+            ↺ 다시 1로
+          </Return>
         </Nav>
         <span style={{ flex: 1 }} />
         {it.detail && (
@@ -291,9 +340,13 @@ export default function SimulationApp() {
             {it.detail.session.label}
           </Sub>
         )}
+        {/* Who the residents are. Source-derived personas are the real people of
+            the village the study was done in; the synthetic fixture says so
+            instead, and never borrows that name. */}
         <Tag $kind={s.catalog.personas.dataSource === 'synthetic' ? 'warn' : 'unknown'}>
-          페르소나 {s.catalog.personas.dataSource === 'synthetic' ? '합성' : '원자료'} ·{' '}
-          {s.catalog.personas.personaCount}명
+          {s.catalog.personas.dataSource === 'synthetic'
+            ? `합성 페르소나 · ${s.catalog.personas.personaCount}명`
+            : `실제 남해군 은점마을 주민 ${s.catalog.personas.personaCount}명`}
         </Tag>
       </Header>
 
@@ -378,6 +431,7 @@ export default function SimulationApp() {
           eventCount={loaded.detail.attempt.eventCount}
           atMs={s.atMs}
           playing={s.playing}
+          speed={s.speed}
           selectedCluster={s.selectedCluster}
           selectedActor={s.selectedActor}
           detailActor={s.detailActor}
@@ -389,6 +443,9 @@ export default function SimulationApp() {
           onPlay={() => void s.play()}
           onPause={() => void s.pause()}
           onSeek={(seq) => void s.seekToSeq(seq)}
+          onScrub={s.scrubTo}
+          onScrubEnd={() => void s.commitScrub()}
+          onSetSpeed={s.setSpeed}
           onStep={() => void s.step()}
           onStepBack={() => void s.stepBack()}
           onRestart={() => void s.restart()}

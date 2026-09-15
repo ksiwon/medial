@@ -69,6 +69,9 @@ interface SimState {
   seekToSeq: (seq: number) => Promise<void>;
   restart: () => Promise<void>;
   scrubTo: (atMs: number) => void;
+  /** Persist where a scrub stopped. The clock stays where it was dragged. */
+  commitScrub: () => Promise<void>;
+  setSpeed: (speed: number) => void;
   selectCluster: (key: string | null, actorId?: string | null) => void;
   setDetailActor: (id: string | null) => void;
   tick: (deltaMs: number) => void;
@@ -77,7 +80,10 @@ interface SimState {
 let commandCounter = 0;
 const nextCommandId = (name: string) => `cmd-${name}-${Date.now()}-${commandCounter++}`;
 
-const DAY_START_MS = 8 * 60 * 60 * 1000;
+/** The village day runs 05:00-22:00, as in the source diorama; the server's
+ *  day_started event is stamped at 05:00 too. Exported for the slider. */
+export const DAY_START_MS = 5 * 60 * 60 * 1000;
+export const DAY_END_MS = 22 * 60 * 60 * 1000;
 
 function describe(error: unknown): string {
   if (error instanceof ApiError) return error.message;
@@ -304,6 +310,18 @@ export const useSimStore = create<SimState>((set, get) => ({
     set({ atMs, cursorSeq: loaded ? seqAt(loaded.events, atMs) : 0, playing: false });
   },
 
+  commitScrub: async () => {
+    const { activeId, cursorSeq } = get();
+    if (!activeId) return;
+    try {
+      await api.command(activeId, nextCommandId('seek'), 'seek', cursorSeq);
+    } catch (error) {
+      set({ error: describe(error) });
+    }
+  },
+
+  setSpeed: (speed) => set({ speed }),
+
   selectCluster: (key, actorId = null) => set({ selectedCluster: key, selectedActor: actorId }),
   setDetailActor: (id) => set({ detailActor: id }),
 
@@ -311,7 +329,7 @@ export const useSimStore = create<SimState>((set, get) => ({
     const { playing, atMs, speed, activeId, attempts } = get();
     if (!playing || !activeId) return;
     const loaded = attempts[activeId];
-    const horizon = loaded?.detail.timeline?.horizonMs ?? 20 * 60 * 60 * 1000;
+    const horizon = loaded?.detail.timeline?.horizonMs ?? DAY_END_MS;
     const next = atMs + deltaMs * speed;
     if (next >= horizon) {
       set({ atMs: horizon, cursorSeq: loaded ? loaded.events.length : 0 });
@@ -371,4 +389,3 @@ async function loadAttempt(
   return loaded;
 }
 
-export const DAY_START = DAY_START_MS;

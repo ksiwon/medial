@@ -33,7 +33,7 @@ HOUR_MS = 60 * MIN_MS
 
 NEED_MS = 8 * HOUR_MS                     # 08:00 - P9 raises the need
 SECOND_NEED_MS = 10 * HOUR_MS + 30 * MIN_MS   # 10:30 - while the first car is out
-HORIZON_MS = 20 * HOUR_MS
+HORIZON_MS = 22 * HOUR_MS                # the village day: 05:00 to 22:00, as in the source diorama
 
 DECK_ID = "deck-p9-transport-v1"
 

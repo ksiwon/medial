@@ -71,6 +71,11 @@ from .village import Village
 from .world import MIN_MS, Segment, WorldState
 
 CHECK_ON_SITE_MS = 5 * MIN_MS
+#: The clock the village day is read from. Nothing is scheduled before it -
+#: the earliest routine step in the registry is 05:30 - and the replay slider
+#: starts here rather than at midnight. Baseline segments still begin at 0 so
+#: that everyone is at home before the day opens.
+DAY_START_MS = 5 * 60 * MIN_MS
 CALL_BUFFER_MS = 15 * MIN_MS
 
 #: Kept as a name for the tests and scripts that referred to 은점's head before
@@ -349,8 +354,8 @@ class Engine:
 
     # -- run -------------------------------------------------------------
     def run(self) -> RunResult:
-        self._emit(0, EventType.world_day_started, ENGINE, "world", [RESEARCHER],
-                   {"dayStartMs": 0, "dataSource": self.village.data_source})
+        self._emit(DAY_START_MS, EventType.world_day_started, ENGINE, "world", [RESEARCHER],
+                   {"dayStartMs": DAY_START_MS, "dataSource": self.village.data_source})
         for scenario_event in self.deck.events:
             self._schedule(scenario_event.simTimeMs, "scenario", {"event": scenario_event})
         self._schedule(self.deck.horizonMs, "finalize", {})

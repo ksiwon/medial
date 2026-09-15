@@ -86,7 +86,7 @@ const Corner = styled.div`
 
 const Tools = styled(Corner)`
   right: 12px;
-  bottom: 34px;
+  bottom: 26px;
   flex-direction: column;
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid ${colour.border};
@@ -139,16 +139,25 @@ const ModeBadge = styled.div`
 `;
 
 /** Required source credit. Small type is allowed here and only here. */
+/* Required attribution, under the zoom tools in the bottom-right corner and as
+   small as it is allowed to be. It was a strip along the bottom-left, where it
+   sat on top of the village. */
 const Credit = styled.div`
   position: absolute;
-  left: 12px;
-  bottom: 12px;
-  font-size: ${font.micro};
-  color: ${colour.secondary};
-  background: rgba(255, 255, 255, 0.86);
-  border-radius: 4px;
-  padding: 1px 6px;
+  right: 12px;
+  bottom: 6px;
+  max-width: 60%;
+  text-align: right;
+  font-size: 9px;
+  line-height: 1.3;
+  color: ${colour.unknown};
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 3px;
+  padding: 0 4px;
   pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
 /* Flips above/below and clamps to the frame, with 16 px of clearance so it
@@ -685,7 +694,7 @@ export default function VillageMap({
 
         <Credit>
           {hasRaster
-            ? '지도 © OpenStreetMap 기여자 · 원자료 시뮬레이터에서 추출'
+            ? '© OpenStreetMap 기여자'
             : '지도 이미지 없음 · 원자료 좌표만 표시'}
         </Credit>
 

@@ -23,7 +23,7 @@ MIN_MS = 60_000
 HOUR_MS = 60 * MIN_MS
 
 CHECKIN_MS = 9 * HOUR_MS + 30 * MIN_MS
-HORIZON_MS = 20 * HOUR_MS
+HORIZON_MS = 22 * HOUR_MS                # the village day: 05:00 to 22:00, as in the source diorama
 
 DECK_ID = "deck-r1-no-response-v1"
 

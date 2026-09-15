@@ -1,3 +1,4 @@
+import { placeWord } from './selectors/story';
 import type { DomainEvent, Segment, Timeline, TimelineActor, VillagePayload } from './api/types';
 
 // Position interpolation for the map. This mirrors the server snapshot endpoint
@@ -272,7 +273,9 @@ export function placeLabel(
   if (!place) return null;
   const home = /^HOME:(.+)$/.exec(place);
   if (home) return home[1] === viewerId ? null : `${home[1]}의 집`;
-  return village.places[place]?.label ?? place;
+  // PATROL is a route, not a registry place, so it has no label of its own;
+  // the board printed the key beside 마을 순찰.
+  return village.places[place]?.label ?? placeWord(place);
 }
 
 export function placeXY(village: VillagePayload, place: string): [number, number] | null {

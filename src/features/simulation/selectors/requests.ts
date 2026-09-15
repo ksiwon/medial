@@ -274,13 +274,13 @@ export function currentSentence(flow: RequestFlow): string {
     case 'transport.dropoff':
       return `${withParticle(p.riderId ? personName(str(p.riderId)) : who, 'subject')} 내렸습니다.`;
     case 'task.travel_started':
-      return `${withParticle(personName(last.actorId), 'subject')} ${str(p.to) ?? '목적지'}(으)로 출발했습니다.`;
+      return `${withParticle(personName(last.actorId), 'subject')} ${p.to ? placeWord(str(p.to)) : '목적지'}(으)로 출발했습니다.`;
     case 'task.travel_arrived':
-      return `${withParticle(personName(last.actorId), 'subject')} ${str(p.place) ?? '목적지'}에 도착했습니다.`;
+      return `${withParticle(personName(last.actorId), 'subject')} ${p.place ? placeWord(str(p.place)) : '목적지'}에 도착했습니다.`;
     case 'task.check_performed':
       return str(p.outcome) === 'subject_found_well'
         ? `${withParticle(who, 'object')} 직접 확인했습니다.`
-        : `${str(p.place) ?? '그 장소'}에 ${withParticle(who, 'subject')} 없었습니다.`;
+        : `${p.place ? placeWord(str(p.place)) : '그 장소'}에 ${withParticle(who, 'subject')} 없었습니다.`;
     case 'handoff.requested':
       return `${to ?? '기관'}에 인계를 요청했습니다.`;
     case 'handoff.accepted':
