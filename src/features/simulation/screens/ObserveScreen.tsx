@@ -351,17 +351,6 @@ export default function ObserveScreen({
     [activeFlow],
   );
 
-  // A quote is only ever an utterance the log already holds for that person at
-  // or before the cursor. Nothing is written for the popover.
-  const quoteFor = useMemo(() => {
-    const byActor = new Map<string, string>();
-    for (const event of visibleEvents) {
-      const utterance = (event.payload as Record<string, unknown>).utterance;
-      if (typeof utterance === 'string') byActor.set(event.actorId, utterance);
-    }
-    return (actorId: string) => byActor.get(actorId) ?? null;
-  }, [visibleEvents]);
-
   const actorIds = useMemo(
     () =>
       Object.keys(detail.timeline?.actors ?? {}).sort((a, b) =>
@@ -400,7 +389,6 @@ export default function ObserveScreen({
             highlight={highlight}
             selectedCluster={selectedCluster}
             selectedActor={selectedActor}
-            quoteFor={quoteFor}
             title={village.isSynthetic ? '합성 마을' : '은점마을'}
             onSelectCluster={onSelectCluster}
             onOpenDetail={onOpenDetail}

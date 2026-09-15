@@ -316,10 +316,14 @@ export function clusterPoses(poses: ActorPose[]): Cluster[] {
 
     // A car and its passengers are one marker with one vehicle on it.
     const vehicle = pose.ridingWith ?? (pose.riders.length > 0 ? pose.id : null);
+    // Standing people are grouped by where they stand, not by the name of the
+    // place: P10 and P11 share one house under two keys (HOME:P10, HOME:P11),
+    // and a visitor at P5's is at "P5" while P5 is at "HOME:P5". Same spot,
+    // one marker.
     const key = vehicle
       ? `vehicle:${vehicle}`
       : pose.place && !pose.moving
-        ? `place:${pose.place}`
+        ? `place:${pose.x.toFixed(1)},${pose.y.toFixed(1)}`
         : `alone:${pose.id}`;
 
     const found = groups.get(key);

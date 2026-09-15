@@ -236,12 +236,25 @@ const PopBody = styled.div`
   color: ${colour.text};
 `;
 
-const Quote = styled.div`
-  margin-top: 6px;
-  padding-left: 8px;
-  border-left: 2px solid ${colour.border};
-  font-size: ${font.small};
-  color: ${colour.secondary};
+/** Who is in the chip row; where and what are the two facts below it. The
+ *  utterance that used to be quoted here is on the person's page. */
+const Facts = styled.dl`
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 8px;
+  row-gap: 2px;
+  > dt {
+    color: ${colour.unknown};
+    white-space: nowrap;
+  }
+  > dd {
+    margin: 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 `;
 
 const MoreButton = styled.button`
@@ -342,7 +355,6 @@ interface Props {
   selectedActor: string | null;
   /** One short line from the current scene for the selected person, or null.
    *  Never invented: the observe screen passes an actual event's words. */
-  quoteFor: (actorId: string) => string | null;
   /** Shown as a small badge over the map's top-left corner. */
   title: string;
   onSelectCluster: (key: string | null, actorId?: string | null) => void;
@@ -359,7 +371,6 @@ export default function VillageMap({
   highlight,
   selectedCluster,
   selectedActor,
-  quoteFor,
   title,
   onSelectCluster,
   onOpenDetail,
@@ -560,7 +571,11 @@ export default function VillageMap({
 
   const selectedMember =
     active?.members.find((m) => m.id === selectedActor) ?? active?.members[0] ?? null;
-  const quote = selectedMember ? quoteFor(selectedMember.id) : null;
+  const popWhere = selectedMember
+    ? selectedMember.moving
+      ? '이동 중'
+      : (placeLabel(village, selectedMember.place, selectedMember.id) ?? '자택')
+    : '';
 
   return (
     <>
@@ -760,10 +775,17 @@ export default function VillageMap({
 
             {selectedMember && (
               <PopBody>
-                <span>{selectedMember.activity}
-                  {selectedMember.ridingWith && ' · 차량 동승'}
-                  {quote && <Quote>“{quote}”</Quote>}
-                </span>
+                <Facts>
+                  <dt>어디서</dt>
+                  <dd>{popWhere}</dd>
+                  <dt>무엇을</dt>
+                  <dd>
+                    {/* A stay's activity is the place's own name ("자택"), which
+                        would repeat the line above. */}
+                    {selectedMember.activity === popWhere ? '머무는 중' : selectedMember.activity}
+                    {selectedMember.ridingWith && ' · 차량 동승'}
+                  </dd>
+                </Facts>
                 <MoreButton onClick={() => { onOpenDetail(selectedMember.id); setDismissed(active.key); onSelectCluster(null, null); }}>더 알아보기 ↗</MoreButton>
               </PopBody>
             )}
@@ -945,8 +967,9 @@ function ClusterMark({
         </>
       )}
 
+      {/* 62 rather than 53 wide: 이장 and P10-P12 touched the right edge. */}
       <rect x={x - (faces.length > 1 ? 28 : 16) * k} y={y - 16*k}
-        width={(faces.length > 1 ? 56 : 53)*k} height={32*k} rx={16*k}
+        width={(faces.length > 1 ? 56 : 62)*k} height={32*k} rx={16*k}
         fill={selected || hovered ? '#edf5ec' : '#fffffff5'}
         stroke={selected || hovered ? '#8eaf98' : '#d6e1d3'} strokeWidth={1.2*k}
         style={{filter:'drop-shadow(0 1px 2px #304c3926)'}} />
