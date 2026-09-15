@@ -141,7 +141,7 @@ export const useSimStore = create<SimState>((set, get) => ({
   cursorSeq: 0,
   atMs: DAY_START_MS,
   playing: false,
-  speed: 120,
+  speed: 180,
   selectedCluster: null,
   selectedActor: null,
   detailActor: null,

@@ -249,7 +249,7 @@ const SettingRow = styled.label`
   }
 `;
 
-const SPEEDS = [30, 60, 120, 240] as const;
+const SPEEDS = [60, 180, 300, 600] as const;
 
 interface Props {
   village: VillagePayload;
