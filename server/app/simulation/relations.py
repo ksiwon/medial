@@ -47,7 +47,7 @@ def _companions() -> list[RelationEdge]:
 #: is an inference about who *would* help whom in general.
 _RECORDED = [
     RelationEdge(a="P6", b="P12", kind="kin", provenance="source-adapted",
-                 reason="P12 박동규는 이장 P6의 사촌이다"),
+                 reason="P12는 이장 P6의 사촌이다"),
     RelationEdge(a="P9", b="P12", kind="ride", provenance="source-adapted",
                  reason="Q1 병원 동행 갈 때 P12가 P9를 태워 갔다 (08:00~08:38)"),
     RelationEdge(a="P3", b="P9", kind="ride", provenance="source-adapted",
