@@ -40,7 +40,7 @@ from .decks.registry import DECK_DEFAULTS, DECKS, POLICIES, RESOURCE_SETS
 from .agents.model_calls import ModelCallLog
 from .case_bundle import CaseValidationError, build_case, empty_ledger_for, unsupported_reason
 from .engine import Engine, RunResult
-from .persona import load_personas
+from .persona import apply_community_facts, load_personas
 from .village import Village, load_village
 
 _PERSONA_CACHE: dict[str, tuple[dict[str, Any], dict[str, Any]]] = {}
@@ -178,6 +178,10 @@ def run_attempt(attempt_id: str, policy_id: str, deck_id: str, resource_id: str,
         raise CaseValidationError(reason)
     ledger = ledger or load_ledger(village.path, [r["id"] for r in village.residents],
                                    case.village_head_id) or empty_ledger_for(case)
+    # What the researcher states about the community (who drives) sits on top
+    # of what the interviews said. The ledger is in the input hashes, so a
+    # changed statement is a changed input.
+    profiles = apply_community_facts(profiles, ledger)
     model_policy = model_policy or ModelPolicy()
     # The day is drawn before anything runs, from (village, environment, seed)
     # alone. A rerun and a fork inherit the parent's seed, so they land on this

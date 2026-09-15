@@ -326,7 +326,7 @@ export function latestReasoning(
     ? (p.excluded as { actorId: string; reason: string }[])
     : (record?.candidates.filter((c) => !c.included) ?? []);
   return {
-    question: str(p.question) ?? record?.question ?? '',
+    question: questionWords(str(p.question) ?? record?.question ?? ''),
     chosen: str(p.chosen) ?? record?.chosen ?? '없음',
     rationale: str(p.rationale) ?? record?.rationale ?? '',
     knownFacts: record?.knownFacts ?? [],
@@ -337,21 +337,47 @@ export function latestReasoning(
 /** Every judgement on this request, oldest first, each with its own reason.
  *  The panel showed only the latest, so a relation-first run displayed "keep
  *  looking at the field" and hid why the head was asked in the first place. */
-export function reasonsInOrder(
-  flow: RequestFlow,
-): { seq: number; atMs: number; question: string; chosen: string | null; rationale: string }[] {
-  return flow.events
-    .filter((event) => event.type === 'medial.decided')
-    .map((event) => {
-      const p = asRecord(event);
-      return {
-        seq: event.seq,
-        atMs: event.simTimeMs,
-        question: str(p.question) ?? '',
-        chosen: str(p.chosen),
-        rationale: str(p.rationale) ?? '',
-      };
+/** A policy's question names the destination by its engine key ("TOWN까지의
+ *  이동을 …"); the reader gets the place's word. */
+export function questionWords(question: string): string {
+  return question.replace(/^([A-Z][A-Z0-9_]*(?::P\d+)?)(까지|에서|으로|로|에)/, (_m, key, particle) =>
+    `${placeWord(key)}${particle}`,
+  );
+}
+
+export function reasonsInOrder(flow: RequestFlow): {
+  seq: number;
+  atMs: number;
+  question: string;
+  /** Everyone this same judgement was applied to, in order asked. One entry
+   *  unless the policy asked down a list with the same reasoning each time. */
+  chosen: string[];
+  rationale: string;
+}[] {
+  const out: ReturnType<typeof reasonsInOrder> = [];
+  for (const event of flow.events) {
+    if (event.type !== 'medial.decided') continue;
+    const p = asRecord(event);
+    const question = questionWords(str(p.question) ?? '');
+    const rationale = str(p.rationale) ?? '';
+    const chosen = str(p.chosen);
+    const last = out[out.length - 1];
+    // Asking the next candidate with the same question and the same reasoning
+    // is one judgement applied down a list, not eight judgements. The panel
+    // showed eight identical paragraphs (2026-09-15).
+    if (last && last.question === question && last.rationale === rationale && chosen) {
+      last.chosen.push(chosen);
+      continue;
+    }
+    out.push({
+      seq: event.seq,
+      atMs: event.simTimeMs,
+      question,
+      chosen: chosen ? [chosen] : [],
+      rationale,
     });
+  }
+  return out;
 }
 
 export interface AskedRow {

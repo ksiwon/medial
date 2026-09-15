@@ -311,7 +311,8 @@ export default function OrchestratorPanel({
                         {earlier.map((row) => (
                           <li key={row.seq}>
                             {formatClock(row.atMs)} · {row.question} →{' '}
-                            {row.chosen ? personName(row.chosen) : '없음'}: {row.rationale}
+                            {row.chosen.length ? row.chosen.map(personName).join(', ') : '없음'}
+                            {row.chosen.length > 1 && ' (차례로 물음)'}: {row.rationale}
                           </li>
                         ))}
                       </Facts>

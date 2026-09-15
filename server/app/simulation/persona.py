@@ -290,6 +290,41 @@ class PersonaCompiler:
         return (accept, decline, unknowns)
 
 
+def apply_community_facts(profiles: dict[str, PersonaProfile],
+                          ledger: Any) -> dict[str, PersonaProfile]:
+    """Fill ``drivesSelf`` from the ledger's mobility statements.
+
+    Only an *unknown* is filled. A persona whose interview said they do not
+    drive keeps that; the researcher's community-level statement does not
+    outrank a person's own words. Each filled value gets an evidence card of
+    kind ``assumption`` pointing at the ledger, so the ride decision can still
+    say where the belief came from.
+    """
+    statements = getattr(ledger, "mobility", None) or []
+    if not statements:
+        return profiles
+    out: dict[str, PersonaProfile] = {}
+    for pid, profile in profiles.items():
+        statement = ledger.drives(pid)
+        if profile.drivesSelf is not None or statement is None:
+            out[pid] = profile
+            continue
+        card = EvidenceCard(
+            id="%s-drivesSelf-ledger" % pid, subjectId=pid, kind="assumption",
+            field="drivesSelf",
+            claim=("운전 가능으로 둔다: " if statement.drivesSelf else "운전하지 않는 것으로 둔다: ")
+            + statement.reason,
+            pointer="ledger:%s/mobility" % getattr(ledger, "id", "?"),
+            sourceKind="researcher_note", confidence="medium",
+            note="공동체 단위의 연구자 진술. 본인 인터뷰가 운전 여부를 말했다면 그쪽이 우선한다.")
+        out[pid] = profile.model_copy(update={
+            "drivesSelf": statement.drivesSelf,
+            "hasVehicle": True if statement.drivesSelf else profile.hasVehicle,
+            "evidence": [*profile.evidence, card],
+        })
+    return out
+
+
 def load_personas(path: "str | Path | None" = None
                   ) -> tuple[dict[str, PersonaProfile], dict[str, Any]]:
     """Compile personas from the local source, or from the synthetic fixture.

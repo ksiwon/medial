@@ -93,6 +93,26 @@ class RoutineKnowledge(Base):
     reason: str
 
 
+class MobilityStatement(Base):
+    """Who drives, as the researcher states it for the community.
+
+    The persona compiler only reads what an interview said, and most interviews
+    never mention driving, so every ride request was declined with
+    ``driving_status_unknown``. The researcher who did the fieldwork knows the
+    village cannot be lived in without a car. That is a fact about the
+    community, not about one transcript, so it is recorded here with its own
+    provenance and applied on top of the compiled personas - never by editing
+    the compiler into inventing it, and never over a persona whose interview
+    said the opposite.
+    """
+
+    #: ``None`` means everyone in the community.
+    actorIds: list[str] | None = None
+    drivesSelf: bool
+    provenance: Literal["researcher-statement"] = "researcher-statement"
+    reason: str
+
+
 class ElicitationLedger(Base):
     EDITABLE_BY_CHANGE_SET: ClassVar[bool] = False
 
@@ -100,7 +120,16 @@ class ElicitationLedger(Base):
     label: str
     entries: list[LedgerEntry] = Field(default_factory=list)
     routineKnowledge: list[RoutineKnowledge] = Field(default_factory=list)
+    mobility: list[MobilityStatement] = Field(default_factory=list)
     assumptions: list[str] = Field(default_factory=list)
+
+    def drives(self, actor_id: str) -> MobilityStatement | None:
+        """The most specific statement about this person, or none."""
+        named = [m for m in self.mobility if m.actorIds and actor_id in m.actorIds]
+        if named:
+            return named[-1]
+        general = [m for m in self.mobility if m.actorIds is None]
+        return general[-1] if general else None
 
     def status(self, actor_id: str, topic: str) -> ElicitationStatus:
         for e in self.entries:

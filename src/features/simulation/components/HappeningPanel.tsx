@@ -149,7 +149,9 @@ export default function HappeningPanel({
   const [showAll, setShowAll] = useState(false);
   const dayOver = eventCount > 0 && cursorSeq >= eventCount;
 
-  const rows = useMemo(() => storyRows(events), [events]);
+  // Newest at the top: while the day plays, the line that just happened is
+  // the one being read, and it should not arrive at the bottom of a list.
+  const rows = useMemo(() => storyRows(events).reverse(), [events]);
   const hidden = useMemo(() => hiddenRows(events), [events]);
 
   // The day's reviews only exist once the loop has collected them; until then
