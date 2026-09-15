@@ -22,15 +22,15 @@ export const colour = {
   unknown: '#8B96A1',
 } as const;
 
-/** One font stack, and it is the platform's own.
+/** One font stack: Pretendard, shipped with the build.
  *
- *  This used to start with 'Pretendard', whose @font-face lived only in the
- *  removed companion stylesheet - so it never loaded here and every screenshot
- *  in the docs is already the system font. Naming a font the build does not
- *  ship is a promise the page cannot keep. */
+ *  An earlier stack named 'Pretendard' without loading it, so every screen was
+ *  really the system font. The @font-face now comes from the `pretendard`
+ *  package imported in main.tsx, and the platform fonts after it are only a
+ *  fallback for a glyph the subset does not carry. */
 export const font = {
   family:
-    'system-ui, -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", Roboto, sans-serif',
+    '"Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", Roboto, sans-serif',
   page: '24px',
   section: '18px',
   brand: '18px',

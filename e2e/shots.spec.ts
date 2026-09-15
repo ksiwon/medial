@@ -42,6 +42,7 @@ async function openHint(page: Page, label: string) {
 test('@shots A 사례와 서비스 경험', async ({ page }) => {
   test.setTimeout(240_000);
   await page.goto('/');
+  await page.evaluate(() => document.fonts.ready);
   await page.getByRole('button', { name: '사례와 서비스 경험', exact: true }).click();
 
   const newCase = page.getByRole('button', { name: '새 사례 준비', exact: true });
@@ -116,6 +117,7 @@ test('@shots A 사례와 서비스 경험', async ({ page }) => {
 test('@shots B 주민 평가', async ({ page }) => {
   test.setTimeout(240_000);
   await page.goto('/');
+  await page.evaluate(() => document.fonts.ready);
   await page.getByRole('button', { name: '주민 평가', exact: true }).click();
   await expect(page.getByText('평가 항목의 개수')).toBeVisible({ timeout: 60_000 });
   await shot(page, '11-evaluations');
@@ -144,6 +146,7 @@ test('@shots B 주민 평가', async ({ page }) => {
 test('@shots C 개선과 확인', async ({ page }) => {
   test.setTimeout(240_000);
   await page.goto('/');
+  await page.evaluate(() => document.fonts.ready);
   await page.getByRole('button', { name: '개선과 확인', exact: true }).click();
   await expect(page.getByText('바꿀 운영 규칙')).toBeVisible({ timeout: 30_000 });
 
@@ -212,6 +215,7 @@ test('@shots C 개선과 확인', async ({ page }) => {
 test('@shots D 현장 기록', async ({ page }) => {
   test.setTimeout(240_000);
   await page.goto('/');
+  await page.evaluate(() => document.fonts.ready);
   await page.getByRole('button', { name: '개선과 확인', exact: true }).click();
   const open = page.getByRole('button', { name: '현장에서 검토할 안 선택', exact: true });
   if (await open.count()) {
@@ -260,6 +264,7 @@ test('@shots D 현장 기록', async ({ page }) => {
 test('@shots E 좁은 폭', async ({ page }) => {
   await page.setViewportSize({ width: 800, height: 900 });
   await page.goto('/');
+  await page.evaluate(() => document.fonts.ready);
   await page.getByRole('button', { name: '개선과 확인', exact: true }).click();
   await expect(page.getByRole('heading', { name: '무엇이 달라졌나요?' })).toBeVisible({
     timeout: 30_000,

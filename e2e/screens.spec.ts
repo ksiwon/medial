@@ -54,6 +54,7 @@ test('관찰: 이웃 우선 정책에서 누가 거절했고 왜인지가 읽힌
   expect(refusals.length).toBeGreaterThan(0);
 
   await page.goto('/');
+  await page.evaluate(() => document.fonts.ready);
   await page.getByRole('button', { name: '사례와 서비스 경험', exact: true }).click();
   await expect(page.getByText('MEDial · 조율 현황')).toBeVisible();
   await seekToEnd(page);
@@ -98,6 +99,7 @@ test('관찰: 정책 D는 재연락을 먼저 하고, 이장에게 가는 이유
   expect(created.ok()).toBeTruthy();
 
   await page.goto('/');
+  await page.evaluate(() => document.fonts.ready);
   await page.getByRole('button', { name: '사례와 서비스 경험', exact: true }).click();
   await expect(page.getByText('MEDial · 조율 현황')).toBeVisible();
   await seekToEnd(page);
@@ -117,6 +119,7 @@ test('관찰: 정책 D는 재연락을 먼저 하고, 이장에게 가는 이유
 test('사례 → 실행 → 주민 평가 → 개선과 확인: 한 바퀴가 실제로 돈다', async ({ page }) => {
   test.setTimeout(240_000);
   await page.goto('/');
+  await page.evaluate(() => document.fonts.ready);
   await page.getByRole('button', { name: '사례와 서비스 경험', exact: true }).click();
   // The earlier tests left runs in this database, so the case screen opens on
   // one of them; setting up a new case is an explicit step.
@@ -222,6 +225,7 @@ test('사례 → 실행 → 주민 평가 → 개선과 확인: 한 바퀴가 �
 test('현장 기록: 공개 전 응답 없이는 공개도 비교도 할 수 없다', async ({ page }) => {
   test.setTimeout(240_000);
   await page.goto('/');
+  await page.evaluate(() => document.fonts.ready);
   // Reuse whatever session the previous test left; the field sheet opens from
   // the improve screen once the loop has stopped.
   await page.getByRole('button', { name: '개선과 확인', exact: true }).click();
@@ -275,6 +279,16 @@ test('세 화면이 1440·1366·800에서 가로로 넘치지 않는다', async 
   // itself, and jsdom cannot see it. The widths are the ones doc 26 section 5
   // asks about; the loop's own data comes from whatever the earlier tests left.
   await page.goto('/');
+  await page.evaluate(() => document.fonts.ready);
+  // Every width below was checked in Pretendard. A build that stops shipping it
+  // falls back silently and moves every line break, so the face is asserted.
+  await page.evaluate(() => document.fonts.ready);
+  const face = await page.evaluate(() => ({
+    loaded: document.fonts.check('14px "Pretendard Variable"', '주민 평가'),
+    family: getComputedStyle(document.querySelector('header')!).fontFamily,
+  }));
+  expect(face.loaded).toBe(true);
+  expect(face.family).toMatch(/^"?Pretendard Variable/);
   for (const width of [1440, 1366, 800]) {
     await page.setViewportSize({ width, height: 900 });
     for (const screenName of ['사례와 서비스 경험', '주민 평가', '개선과 확인']) {
@@ -298,6 +312,7 @@ test('세 화면이 1440·1366·800에서 가로로 넘치지 않는다', async 
 test('키보드만으로 세 화면과 평가 근거에 닿는다', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
+  await page.evaluate(() => document.fonts.ready);
   // Wait for the workspace to load: a disabled screen name is not focusable,
   // and tabbing before the session is restored would be a different test.
   await expect(page.getByRole('button', { name: '개선과 확인', exact: true })).toBeEnabled({

@@ -21,13 +21,21 @@
       body {
         /* Same stack as the app root, so any text outside it - an error boundary,
            a bare fallback - is not rendered in the browser's serif default. */
-        font-family: system-ui, -apple-system, 'Segoe UI', 'Malgun Gothic',
-          'Apple SD Gothic Neo', Roboto, sans-serif;
+        font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
+          system-ui, 'Segoe UI', 'Malgun Gothic', 'Apple SD Gothic Neo', Roboto, sans-serif;
         background: #f7f8fa;
         -webkit-font-smoothing: antialiased;
       }
       #root {
         min-height: 100vh;
+      }
+      /* One typeface everywhere, ids and hashes included: the browser's own
+         monospace default was the one place a second font still appeared. */
+      code,
+      kbd,
+      pre,
+      samp {
+        font-family: inherit;
       }
     </style>
   </head>
