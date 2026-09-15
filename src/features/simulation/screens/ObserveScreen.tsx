@@ -493,6 +493,7 @@ export default function ObserveScreen({
         <HappeningPanel
           events={visibleEvents}
           cursorSeq={cursorSeq}
+          atMs={atMs}
           eventCount={eventCount}
           generation={generation}
           onSeek={onSeek}

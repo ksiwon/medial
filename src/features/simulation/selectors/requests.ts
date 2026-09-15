@@ -72,8 +72,11 @@ export interface RequestFlow {
   title: string;
   events: DomainEvent[];
   stages: RequestStage[];
-  /** Whether this request has reached need.resolved / need.unresolved. */
-  closed: 'resolved' | 'unresolved' | null;
+  /** Whether this request has reached need.resolved / need.unresolved. A
+   *  check-in is `answered` when the person picked up, and `handed_on` when
+   *  its no-response became a request of its own - it is not still "in
+   *  progress" ten hours later. */
+  closed: 'resolved' | 'unresolved' | 'answered' | 'handed_on' | null;
   firstMs: number;
   lastMs: number;
   /** Everyone MEDial contacted or moved for this request. */
@@ -100,7 +103,7 @@ export function requestFlows(visible: DomainEvent[]): RequestFlow[] {
     byId.set(key, [...(byId.get(key) ?? []), event]);
   }
 
-  return [...byId.entries()]
+  const flows: RequestFlow[] = [...byId.entries()]
     .map(([id, events]) => {
       const ordered = [...events].sort((a, b) => a.seq - b.seq);
       const subjectId =
@@ -131,6 +134,7 @@ export function requestFlows(visible: DomainEvent[]): RequestFlow[] {
 
       const resolved = ordered.some((e) => e.type === 'need.resolved');
       const unresolved = ordered.some((e) => e.type === 'need.unresolved');
+      const answered = ordered.some((e) => e.type === 'contact.answered');
 
       const participants = [
         ...new Set(
@@ -153,13 +157,36 @@ export function requestFlows(visible: DomainEvent[]): RequestFlow[] {
         title: titleFor(id, subjectId, ordered),
         events: ordered,
         stages,
-        closed: resolved ? ('resolved' as const) : unresolved ? ('unresolved' as const) : null,
+        closed: resolved
+          ? ('resolved' as const)
+          : unresolved
+            ? ('unresolved' as const)
+            : answered
+              ? ('answered' as const)
+              : null,
         firstMs: ordered[0]?.simTimeMs ?? 0,
         lastMs: ordered[ordered.length - 1]?.simTimeMs ?? 0,
         participants,
       };
     })
     .sort((a, b) => a.firstMs - b.firstMs || a.id.localeCompare(b.id));
+
+  // A check-in that went unanswered and then raised a request about the same
+  // person is finished as a check-in: what happens next is that request's
+  // story. Left open, the panel counted it as "in progress" all day.
+  for (const flow of flows) {
+    if (flow.closed !== null || !flow.subjectId) continue;
+    const noResponse = flow.events.find((e) => e.type === 'contact.no_response');
+    if (!noResponse) continue;
+    const raised = flows.some(
+      (other) =>
+        other.id !== flow.id &&
+        other.subjectId === flow.subjectId &&
+        other.events.some((e) => e.type === 'request.raised' && e.seq > noResponse.seq),
+    );
+    if (raised) flow.closed = 'handed_on';
+  }
+  return flows;
 }
 
 /** The person a correlation id is about. Ids come in two shapes in the stored

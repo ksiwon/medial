@@ -257,6 +257,8 @@ export default function OrchestratorPanel({
                 <span style={{ flex: 1, minWidth: 0 }}>{row.title}</span>
                 <Sub as="span">{formatClock(row.firstMs)}</Sub>
                 {row.closed === 'resolved' && <Tag $kind="positive">종료</Tag>}
+                {row.closed === 'answered' && <Tag $kind="positive">응답함</Tag>}
+                {row.closed === 'handed_on' && <Tag $kind="unknown">확인 요청으로 이어짐</Tag>}
                 {row.closed === 'unresolved' && <Tag $kind="negative">미해결</Tag>}
                 {row.closed === null && <Tag $kind="warn">진행 중</Tag>}
               </RequestRow>

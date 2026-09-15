@@ -7,6 +7,7 @@ import { ASSESSMENT_LABELS,
   type GenerationDetail,
 } from '../api/iteration';
 import type { DomainEvent } from '../api/types';
+import { formatClock } from '../positions';
 import { hiddenRows, personName, storyRows, type StoryTone } from '../selectors/story';
 import {
   Disclosure,
@@ -127,6 +128,8 @@ const worstOf = (review: AgentReview): 'negative' | 'mixed' | 'positive' | 'unkn
 interface Props {
   events: DomainEvent[];
   cursorSeq: number;
+  /** The clock, so the panel can say how long nothing has happened. */
+  atMs: number;
   /** Total events in the run, so the panel can tell that the day is over. */
   eventCount: number;
   /** The generation whose day just finished, when there is one. */
@@ -138,6 +141,7 @@ interface Props {
 export default function HappeningPanel({
   events,
   cursorSeq,
+  atMs,
   eventCount,
   generation,
   onSeek,
@@ -152,6 +156,9 @@ export default function HappeningPanel({
   // Newest at the top: while the day plays, the line that just happened is
   // the one being read, and it should not arrive at the bottom of a list.
   const rows = useMemo(() => storyRows(events).reverse(), [events]);
+  // The newest readable line, if it is more than half an hour behind the clock.
+  const newestMs = rows[0]?.event.simTimeMs ?? null;
+  const quietSince = newestMs !== null && atMs - newestMs > 30 * 60_000 ? newestMs : null;
   const hidden = useMemo(() => hiddenRows(events), [events]);
 
   // The day's reviews only exist once the loop has collected them; until then
@@ -188,6 +195,20 @@ export default function HappeningPanel({
           <>
             {rows.length === 0 && (
               <Empty>이 시각까지 읽을 만한 사건이 없습니다. 재생하거나 시점을 옮겨 보세요.</Empty>
+            )}
+            {/* At 19:47 with the last line at 09:40 the list looked stale. It
+                is not: the incident ended and the day went on. Say so at the
+                top, where the newest line is. */}
+            {quietSince !== null && (
+              <Item as="div" $tone="plain" $active={false} style={{ cursor: 'default' }}>
+                <Clock>{formatClock(atMs)}</Clock>
+                <span>
+                  <Text style={{ color: colour.secondary }}>
+                    {formatClock(quietSince)} 이후 새로운 일 없음
+                    {dayOver ? '' : ' · 하루는 22:00에 마칩니다'}
+                  </Text>
+                </span>
+              </Item>
             )}
             {rows.map((row) => (
               <Item
