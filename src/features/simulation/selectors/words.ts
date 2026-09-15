@@ -52,6 +52,7 @@ const INPUT: Record<string, string> = {
   environment: '마을 규칙',
   day: '뽑힌 하루',
   relations: '관계 기록',
+  ledger: '채록 장부',
   modelPolicy: '모델 설정',
   persona: '페르소나',
   baseline: '기본 일과',

@@ -23,6 +23,7 @@ from typing import Any
 
 from .day import apply_realization, realize_day
 from .environment import get_environment
+from .ledger import load_ledger
 from .relations import get_relations
 from .contracts import (
     ENGINE_VERSION,
@@ -37,7 +38,7 @@ from .contracts import (
 )
 from .decks.registry import DECK_DEFAULTS, DECKS, POLICIES, RESOURCE_SETS
 from .agents.model_calls import ModelCallLog
-from .engine import Engine, RunResult
+from .engine import VILLAGE_HEAD_ID, Engine, RunResult
 from .persona import load_personas
 from .village import Village, load_village
 
@@ -67,10 +68,13 @@ def build_attempt(attempt_id: str, label: str, policy: PolicyRevision, deck: Sce
                   environment: Any | None = None,
                   day: Any | None = None,
                   model_policy: Any | None = None,
-                  relations: Any | None = None) -> Attempt:
+                  relations: Any | None = None,
+                  ledger: Any | None = None) -> Attempt:
     environment = environment or get_environment()
     model_policy = model_policy or ModelPolicy()
     relations = relations or get_relations()
+    ledger = ledger or load_ledger(village.path, [r["id"] for r in village.residents],
+                                   VILLAGE_HEAD_ID)
     return Attempt(
         id=attempt_id,
         parentId=parent_id,
@@ -91,6 +95,7 @@ def build_attempt(attempt_id: str, label: str, policy: PolicyRevision, deck: Sce
         dayRealizationId=day.id if day is not None else None,
         modelPolicy=model_policy,
         relationRevisionId=relations.id,
+        ledgerRevisionId=ledger.id,
         createdAt=datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         dataSource=village.data_source,
         inputHashes={
@@ -115,6 +120,10 @@ def build_attempt(attempt_id: str, label: str, policy: PolicyRevision, deck: Sce
             # carrying the day, so two runs that disagree about the village's
             # relations are not a controlled pair.
             "relations": _hash(relations.model_dump()),
+            # What was asked of whom. A run under a ledger that marks P1's
+            # help contacts "not asked" and one that marks them "asked, none"
+            # reach different conclusions from the same events.
+            "ledger": ledger.content_hash(),
             "persona": persona_revision or "none",
             "personaSource": persona_source or "none",
         },
@@ -135,7 +144,8 @@ def run_attempt(attempt_id: str, policy_id: str, deck_id: str, resource_id: str,
                 model_policy: Any | None = None,
                 inherited_model_calls: Any | None = None,
                 provider: Any | None = None,
-                relation_id: str | None = None) -> RunResult:
+                relation_id: str | None = None,
+                ledger: Any | None = None) -> RunResult:
     """``policy`` overrides the built-in registry so that an edited revision,
     which only exists in the service, can be executed without being registered
     globally."""
@@ -146,6 +156,8 @@ def run_attempt(attempt_id: str, policy_id: str, deck_id: str, resource_id: str,
     profiles, provenance = personas(persona_path)
     env = get_environment(environment_id)
     relations = get_relations(relation_id)
+    ledger = ledger or load_ledger(village.path, [r["id"] for r in village.residents],
+                                   VILLAGE_HEAD_ID)
     model_policy = model_policy or ModelPolicy()
     # The day is drawn before anything runs, from (village, environment, seed)
     # alone. A rerun and a fork inherit the parent's seed, so they land on this
@@ -159,14 +171,15 @@ def run_attempt(attempt_id: str, policy_id: str, deck_id: str, resource_id: str,
                             persona_revision=provenance.get("revisionId"),
                             persona_source=provenance.get("dataSource"),
                             environment=env, day=day, model_policy=model_policy,
-                            relations=relations)
+                            relations=relations, ledger=ledger)
     # A fork is handed its parent's recorded calls. Along the shared prefix the
     # prompts are identical, so the keys match and the child replays the parent's
     # answers; after the checkpoint they diverge, and what diverges is the policy.
     log = ModelCallLog(attempt.id, model_policy, inherited=inherited_model_calls or [])
     engine = Engine(attempt, policy, deck, resources, village, script=script,
                     personas=profiles, policy_switch=policy_switch, environment=env,
-                    model_calls=log, provider=provider, relations=relations)
+                    model_calls=log, provider=provider, relations=relations,
+                    ledger=ledger)
     result = engine.run()
     result.attempt.status = AttemptStatus.completed
     result.attempt.eventCount = len(result.events)

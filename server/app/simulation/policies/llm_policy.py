@@ -122,10 +122,12 @@ NO_LEAD_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
         "action": {"type": "string", "enum": ["ask_whereabouts", "handoff", "stop"]},
+        "askActorId": {"type": ["string", "null"],
+                       "description": "ask_whereabouts일 때 whoKnowsTheirDay 중 누구에게 물을지"},
         "rationale": {"type": "string"},
         "message": {"type": "string", "description": "ask_whereabouts·handoff일 때 실제로 보낼 말"},
     },
-    "required": ["action", "rationale", "message"],
+    "required": ["action", "askActorId", "rationale", "message"],
     "additionalProperties": False,
 }
 
@@ -133,7 +135,7 @@ STRATEGY_WORDS = {
     ContactStrategy.head_first: "이장에게 먼저 부탁한다. askOrder의 첫 사람은 이장이어야 한다.",
     ContactStrategy.retry_then_clinic: "본인에게 다시 연락하고, 그래도 닿지 않으면 보건소로 넘긴다. 이웃에게는 부탁하지 않는다.",
     ContactStrategy.neighbour_first: "이장 한 사람에게 몰지 않고 가까운 이웃에게 먼저 부탁한다. 거절당하면 askOrder의 다음 사람에게 간다.",
-    ContactStrategy.relation_first: "대상자와 기록된 관계가 있는 사람(people[].recordedRelationToSubject)에게 먼저 부탁하고, 이장은 마지막에 둔다. 기록된 관계가 없는 사람에게는 부탁하지 않는다.",
+    ContactStrategy.relation_first: "대상자와 기록된 관계가 있는 사람(people[].recordedRelationToSubject)에게 먼저 부탁하고, 이장은 마지막에 둔다. 기록된 관계가 없는 사람에게는 부탁하지 않는다. policy.helpContactsAsked가 not_asked면 관계가 없는 것이 아니라 묻지 않은 것이다.",
 }
 
 AskFn = Callable[[dict[str, Any], CallSpec], dict[str, Any]]
@@ -294,9 +296,15 @@ class LlmMedialPolicy(MedialPolicy):
         payload["report"] = {
             "checkedBy": checker,
             "note": "%s가 자택에 가 봤으나 대상자가 없었고, 어디 있을지 짐작할 근거가 없다" % checker}
-        payload["villageHead"] = {
-            "actorId": head, "alreadyAsked": head == checker or head in already_asked,
-            "knows": "마을 사람들의 평소 일과를 장소 단위로 안다 (MEDial은 모른다)"}
+        payload["whoKnowsTheirDay"] = [
+            {"actorId": k["actorId"], "alreadyAsked": k["actorId"] == checker
+                                                     or k["actorId"] in already_asked,
+             "basis": k["reason"],
+             "recorded": k["provenance"] == "source-adapted"}
+            for k in ctx.routine_knowers]
+        if not ctx.routine_knowers:
+            payload["whoKnowsTheirDay"] = []
+            payload["note"] = "이 사람의 평소 장소를 아는 사람이 장부에 없다 (채록 공백)"
         payload["policy"] = self._policy_words(ctx)
         payload["allowedActions"] = ["ask_whereabouts", "handoff", "stop"]
         spec = CallSpec(role="head", system=HEAD_SYSTEM, schema=NO_LEAD_SCHEMA,
@@ -310,10 +318,16 @@ class LlmMedialPolicy(MedialPolicy):
             if action in ("ask_whereabouts", "handoff") and not str(data.get("message") or "").strip():
                 out.append("message가 비어 있다. 실제로 보낼 말을 적는다")
             if action == "ask_whereabouts":
-                if not self.revision.params.allowHeadContact:
+                who = data.get("askActorId")
+                knowers = {k["actorId"] for k in ctx.routine_knowers}
+                if who not in knowers:
+                    out.append("askActorId는 whoKnowsTheirDay 중 한 사람이어야 한다 (%s)"
+                               % ", ".join(sorted(knowers)) if knowers else
+                               "이 사람의 일과를 아는 사람이 없어 ask_whereabouts를 고를 수 없다")
+                elif who == head and not self.revision.params.allowHeadContact:
                     out.append("allowHeadContact=false: 이장(%s)에게 물을 수 없다" % head)
-                if head == checker or head in already_asked:
-                    out.append("이장(%s)에게는 이미 이 건을 물었다" % head)
+                elif who == checker or who in already_asked:
+                    out.append("%s에게는 이미 이 건을 물었다" % who)
             return out
 
         data = self._ask_checked(payload, spec, problems)
@@ -321,10 +335,11 @@ class LlmMedialPolicy(MedialPolicy):
         rationale = str(data.get("rationale") or "")
         message = str(data.get("message") or "").strip()
         if data["action"] == "ask_whereabouts":
+            who = str(data["askActorId"])
             return (self._decision(ctx, question, [Candidate(
-                actorId=head, included=True, reason="평소 일과를 장소 단위로 안다")],
-                head, rationale), [Intent("ask_whereabouts", {
-                    "toActorId": head, "requestId": ctx.request_id,
+                actorId=who, included=True, reason="평소 일과를 장소 단위로 안다")],
+                who, rationale), [Intent("ask_whereabouts", {
+                    "toActorId": who, "requestId": ctx.request_id,
                     "disclosure": self.disclosure_to("neighbour", ctx), "message": message})])
         if data["action"] == "handoff":
             intent = self._handoff_intent(ctx)
@@ -454,6 +469,7 @@ class LlmMedialPolicy(MedialPolicy):
             "helperContactCap": p.helperContactCap,
             "retryCount": p.retryCount,
             "retriesAlreadyMade": max(0, ctx.attempt_number - 1),
+            "helpContactsAsked": ctx.help_contacts_status,
             "disclosure": p.disclosure,
             "disclosureMeans": ("응답이 없었다는 것만 말한다" if p.disclosure == "minimal"
                                 else "응답이 없었다는 것과 연락한 시각까지 말해도 된다"),

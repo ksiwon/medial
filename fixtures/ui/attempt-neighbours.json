@@ -1,6 +1,6 @@
 {
  "attempt": {
-  "id": "att-C-v1-12e8aab6568c",
+  "id": "att-C-v1-2bd5c199cfe6",
   "parentId": null,
   "parentSeq": null,
   "lineage": "root",
@@ -27,7 +27,8 @@
    "mode": "off"
   },
   "relationRevisionId": "rel-v1",
-  "createdAt": "2026-09-14T17:30:35+00:00",
+  "ledgerRevisionId": "ledger-synthetic-v1",
+  "createdAt": "2026-09-15T04:15:34+00:00",
   "cursorSeq": 0,
   "eventCount": 30,
   "dataSource": "synthetic",
@@ -39,7 +40,8 @@
    "environment": "93fe4eaa98c3eed7",
    "day": "day-58d7f0c850257455",
    "modelPolicy": "1e989ad065f7cc60",
-   "relations": "62ade898153f86df",
+   "relations": "7053caf608616a2e",
+   "ledger": "ae0323e8661e73e4",
    "persona": "persona-synthetic-b7889f7457bde193",
    "personaSource": "synthetic"
   }
@@ -188,6 +190,128 @@
     }
    ],
    "note": "거절과 미룸을 합산 점수로 만들지 않는다. 규칙 하나가 걸린 것이 곧 사유다."
+  },
+  "elicitation": {
+   "ledgerId": "ledger-synthetic-v1",
+   "involved": [
+    "P1",
+    "P10",
+    "P11",
+    "P6",
+    "P9"
+   ],
+   "gaps": [
+    {
+     "actorId": "P1",
+     "topic": "help_contacts",
+     "status": "not_asked",
+     "text": "P1 · 부탁하거나 도움을 청하는 사람: 안 물어봄"
+    },
+    {
+     "actorId": "P1",
+     "topic": "routine_knowers",
+     "status": "not_asked",
+     "text": "P1 · 내 평소 일과를 아는 사람: 안 물어봄"
+    },
+    {
+     "actorId": "P1",
+     "topic": "reachability",
+     "status": "partial",
+     "text": "P1 · 연락이 닿는 조건 (어디서 · 무엇으로): 일부만 기록됨"
+    },
+    {
+     "actorId": "P1",
+     "topic": "decline_conditions",
+     "status": "not_asked",
+     "text": "P1 · 부탁을 못 받는 조건: 안 물어봄"
+    },
+    {
+     "actorId": "P10",
+     "topic": "help_contacts",
+     "status": "not_asked",
+     "text": "P10 · 부탁하거나 도움을 청하는 사람: 안 물어봄"
+    },
+    {
+     "actorId": "P10",
+     "topic": "routine_knowers",
+     "status": "not_asked",
+     "text": "P10 · 내 평소 일과를 아는 사람: 안 물어봄"
+    },
+    {
+     "actorId": "P10",
+     "topic": "reachability",
+     "status": "not_asked",
+     "text": "P10 · 연락이 닿는 조건 (어디서 · 무엇으로): 안 물어봄"
+    },
+    {
+     "actorId": "P11",
+     "topic": "help_contacts",
+     "status": "not_asked",
+     "text": "P11 · 부탁하거나 도움을 청하는 사람: 안 물어봄"
+    },
+    {
+     "actorId": "P11",
+     "topic": "routine_knowers",
+     "status": "not_asked",
+     "text": "P11 · 내 평소 일과를 아는 사람: 안 물어봄"
+    },
+    {
+     "actorId": "P11",
+     "topic": "reachability",
+     "status": "not_asked",
+     "text": "P11 · 연락이 닿는 조건 (어디서 · 무엇으로): 안 물어봄"
+    },
+    {
+     "actorId": "P6",
+     "topic": "help_contacts",
+     "status": "not_asked",
+     "text": "P6 · 부탁하거나 도움을 청하는 사람: 안 물어봄"
+    },
+    {
+     "actorId": "P6",
+     "topic": "routine_knowers",
+     "status": "not_asked",
+     "text": "P6 · 내 평소 일과를 아는 사람: 안 물어봄"
+    },
+    {
+     "actorId": "P6",
+     "topic": "reachability",
+     "status": "not_asked",
+     "text": "P6 · 연락이 닿는 조건 (어디서 · 무엇으로): 안 물어봄"
+    },
+    {
+     "actorId": "P6",
+     "topic": "decline_conditions",
+     "status": "not_asked",
+     "text": "P6 · 부탁을 못 받는 조건: 안 물어봄"
+    },
+    {
+     "actorId": "P9",
+     "topic": "help_contacts",
+     "status": "not_asked",
+     "text": "P9 · 부탁하거나 도움을 청하는 사람: 안 물어봄"
+    },
+    {
+     "actorId": "P9",
+     "topic": "routine_knowers",
+     "status": "not_asked",
+     "text": "P9 · 내 평소 일과를 아는 사람: 안 물어봄"
+    },
+    {
+     "actorId": "P9",
+     "topic": "reachability",
+     "status": "not_asked",
+     "text": "P9 · 연락이 닿는 조건 (어디서 · 무엇으로): 안 물어봄"
+    },
+    {
+     "actorId": "P9",
+     "topic": "decline_conditions",
+     "status": "not_asked",
+     "text": "P9 · 부탁을 못 받는 조건: 안 물어봄"
+    }
+   ],
+   "leanedOn": [],
+   "note": "채록 공백은 '없음'이 아니라 '모름'이다. leanedOn은 이 실행의 결정이 실제로 기댄 연구자 가정이다."
   },
   "safety": {
    "emergencyClassifications": 0,
@@ -1213,7 +1337,7 @@
    "assumption-phone-reachability"
   ]
  },
- "logFingerprint": "4f7019c30c1ddadf",
+ "logFingerprint": "2343b9ee9986f758",
  "timeline": {
   "horizonMs": 72000000,
   "actors": {
@@ -6180,7 +6304,7 @@
  "decisions": [
   {
    "id": "dec-1",
-   "attemptId": "att-C-v1-12e8aab6568c",
+   "attemptId": "att-C-v1-2bd5c199cfe6",
    "simTimeMs": 34200000,
    "policyId": "policy-C-v1",
    "question": "응답이 없는 상태를 누가 어떻게 확인할 것인가",
@@ -6259,7 +6383,7 @@
   },
   {
    "id": "dec-2",
-   "attemptId": "att-C-v1-12e8aab6568c",
+   "attemptId": "att-C-v1-2bd5c199cfe6",
    "simTimeMs": 34603611,
    "policyId": "policy-C-v1",
    "question": "자택에 없고 짐작 가는 곳도 없을 때 누구에게 물을 것인가",
@@ -6267,11 +6391,11 @@
     {
      "actorId": "P6",
      "included": true,
-     "reason": "마을 사람들의 평소 일과를 장소 단위로 아는 사람으로 등록되어 있다. MEDial은 그 지식을 갖고 있지 않다"
+     "reason": "P1의 평소 장소를 안다: 합성 마을 설정: 이장이 P1의 밭 일과를 안다"
     }
    ],
    "chosen": "P6",
-   "rationale": "P9는 자택에 없다는 것만 확인했고 어디 있을지 짐작할 근거가 없다. 없다는 것도 위치나 상태를 확정하지 않으므로, 평소 일과를 아는 이장에게 어디 있을지 전화로 묻는다.",
+   "rationale": "P9는 자택에 없다는 것만 확인했고 어디 있을지 짐작할 근거가 없다. 없다는 것도 위치나 상태를 확정하지 않으므로, 평소 일과를 아는 P6에게 어디 있을지 전화로 묻는다.",
    "knownFacts": [
     "P1에게 1회 연락했고 응답이 없다",
     "MEDial은 P1의 현재 위치를 알지 못한다"
@@ -6284,7 +6408,7 @@
   },
   {
    "id": "dec-3",
-   "attemptId": "att-C-v1-12e8aab6568c",
+   "attemptId": "att-C-v1-2bd5c199cfe6",
    "simTimeMs": 34603611,
    "policyId": "policy-C-v1",
    "question": "자택에 없을 때 확인을 계속할 것인가",
@@ -6312,7 +6436,7 @@
  "reviews": [
   {
    "id": "rev-1",
-   "attemptId": "att-C-v1-12e8aab6568c",
+   "attemptId": "att-C-v1-2bd5c199cfe6",
    "actorId": "P1",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6353,7 +6477,7 @@
   },
   {
    "id": "rev-10",
-   "attemptId": "att-C-v1-12e8aab6568c",
+   "attemptId": "att-C-v1-2bd5c199cfe6",
    "actorId": "P7",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6368,7 +6492,7 @@
   },
   {
    "id": "rev-11",
-   "attemptId": "att-C-v1-12e8aab6568c",
+   "attemptId": "att-C-v1-2bd5c199cfe6",
    "actorId": "P8",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6383,7 +6507,7 @@
   },
   {
    "id": "rev-12",
-   "attemptId": "att-C-v1-12e8aab6568c",
+   "attemptId": "att-C-v1-2bd5c199cfe6",
    "actorId": "P9",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6427,7 +6551,7 @@
   },
   {
    "id": "rev-13",
-   "attemptId": "att-C-v1-12e8aab6568c",
+   "attemptId": "att-C-v1-2bd5c199cfe6",
    "actorId": "HC_NURSE",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6442,7 +6566,7 @@
   },
   {
    "id": "rev-2",
-   "attemptId": "att-C-v1-12e8aab6568c",
+   "attemptId": "att-C-v1-2bd5c199cfe6",
    "actorId": "P10",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6481,7 +6605,7 @@
   },
   {
    "id": "rev-3",
-   "attemptId": "att-C-v1-12e8aab6568c",
+   "attemptId": "att-C-v1-2bd5c199cfe6",
    "actorId": "P11",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6520,7 +6644,7 @@
   },
   {
    "id": "rev-4",
-   "attemptId": "att-C-v1-12e8aab6568c",
+   "attemptId": "att-C-v1-2bd5c199cfe6",
    "actorId": "P12",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6535,7 +6659,7 @@
   },
   {
    "id": "rev-5",
-   "attemptId": "att-C-v1-12e8aab6568c",
+   "attemptId": "att-C-v1-2bd5c199cfe6",
    "actorId": "P2",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6550,7 +6674,7 @@
   },
   {
    "id": "rev-6",
-   "attemptId": "att-C-v1-12e8aab6568c",
+   "attemptId": "att-C-v1-2bd5c199cfe6",
    "actorId": "P3",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6565,7 +6689,7 @@
   },
   {
    "id": "rev-7",
-   "attemptId": "att-C-v1-12e8aab6568c",
+   "attemptId": "att-C-v1-2bd5c199cfe6",
    "actorId": "P4",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6580,7 +6704,7 @@
   },
   {
    "id": "rev-8",
-   "attemptId": "att-C-v1-12e8aab6568c",
+   "attemptId": "att-C-v1-2bd5c199cfe6",
    "actorId": "P5",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6595,7 +6719,7 @@
   },
   {
    "id": "rev-9",
-   "attemptId": "att-C-v1-12e8aab6568c",
+   "attemptId": "att-C-v1-2bd5c199cfe6",
    "actorId": "P6",
    "source": "simulated",
    "scope": "day_end_retrospective",

@@ -489,6 +489,7 @@ class IterationEngine:
                 "handovers": row["metrics"].get("handovers"),
                 "refusals": row["metrics"].get("refusals"),
                 "dayRealization": _day_without_steps(row["metrics"].get("dayRealization")),
+                "elicitation": row["metrics"].get("elicitation"),
             }
         vector = combine_vectors(vectors)
         return {

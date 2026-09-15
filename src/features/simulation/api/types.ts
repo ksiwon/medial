@@ -248,6 +248,22 @@ export interface StepChange {
 /** The day a run took place on: the recorded routine, possibly nudged within
  *  the bounds the environment states. A pure function of (village, environment,
  *  seed), so a rerun lands on the same day without copying anything. */
+export interface ElicitationGap {
+  actorId: string;
+  topic: string;
+  status: 'recorded' | 'partial' | 'asked_none' | 'not_asked';
+  /** Already in words: "P1 · 부탁하거나 도움을 청하는 사람: 안 물어봄". */
+  text: string;
+}
+
+export interface Elicitation {
+  ledgerId: string;
+  involved: string[];
+  gaps: ElicitationGap[];
+  leanedOn: { kind: string; knowerId?: string; subjectId?: string; reason?: string }[];
+  note: string;
+}
+
 export interface DayRealization {
   id: string;
   seed: number;
@@ -317,6 +333,9 @@ export interface Metrics {
   };
   refusals?: { count: number; byRule: Record<string, number>; rows: Refusal[]; note: string };
   dayRealization?: DayRealization;
+  /** What was asked of whom (the elicitation ledger), restricted to the people
+   *  this day involved, and the assumed facts a decision actually rested on. */
+  elicitation?: Elicitation;
   safety: {
     emergencyClassifications: number;
     expected: number;

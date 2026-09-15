@@ -881,6 +881,9 @@ class Attempt(Base):
     #: Which relation graph this run used. Defaulted so that attempts stored
     #: before residents could involve each other still load.
     relationRevisionId: str = "rel-v1"
+    #: Which elicitation ledger. ``ledger-legacy`` for attempts stored before
+    #: the ledger existed: every question unasked, the head assumed to know all.
+    ledgerRevisionId: str = "ledger-legacy"
     createdAt: str
     cursorSeq: int = 0
     eventCount: int = 0

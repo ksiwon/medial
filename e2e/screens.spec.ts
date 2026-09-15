@@ -131,5 +131,13 @@ test('준비 → 실행 → 비교: 어느 하루였나와 누가 거절했나�
   // Only v0 exists: the screen says there is nothing to compare yet, not that
   // the comparison is uncontrolled.
   await expect(page.getByText('통제 비교가 아닙니다')).toHaveCount(0);
+  // What the interview never asked is a row of its own, in words, never a key.
+  await expect(page.getByText('기록에 없던 것')).toBeVisible();
+  await expect(page.getByText(/부탁하거나 도움을 청하는 사람/).first()).toBeAttached();
+  await expect(page.getByText(/not_asked|help_contacts/)).toHaveCount(0);
   await shot(page, 'compare');
+  const gapsRow = page.getByText('기록에 없던 것', { exact: true });
+  await gapsRow.scrollIntoViewIfNeeded();
+  await page.locator('details summary', { hasText: '안 물어봤거나' }).first().click();
+  await gapsRow.locator('xpath=..').screenshot({ path: resolve(SHOTS, 'compare-gaps.png') });
 });

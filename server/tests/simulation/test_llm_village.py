@@ -71,7 +71,9 @@ class Village:
                     "evidenceEventIds": [], "emergencyEvidenceEventIds": [],
                     "rationale": "응답이 없다는 것 외에는 아는 것이 없다."}
         if prompt["stage"] == "no_lead":
-            return {"action": "ask_whereabouts", "rationale": "평소 일과를 아는 이장에게 묻는다.",
+            knowers = [k["actorId"] for k in prompt["whoKnowsTheirDay"] if not k["alreadyAsked"]]
+            return {"action": "ask_whereabouts", "askActorId": knowers[0] if knowers else None,
+                    "rationale": "평소 일과를 아는 사람에게 묻는다.",
                     "message": "%s 어르신이 댁에 안 계셨어요. 이 시간이면 어디 계실지 아세요?"
                                % prompt["subjectId"]}
         if prompt["stage"] == "absent":

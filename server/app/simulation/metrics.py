@@ -115,6 +115,7 @@ def build_metrics(engine: "Engine") -> dict[str, Any]:
         "transport": transport,
         "handovers": handovers,
         "refusals": refusals,
+        "elicitation": _elicitation(engine),
         "safety": {
             "emergencyClassifications": len(emergency_events),
             "expected": 0,
@@ -183,6 +184,30 @@ def _handovers(engine: "Engine") -> dict[str, Any]:
         "note": ("MEDial은 자기가 부탁한 사람이 수락했다고만 안다. 이웃끼리 넘긴 것과 "
                  "실제로 간 사람은 연구자 전용 기록이다."),
     }
+
+
+def _elicitation(engine: "Engine") -> dict[str, Any]:
+    """What this run's outcome rests on that the record does not fully back.
+
+    Two lists: the ledger's gaps for the people this day actually involved
+    (a question never asked of someone who was never contacted changes
+    nothing), and the assumed facts a decision actually used.
+    """
+    from .ledger import STATUS_WORDS, TOPIC_WORDS, ElicitationStatus
+
+    involved = sorted({r["subjectId"] for r in engine.requests.values()}
+                      | {a for a, rt in engine.world.actors.items()
+                         if rt.contacts_received or rt.task_ms})
+    gaps = []
+    for actor in involved:
+        for topic in engine.ledger.gaps(actor):
+            status = engine.ledger.status(actor, topic)
+            gaps.append({"actorId": actor, "topic": topic, "status": status.value,
+                         "text": "%s · %s: %s" % (actor, TOPIC_WORDS[topic],
+                                                  STATUS_WORDS[ElicitationStatus(status)])})
+    return {"ledgerId": engine.ledger.id, "involved": involved, "gaps": gaps,
+            "leanedOn": list(engine.leaned_on),
+            "note": "채록 공백은 '없음'이 아니라 '모름'이다. leanedOn은 이 실행의 결정이 실제로 기댄 연구자 가정이다."}
 
 
 def _refusals(engine: "Engine") -> dict[str, Any]:
@@ -389,6 +414,7 @@ CONTROLLED_INPUTS = (
     ("environment", lambda a, r: a["inputHashes"].get("environment")),
     ("day", lambda a, r: a["inputHashes"].get("day")),
     ("relations", lambda a, r: a["inputHashes"].get("relations")),
+    ("ledger", lambda a, r: a["inputHashes"].get("ledger")),
     ("modelPolicy", lambda a, r: a["inputHashes"].get("modelPolicy")),
     ("persona", lambda a, r: a.get("personaRevisionId")),
     ("baseline", lambda a, r: a.get("baselineRevisionId")),
@@ -455,6 +481,7 @@ def compare(runs: list[dict[str, Any]]) -> dict[str, Any]:
             "handovers": metrics.get("handovers", {}).get("count", 0),
             "refusals": metrics.get("refusals", {}).get("count", 0),
             "dayRealization": metrics.get("dayRealization"),
+            "elicitation": metrics.get("elicitation"),
             "emergencyClassifications": metrics["safety"]["emergencyClassifications"],
         })
 

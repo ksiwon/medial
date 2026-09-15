@@ -58,6 +58,7 @@ from .contracts import (
     validate_proposal,
 )
 from .environment import get_environment, resolve_place
+from .ledger import ElicitationLedger, legacy_ledger
 from .relations import get_relations
 from .institution import Desk, ShiftExhausted
 from .observations import ActorView, ObservationLog, home_window, shared_routine
@@ -120,7 +121,8 @@ class Engine:
                  environment: Any | None = None,
                  model_calls: Any | None = None,
                  provider: Any | None = None,
-                 relations: Any | None = None) -> None:
+                 relations: Any | None = None,
+                 ledger: Any | None = None) -> None:
         self.attempt = attempt
         #: World rules as data. The attempt records which revision it ran on so
         #: that changing an assumption shows up as a different input rather than
@@ -155,6 +157,14 @@ class Engine:
 
         #: ``{holderId: {subjectId: routine}}``. Split per holder on purpose -
         #: see the module docstring.
+        #: What was asked of whom. Says which "none" is a real none, and who
+        #: knows whose usual places - with provenance - instead of the head
+        #: being assumed to know everybody's.
+        self.ledger: ElicitationLedger = ledger or legacy_ledger(
+            [r["id"] for r in village.residents], VILLAGE_HEAD_ID)
+        #: Which of the ledger's gaps and assumptions this run actually leaned
+        #: on, so the metrics can say "this outcome rests on an assumed pair".
+        self.leaned_on: list[dict[str, Any]] = []
         self.routines = self._build_routines()
 
         self._seq = itertools.count(1)
@@ -245,16 +255,21 @@ class Engine:
         horizon = self.deck.horizonMs
         medial: dict[str, dict[str, Any]] = {}
         head: dict[str, dict[str, Any]] = {}
+        by_id = {r["id"]: r for r in self.village.residents}
         for resident in self.village.residents:
             medial[resident["id"]] = shared_routine(
                 resident, MEDIAL, horizon, "home_or_away").model_dump(mode="json")
-            if resident["id"] != VILLAGE_HEAD_ID:
-                head[resident["id"]] = shared_routine(
-                    resident, VILLAGE_HEAD_ID, horizon,
+        # Place-level knowledge is held by whoever the ledger says knows that
+        # person's day - not by the head as a matter of code.
+        held: dict[str, dict[str, Any]] = {}
+        for k in self.ledger.routineKnowledge:
+            if k.subjectId in by_id and k.knowerId != k.subjectId:
+                held.setdefault(k.knowerId, {})[k.subjectId] = shared_routine(
+                    by_id[k.subjectId], k.knowerId, horizon,
                     "place_level").model_dump(mode="json")
         # The centre starts with nothing. It receives a routine only if a policy
         # actually discloses one at handoff.
-        return {MEDIAL: medial, VILLAGE_HEAD_ID: head, HEALTH_STAFF: {}}
+        return {MEDIAL: medial, HEALTH_STAFF: {}, **held}
 
     def _build_adapters(self, script: list[dict[str, Any]] | None) -> dict[str, Any]:
         """One instance per actor, always.
@@ -985,6 +1000,12 @@ class Engine:
             at_ms, request, question,
             lambda: self.policy.on_absent_no_lead(
                 ctx, actor_id, list(self.relay_chains.get(request["id"], []))))
+        if intents and intents[0].kind == "ask_whereabouts":
+            k = next((k for k in self.ledger.knowers_of(subject)
+                      if k.knowerId == intents[0].payload["toActorId"]), None)
+            if k is not None and k.provenance == "researcher-assumption":
+                self._lean_on("assumed_routine_knowledge", knowerId=k.knowerId,
+                              subjectId=subject, reason=k.reason)
         if decision is None:
             return
         self._commit_decision(at_ms, decision, request)
@@ -1067,6 +1088,11 @@ class Engine:
 
         proposal = proposals[0]
         suggested = proposal.params["suggestedPlace"]
+        if proposal.params.get("provenance") == "actor-local-knowledge":
+            k = next((k for k in self.ledger.knowers_of(subject) if k.knowerId == actor_id), None)
+            if k is not None and k.provenance == "researcher-assumption":
+                self._lean_on("assumed_routine_knowledge", knowerId=actor_id,
+                              subjectId=subject, reason=k.reason)
         reported = self._emit(at_ms, EventType.medial_observed, actor_id, request["id"],
                               [MEDIAL, actor_id],
                               {"observationKind": "local_knowledge", "subjectId": subject,
@@ -1791,7 +1817,11 @@ class Engine:
             known_facts=_known_facts(subject, request, attempt_number),
             relations=[{"actorId": self.relations.other(e, subject), "kind": e.kind,
                         "reason": e.reason}
-                       for e in self.relations.neighbours(subject)])
+                       for e in self.relations.neighbours(subject)],
+            help_contacts_status=self.ledger.status(subject, "help_contacts").value,
+            routine_knowers=[{"actorId": k.knowerId, "provenance": k.provenance,
+                              "reason": k.reason}
+                             for k in self.ledger.knowers_of(subject)])
 
     def _commit_decision(self, at_ms: int, decision: DecisionRecord,
                          request: dict[str, Any]) -> None:
@@ -1897,15 +1927,24 @@ class Engine:
         from .observations import routine_place
 
         held = self.routines.get(actor_id) or {}
-        if actor_id != VILLAGE_HEAD_ID or not held:
+        if actor_id in (MEDIAL, HEALTH_STAFF) or not held:
             return []
+        prov = {k.subjectId: k for k in self.ledger.known_by(actor_id)}
         out = []
         for subject_id, routine in sorted(held.items()):
             place = routine_place(routine, at_ms)
             if place in ("FARM", "PORT", "SEA"):
+                k = prov.get(subject_id)
                 out.append({"subjectId": subject_id, "place": place,
-                            "basis": "평소 일과에 대한 지역 지식"})
+                            "basis": "평소 일과에 대한 지역 지식",
+                            "provenance": k.provenance if k else "researcher-assumption"})
         return out
+
+    def _lean_on(self, kind: str, **detail: Any) -> None:
+        """Note that this run's outcome rests on a ledger gap or assumption."""
+        row = {"kind": kind, **detail}
+        if row not in self.leaned_on:
+            self.leaned_on.append(row)
 
     def _record_disclosure(self, disclosure: dict[str, Any] | None, recipient: str) -> None:
         if not disclosure:

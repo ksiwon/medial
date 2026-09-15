@@ -42,6 +42,27 @@ class RuleResidentAdapter:
 
     def propose(self, view: ActorView,
                 allowed: Sequence[ProposalAction]) -> list[ActionProposal]:
+        if ProposalAction.report_observation in allowed:
+            # Asked where the subject would be: either they went to the house
+            # themselves, or MEDial phoned them after someone else found it
+            # empty. Answered from local knowledge the ledger says they hold.
+            absent = view.latest("task.check_performed")
+            asked = view.latest("request.offered")
+            source = (absent if absent is not None
+                      and absent.payload.get("outcome") == "subject_absent" else asked)
+            guess = self._where_would_they_be(view, source.subjectId) if source else None
+            if guess is not None:
+                return [self.factory.make(
+                    view.actor_id, view.sim_time_ms, ProposalAction.report_observation,
+                    requestId=source.payload.get("requestId"),
+                    params={"suggestedPlace": guess["place"],
+                            "basis": guess["basis"],
+                            "provenance": "actor-local-knowledge"},
+                    utterance="이 시간이면 밭에 있을 겁니다. 가 보겠습니다.",
+                    observationIds=[source.id],
+                    uncertainty="본인이 직접 본 것이 아니라 평소 일과에 근거한 추정",
+                )]
+
         ride = view.latest("ride.offered")
         if ride is not None and (offer := view.latest("request.offered")) is not None \
                 and offer.simTimeMs > ride.simTimeMs:
@@ -138,6 +159,13 @@ class RuleResidentAdapter:
         )]
 
     # -- T004: someone asks for a lift ------------------------------------
+    @staticmethod
+    def _where_would_they_be(view: ActorView, subject_id: str | None) -> dict[str, Any] | None:
+        for item in view.local_knowledge:
+            if item.get("subjectId") == subject_id:
+                return item
+        return None
+
     def _on_ride_offer(self, view: ActorView, offer,
                        allowed: Sequence[ProposalAction]) -> list[ActionProposal]:
         """Answer a ride request out of this person's own compiled persona.
@@ -208,44 +236,16 @@ class RuleResidentAdapter:
 
 
 class RuleVillageHeadAdapter(RuleResidentAdapter):
-    """P6 is the same person as the resident P6, with one addition: local knowledge.
+    """The village head is the same adapter as any resident.
 
-    He is not a subordinate executor. When a check turns up nobody, he offers
-    where he thinks the person is - and that is *his* knowledge, which MEDial did
-    not have and does not acquire except through this report.
+    He used to be the only one who could say where a neighbour would be. That
+    knowledge now comes from the elicitation ledger - whoever it says knows a
+    person's day gets that person's place-level routine in their view - so the
+    branch lives in ``RuleResidentAdapter`` and this class only keeps the name
+    stored runs and the catalogue know him by.
     """
 
     name = "rule-village-head"
-
-    def propose(self, view: ActorView,
-                allowed: Sequence[ProposalAction]) -> list[ActionProposal]:
-        if ProposalAction.report_observation in allowed:
-            # Asked where the subject would be: either he went to the house
-            # himself, or MEDial phoned him after someone else found it empty.
-            absent = view.latest("task.check_performed")
-            asked = view.latest("request.offered")
-            source = (absent if absent is not None
-                      and absent.payload.get("outcome") == "subject_absent" else asked)
-            guess = self._where_would_they_be(view, source.subjectId) if source else None
-            if guess is not None:
-                return [self.factory.make(
-                    view.actor_id, view.sim_time_ms, ProposalAction.report_observation,
-                    requestId=source.payload.get("requestId"),
-                    params={"suggestedPlace": guess["place"],
-                            "basis": guess["basis"],
-                            "provenance": "actor-local-knowledge"},
-                    utterance="이 시간이면 밭에 있을 겁니다. 가 보겠습니다.",
-                    observationIds=[source.id],
-                    uncertainty="본인이 직접 본 것이 아니라 평소 일과에 근거한 추정",
-                )]
-        return super().propose(view, allowed)
-
-    @staticmethod
-    def _where_would_they_be(view: ActorView, subject_id: str | None) -> dict[str, Any] | None:
-        for item in view.local_knowledge:
-            if item.get("subjectId") == subject_id:
-                return item
-        return None
 
 
 class RuleOrchestratorResidentAdapter(RuleResidentAdapter):

@@ -1,6 +1,6 @@
 {
  "attempt": {
-  "id": "att-A-v1-f184a4f99a32",
+  "id": "att-A-v1-8ddcc5472ff1",
   "parentId": null,
   "parentSeq": null,
   "lineage": "root",
@@ -27,7 +27,8 @@
    "mode": "off"
   },
   "relationRevisionId": "rel-v1",
-  "createdAt": "2026-09-14T17:30:34+00:00",
+  "ledgerRevisionId": "ledger-synthetic-v1",
+  "createdAt": "2026-09-15T04:15:34+00:00",
   "cursorSeq": 0,
   "eventCount": 24,
   "dataSource": "synthetic",
@@ -39,7 +40,8 @@
    "environment": "93fe4eaa98c3eed7",
    "day": "day-58d7f0c850257455",
    "modelPolicy": "1e989ad065f7cc60",
-   "relations": "62ade898153f86df",
+   "relations": "7053caf608616a2e",
+   "ledger": "ae0323e8661e73e4",
    "persona": "persona-synthetic-b7889f7457bde193",
    "personaSource": "synthetic"
   }
@@ -137,6 +139,65 @@
    "byRule": {},
    "rows": [],
    "note": "거절과 미룸을 합산 점수로 만들지 않는다. 규칙 하나가 걸린 것이 곧 사유다."
+  },
+  "elicitation": {
+   "ledgerId": "ledger-synthetic-v1",
+   "involved": [
+    "P1",
+    "P6"
+   ],
+   "gaps": [
+    {
+     "actorId": "P1",
+     "topic": "help_contacts",
+     "status": "not_asked",
+     "text": "P1 · 부탁하거나 도움을 청하는 사람: 안 물어봄"
+    },
+    {
+     "actorId": "P1",
+     "topic": "routine_knowers",
+     "status": "not_asked",
+     "text": "P1 · 내 평소 일과를 아는 사람: 안 물어봄"
+    },
+    {
+     "actorId": "P1",
+     "topic": "reachability",
+     "status": "partial",
+     "text": "P1 · 연락이 닿는 조건 (어디서 · 무엇으로): 일부만 기록됨"
+    },
+    {
+     "actorId": "P1",
+     "topic": "decline_conditions",
+     "status": "not_asked",
+     "text": "P1 · 부탁을 못 받는 조건: 안 물어봄"
+    },
+    {
+     "actorId": "P6",
+     "topic": "help_contacts",
+     "status": "not_asked",
+     "text": "P6 · 부탁하거나 도움을 청하는 사람: 안 물어봄"
+    },
+    {
+     "actorId": "P6",
+     "topic": "routine_knowers",
+     "status": "not_asked",
+     "text": "P6 · 내 평소 일과를 아는 사람: 안 물어봄"
+    },
+    {
+     "actorId": "P6",
+     "topic": "reachability",
+     "status": "not_asked",
+     "text": "P6 · 연락이 닿는 조건 (어디서 · 무엇으로): 안 물어봄"
+    },
+    {
+     "actorId": "P6",
+     "topic": "decline_conditions",
+     "status": "not_asked",
+     "text": "P6 · 부탁을 못 받는 조건: 안 물어봄"
+    }
+   ],
+   "leanedOn": [],
+   "note": "채록 공백은 '없음'이 아니라 '모름'이다. leanedOn은 이 실행의 결정이 실제로 기댄 연구자 가정이다."
   },
   "safety": {
    "emergencyClassifications": 0,
@@ -6044,7 +6105,7 @@
  "decisions": [
   {
    "id": "dec-1",
-   "attemptId": "att-A-v1-f184a4f99a32",
+   "attemptId": "att-A-v1-8ddcc5472ff1",
    "simTimeMs": 34200000,
    "policyId": "policy-A-v1",
    "question": "응답이 없는 상태를 누가 어떻게 확인할 것인가",
@@ -6123,7 +6184,7 @@
   },
   {
    "id": "dec-2",
-   "attemptId": "att-A-v1-f184a4f99a32",
+   "attemptId": "att-A-v1-8ddcc5472ff1",
    "simTimeMs": 34452257,
    "policyId": "policy-A-v1",
    "question": "자택에 없을 때 확인을 계속할 것인가",
@@ -6151,7 +6212,7 @@
  "reviews": [
   {
    "id": "rev-1",
-   "attemptId": "att-A-v1-f184a4f99a32",
+   "attemptId": "att-A-v1-8ddcc5472ff1",
    "actorId": "P1",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6192,7 +6253,7 @@
   },
   {
    "id": "rev-10",
-   "attemptId": "att-A-v1-f184a4f99a32",
+   "attemptId": "att-A-v1-8ddcc5472ff1",
    "actorId": "P7",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6207,7 +6268,7 @@
   },
   {
    "id": "rev-11",
-   "attemptId": "att-A-v1-f184a4f99a32",
+   "attemptId": "att-A-v1-8ddcc5472ff1",
    "actorId": "P8",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6222,7 +6283,7 @@
   },
   {
    "id": "rev-12",
-   "attemptId": "att-A-v1-f184a4f99a32",
+   "attemptId": "att-A-v1-8ddcc5472ff1",
    "actorId": "P9",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6237,7 +6298,7 @@
   },
   {
    "id": "rev-13",
-   "attemptId": "att-A-v1-f184a4f99a32",
+   "attemptId": "att-A-v1-8ddcc5472ff1",
    "actorId": "HC_NURSE",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6252,7 +6313,7 @@
   },
   {
    "id": "rev-2",
-   "attemptId": "att-A-v1-f184a4f99a32",
+   "attemptId": "att-A-v1-8ddcc5472ff1",
    "actorId": "P10",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6267,7 +6328,7 @@
   },
   {
    "id": "rev-3",
-   "attemptId": "att-A-v1-f184a4f99a32",
+   "attemptId": "att-A-v1-8ddcc5472ff1",
    "actorId": "P11",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6282,7 +6343,7 @@
   },
   {
    "id": "rev-4",
-   "attemptId": "att-A-v1-f184a4f99a32",
+   "attemptId": "att-A-v1-8ddcc5472ff1",
    "actorId": "P12",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6297,7 +6358,7 @@
   },
   {
    "id": "rev-5",
-   "attemptId": "att-A-v1-f184a4f99a32",
+   "attemptId": "att-A-v1-8ddcc5472ff1",
    "actorId": "P2",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6312,7 +6373,7 @@
   },
   {
    "id": "rev-6",
-   "attemptId": "att-A-v1-f184a4f99a32",
+   "attemptId": "att-A-v1-8ddcc5472ff1",
    "actorId": "P3",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6327,7 +6388,7 @@
   },
   {
    "id": "rev-7",
-   "attemptId": "att-A-v1-f184a4f99a32",
+   "attemptId": "att-A-v1-8ddcc5472ff1",
    "actorId": "P4",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6342,7 +6403,7 @@
   },
   {
    "id": "rev-8",
-   "attemptId": "att-A-v1-f184a4f99a32",
+   "attemptId": "att-A-v1-8ddcc5472ff1",
    "actorId": "P5",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6357,7 +6418,7 @@
   },
   {
    "id": "rev-9",
-   "attemptId": "att-A-v1-f184a4f99a32",
+   "attemptId": "att-A-v1-8ddcc5472ff1",
    "actorId": "P6",
    "source": "simulated",
    "scope": "day_end_retrospective",

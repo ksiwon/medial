@@ -1368,8 +1368,28 @@ P1 사례, 같은 하루, 고친 뒤:
 | 비교 화면에 버전이 하나뿐일 때 v0 대 v0를 "통제 비교가 아닙니다"로 경고 | "같은 버전을 양쪽에 골랐습니다 · 아직 비교할 다음 버전이 없습니다" |
 | D 결정 사유가 "관계 중 지금 부탁할 수 있는 사람이 없어" — 사실은 관계가 이장뿐 | 두 경우를 나눔: "기록된 가까운 관계는 이장 한 사람뿐" / "관계는 있지만 지금은 부탁할 수 없다 (사람별 이유)" |
 
+### 채록 장부 — 물었고 없는 것과 안 물어본 것 (D090)
+
+일반화 검토에서 첫째로 꼽힌 문제: 관계·지역 지식·연락 조건이 손으로 옮겨졌고, 그 빈칸이 코드
+안에서 '없음'으로 읽혔다. `server/app/simulation/ledger.py`와 `docs/research/25_ELICITATION_GUIDE.md`.
+
+- 사람×항목 다섯 개(`companions` · `help_contacts` · `routine_knowers` · `reachability` ·
+  `decline_conditions`)의 상태 넷. 마을 파일 옆 `ledger*.json`, 없으면 `ledger-legacy`.
+- "누가 누구의 평소 장소를 아는가"가 장부의 `routineKnowledge`로 옮겨졌다. 이장 하드코딩
+  (`_local_knowledge`, `_build_routines`, 빈집 다음 단계)이 사라지고, 규칙 주민 어댑터 누구나
+  장부가 아는 사람이면 "어디 있을지"를 답한다. `RuleVillageHeadAdapter`는 이름만 남았다.
+- 정책 D 사유와 빈집 다음 판단이 상태를 말한다. `metrics.elicitation` = 관련된 사람의 공백 +
+  결정이 기댄 가정. 비교 화면 "기록에 없던 것" 행 (Playwright `compare-gaps.png`).
+- 합성 장부 `fixtures/synthetic/ledger.synthetic.json`(원자료 구조를 흉내 냄). 실제 마을 초안
+  `local-data/normalized/ledger.v1.json`(git 제외, **연구자 검토 전**): 함께 다니는 사람만
+  `recorded/asked_none`, 나머지 대부분 `not_asked`, 이장의 지식은 동행군·사촌·Q3만
+  `source-adapted`이고 P1·P2·P3·P5·P9·P10·P11은 `researcher-assumption`.
+
 ### 아직 안 한 것
 
+- 실제 마을 장부 초안은 익명본 페르소나 JSON의 '관계'·'하루' 필드만 보고 적었다. 전사 확인 후 확정.
+- 연락 조건·거절 조건은 장부에 상태만 있고, 값은 여전히 `environment.py`·`decline_rules`에 있다.
+  장부에서 읽도록 옮기는 것은 하지 않았다.
 - 이동(동승) 요청과 보건소 담당자는 규칙. 5단계에서 보건소를 키울 때 같이 본다.
 - 이장에게도 짐작이 없는 경우(`no_local_knowledge`)는 코드 경로와 화면 문구만 있고, 이 덱에서는
   일어나지 않아 실행으로 확인하지 못했다.

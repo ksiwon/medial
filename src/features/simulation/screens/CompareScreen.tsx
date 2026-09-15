@@ -9,7 +9,7 @@ import {
   type SessionDetail,
   type UsageStatus,
 } from '../api/iteration';
-import { nameList, personName } from '../selectors/story';
+import { nameList, personName, withParticle } from '../selectors/story';
 import { conditionDiff, versionFacts, type Measure, type VersionFacts } from '../selectors/versionFacts';
 import { inputName, paramName, paramValue, ruleName } from '../selectors/words';
 import {
@@ -234,6 +234,52 @@ function refusalCell(facts: VersionFacts) {
       ))}
       <Label style={{ marginBottom: 0, marginTop: 2 }}>
         거절 표에서 걸린 줄 하나가 곧 사유입니다. 합산 점수가 아닙니다.
+      </Label>
+    </div>
+  );
+}
+
+/** What the record did not have, for the people this version's days involved,
+ *  and the assumptions its decisions rested on. A blank in the interview is not
+ *  an absence in the village, and the row keeps the two apart. */
+function elicitationCell(facts: VersionFacts) {
+  if (facts.attemptCount === 0) return <span style={{ color: colour.unknown }}>미수집</span>;
+  const { gaps, leanedOn, ledgerId } = facts.elicitation;
+  if (ledgerId === null) return <span style={{ color: colour.unknown }}>장부 기록 없음 (예전 실행)</span>;
+  const byPerson = new Map<string, string[]>();
+  for (const g of gaps) {
+    const topic = g.text.slice(g.text.indexOf(' · ') + 3);
+    byPerson.set(g.actorId, [...(byPerson.get(g.actorId) ?? []), topic]);
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {leanedOn.length === 0 ? (
+        <span>결정이 기댄 연구자 가정 없음</span>
+      ) : (
+        leanedOn.map((l, i) => (
+          <span key={i}>
+            <Tag $kind="warn">가정에 기댐</Tag>{' '}
+            {l.knowerId && l.subjectId
+              ? `${withParticle(personName(l.knowerId), 'subject')} ${personName(l.subjectId)}의 평소 장소를 안다고 가정`
+              : l.kind}
+            {l.reason ? ` — ${l.reason}` : ''}
+          </span>
+        ))
+      )}
+      {byPerson.size > 0 && (
+        <Disclosure>
+          <summary>안 물어봤거나 일부만 기록된 것 {gaps.length}건 · {byPerson.size}명</summary>
+          <div>
+            {[...byPerson.entries()].map(([who, topics]) => (
+              <div key={who}>
+                <strong>{personName(who)}</strong> — {topics.join(' · ')}
+              </div>
+            ))}
+          </div>
+        </Disclosure>
+      )}
+      <Label style={{ marginBottom: 0, marginTop: 2 }}>
+        빈칸은 '없음'이 아니라 '모름'입니다. 장부 {ledgerId}.
       </Label>
     </div>
   );
@@ -567,6 +613,12 @@ export default function CompareScreen({
                 <td>누가 거절했나</td>
                 <td>{refusalCell(leftFacts)}</td>
                 <td>{refusalCell(rightFacts)}</td>
+              </tr>
+
+              <tr>
+                <td>기록에 없던 것</td>
+                <td>{elicitationCell(leftFacts)}</td>
+                <td>{elicitationCell(rightFacts)}</td>
               </tr>
 
               <tr>

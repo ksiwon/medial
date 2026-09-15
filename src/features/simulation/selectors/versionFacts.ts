@@ -1,5 +1,5 @@
 import type { AgentReview, GenerationDetail, UsageStatus } from '../api/iteration';
-import type { DayRealization, Handover, Refusal } from '../api/types';
+import type { DayRealization, Elicitation, ElicitationGap, Handover, Refusal } from '../api/types';
 import { dayChangeLines, dayLabel } from './words';
 
 // One version's readable facts, aggregated from the stored metrics of the
@@ -43,6 +43,9 @@ export interface VersionFacts {
   refusals: Refusal[];
   /** One entry per attempt in the version: which day it ran on. */
   days: { attemptId: string; label: string; changes: string[] }[];
+  /** Ledger gaps for the people the version's days involved, deduplicated,
+   *  and the assumptions its decisions rested on. */
+  elicitation: { ledgerId: string | null; gaps: ElicitationGap[]; leanedOn: Elicitation['leanedOn'] };
   contactAttempts: Measure;
   transportNeeds: Measure;
   transportCompleted: Measure;
@@ -103,6 +106,10 @@ export function versionFacts(generation: GenerationDetail): VersionFacts {
   const handovers: Handover[] = [];
   const refusals: Refusal[] = [];
   const days: VersionFacts['days'] = [];
+  let ledgerId: string | null = null;
+  const gapByKey = new Map<string, ElicitationGap>();
+  const leanedOn: Elicitation['leanedOn'] = [];
+  const leanedKeys = new Set<string>();
   for (const [attemptId, attempt] of Object.entries(objective)) {
     const h = dig(attempt, 'handovers') as
       | { rows?: Handover[]; peopleAskedByMedial?: string[]; peopleAskedByNeighbour?: string[] }
@@ -114,6 +121,15 @@ export function versionFacts(generation: GenerationDetail): VersionFacts {
     refusals.push(...(r?.rows ?? []));
     const day = dig(attempt, 'dayRealization') as DayRealization | undefined;
     if (day) days.push({ attemptId, label: dayLabel(day), changes: dayChangeLines(day) });
+    const el = dig(attempt, 'elicitation') as Elicitation | undefined;
+    if (el) {
+      ledgerId = el.ledgerId;
+      for (const g of el.gaps) gapByKey.set(`${g.actorId}/${g.topic}`, g);
+      for (const l of el.leanedOn) {
+        const key = JSON.stringify(l);
+        if (!leanedKeys.has(key)) { leanedKeys.add(key); leanedOn.push(l); }
+      }
+    }
   }
 
   const usage: Partial<Record<UsageStatus, number>> = {};
@@ -156,6 +172,7 @@ export function versionFacts(generation: GenerationDetail): VersionFacts {
     handovers,
     refusals,
     days,
+    elicitation: { ledgerId, gaps: [...gapByKey.values()], leanedOn },
     contactAttempts: {
       value: sumAcross(objectives, 'contacts', 'attempts'),
       basis: '회 · 무응답을 거절로 합치지 않음',

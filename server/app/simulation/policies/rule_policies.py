@@ -78,6 +78,11 @@ class PolicyContext:
     #: recorded tie with and what the record says. Assumed registered as the
     #: subject's close contacts (``assumption-registered-contacts``).
     relations: list[dict[str, Any]] = field(default_factory=list)
+    #: Ledger status of "whom does the subject ask for help". ``not_asked``
+    #: and ``partial`` mean an empty relation list is not an empty village.
+    help_contacts_status: str = "not_asked"
+    #: Who knows the subject's usual places, with provenance.
+    routine_knowers: list[dict[str, Any]] = field(default_factory=list)
 
 
 class MedialPolicy:
@@ -276,32 +281,46 @@ class MedialPolicy:
         params = self.revision.params
         head = self.village_head_id
         question = "자택에 없고 짐작 가는 곳도 없을 때 누구에게 물을 것인가"
-        if not params.allowHeadContact:
-            reason = "이 정책은 이장에게 묻지 않는다"
-        elif head == checker or head in already_asked:
-            reason = "이장에게는 이미 이 건을 물었다"
-        else:
+        candidates: list[Candidate] = []
+        chosen: dict[str, Any] | None = None
+        for k in ctx.routine_knowers:
+            who = k["actorId"]
+            if who == head and not params.allowHeadContact:
+                candidates.append(Candidate(actorId=who, included=False,
+                                            reason="이 정책은 이장에게 묻지 않는다"))
+            elif who == checker or who in already_asked:
+                candidates.append(Candidate(actorId=who, included=False,
+                                            reason="이미 이 건을 물었다"))
+            else:
+                basis = ("%s의 평소 장소를 안다: %s" % (ctx.subject_id, k["reason"])
+                         + (" (연구자 가정 · 현장 확인 필요)"
+                            if k["provenance"] == "researcher-assumption" else ""))
+                candidates.append(Candidate(actorId=who, included=True, reason=basis))
+                if chosen is None:
+                    chosen = k
+        if not ctx.routine_knowers:
+            candidates.append(Candidate(
+                actorId=head, included=False,
+                reason="%s의 평소 장소를 아는 사람이 장부에 없다 (채록 공백)" % ctx.subject_id))
+        if chosen is None:
             return (self._decision(
-                ctx, question=question,
-                candidates=[Candidate(
-                    actorId=head, included=True,
-                    reason=("마을 사람들의 평소 일과를 장소 단위로 아는 사람으로 등록되어 있다. "
-                            "MEDial은 그 지식을 갖고 있지 않다"))],
-                chosen=head,
-                rationale=("%s는 자택에 없다는 것만 확인했고 어디 있을지 짐작할 근거가 없다. "
-                           "없다는 것도 위치나 상태를 확정하지 않으므로, 평소 일과를 아는 이장에게 "
-                           "어디 있을지 전화로 묻는다." % checker),
-            ), [Intent("ask_whereabouts", {
-                "toActorId": head,
-                "requestId": ctx.request_id,
-                "disclosure": self.disclosure_to("neighbour", ctx),
-            })])
+                ctx, question=question, candidates=candidates, chosen=None,
+                rationale="자택에 없었고 어디 있을지 물을 사람이 없다: %s."
+                          % "; ".join("%s — %s" % (c.actorId, c.reason) for c in candidates),
+            ), [])
+        assumed = chosen["provenance"] == "researcher-assumption"
         return (self._decision(
-            ctx, question=question,
-            candidates=[Candidate(actorId=head, included=False, reason=reason)],
-            chosen=None,
-            rationale="자택에 없었고 어디 있을지 물을 사람이 없다: %s." % reason,
-        ), [])
+            ctx, question=question, candidates=candidates, chosen=chosen["actorId"],
+            rationale=("%s는 자택에 없다는 것만 확인했고 어디 있을지 짐작할 근거가 없다. "
+                       "없다는 것도 위치나 상태를 확정하지 않으므로, 평소 일과를 아는 %s에게 "
+                       "어디 있을지 전화로 묻는다.%s"
+                       % (checker, chosen["actorId"],
+                          " 이 사람이 안다는 것은 연구자 가정이다 — 현장 확인 필요." if assumed else "")),
+        ), [Intent("ask_whereabouts", {
+            "toActorId": chosen["actorId"],
+            "requestId": ctx.request_id,
+            "disclosure": self.disclosure_to("neighbour", ctx),
+        })])
 
     # -- the head reports the subject was not at home ---------------------
     def on_absent_report(self, ctx: PolicyContext,
@@ -474,8 +493,17 @@ class MedialPolicy:
         if not others:
             recorded = ("기록된 가까운 관계는 이장 한 사람뿐" if any(
                 r["actorId"] == head for r in ctx.relations) else "기록된 가까운 관계가 없음")
-            return ("%s: %s이라 %s 이장에게 부담이 몰리는 것은 관계 기록의 결과이지 정책이 "
-                    "이장을 고른 것이 아니다." % (ctx.subject_id, recorded, tail))
+            # "Nobody" and "nobody asked" read alike in the edge list; the
+            # ledger tells them apart, and the reason says which it was.
+            asked = {
+                "recorded": "누구에게 도움을 청하는지 물었고 이것이 답의 전부다.",
+                "asked_none": "누구에게 도움을 청하는지 물었고 없다고 했다.",
+                "partial": "누구에게 도움을 청하는지 물었으나 기록이 일부뿐이다 (채록 공백).",
+                "not_asked": "누구에게 도움을 청하는지는 묻지 않았다 (채록 공백) — "
+                             "없는 것이 아니라 모르는 것이다.",
+            }[ctx.help_contacts_status]
+            return ("%s: %s이라 %s %s 이장에게 부담이 몰리는 것은 관계 기록의 결과이지 정책이 "
+                    "이장을 고른 것이 아니다." % (ctx.subject_id, recorded, tail, asked))
         why = {c.actorId: c.reason for c in candidates}
         return ("기록된 가까운 관계(%s)가 있지만 지금은 부탁할 수 없다 (%s). %s" % (
             ", ".join(others), "; ".join("%s: %s" % (a, why.get(a, "후보 아님")) for a in others),
