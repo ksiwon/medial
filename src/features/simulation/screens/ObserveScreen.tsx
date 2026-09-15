@@ -16,6 +16,7 @@ import PersonPanel from '../components/PersonPanel';
 import VillageMap, { type MapHighlight } from '../components/VillageMap';
 import { formatClock, type ActorPose, type MedialKnown } from '../positions';
 import { requestFlows } from '../selectors/requests';
+import { taskColours } from '../selectors/taskColour';
 import { dayChangeLines, dayLabel } from '../selectors/words';
 import { DAY_END_MS, DAY_START_MS } from '../store';
 import { IconButton, Panel, Select, Sub } from '../ui/primitives';
@@ -330,19 +331,28 @@ export default function ObserveScreen({
   onReadEvaluations,
 }: Props) {
   const flows = useMemo(() => requestFlows(visibleEvents), [visibleEvents]);
-  const [requestId, setRequestId] = useState<string | null>(null);
+  // A request the researcher clicked stays put; otherwise the panel follows the
+  // clock. It used to hold whatever it had shown first, so at 20:42 - with an
+  // emergency running - it was still explaining a ride that ended at 13:26.
+  const [picked, setPicked] = useState<string | null>(null);
+  const [followed, setFollowed] = useState<string | null>(null);
 
-  // Follow the cursor: the request the newest visible event belongs to is the
-  // one being read, unless the researcher picked another.
   const newest = visibleEvents[visibleEvents.length - 1];
   useEffect(() => {
     if (!newest || newest.correlationId === 'world' || newest.correlationId === 'report') return;
-    setRequestId((current) =>
-      current && flows.some((f) => f.id === current) ? current : newest.correlationId,
-    );
-  }, [newest, flows]);
+    setFollowed(newest.correlationId);
+  }, [newest]);
 
-  const activeFlow = flows.find((f) => f.id === requestId) ?? flows[flows.length - 1] ?? null;
+  const setRequestId = (id: string) => setPicked(id);
+  const activeFlow =
+    flows.find((f) => f.id === picked) ??
+    flows.find((f) => f.id === followed) ??
+    flows[flows.length - 1] ??
+    null;
+
+  // One colour per running request, shared by the map, the event log and the
+  // orchestrator panel, so the three can be read as one thing.
+  const colours = useMemo(() => taskColours(flows), [flows]);
 
   // Only the people of the request being read are drawn brightly. Routes are
   // not drawn any more (see VillageMap); the list stays empty.
@@ -387,6 +397,7 @@ export default function ObserveScreen({
               0
             }
             highlight={highlight}
+            taskColours={colours}
             selectedCluster={selectedCluster}
             selectedActor={selectedActor}
             title={village.isSynthetic ? '합성 마을' : '은점마을'}
@@ -496,6 +507,7 @@ export default function ObserveScreen({
           atMs={atMs}
           eventCount={eventCount}
           generation={generation}
+          taskColours={colours}
           onSeek={onSeek}
           onOpenScene={onOpenScene}
         />
@@ -503,6 +515,7 @@ export default function ObserveScreen({
           flows={flows}
           decisions={detail.decisions.filter((row) => row.simTimeMs <= atMs)}
           selectedId={activeFlow?.id ?? null}
+          taskColours={colours}
           onSelect={setRequestId}
           onSeek={onSeek}
         />

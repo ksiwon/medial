@@ -25,6 +25,7 @@ import {
   Tag,
   type TagKind,
 } from '../ui/primitives';
+import { taskTint } from '../selectors/taskColour';
 import { colour, font } from '../ui/theme';
 
 // The middle column: the AI care orchestrator's own dashboard.
@@ -40,9 +41,11 @@ import { colour, font } from '../ui/theme';
 // DecisionRecord. `world.*` events are excluded upstream, so the world's reason
 // for an unanswered phone cannot appear in MEDial's own status line.
 
-const Now = styled.div`
+const Now = styled.div<{ $task?: string | null }>`
   padding: 12px 16px;
   border-bottom: 1px solid ${colour.border};
+  border-left: ${(p) => (p.$task ? `4px solid ${p.$task}` : 'none')};
+  background: ${(p) => (p.$task ? taskTint(p.$task) : 'transparent')};
 `;
 
 const Sentence = styled.div`
@@ -55,7 +58,7 @@ const Requests = styled.div`
   border-bottom: 1px solid ${colour.border};
 `;
 
-const RequestRow = styled.button<{ $active: boolean }>`
+const RequestRow = styled.button<{ $active: boolean; $task?: string | null }>`
   display: flex;
   align-items: center;
   gap: 8px;
@@ -63,8 +66,10 @@ const RequestRow = styled.button<{ $active: boolean }>`
   text-align: left;
   border: none;
   border-bottom: 1px solid ${colour.border};
-  border-left: 3px solid ${(p) => (p.$active ? colour.primary : 'transparent')};
-  background: ${(p) => (p.$active ? colour.selected : 'transparent')};
+  border-left: ${(p) => (p.$task ? '4px' : '3px')} solid
+    ${(p) => (p.$task ? p.$task : p.$active ? colour.primary : 'transparent')};
+  background: ${(p) =>
+    p.$task && p.$active ? taskTint(p.$task) : p.$active ? colour.selected : 'transparent'};
   padding: 8px 16px 8px 13px;
   cursor: pointer;
   font-family: inherit;
@@ -79,6 +84,44 @@ const RequestRow = styled.button<{ $active: boolean }>`
   &:focus-visible {
     outline: 2px solid ${colour.primary};
     outline-offset: -2px;
+  }
+`;
+
+/** A running request says so out loud: its colour, and a dot that breathes. */
+const Running = styled.span<{ $task: string }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: ${font.small};
+  font-weight: 650;
+  color: ${(p) => p.$task};
+  background: ${(p) => taskTint(p.$task)};
+  border: 1px solid ${(p) => p.$task}55;
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: ${(p) => p.$task};
+    animation: taskPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes taskPulse {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.35;
+      transform: scale(0.75);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &::before {
+      animation: none;
+    }
   }
 `;
 
@@ -229,6 +272,8 @@ interface Props {
   flows: RequestFlow[];
   decisions: DecisionRecord[];
   selectedId: string | null;
+  /** Colour per still-running request (see selectors/taskColour). */
+  taskColours: Map<string, string>;
   onSelect: (id: string) => void;
   onSeek: (seq: number) => void;
 }
@@ -237,6 +282,7 @@ export default function OrchestratorPanel({
   flows,
   decisions,
   selectedId,
+  taskColours,
   onSelect,
   onSeek,
 }: Props) {
@@ -258,6 +304,7 @@ export default function OrchestratorPanel({
     <RequestRow
       key={item.id}
       $active={item.id === flow?.id}
+      $task={taskColours.get(item.id) ?? null}
       onClick={() => onSelect(item.id)}
     >
       <span style={{ flex: 1, minWidth: 0 }}>{item.title}</span>
@@ -266,7 +313,9 @@ export default function OrchestratorPanel({
       {item.closed === 'answered' && <Tag $kind="positive">응답함</Tag>}
       {item.closed === 'handed_on' && <Tag $kind="unknown">확인 요청으로 이어짐</Tag>}
       {item.closed === 'unresolved' && <Tag $kind="negative">미해결</Tag>}
-      {item.closed === null && <Tag $kind="warn">진행 중</Tag>}
+      {item.closed === null && (
+        <Running $task={taskColours.get(item.id) ?? colour.warn}>진행 중</Running>
+      )}
     </RequestRow>
   );
 
@@ -292,7 +341,7 @@ export default function OrchestratorPanel({
 
           {flow && (
             <>
-              <Now>
+              <Now $task={taskColours.get(flow.id) ?? null}>
                 <Sentence>{currentSentence(flow)}</Sentence>
                 <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   <Tag $kind="unknown">관련자 {flow.participants.length}명</Tag>

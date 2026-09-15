@@ -52,7 +52,7 @@ const TabButton = styled.button<{ $active: boolean }>`
   }
 `;
 
-const Item = styled.button<{ $tone: StoryTone; $active: boolean }>`
+const Item = styled.button<{ $tone: StoryTone; $active: boolean; $task?: string | null }>`
   display: grid;
   grid-template-columns: 46px 1fr;
   gap: 10px;
@@ -64,9 +64,14 @@ const Item = styled.button<{ $tone: StoryTone; $active: boolean }>`
   padding: 9px 16px 9px 14px;
   cursor: pointer;
   font-family: inherit;
-  border-left: 2px solid
+  /* A line from a request that is still running is marked in that request's
+     colour - the same colour the map rings those people with. Tone is the
+     fallback for everything else. */
+  border-left: ${(p) => (p.$task ? '4px' : '2px')} solid
     ${(p) =>
-      p.$tone === 'good'
+      p.$task
+        ? p.$task
+        : p.$tone === 'good'
         ? colour.primary
         : p.$tone === 'bad'
           ? colour.error
@@ -134,6 +139,8 @@ interface Props {
   eventCount: number;
   /** The generation whose day just finished, when there is one. */
   generation: GenerationDetail | null;
+  /** Colour per still-running request (see selectors/taskColour). */
+  taskColours: Map<string, string>;
   onSeek: (seq: number) => void;
   onOpenScene: (attemptId: string, eventId: string) => void;
 }
@@ -144,6 +151,7 @@ export default function HappeningPanel({
   atMs,
   eventCount,
   generation,
+  taskColours,
   onSeek,
   onOpenScene,
 }: Props) {
@@ -214,6 +222,7 @@ export default function HappeningPanel({
               <Item
                 key={row.event.id}
                 $tone={row.tone}
+                $task={taskColours.get(row.event.correlationId) ?? null}
                 $active={row.event.seq === cursorSeq}
                 onClick={() => onSeek(row.event.seq)}
                 title="이 장면을 다시 봅니다 (저장된 기록 재생, 새 계산 없음)"

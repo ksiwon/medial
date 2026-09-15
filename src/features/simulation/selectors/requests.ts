@@ -315,6 +315,22 @@ export function currentSentence(flow: RequestFlow): string {
       return str(p.outcome) === 'subject_found_well'
         ? `${withParticle(who, 'object')} 직접 확인했습니다.`
         : `${p.place ? placeWord(str(p.place)) : '그 장소'}에 ${withParticle(who, 'subject')} 없었습니다.`;
+    // The reader is looking at a request that is still running, so the last
+    // event is often a task that has only just begun, or the ambulance chain.
+    case 'task.started':
+      return str(p.task) === 'stay_with'
+        ? `${withParticle(personName(last.actorId), 'subject')} ${who} 곁에서 기다리고 있습니다.`
+        : `${withParticle(personName(last.actorId), 'subject')} 부탁받은 일을 시작했습니다.`;
+    case 'task.completed':
+      return `${withParticle(personName(last.actorId), 'subject')} 부탁받은 일을 마쳤습니다.`;
+    case 'emergency.reported':
+      return `${withParticle(personName(last.actorId), 'subject')} ${who}이(가) 위급하다고 알렸습니다.`;
+    case 'ems.dispatched':
+      return `구급대가 출동했습니다 (도착까지 약 ${String(p.etaMinutes ?? '?')}분).`;
+    case 'ems.arrived':
+      return '구급대가 도착했습니다.';
+    case 'ems.handover':
+      return `${withParticle(who, 'object')} 구급대에 인계했습니다.`;
     case 'handoff.requested':
       return `${to ?? '기관'}에 인계를 요청했습니다.`;
     case 'handoff.accepted':
