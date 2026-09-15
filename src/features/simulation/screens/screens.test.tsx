@@ -106,12 +106,14 @@ afterEach(cleanup);
 describe('ObserveScreen', () => {
   it('renders all three columns from real payloads', () => {
     observe();
-    expect(screen.getByText('은점마을')).toBeDefined();
+    // The map's name is a badge on the map; the synthetic fixture never
+    // borrows the real village's name.
+    expect(screen.getByText(village.isSynthetic ? '합성 마을' : '은점마을')).toBeDefined();
     expect(screen.getByText('MEDial · 조율 현황')).toBeDefined();
     // The person column is headed by whoever is being shown, not by a title.
     expect(screen.getByLabelText('볼 사람')).toBeDefined();
-    // The map says which kind of ground it is standing on, always.
-    expect(screen.getByText(village.isSynthetic ? '합성 지도' : '원자료 지형')).toBeDefined();
+    // Which ground the map stands on is still stated, behind the gear.
+    expect(screen.getByText(new RegExp(village.isSynthetic ? '합성 지도' : '원자료 지형'))).toBeDefined();
   });
 
   it('separates the recording from the run', () => {

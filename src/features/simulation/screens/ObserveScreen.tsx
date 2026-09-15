@@ -18,7 +18,7 @@ import { formatClock, type ActorPose, type MedialKnown } from '../positions';
 import { requestFlows } from '../selectors/requests';
 import { dayChangeLines, dayLabel } from '../selectors/words';
 import { DAY_END_MS, DAY_START_MS } from '../store';
-import { IconButton, Panel, PanelHead, PanelTitle, Select, Sub, Tag } from '../ui/primitives';
+import { IconButton, Panel, Select, Sub } from '../ui/primitives';
 import { colour, font, radius } from '../ui/theme';
 
 // Screen B, in three equal columns: the village, the orchestrator, the person.
@@ -344,26 +344,12 @@ export default function ObserveScreen({
 
   const activeFlow = flows.find((f) => f.id === requestId) ?? flows[flows.length - 1] ?? null;
 
-  // Only the people and the route of the request being read are drawn brightly.
-  const highlight: MapHighlight | null = useMemo(() => {
-    if (!activeFlow) return null;
-    const actorIds = new Set(activeFlow.participants);
-    const routes: [number, number][][] = [];
-    const timeline = detail.timeline;
-    if (timeline) {
-      for (const actor of Object.values(timeline.actors)) {
-        if (!actorIds.has(actor.id)) continue;
-        for (const segment of actor.realized) {
-          // An off-map leg's polyline is a straight line to a point outside
-          // the frame - it drew as a bar across the whole valley. The strip
-          // under the map already says who is out of the village.
-          if (segment.mode === 'offmap') continue;
-          if (segment.requestId && segment.polyline?.length) routes.push(segment.polyline);
-        }
-      }
-    }
-    return { actorIds, routes };
-  }, [activeFlow, detail.timeline]);
+  // Only the people of the request being read are drawn brightly. Routes are
+  // not drawn any more (see VillageMap); the list stays empty.
+  const highlight: MapHighlight | null = useMemo(
+    () => (activeFlow ? { actorIds: new Set(activeFlow.participants), routes: [] } : null),
+    [activeFlow],
+  );
 
   // A quote is only ever an utterance the log already holds for that person at
   // or before the cursor. Nothing is written for the popover.
@@ -400,34 +386,6 @@ export default function ObserveScreen({
     <Layout>
       <Village>
         <MapPanel>
-          <PanelHead style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}>
-            <PanelTitle>은점마을</PanelTitle>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center', minWidth: 0 }}>
-              <Tag $kind={village.isSynthetic ? 'warn' : 'unknown'}>
-                {village.isSynthetic ? '합성 지도' : '원자료 지형'}
-              </Tag>
-              {/* Which day this run happened on. The one line says whether the
-                  routine was taken as recorded or nudged; the edits themselves
-                  are in the tooltip, one per person, checkable against the
-                  source. A run stored before days were drawn has no tag. */}
-              {detail.metrics.dayRealization && (
-                <Tag
-                  $kind={
-                    detail.metrics.dayRealization.classification === 'source_baseline'
-                      ? 'unknown'
-                      : 'warn'
-                  }
-                  title={
-                    dayChangeLines(detail.metrics.dayRealization).join('\n') ||
-                    '기록된 일과를 그대로 썼습니다.'
-                  }
-                >
-                  {dayLabel(detail.metrics.dayRealization)}
-                </Tag>
-              )}
-            </div>
-          </PanelHead>
-
           <VillageMap
             village={village}
             poses={poses}
@@ -443,6 +401,7 @@ export default function ObserveScreen({
             selectedCluster={selectedCluster}
             selectedActor={selectedActor}
             quoteFor={quoteFor}
+            title={village.isSynthetic ? '합성 마을' : '은점마을'}
             onSelectCluster={onSelectCluster}
             onOpenDetail={onOpenDetail}
           />
@@ -519,7 +478,22 @@ export default function ObserveScreen({
                 </div>
                 <Sub as="span">
                   사건 {cursorSeq}/{eventCount}
+                  {' · '}
+                  {village.isSynthetic ? '합성 지도' : '원자료 지형'}
                 </Sub>
+                {/* Which day this run happened on: as recorded, or nudged. The
+                    edits themselves are in the tooltip, one per person. */}
+                {detail.metrics.dayRealization && (
+                  <Sub
+                    as="span"
+                    title={
+                      dayChangeLines(detail.metrics.dayRealization).join('\n') ||
+                      '기록된 일과를 그대로 썼습니다.'
+                    }
+                  >
+                    {dayLabel(detail.metrics.dayRealization)}
+                  </Sub>
+                )}
                 <IconButton onClick={onNewCase}>새 사례 준비</IconButton>
               </div>
             </Settings>

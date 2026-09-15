@@ -76,7 +76,7 @@ test('@shots A 사례와 서비스 경험', async ({ page }) => {
   await expect(range).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText('MEDial · 조율 현황')).toBeVisible();
   await shot(page, '03-observe');
-  await crop(panel(page, '은점마을'), '04-observe-map');
+  await crop(panel(page, '합성 마을'), '04-observe-map');
   await crop(panel(page, '지금 일어난 일'), '05-observe-happening');
   await crop(
     page.getByText('MEDial · 조율 현황').locator('xpath=ancestor::section[1]'),

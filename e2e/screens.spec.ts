@@ -53,9 +53,11 @@ test('관찰: 이웃 우선 정책에서 누가 거절했고 왜인지가 읽힌
   await expect(page.getByText('MEDial · 조율 현황')).toBeVisible();
   await seekToEnd(page);
 
-  // The day the run happened on, in one line.
+  // The day the run happened on, in one line - behind the gear, off the map.
   const day = detail.metrics.dayRealization;
+  await page.getByLabel('재생 설정', { exact: true }).click();
   await expect(page.getByText(DAY_LABEL[day.classification], { exact: true })).toBeVisible();
+  await page.getByLabel('재생 설정', { exact: true }).click();
 
   // Every refusal: the person and the sentence they gave. Never the rule key.
   await expect(page.getByText('누구에게 부탁했고, 뭐라고 했나')).toBeVisible();

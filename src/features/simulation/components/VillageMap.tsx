@@ -125,10 +125,30 @@ const Compass = styled.div`
   line-height: 1.2;
 `;
 
-const ModeBadge = styled.div`
+/** The map's name, on the map itself. The panel used to carry a heading row
+ *  with two tags (terrain source, which day); that row was 60px of a column
+ *  whose whole point is the map, so the name became a small badge and the
+ *  tags went behind the gear. */
+const MapTitle = styled.h2`
   position: absolute;
   left: 12px;
   top: 10px;
+  margin: 0;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid ${colour.border};
+  color: ${colour.text};
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: ${font.small};
+  font-weight: 600;
+  line-height: 1.4;
+  pointer-events: none;
+`;
+
+const ModeBadge = styled.div`
+  position: absolute;
+  left: 12px;
+  top: 40px;
   background: ${colour.surface};
   border: 1px solid ${colour.border};
   color: ${colour.secondary};
@@ -323,6 +343,8 @@ interface Props {
   /** One short line from the current scene for the selected person, or null.
    *  Never invented: the observe screen passes an actual event's words. */
   quoteFor: (actorId: string) => string | null;
+  /** Shown as a small badge over the map's top-left corner. */
+  title: string;
   onSelectCluster: (key: string | null, actorId?: string | null) => void;
   onOpenDetail: (actorId: string) => void;
 }
@@ -338,6 +360,7 @@ export default function VillageMap({
   selectedCluster,
   selectedActor,
   quoteFor,
+  title,
   onSelectCluster,
   onOpenDetail,
 }: Props) {
@@ -586,20 +609,10 @@ export default function VillageMap({
               />
             ))}
 
-          {/* The route of the request being read, and nothing else. The full
-              road graph and every actor's path stay hidden by default. */}
-          {highlight?.routes.map((route, index) => (
-            <polyline
-              key={`route-${index}`}
-              points={route.map((p) => `${p[0]},${p[1]}`).join(' ')}
-              fill="none"
-              stroke={colour.primary}
-              strokeOpacity={0.75}
-              strokeWidth={3 * k}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          ))}
+          {/* No route lines. The request's path used to be drawn in green; the
+              reader asked for it gone - the marker moving along the road is
+              the path, and the line only covered the map (2026-09-15).
+              `highlight` still dims everyone not in the request. */}
 
           {/* Confirmed residences, at the source coordinates, kept quiet: a
               small outline, no label, no cartoon roof. */}
@@ -685,6 +698,7 @@ export default function VillageMap({
           })}
         </Svg>
 
+        <MapTitle>{title}</MapTitle>
         {medial && <ModeBadge>MEDial이 보고받은 위치만 표시 중</ModeBadge>}
 
         <Compass>
