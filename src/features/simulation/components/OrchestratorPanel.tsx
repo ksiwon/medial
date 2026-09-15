@@ -137,6 +137,19 @@ const Facts = styled.ul`
   font-size: ${font.small};
 `;
 
+/** The day went quiet: said plainly, rather than an empty panel. */
+const Quiet = styled.div`
+  padding: 10px 16px;
+  font-size: ${font.small};
+  color: ${colour.unknown};
+  border-bottom: 1px solid ${colour.border};
+`;
+
+const Folded = styled.div`
+  margin: 0 -16px -12px;
+  border-top: 1px solid ${colour.border};
+`;
+
 const Empty = styled.div`
   padding: 16px;
   font-size: ${font.small};
@@ -227,10 +240,35 @@ export default function OrchestratorPanel({
   onSelect,
   onSeek,
 }: Props) {
-  const flow = flows.find((f) => f.id === selectedId) ?? flows[0] ?? null;
+  // What is still open is the panel's subject; what has closed is history and
+  // folds away at the bottom. With nothing open, the last request to close
+  // stands in - the panel should not go blank because the day got quiet.
+  const live = flows.filter((f) => f.closed === null);
+  const past = flows.filter((f) => f.closed !== null);
+  const flow =
+    flows.find((f) => f.id === selectedId) ?? live[0] ?? past[past.length - 1] ?? null;
+  const shownAtTop =
+    flow && flow.closed !== null ? [flow, ...live] : live.length > 0 ? live : flow ? [flow] : [];
+  const folded = past.filter((f) => !shownAtTop.some((r) => r.id === f.id));
   const reasoning = flow ? latestReasoning(flow, decisions) : null;
   const earlier = flow ? reasonsInOrder(flow).slice(0, -1) : [];
   const asked = flow ? askedPeople(flow) : [];
+
+  const row = (item: RequestFlow) => (
+    <RequestRow
+      key={item.id}
+      $active={item.id === flow?.id}
+      onClick={() => onSelect(item.id)}
+    >
+      <span style={{ flex: 1, minWidth: 0 }}>{item.title}</span>
+      <Sub as="span">{formatClock(item.firstMs)}</Sub>
+      {item.closed === 'resolved' && <Tag $kind="positive">종료</Tag>}
+      {item.closed === 'answered' && <Tag $kind="positive">응답함</Tag>}
+      {item.closed === 'handed_on' && <Tag $kind="unknown">확인 요청으로 이어짐</Tag>}
+      {item.closed === 'unresolved' && <Tag $kind="negative">미해결</Tag>}
+      {item.closed === null && <Tag $kind="warn">진행 중</Tag>}
+    </RequestRow>
+  );
 
   return (
     <Panel>
@@ -245,25 +283,12 @@ export default function OrchestratorPanel({
         </Empty>
       ) : (
         <Scroll>
-          {/* Every request of the day, not just the selected one: a request that
-              was closed hours ago is still part of what happened. */}
-          <Requests>
-            {flows.map((row) => (
-              <RequestRow
-                key={row.id}
-                $active={row.id === flow?.id}
-                onClick={() => onSelect(row.id)}
-              >
-                <span style={{ flex: 1, minWidth: 0 }}>{row.title}</span>
-                <Sub as="span">{formatClock(row.firstMs)}</Sub>
-                {row.closed === 'resolved' && <Tag $kind="positive">종료</Tag>}
-                {row.closed === 'answered' && <Tag $kind="positive">응답함</Tag>}
-                {row.closed === 'handed_on' && <Tag $kind="unknown">확인 요청으로 이어짐</Tag>}
-                {row.closed === 'unresolved' && <Tag $kind="negative">미해결</Tag>}
-                {row.closed === null && <Tag $kind="warn">진행 중</Tag>}
-              </RequestRow>
-            ))}
-          </Requests>
+          {live.length === 0 && (
+            <Quiet>
+              지금 진행 중인 요청이 없습니다 — 마지막으로 끝난 요청을 보여 줍니다.
+            </Quiet>
+          )}
+          <Requests>{shownAtTop.map(row)}</Requests>
 
           {flow && (
             <>
@@ -416,6 +441,17 @@ export default function OrchestratorPanel({
                 </Disclosure>
               </Section>
             </>
+          )}
+
+          {/* A request that closed hours ago is still part of the day, so it
+              stays reachable - just not in the way of what is happening now. */}
+          {folded.length > 0 && (
+            <Section>
+              <Disclosure>
+                <summary>이전 내역 {folded.length}건</summary>
+                <Folded>{folded.map(row)}</Folded>
+              </Disclosure>
+            </Section>
           )}
         </Scroll>
       )}
