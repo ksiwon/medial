@@ -101,8 +101,8 @@
      수치는 도구가 무엇을 보여 주는지의 예시이지 연구 결과가 아니다.</p>
   <div class="meta">
     <span class="chip">날짜 <b>2026-09-15</b></span>
-    <span class="chip">결정 <b>D093–D101</b></span>
-    <span class="chip">검증 서버 <b>418</b> · 화면 <b>63</b> · Playwright <b>6</b></span>
+    <span class="chip">결정 <b>D093–D106</b></span>
+    <span class="chip">검증 서버 <b>433</b> · 화면 <b>63</b> · Playwright <b>6</b></span>
     <span class="chip">캡처 <b>31장</b> · <code>npm run shots</code></span>
   </div>
 </header>
@@ -113,12 +113,13 @@
     <li><a href="#diagnosis">무엇이 문제였나</a></li>
     <li><a href="#flow">지금의 흐름 — 세 화면</a></li>
     <li><a href="#decisions">바뀐 원칙 여덟</a></li>
+    <li><a href="#after">그 뒤에 더해진 것 — 하루와 마을</a></li>
     <li><a href="#reading">한 번 돌린 결과를 읽는 법</a></li>
     <li><a href="#transfer">다른 곳으로 옮길 수 있나</a></li>
     <li><a href="#verify">검증 — 한 것과 하지 않은 것</a></li>
     <li><a href="#next">남은 연구자 판단</a></li>
     <li><a href="#shots">부록 A · 발표용 캡처 목록</a></li>
-    <li><a href="#index">부록 B · 결정 색인 D093–D101</a></li>
+    <li><a href="#index">부록 B · 결정 색인 D093–D106</a></li>
   </ol>
 </nav>
 
@@ -203,7 +204,8 @@
 </figure>
 <figure>
   <img src="screenshots/2026-09-15-ui/03-observe.png" alt="관찰 화면">
-  <figcaption><b>그 하루.</b> 지도 · 일어난 일 · MEDial의 조율 판단 · 마을 사람들. 평가에서 "그 장면 열기"로 들어오면 그 사건 시점에서 열린다. <span class="file">03-observe.png</span></figcaption>
+  <figcaption><b>그 하루.</b> 지도 · 일어난 일 · MEDial의 조율 판단 · 마을 사람들. 평가에서 "그 장면 열기"로 들어오면 그 사건 시점에서 열린다.
+    막대는 사건 번호가 아니라 <b>05:00–22:00의 시각</b>이고, 22:00에 주민이 하루를 평가한다(D102). <span class="file">03-observe.png</span></figcaption>
 </figure>
 <div class="shots">
   <figure>
@@ -304,9 +306,39 @@
 </figure>
 </section>
 
-<!-- ============================================================ 5 -->
+<!-- ============================================================ 4-2 -->
+<section id="after">
+<h2>5. 그 뒤에 더해진 것 — 하루와 마을</h2>
+<p class="lead">위의 여덟은 <b>반복 루프의 구조</b>에 대한 결정이다. 그 구조가 선 뒤에 남은 문제는 다른 종류였다 —
+   루프가 읽는 <b>하루</b>가 원자료의 하루가 아니었고, 그 하루가 벌어지는 <b>마을</b>이 지도와 달랐다.</p>
+<div class="grid two">
+  <div class="paper"><span class="venue">D102</span><h3>하루는 05:00에 시작해 22:00에 평가된다</h3>
+    <p>실행 지평이 20:00이라 21:00 귀가가 잘려 있었다. 재생 막대를 시각으로 바꾸고 배속·한 사건 이동·MEDial 관점은 ⚙ 뒤로 옮겼다.
+       세 화면 이름은 ①→②→③ ↺ 한 바퀴로 그린다.</p></div>
+  <div class="paper"><span class="venue g">D103</span><h3>운전 여부는 공동체 진술로 채운다</h3>
+    <p>인터뷰가 운전을 묻지 않아 동승 요청을 11명 전원이 "운전 여부 모름"으로 거절했다 — 차 없이는 다니기 어려운 마을에서.
+       현장을 아는 연구자의 진술을 <b>장부에 provenance와 함께</b> 적고, 컴파일러가 지어낸 값과 구분한다.</p></div>
+  <div class="paper"><span class="venue g">D104</span><h3>v0의 사례는 원자료의 하루</h3>
+    <p>사건 하나와 열두 시간의 정적 대신, Q1·Q2·Q3·Q5를 원자료 시각에 둔 하루 덱. 한 덱이 여러 퀘스트를 가질 수 있다.</p></div>
+  <div class="paper"><span class="venue j">D105</span><h3>보건소와 119는 에이전트다</h3>
+    <p>119는 신고자의 말 그대로 받아 출동·보류·거절만 답하고 <b>상태를 진단하지 않는다</b>. 보건소는 17:00에 MEDial의 하루 보고를 받아
+       주민마다 조치를 정한다. 모델 답이 스키마 밖이면 <b>어댑터 실패</b>이지 기관의 거절이 아니다. 이것으로 Q4(20:30 위급)가 돌아간다.</p></div>
+  <div class="paper"><span class="venue j">D106</span><h3>사람은 지도에 그려진 길을 따라 다닌다</h3>
+    <p>원본의 도로는 건물과 건물을 잇는 직선이라 사람들이 밭과 바다를 가로질렀다. 지도 래스터에서 도로 색을 골라
+       <b>277개 폴리라인</b>을 뽑고 장소·집 19곳을 그 위에 붙였다(가장 먼 곳이 밭 44m). 원본의 거리는 지우지 않고
+       <b>대조군</b>으로 남겼다 — 이름난 16개 경로에서 평균 31m 차이.</p></div>
+  <div class="paper"><span class="venue">화면</span><h3>진행 중인 것이 티가 나게</h3>
+    <p>열려 있는 요청마다 색 하나. 그 색이 그 일을 하는 사람의 테두리이자 사건 줄의 띠이고 조율 현황의 줄이다.
+       끝난 요청은 아래로 접고, 조율 현황은 시계를 따라간다.</p></div>
+</div>
+<div class="paper" style="margin-top:18px"><span class="venue r">이 다섯이 바꾼 것 — 저장된 실행은 그대로다</span>
+  <p>덱·장부·도로는 전부 <b>attempt 입력</b>이다. 바꾸면 다른 입력이므로, 이전에 저장된 실행은 예전 지오메트리와 예전 하루를 그대로 들고 남는다.
+     새 실행부터 길을 따르고 5퀘스트를 돈다. 고쳐 쓰지 않고 새 기록으로 쌓는다.</p></div>
+</section>
+
+<!-- ============================================================ 6 -->
 <section id="reading">
-<h2>5. 한 번 돌린 결과를 읽는 법</h2>
+<h2>6. 한 번 돌린 결과를 읽는 법</h2>
 <p class="lead">캡처를 찍으려고 돌린 한 쌍(합성 마을 · 시나리오 2개 · 규칙 어댑터). <b>결과가 아니라 도구가 무엇을 가려 주는지의 예시</b>로만 읽는다.</p>
 
 <div class="tablewrap"><table>
@@ -322,7 +354,7 @@
 
 <!-- ============================================================ 6 -->
 <section id="transfer">
-<h2>6. 다른 곳으로 옮길 수 있나</h2>
+<h2>7. 다른 곳으로 옮길 수 있나</h2>
 <div class="tablewrap"><table>
   <tr><th>수준</th><th>무엇이 바뀌나</th><th>상태</th></tr>
   <tr><td><b>G1</b> 다른 공동체</td><td>주민 · 관계 · 일과 · 자료 공백</td><td><span class="pill ok">검사함</span> P번호를 쓰지 않는 5인 · 이장 없음 · 장부 대부분 "안 물어봄"인 합성 공동체가 같은 루프를 돈다. 다른 공동체의 관계·시나리오가 섞이면 로드·생성·실행 모두 거부.</td></tr>
@@ -334,20 +366,28 @@
 
 <!-- ============================================================ 7 -->
 <section id="verify">
-<h2>7. 검증 — 한 것과 하지 않은 것</h2>
+<h2>8. 검증 — 한 것과 하지 않은 것</h2>
 <div class="grid two">
   <div class="paper"><span class="venue g">실행한 것 · 2026-09-15</span>
     <ul>
-      <li>서버 테스트 <b>418</b> 통과 (착수 기준 386)</li>
+      <li>서버 테스트 <b>433</b> 통과 (착수 기준 386 · 구조 작업 뒤 418, 그 뒤 기관 10건·도로 5건)</li>
       <li>화면 mount 테스트 <b>63</b> 통과 (기준 53) · 타입검사·빌드 통과</li>
       <li>Playwright 실브라우저 <b>6</b> 통과 — 세 화면 한 바퀴, 현장 기록 순서, 1440·1366·800 가로 넘침 0, 키보드만으로 근거까지</li>
       <li>캡처 31장을 사람이 열어 보고 고친 결함: 다른 공동체 시나리오 혼입, 사례 구분 없는 중복 행, 확정 뒤 이전 쌍 비교, 첫 초안이 실행 대상, 잘린 이름·단계명·버튼, <b>거절 사유와 현장 장면 제목에 엔진 키 노출</b>(<code>driving_status_unknown</code>, <code>time_labour</code>), 2단계인데 남아 있던 1단계 입력칸</li>
-      <li>기존 DB는 추가만 하는 migration(<code>schemaVersion 2</code>). 연구 DB는 열지 않았다</li>
+      <li>기존 DB는 추가만 하는 migration(<code>schemaVersion 2</code>)</li>
+      <li><b>실모델 호출을 하긴 했다.</b> 보건소·119 어댑터를 실제 Gemini(<code>gemini-3.8-flash</code>)로 하루 2회 호출해
+          출동 응답과 17:00 보고 검토가 사건으로 남는 것까지 확인했다 (D105)</li>
+      <li>도로는 사람이 눈으로 확인했다 — 추적한 폴리라인과 하루의 이동 경로를 래스터 위에 겹쳐 그려
+          밭·바다를 가로지르는 선이 없는 것을 보았다. 자동 검사는 "원본 거리와 평균 31m"까지만 말한다</li>
     </ul>
   </div>
   <div class="paper"><span class="venue r">하지 않은 것 — 완료라고 쓰지 않는다</span>
     <ul>
-      <li><b>실제 모델 호출 0회.</b> 개선 프롬프트가 규칙 값을 제안하는 형태(<code>medial-improve/2.0.0</code>)로 바뀌었는데 실모델에서 확인하지 않았다</li>
+      <li><b>개선 프롬프트는 여전히 실모델 미검증.</b> 규칙 값을 제안하는 형태(<code>medial-improve/2.0.0</code>)로 바뀐 뒤
+          실제로 호출해 본 것은 기관 어댑터뿐이다</li>
+      <li><b>119는 출동까지만.</b> 이송·응급실은 시뮬레이터 밖이고, 보건소의 다음 날 방문은 하루 단위 실행이라 계획으로만 남는다</li>
+      <li><b>추적한 도로는 측량이 아니다.</b> 지도 그림을 읽은 것이고, 지도에 없는 농로·사잇길은 없다.
+          바다 위 이동(조업)과 읍내행의 지도 밖 구간은 여전히 직선이다</li>
       <li><b>실제 주민 응답 0건.</b> 기록 도구만 섰다 (RQ3 비어 있음)</li>
       <li><b>종합 판정의 사람 라벨 0건.</b> 전부 <code>unreviewed</code></li>
       <li><b>사용성 평가 0회.</b> 26번의 "2분 안에 설명" 같은 수치는 목표다</li>
@@ -360,7 +400,7 @@
 
 <!-- ============================================================ 8 -->
 <section id="next">
-<h2>8. 남은 연구자 판단</h2>
+<h2>9. 남은 연구자 판단</h2>
 <div class="flow">
   <div class="step"><div class="n">1</div><div><h4>개선 프롬프트를 실모델로 검증할까</h4><p>제한 예산으로 한 쌍. 기록 재생과 새 호출을 구분해 본다. 규칙표에 맞추려고 프롬프트를 조정하지 않는다.</p></div></div>
   <div class="step"><div class="n">2</div><div><h4>RQ3 — 실제 주민 재방문 절차</h4><p>도구의 순서(공개 전 → 공개 → 공개 후)는 섰다. 누구에게, 어떤 장면을, 어떤 동의 범위로 물을지는 연구 설계의 몫이다.</p></div></div>
@@ -412,7 +452,7 @@
 
 <!-- ============================================================ B -->
 <section id="index">
-<h2>부록 B · 결정 색인 D093–D101</h2>
+<h2>부록 B · 결정 색인 D093–D106</h2>
 <div class="tablewrap"><table>
   <tr><th>번호</th><th>결정</th><th>근거</th><th>확인</th></tr>
   <tr><td>D093</td><td>하나의 의미 규칙에서 문장·실행값·해시 생성</td><td>"재연락 2회" + 실행 1회가 통과했다</td><td><code>semantic_rules.py</code> · 위조 문장 거부 테스트</td></tr>
@@ -424,13 +464,18 @@
   <tr><td>D099</td><td>새 실행 경로는 Change Set 확정 하나</td><td>세 경로가 구분 없이 revision 생성</td><td>편집기·발견 패널 삭제, 기록은 읽기 전용</td></tr>
   <tr><td>D100</td><td>단서 조항은 <code>?</code>·접기로, 막는 문제는 접지 않음</td><td>무엇을 먼저 볼지 알 수 없었다</td><td>검사가 힌트를 열어 문장 확인</td></tr>
   <tr><td>D101</td><td>잘리지 않게: 이름 우선, 좁으면 현재 단계만, 버튼 줄바꿈</td><td>'P..', '하루', 세로 한 글자</td><td>800·1366·1440 캡처</td></tr>
+  <tr><td>D102</td><td>하루는 05:00–22:00, 막대는 시각, 보조 노브는 ⚙ 뒤로</td><td>지평 20:00이라 21:00 귀가가 잘림</td><td>deck <code>HORIZON_MS=22h</code> · 세 열 1:1:1</td></tr>
+  <tr><td>D103</td><td>운전 여부를 장부의 공동체 진술로 채움</td><td>동승 요청을 전원이 '모름'으로 거절</td><td><code>apply_community_facts</code> · 진술은 입력 해시에</td></tr>
+  <tr><td>D104</td><td>v0의 사례는 원자료의 하루(5퀘스트 덱)</td><td>사건 하나와 열두 시간의 정적</td><td><code>deck-eunjeom-day-v1</code> · <code>DECK_QUEST_SETS</code></td></tr>
+  <tr><td>D105</td><td>보건소·119를 에이전트로, 어댑터를 따로 고름</td><td>119가 없어 Q4를 돌릴 수 없었다</td><td><code>test_institutions.py</code> 10건 · 실모델 2회</td></tr>
+  <tr><td>D106</td><td>이동은 지도에서 추적한 도로를 따른다(<code>mapRoads</code>)</td><td>밭과 바다를 가로질러 다녔다</td><td><code>trace_map_roads.py</code> · <code>test_map_roads.py</code> 5건 · 원본 거리와 평균 31m</td></tr>
 </table></div>
 </section>
 
 <footer>
   <b>근거 파일</b><br>
   문서: <code>docs/research/26_REFACTOR_AUDIT_AND_PLAN_2026-09-15.md</code>(진단) · <code>28_REFACTOR_LOG_2026-09-15.md</code>(실행 기록) · <code>DECISIONS.md</code> · <code>DEVELOPMENT.md</code> · 1탄 <code>RESEARCH_NOTE_2026-09-15.html</code><br>
-  코드: <code>server/app/simulation/iteration/semantic_rules.py</code> · <code>rule_application.py</code> · <code>services.py</code> · <code>case_bundle.py</code> · <code>src/features/simulation/screens/EvaluationsScreen.tsx</code> · <code>components/ChangeComposer.tsx</code> · <code>components/FieldSheet.tsx</code><br>
+  코드: <code>server/app/simulation/agents/institutions.py</code> · <code>decks/eunjeom_day.py</code> · <code>village.py</code>(<code>path_between</code>) · <code>scripts/trace_map_roads.py</code> · <code>server/app/simulation/iteration/semantic_rules.py</code> · <code>rule_application.py</code> · <code>services.py</code> · <code>case_bundle.py</code> · <code>src/features/simulation/screens/EvaluationsScreen.tsx</code> · <code>components/ChangeComposer.tsx</code> · <code>components/FieldSheet.tsx</code><br>
   캡처: <code>e2e/shots.spec.ts</code> → <code>docs/research/screenshots/2026-09-15-ui/</code><br>
   <p style="margin-top:14px">MEDial · Resident Agents as Evaluators — 연구노트 2 · 2026-09-15 · 시뮬레이션 주민은 실제 참여자가 아니다</p>
 </footer>
