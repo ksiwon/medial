@@ -76,7 +76,10 @@ http_ok() {
 # 둘을 구분해야 "기다린다"와 "터졌으니 로그를 보여 준다"를 나눌 수 있다.
 http_status() {
   if command -v curl >/dev/null 2>&1; then
-    curl -s -o /dev/null -m 5 -w '%{http_code}' "$1" 2>/dev/null || echo 000
+    # 연결이 안 되면 curl 은 000 을 찍고도 실패로 끝난다. 거기에 000 을 또 붙이면
+    # "000000" 이 되어 "아직 안 떴다"로 읽히지 않는다.
+    code="$(curl -s -o /dev/null -m 5 -w '%{http_code}' "$1" 2>/dev/null)"
+    echo "${code:-000}"
   elif command -v powershell.exe >/dev/null 2>&1; then
     powershell.exe -NoProfile -Command \
       "try { (Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 -Uri '$1').StatusCode }
