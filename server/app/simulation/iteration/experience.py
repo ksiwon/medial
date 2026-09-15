@@ -28,7 +28,8 @@ _ROLE_BY_ACTOR = {
     HEALTH_DIRECTOR: "health_director",
 }
 
-VILLAGE_HEAD_ID = "P6"
+#: No default head any more: who fills a role is the case's data (26번 C01),
+#: and a community without the role simply has no ``village_head`` reviewer.
 
 
 class ReviewBoundaryError(ValueError):
@@ -81,10 +82,10 @@ class ActorExperience:
         return None
 
 
-def actor_role(actor_id: str, village_head_id: str = VILLAGE_HEAD_ID) -> str:
+def actor_role(actor_id: str, village_head_id: str | None = None) -> str:
     if actor_id in _ROLE_BY_ACTOR:
         return _ROLE_BY_ACTOR[actor_id]
-    if actor_id == village_head_id:
+    if village_head_id is not None and actor_id == village_head_id:
         return "village_head"
     return "resident"
 
@@ -132,7 +133,7 @@ def build_experience(actor_id: str, *, attempt: dict[str, Any],
                      events: list[dict[str, Any]], metrics: dict[str, Any],
                      persona: dict[str, Any] | None,
                      cycle_end_ms: int,
-                     village_head_id: str = VILLAGE_HEAD_ID) -> ActorExperience:
+                     village_head_id: str | None = None) -> ActorExperience:
     """Project the stored log down to one actor's experience.
 
     The filter is the event's own ``visibility`` list, which is the same rule the
@@ -178,7 +179,7 @@ def build_experience(actor_id: str, *, attempt: dict[str, Any],
 def build_all_experiences(*, attempt: dict[str, Any], events: list[dict[str, Any]],
                           metrics: dict[str, Any], personas: dict[str, Any],
                           resident_ids: list[str], cycle_end_ms: int,
-                          village_head_id: str = VILLAGE_HEAD_ID,
+                          village_head_id: str | None = None,
                           ) -> dict[str, ActorExperience]:
     """One experience set per resident plus the institution desk.
 

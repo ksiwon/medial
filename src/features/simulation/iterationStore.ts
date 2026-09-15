@@ -47,15 +47,26 @@ function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** The three top-level screens (doc 15 section 3). The six research steps of
- *  doc 12 still exist and still run in that order - they are the *loop*, shown
- *  as read-only progress - but they are no longer six places to click. */
-export type Screen = 'prepare' | 'observe' | 'compare';
+/** The three top-level screens (doc 19 section 9, 26번 5장):
+ *
+ *  - ``case``        사례와 서비스 경험 - the village, what is fixed, and the run;
+ *  - ``evaluations`` 주민 평가 - the screen the loop arrives at when a day ends;
+ *  - ``improve``     개선과 확인 - the change, its confirmation, the comparison
+ *                    and the field record.
+ *
+ *  The six research steps of doc 12 still run in that order on the server; they
+ *  are read-only progress, not six places to click. */
+export type Screen = 'case' | 'evaluations' | 'improve';
 
-/** Which body of material a screen is reading. Separate from `Screen` on
- *  purpose: the UI stage and the kind of record being read are different
- *  questions, and collapsing them is what produced seven tabs. */
-export type CompareView = 'summary' | 'all_generations' | 'manual';
+/** Inside 사례와 서비스 경험: setting a run up, or reading the one that ran.
+ *  ``auto`` is the default and means "whichever fits": a workspace with a run
+ *  in it opens on that run, an empty one opens on the setup. Only an explicit
+ *  choice pins it, so reopening the tool does not land on a blank form beside
+ *  a day that already happened. */
+export type CaseView = 'auto' | 'setup' | 'experience';
+
+/** Advanced reads that are reachable but do not occupy the default screen. */
+export type CompareView = 'summary' | 'all_generations';
 
 /** Exactly the body the create endpoint takes. Named so the prepare screen and
  *  the store cannot drift apart about what an experiment is. */
@@ -95,11 +106,19 @@ interface IterationState {
    *  never changes what the loop is running. */
   viewGenerationId: string | null;
   screen: Screen;
+  caseView: CaseView;
   compareView: CompareView;
+  /** Set once when a run finishes, so the loop lands on the evaluations rather
+   *  than leaving the reader on the map. Cleared when a new run starts. */
+  landedOnEvaluations: boolean;
   /** Which version the *comparison* is reading. Independent of the version the
    *  loop is processing; reading an old one changes neither. */
   compareLeftId: string | null;
   compareRightId: string | null;
+  /** True once the researcher has chosen the sides themselves. Until then the
+   *  comparison follows the newest confirmed version, so a run that has just
+   *  finished is the one being read rather than the pair from before it. */
+  compareSidesPinned: boolean;
   /** Open when the designer is choosing what to take to the field. */
   fieldSheetOpen: boolean;
   startPhase: StartPhase;
@@ -119,7 +138,12 @@ interface IterationState {
   refresh: () => Promise<void>;
   send: (name: string, payload?: Record<string, unknown>) => Promise<void>;
   confirmChangeSet: (changeSetId: string, reason: string) => Promise<void>;
-  saveResearcherChangeSet: (body: Record<string, unknown>) => Promise<void>;
+  /** Resolves to the server's refusal text, or ``null`` when the draft was
+   *  saved. The composer needs the text in place beside its fields rather than
+   *  as a banner, and it must keep the input either way. */
+  saveResearcherChangeSet: (body: Record<string, unknown>) => Promise<string | null>;
+  /** "이번에는 수정하지 않음": an explicit end with its reason. Runs nothing. */
+  declineChanges: (reason: string) => Promise<void>;
   decide: (body: {
     disposition: 'adopt_for_field_review' | 'hold' | 'reject';
     generationId: string | null;
@@ -129,18 +153,17 @@ interface IterationState {
     dissent: string[];
     unansweredQuestions: string[];
   }) => Promise<void>;
-  submitHumanReview: (body: {
+  submitHumanReview: (body: Record<string, unknown>) => Promise<void>;
+  /** Record the moment a respondent is shown the simulated evaluation. The
+   *  server refuses it when their independent answer is not on file. */
+  recordDisclosure: (body: {
     packageId: string;
-    reviewerRole: string;
-    elicitation: string;
-    actorId: string | null;
-    selectedEpisodeIds: string[];
-    responses: Record<string, unknown>[];
-    corrections: Record<string, unknown>[];
-    agreement: string;
-    consentScope: string;
+    episodeId: string;
+    respondentId: string;
+    shownReviewIds: string[];
   }) => Promise<void>;
   setScreen: (screen: Screen) => void;
+  setCaseView: (view: CaseView) => void;
   setCompareView: (view: CompareView) => void;
   setCompareSides: (left: string | null, right: string | null) => void;
   setFieldSheet: (open: boolean) => void;
@@ -158,10 +181,13 @@ export const useIterationStore = create<IterationState>((set, get) => ({
   detail: null,
   comparison: null,
   viewGenerationId: null,
-  screen: 'prepare',
+  screen: 'case',
+  caseView: 'auto',
   compareView: 'summary',
+  landedOnEvaluations: false,
   compareLeftId: null,
   compareRightId: null,
+  compareSidesPinned: false,
   fieldSheetOpen: false,
   startPhase: { kind: 'idle' },
   busy: false,
@@ -181,7 +207,11 @@ export const useIterationStore = create<IterationState>((set, get) => ({
         // cannot re-run a loop that already finished.
         const latest = [...rows].sort((a, b) => a.updatedAt.localeCompare(b.updatedAt)).pop()!;
         await get().openSession(latest.id);
-        set({ screen: 'observe' });
+        // Only the case view, never the screen: restoring is asynchronous, and
+        // setting the screen here overrode a navigation the reader had already
+        // made while it was loading (seen in a browser, 2026-09-15). The
+        // default screen is 사례와 서비스 경험 anyway.
+        set({ caseView: 'auto' });
       }
     } catch (error) {
       set({ error: describe(error) });
@@ -231,7 +261,8 @@ export const useIterationStore = create<IterationState>((set, get) => ({
     set({ busy: true, error: null, startPhase: { kind: 'starting', sessionId } });
     try {
       await api.iteration.command(sessionId, nextCommandId('start'), 'start');
-      set({ startPhase: { kind: 'running', sessionId }, screen: 'observe' });
+      set({ startPhase: { kind: 'running', sessionId }, screen: 'case',
+            caseView: 'experience', landedOnEvaluations: false });
       await get().refresh();
     } catch (error) {
       // 409 from the server means this session is already past `created`. That
@@ -240,7 +271,8 @@ export const useIterationStore = create<IterationState>((set, get) => ({
       if (error instanceof ApiError && error.status === 409) {
         set({
           startPhase: { kind: 'running', sessionId },
-          screen: 'observe',
+          screen: 'case',
+          caseView: 'experience',
           notice: '이미 시작된 실험입니다. 진행 중인 실행을 그대로 보고 있습니다.',
         });
         await get().refresh();
@@ -294,6 +326,7 @@ export const useIterationStore = create<IterationState>((set, get) => ({
         viewGenerationId: stillThere ? current : (detail.generations[0]?.id ?? null),
       });
       seedCompareSides(set, get, detail);
+      landOnEvaluations(set, get, detail);
       schedulePoll(set, get, detail.session.status, detail.running);
     } catch (error) {
       set({ error: describe(error) });
@@ -322,8 +355,26 @@ export const useIterationStore = create<IterationState>((set, get) => ({
   },
 
   saveResearcherChangeSet: async (body) => {
-    await get().send('save_researcher_change_set', body);
-    set({ notice: '연구자 수정본을 새 Change Set으로 저장했습니다. 원본 기록은 유지됩니다.' });
+    const id = get().sessionId;
+    if (!id) return '열려 있는 실험이 없습니다.';
+    set({ busy: true, error: null });
+    try {
+      await api.iteration.command(id, nextCommandId('save'), 'save_researcher_change_set', body);
+      await get().refresh();
+      set({ notice: '수정안을 저장했습니다. 아직 실행되지 않았고 원본 초안도 그대로입니다.' });
+      return null;
+    } catch (error) {
+      // Not a banner: the composer shows this next to the fields and keeps
+      // everything the researcher typed.
+      return describe(error);
+    } finally {
+      set({ busy: false });
+    }
+  },
+
+  declineChanges: async (reason) => {
+    await get().send('decline_changes', { reason });
+    set({ notice: '이번에는 수정하지 않기로 기록했습니다. 실행된 것은 없습니다.' });
   },
 
   decide: async (body) => {
@@ -347,12 +398,33 @@ export const useIterationStore = create<IterationState>((set, get) => ({
     }
   },
 
+  recordDisclosure: async (body) => {
+    const id = get().sessionId;
+    if (!id) return;
+    set({ busy: true, error: null });
+    try {
+      await api.iteration.recordDisclosure(id, body);
+      await get().refresh();
+      set({
+        notice:
+          '모의 평가를 공개한 시점을 기록했습니다. 앱 밖에서 이미 들었을 수 있으므로 무편향 응답을 보증하지는 않습니다.',
+      });
+    } catch (error) {
+      set({ error: describe(error) });
+    } finally {
+      set({ busy: false });
+    }
+  },
+
   submitHumanReview: async (body) => {
     const id = get().sessionId;
     if (!id) return;
     set({ busy: true, error: null });
     try {
-      const saved = await api.iteration.submitHumanReview(id, body);
+      const saved = await api.iteration.submitHumanReview(
+        id,
+        body as Parameters<typeof api.iteration.submitHumanReview>[1],
+      );
       await get().refresh();
       set({
         notice: `실제 사람의 응답으로 저장했습니다 (${saved.id}). 모의 리뷰와 합산하지 않습니다.`,
@@ -365,8 +437,10 @@ export const useIterationStore = create<IterationState>((set, get) => ({
   },
 
   setScreen: (screen) => set({ screen }),
+  setCaseView: (caseView) => set({ caseView }),
   setCompareView: (compareView) => set({ compareView }),
-  setCompareSides: (compareLeftId, compareRightId) => set({ compareLeftId, compareRightId }),
+  setCompareSides: (compareLeftId, compareRightId) =>
+    set({ compareLeftId, compareRightId, compareSidesPinned: true }),
   setFieldSheet: (fieldSheetOpen) => set({ fieldSheetOpen }),
   setViewGeneration: (viewGenerationId) => set({ viewGenerationId }),
 
@@ -384,7 +458,7 @@ export const useIterationStore = create<IterationState>((set, get) => ({
       // Opening a cited scene is a read of a stored log. It moves the observe
       // screen's cursor and touches nothing else - no adapter runs, and the
       // loop keeps doing whatever it was doing.
-      set({ screen: 'observe' });
+      set({ screen: 'case', caseView: 'experience' });
     } catch (error) {
       set({ error: describe(error) });
     }
@@ -426,14 +500,18 @@ function seedCompareSides(
     .find((g) => g.outcome !== 'blocked' && g.parentGenerationId != null);
   const fallbackRight = ordered[ordered.length - 1];
 
+  // Unpinned, the right side follows the newest confirmed version: after a
+  // change is confirmed and rerun, the pair on screen was still the one from
+  // before it, and the rule-application row read "no record" about a run that
+  // had one (seen in a browser, 2026-09-15).
   const right =
-    state.compareRightId && known.has(state.compareRightId)
+    state.compareSidesPinned && state.compareRightId && known.has(state.compareRightId)
       ? state.compareRightId
       : (advanced?.id ?? fallbackRight.id);
 
   const rightRow = ordered.find((g) => g.id === right);
   const left =
-    state.compareLeftId && known.has(state.compareLeftId)
+    state.compareSidesPinned && state.compareLeftId && known.has(state.compareLeftId)
       ? state.compareLeftId
       : rightRow?.parentGenerationId && known.has(rightRow.parentGenerationId)
         ? rightRow.parentGenerationId
@@ -442,6 +520,32 @@ function seedCompareSides(
   if (left !== state.compareLeftId || right !== state.compareRightId) {
     set({ compareLeftId: left, compareRightId: right });
   }
+}
+
+/**
+ * When the day's evaluations exist and the loop has stopped moving, the reader
+ * is taken to them once.
+ *
+ * Doc 19 makes Resident Evaluations the centre of the product; leaving the
+ * reader on the map after a run made them the thing you had to go looking for.
+ * Once only, and never while the loop is still running: being moved mid-read
+ * would be worse than arriving late.
+ */
+function landOnEvaluations(
+  set: (partial: Partial<IterationState>) => void,
+  get: () => IterationState,
+  detail: SessionDetail,
+) {
+  const state = get();
+  if (state.landedOnEvaluations || detail.running) return;
+  if (RUNNING_STATUSES.includes(detail.session.status)) return;
+  // Only from the screen the run was watched on. A poll that arrives while the
+  // researcher is already reading the improvement screen must not pull them
+  // back; being moved mid-read is worse than arriving late.
+  if (state.screen !== 'case') return;
+  const hasReviews = detail.generations.some((g) => g.reviews.length > 0);
+  if (!hasReviews) return;
+  set({ landedOnEvaluations: true, screen: 'evaluations' });
 }
 
 function schedulePoll(

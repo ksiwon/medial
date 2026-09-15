@@ -1,3 +1,4 @@
+import * as React from 'react';
 import styled, { css } from 'styled-components';
 import { colour, font, radius } from './theme';
 
@@ -113,6 +114,9 @@ export const Select = styled.select`
   ${control}
   cursor: pointer;
   max-width: 100%;
+  /* A narrow select cuts a long option through the middle of a character;
+     Chromium honours the ellipsis here and says the name was shortened. */
+  text-overflow: ellipsis;
 `;
 
 export const Field = styled.label`
@@ -169,6 +173,8 @@ export const TextLink = styled.button`
 export const IconButton = styled.button`
   font-family: inherit;
   font-size: ${font.small};
+  white-space: nowrap;
+  flex: none;
   min-width: 32px;
   height: 32px;
   padding: 0 8px;
@@ -222,6 +228,7 @@ function tagColour(kind: TagKind = 'neutral') {
 export const Tag = styled.span<{ $kind?: TagKind }>`
   display: inline-flex;
   align-items: center;
+  flex: none;
   font-size: ${font.small};
   line-height: 1.4;
   border-radius: 999px;
@@ -331,4 +338,150 @@ export function showDelta(value: number): string {
 export function versionName(index: number, label: string): string {
   const prefix = `v${index}`;
   return label.startsWith(prefix) ? label : `${prefix} · ${label}`;
+}
+
+/** One line that must not break or spill out of its box. The full text stays
+ *  reachable as the element's own title. */
+export const Clip = styled.span`
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const HintButton = styled.button`
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin-left: 4px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid ${colour.border};
+  background: ${colour.surface};
+  color: ${colour.secondary};
+  cursor: help;
+  vertical-align: middle;
+  &:hover,
+  &[aria-expanded='true'] {
+    border-color: ${colour.primary};
+    color: ${colour.primary};
+  }
+  &:focus-visible {
+    outline: 2px solid ${colour.primary};
+    outline-offset: 1px;
+  }
+`;
+
+const Bubble = styled.div`
+  position: fixed;
+  z-index: 60;
+  max-width: min(320px, 90vw);
+  padding: 8px 10px;
+  border-radius: ${radius.control};
+  border: 1px solid ${colour.border};
+  background: ${colour.surface};
+  box-shadow: 0 4px 16px rgba(29, 41, 53, 0.18);
+  font-size: ${font.small};
+  line-height: 1.55;
+  color: ${colour.text};
+  white-space: normal;
+  overflow-wrap: anywhere;
+`;
+
+/**
+ * Secondary explanation, one keystroke or one hover away.
+ *
+ * Every screen here has a reason it is careful - what a number is and is not,
+ * which two things must not be added together, why an empty cell is not a zero.
+ * Printed in full next to each row, that careful text is what a reader has to
+ * wade through before finding the number (2026-09-15). It is still one click
+ * away, and it is still the same sentence; it is simply not the first thing on
+ * the screen.
+ *
+ * The bubble is positioned fixed against the trigger's own rectangle, so it is
+ * readable inside bars and tables that clip their overflow.
+ */
+export function Hint({ label, children }: { label: string; children: React.ReactNode }) {
+  const trigger = React.useRef<HTMLButtonElement>(null);
+  const [at, setAt] = React.useState<{ top: number; left: number } | null>(null);
+  // Hover reads it; a click keeps it open, which is the only way to reach it
+  // from a keyboard or a touch screen without holding the pointer still.
+  const [pinned, setPinned] = React.useState(false);
+
+  const show = () => {
+    const box = trigger.current?.getBoundingClientRect();
+    if (!box) return setAt({ top: 0, left: 0 });
+    const width = typeof window === 'undefined' ? 1024 : window.innerWidth;
+    setAt({ top: box.bottom + 6, left: Math.max(8, Math.min(box.left - 8, width - 336)) });
+  };
+  const close = () => {
+    setPinned(false);
+    setAt(null);
+  };
+
+  React.useEffect(() => {
+    if (!pinned) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close();
+    };
+    // A pinned bubble must not sit on top of the next thing the reader clicks.
+    const onDown = (event: MouseEvent) => {
+      if (!trigger.current?.contains(event.target as Node)) close();
+    };
+    window.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onDown);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onDown);
+    };
+  }, [pinned]);
+
+  return (
+    <>
+      <HintButton
+        ref={trigger}
+        type="button"
+        aria-label={`${label} 설명`}
+        aria-expanded={at !== null}
+        onClick={() => {
+          if (pinned) return close();
+          setPinned(true);
+          show();
+        }}
+        onMouseEnter={() => !pinned && show()}
+        onMouseLeave={() => !pinned && setAt(null)}
+        onFocus={() => !pinned && show()}
+        onBlur={() => !pinned && setAt(null)}
+      >
+        ?
+      </HintButton>
+      {at && (
+        <Bubble role="tooltip" style={{ top: at.top, left: at.left }}>
+          {children}
+        </Bubble>
+      )}
+    </>
+  );
+}
+
+/** A heading or table label with its explanation folded into a hint. */
+export function WithHint({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint: React.ReactNode;
+  children?: React.ReactNode;
+}) {
+  return (
+    <span style={{ display: 'inline' }}>
+      {children ?? label}
+      <Hint label={label}>{hint}</Hint>
+    </span>
+  );
 }

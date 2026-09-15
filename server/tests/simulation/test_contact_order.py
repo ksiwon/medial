@@ -108,7 +108,8 @@ def test_p1s_only_recorded_tie_is_the_head_and_the_decision_says_so():
 
 
 def test_relation_first_puts_recorded_ties_before_the_head_and_nobody_else():
-    policy = MedialPolicy(POLICIES["policy-D-v1"])
+    # The head is the case's, passed in explicitly since 2026-09-15.
+    policy = MedialPolicy(POLICIES["policy-D-v1"], "P6")
     routines = {a: {} for a in ("P1", "P3", "P6", "P9", "P10", "P12")}
     ctx = PolicyContext(
         sim_time_ms=10 * 3_600_000, subject_id="P9", request_id="req-1", attempt_number=2,

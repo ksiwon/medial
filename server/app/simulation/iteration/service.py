@@ -23,6 +23,7 @@ from .contracts import (
     ChangeSetValidation,
     CriteriaRevision,
     DesignerDecision,
+    DisclosureRecord,
     EpisodeCard,
     FieldReviewPackage,
     Generation,
@@ -39,12 +40,27 @@ from .engine import IterationEngine, now_iso
 from .improvement import SUPPORTED_CAPABILITIES
 from .llm import LlmClient, content_hash
 from .evaluation_metrics import DEFAULT_CRITERIA
+from . import semantic_rules
+from .contracts import DIMENSION_LABELS, materialize_change
+from .services import get_adapter
+from ..case_bundle import unsupported_reason as case_unsupported
 from .validation import (
     SUPPORTED_QUESTS,
     SUPPORTED_RULE_FIELDS,
     SUPPORTED_TASKS,
     validate_change_set,
 )
+
+#: States in which the researcher may author, save, confirm or decline a Change
+#: Set for the current generation. ``awaiting_confirmation`` is the normal
+#: case; ``no_valid_change`` and ``stalled`` are the cases 26번 F03 names -
+#: no usable draft exists, and the researcher must still be able to write one
+#: from the rule catalogue rather than being stuck.
+AUTHORING_STATES = frozenset({
+    SessionStatus.awaiting_confirmation,
+    SessionStatus.no_valid_change,
+    SessionStatus.stalled,
+})
 
 
 class SessionNotRunnable(RuntimeError):
@@ -68,12 +84,29 @@ class IterationService:
         Listed because doc 12 section 13 asks the tool not to present itself as a
         general medical-service designer when it implements two scenarios.
         """
+        adapter = get_adapter()
+        case = self.sim.case
         return {
-            "supportedCapabilities": list(SUPPORTED_CAPABILITIES),
+            "case": {"caseId": case.caseId, "label": case.label,
+                     "sourceKind": case.sourceKind,
+                     "residentCount": len(case.residents),
+                     "roleAssignments": case.roleAssignments},
+            "service": {"serviceId": adapter.serviceId, "label": adapter.label,
+                        "category": adapter.category},
+            "supportedCapabilities": list(adapter.capabilities()),
             "supportedQuestIds": sorted(SUPPORTED_QUESTS),
             "supportedTaskIds": sorted(SUPPORTED_TASKS),
             "supportedRuleFields": sorted(SUPPORTED_RULE_FIELDS),
-            "decks": [{"id": d.id, "label": d.label} for d in DECKS.values()],
+            # The rule catalogue the composer builds its controls from. Current
+            # values are per generation (``detail``); this is the shape only.
+            "supportedRules": adapter.catalog(None, None),
+            # Only the scenarios *this* community can run. A deck belongs to a
+            # case; offering another community's would produce a session that
+            # fails on its first step (found in a browser, 2026-09-15).
+            "decks": [{"id": d.id, "label": d.label,
+                       "questId": semantic_rules.DECK_QUESTS.get(d.id)}
+                      for d in DECKS.values()
+                      if not ({e.subjectId for e in d.events} - set(case.resident_ids))],
             "modes": {
                 "controlled_iteration": True,
                 # Kept visible and switched off, rather than quietly missing.
@@ -110,9 +143,20 @@ class IterationService:
                        improvement_adapter: str = "rule") -> IterationSession:
         if base_policy_id not in self.sim.policies:
             raise KeyError("unknown policy %s" % base_policy_id)
+        case = self.sim.case
         for deck_id in development_decks:
             if deck_id not in DECKS:
                 raise KeyError("unknown deck %s" % deck_id)
+            strangers = sorted({e.subjectId for e in DECKS[deck_id].events}
+                               - set(case.resident_ids))
+            if strangers:
+                raise ValueError(
+                    "시나리오 %s는 이 사례(%s)에 없는 사람(%s)에 대한 것이다. 다른 공동체의 "
+                    "사례를 같은 실험에 섞을 수 없다."
+                    % (DECKS[deck_id].label, case.label, ", ".join(strangers)))
+        reason = case_unsupported(case, self.sim.policies[base_policy_id].contactStrategy.value)
+        if reason is not None:
+            raise ValueError(reason)
         if resource_id not in RESOURCE_SETS:
             raise KeyError("unknown resource revision %s" % resource_id)
         if mode == "longitudinal":
@@ -194,8 +238,15 @@ class IterationService:
                 payload: dict[str, Any] | None = None,
                 blocking: bool = False) -> dict[str, Any]:
         payload = payload or {}
-        session = self.load(session_id)
         request = {"name": name, "payload": payload}
+        # Idempotency is checked *before* the command runs. Checking it after
+        # (as this did until 2026-09-15) meant a retried confirm executed a
+        # second time and only then discovered it had already been recorded -
+        # the exact duplicate execution the command id exists to prevent.
+        replayed = self.store.find_iteration_command(command_id, session_id, request)
+        if replayed is not None:
+            return {**replayed, "deduplicated": True}
+        session = self.load(session_id)
 
         if name == "start":
             result = self._start(session, blocking=blocking)
@@ -209,6 +260,8 @@ class IterationService:
             result = self._confirm_change_set(session, payload, blocking=blocking)
         elif name == "save_researcher_change_set":
             result = self._save_researcher_change_set(session, payload)
+        elif name == "decline_changes":
+            result = self._decline_changes(session, payload)
         else:
             raise ValueError("unknown iteration command %s" % name)
 
@@ -281,20 +334,19 @@ class IterationService:
 
     def _confirm_change_set(self, session: IterationSession, payload: dict[str, Any],
                             blocking: bool) -> dict[str, Any]:
-        """Grant execution authority to one validated Change Set."""
-        if session.status is not SessionStatus.awaiting_confirmation:
+        """Grant execution authority to one validated Change Set.
+
+        The only command that creates a child generation. Saving a draft does
+        not; declining does not; nothing the loop does on its own does.
+        """
+        if session.status not in AUTHORING_STATES:
             raise SessionNotRunnable(
-                "Change Set 확인을 기다리는 상태가 아니다 (현재 상태: %s)." % session.status.value)
+                "Change Set을 확정할 수 있는 상태가 아니다 (현재 상태: %s)." % session.status.value)
         change_set_id = payload.get("changeSetId")
         reason = str(payload.get("reason") or "").strip()
         if not reason:
             raise ValueError("Change Set을 확정한 연구자 이유를 입력해야 한다.")
-        generation = next((Generation.model_validate(row)
-                           for row in self.store.list_generations(session.id)
-                           if row["index"] == session.currentGenerationIndex
-                           and row["outcome"] != GenerationOutcome.blocked.value), None)
-        if generation is None:
-            raise KeyError("현재 Quest 실행 기록을 찾지 못했다.")
+        generation = self._current_generation(session)
         change_sets = [ChangeSet.model_validate(row)
                        for row in self.store.change_sets(generation.id)]
         chosen = next((item for item in change_sets if item.id == change_set_id), None)
@@ -324,83 +376,105 @@ class IterationService:
         engine._current_id = generation.id
         return self._spawn(session, blocking)
 
+    def _current_generation(self, session: IterationSession) -> Generation:
+        rows = [Generation.model_validate(row)
+                for row in self.store.list_generations(session.id)
+                if row["index"] == session.currentGenerationIndex]
+        live = [g for g in rows if g.outcome is not GenerationOutcome.blocked] or rows
+        if not live:
+            raise KeyError("현재 Quest 실행 기록을 찾지 못했다.")
+        return live[-1]
+
     def _save_researcher_change_set(
         self, session: IterationSession, payload: dict[str, Any]
     ) -> dict[str, Any]:
-        """Save a researcher-authored revision without mutating its source draft."""
-        if session.status is not SessionStatus.awaiting_confirmation:
+        """Save a researcher-authored Change Set. Saving never executes.
+
+        The body carries typed rule changes only (``rules: [{ruleType, after}]``)
+        plus the free text that is *reason*, not rule: label, mechanism,
+        expected effects, possible burdens, what to watch. The sentences and
+        the engine bindings are derived here from the rule values, so the
+        saved record cannot say one thing and run another (26번 F01).
+
+        A source draft is optional. Without one the Change Set is authored
+        from the catalogue directly (26번 F03); with one it supersedes that
+        draft, which stays stored as ``superseded``.
+        """
+        if session.status not in AUTHORING_STATES:
             raise SessionNotRunnable(
-                "Change Set 확인을 기다리는 상태에서만 직접 수정할 수 있다 "
+                "주민 평가가 끝나 수정안을 작성할 수 있는 상태에서만 저장할 수 있다 "
                 "(현재 상태: %s)." % session.status.value)
-        generation = next((Generation.model_validate(row)
-                           for row in self.store.list_generations(session.id)
-                           if row["index"] == session.currentGenerationIndex), None)
-        if generation is None:
-            raise KeyError("현재 Quest 실행 기록을 찾지 못했다.")
+        generation = self._current_generation(session)
         change_sets = [ChangeSet.model_validate(row)
                        for row in self.store.change_sets(generation.id)]
-        template_id = str(payload.get("templateChangeSetId") or "")
-        template = next((item for item in change_sets if item.id == template_id), None)
-        if template is None:
-            raise KeyError("현재 주민 평가의 Change Set 초안이 아니다: %s" % template_id)
-        if template.validationStatus is not ChangeSetValidation.valid:
-            raise ValueError("검증된 Change Set을 바탕으로만 직접 작성할 수 있다.")
+        policy = self.sim.policies[generation.policyRevisionId].model_dump(mode="json")
 
         label = str(payload.get("label") or "").strip()
         mechanism = str(payload.get("mechanism") or "").strip()
-        if not label or not mechanism:
-            raise ValueError("연구자 Change Set의 이름과 변경 원리를 모두 입력해야 한다.")
-        after_rules = payload.get("afterRules") or []
-        binding_values = payload.get("bindingValues") or {}
+        problems: list[str] = []
+        if not label:
+            problems.append("label: 수정안의 이름을 적어야 한다.")
+        if not mechanism:
+            problems.append("mechanism: 이 변경을 시도하는 이유를 적어야 한다.")
+        rules = payload.get("rules") or []
+        if not rules:
+            problems.append("rules: 바꿀 규칙을 하나 이상 골라야 한다.")
         changes = []
-        for index, change in enumerate(template.changes):
-            after_rule = (str(after_rules[index]).strip()
-                          if index < len(after_rules) else change.afterRule)
-            bindings = [binding.model_copy(update={
-                "after": binding_values.get(binding.key, binding.after),
-            }) for binding in change.executionBindings]
-            changes.append(change.model_copy(update={
-                "afterRule": after_rule,
-                "executionBindings": bindings,
-            }))
+        for index, row in enumerate(rules):
+            rule_type = str((row or {}).get("ruleType") or "")
+            try:
+                # Parameters the body leaves out keep their current value, so a
+                # one-parameter edit does not have to restate the rest.
+                after = semantic_rules.merge_after(
+                    rule_type, policy, dict((row or {}).get("after") or {}))
+                semantic = semantic_rules.build_change(rule_type, policy, after)
+            except Exception as exc:  # noqa: BLE001 - shown next to the control
+                problems.append("rules[%d] %s: %s" % (index, rule_type, _plain_error(exc)))
+                continue
+            changes.append(materialize_change(semantic))
+        if problems:
+            raise ValueError("입력을 확인해야 한다: " + " / ".join(problems))
 
-        authored = template.model_copy(update={
-            "id": "cs-researcher-%s" % uuid.uuid4().hex[:10],
-            "label": label,
-            "mechanism": mechanism,
-            "changes": changes,
-            "expectedEffects": list(payload.get("expectedEffects") or []),
-            "possibleRegressions": list(payload.get("possibleRegressions") or []),
-            "watchNext": list(payload.get("watchNext") or []),
-            "author": "researcher_hypothesis",
-            "validationStatus": ChangeSetValidation.pending,
-            "validationErrors": [],
-            "confirmationStatus": ChangeSetConfirmation.draft,
-            "confirmationReason": "",
-            "confirmedAt": None,
-            "resultingPolicyRevisionId": None,
-            "resultingAttemptId": None,
-            "adapter": "rule",
-            "model": None,
-            "createdAt": now_iso(),
-            "changeHash": "",
-        })
-        policy = self.sim.policies[generation.policyRevisionId].model_dump(mode="json")
+        source_id = str(payload.get("sourceChangeSetId") or "")
+        source = None
+        if source_id:
+            source = next((item for item in change_sets if item.id == source_id), None)
+            if source is None:
+                raise KeyError("수정 원본 Change Set을 찾지 못했다: %s" % source_id)
+            if source.confirmationStatus is not ChangeSetConfirmation.draft:
+                raise ValueError("이미 처리된 초안은 수정 원본으로 쓸 수 없다.")
+
+        authored = ChangeSet(
+            id="cs-researcher-%s" % uuid.uuid4().hex[:10],
+            sessionId=session.id, generationIndex=generation.index,
+            baseRevisionId=policy["id"], label=label,
+            reviewItemRefs=list(payload.get("reviewItemRefs")
+                                or (source.reviewItemRefs if source else [])),
+            issueRefs=list(payload.get("issueRefs") or (source.issueRefs if source else [])),
+            eventRefs=list(source.eventRefs) if source else [],
+            evidenceRefs=list(source.evidenceRefs) if source else [],
+            mechanism=mechanism, changes=changes,
+            expectedEffects=[str(x) for x in payload.get("expectedEffects") or []],
+            possibleRegressions=[str(x) for x in payload.get("possibleRegressions") or []],
+            unknowns=list(source.unknowns) if source else [],
+            affectedActors=list(source.affectedActors) if source else [],
+            watchNext=[str(x) for x in payload.get("watchNext") or []],
+            author="researcher_hypothesis", adapter="rule", createdAt=now_iso())
+        reviews = self.store.agent_reviews(generation.id)
+        known_items = {"%s#%d" % (r["id"], i) for r in reviews for i in range(len(r["items"]))}
         checked = validate_change_set(
             authored,
             policy=policy,
             capabilities=tuple(SUPPORTED_CAPABILITIES),
+            known_review_items=known_items,
             applied_change_hashes=set(self.store.session_applied_change_hashes(session.id)),
+            active_decks=list(session.developmentDeckRefs),
         )
         if checked.validationStatus is not ChangeSetValidation.valid:
             raise ValueError("직접 작성한 Change Set을 실행할 수 없다: "
                              + "; ".join(checked.validationErrors))
 
-        source_id = str(payload.get("sourceChangeSetId") or "")
-        if source_id:
-            source = next((item for item in change_sets if item.id == source_id), None)
-            if source is None:
-                raise KeyError("수정 원본 Change Set을 찾지 못했다: %s" % source_id)
+        if source is not None:
             self.store.update_change_set(source.model_copy(update={
                 "confirmationStatus": ChangeSetConfirmation.superseded,
                 "confirmationReason": "연구자 수정본 %s로 대체" % checked.id,
@@ -408,7 +482,49 @@ class IterationService:
         self.store.save_change_sets(generation.id, [checked])
         generation.changeSetIds.append(checked.id)
         self.store.update_generation(generation)
+        if session.status is not SessionStatus.awaiting_confirmation:
+            # A usable Change Set now exists where the loop had found none.
+            session.status = SessionStatus.awaiting_confirmation
+            session.stopReason = "awaiting_confirmation"
+            session.stopDetail = STOP_REASON_TEXT["awaiting_confirmation"]
+            session.updatedAt = now_iso()
+            self.store.update_session(session)
         return {"changeSet": checked.model_dump(mode="json")}
+
+    def _decline_changes(self, session: IterationSession,
+                         payload: dict[str, Any]) -> dict[str, Any]:
+        """'이번에는 수정하지 않음' - an explicit end, recorded with its reason.
+
+        Every draft of the current generation becomes ``declined``; nothing
+        runs; the session hands over to the field-review step. The drafts stay
+        stored, so what was *not* tried is as auditable as what was.
+        """
+        if session.status not in AUTHORING_STATES:
+            raise SessionNotRunnable(
+                "수정안을 작성할 수 있는 상태에서만 '수정하지 않음'을 기록할 수 있다 "
+                "(현재 상태: %s)." % session.status.value)
+        reason = str(payload.get("reason") or "").strip()
+        if not reason:
+            raise ValueError("수정하지 않는 이유를 입력해야 한다. 이것도 기록에 남는 결정이다.")
+        generation = self._current_generation(session)
+        declined = 0
+        for row in self.store.change_sets(generation.id):
+            item = ChangeSet.model_validate(row)
+            if item.confirmationStatus is ChangeSetConfirmation.draft:
+                self.store.update_change_set(item.model_copy(update={
+                    "confirmationStatus": ChangeSetConfirmation.declined,
+                    "confirmationReason": "이번에는 수정하지 않음: " + reason,
+                }))
+                declined += 1
+        generation.outcome = GenerationOutcome.final
+        generation.confirmationReason = "이번에는 수정하지 않음: " + reason
+        self.store.update_generation(generation)
+        session.status = SessionStatus.ready_for_designer
+        session.stopReason = "no_change_this_time"
+        session.stopDetail = STOP_REASON_TEXT["no_change_this_time"] + " 이유: " + reason
+        session.updatedAt = now_iso()
+        self.store.update_session(session)
+        return {"declined": declined, **self.status(session.id)}
 
     # -- reads ------------------------------------------------------------
     def status(self, session_id: str) -> dict[str, Any]:
@@ -445,13 +561,20 @@ class IterationService:
                 "policy": (self.sim.policies[generation.policyRevisionId]
                            .model_dump(mode="json")
                            if generation.policyRevisionId in self.sim.policies else None),
+                # The composer's controls, with this revision's current values.
+                "ruleCatalog": (semantic_rules.catalog(
+                    list(session.developmentDeckRefs),
+                    self.sim.policies[generation.policyRevisionId].model_dump(mode="json"))
+                    if generation.policyRevisionId in self.sim.policies else []),
             })
         return {
             **self.status(session_id),
+            "canAuthor": session.status in AUTHORING_STATES,
             "generations": out_generations,
             "decisions": self.store.decisions_for_session(session_id),
             "fieldPackages": self.store.field_packages(session_id),
             "humanReviews": self.store.human_reviews(session_id),
+            "disclosures": self.store.disclosures(session_id),
             "modelCalls": self.store.model_calls(session_id),
             "capabilities": self.capabilities(),
         }
@@ -578,7 +701,9 @@ class IterationService:
             episodes.append(EpisodeCard(
                 id="epi-%s-%s" % (generation_id[-8:], review.actorId),
                 attemptId=review.attemptId, actorId=review.actorId,
-                title="%s · %s" % (review.actorId, anchor.dimension.value),
+                # A dimension key is not a title a resident is shown (D089).
+                title="%s · %s" % (review.actorId, DIMENSION_LABELS.get(
+                    anchor.dimension.value, anchor.dimension.value)),
                 fromSeq=max(1, seq - 2), toSeq=seq + 2,
                 eventIds=anchor.eventRefs[:4],
                 summary=anchor.reason,
@@ -602,12 +727,58 @@ class IterationService:
         self.store.save_field_package(package)
         return package
 
+    def record_disclosure(self, session_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """Record that a respondent has now been shown the simulated evaluation.
+
+        The protocol's hinge (26번 D, F07): before this exists for a respondent
+        and an episode, their answer is independent; after it, their answer is a
+        comparison. A post-disclosure answer without one of these is refused
+        rather than quietly filed as if it had come first.
+        """
+        package = self.store.field_package(body["packageId"])
+        if package is None:
+            raise KeyError("unknown field review package %s" % body["packageId"])
+        episode_ids = {e["id"] for e in package["episodes"]}
+        if body["episodeId"] not in episode_ids:
+            raise ValueError("이 패키지에 없는 장면이다: %s" % body["episodeId"])
+        respondent = str(body.get("respondentId") or "").strip()
+        if not respondent:
+            raise ValueError("누구에게 공개했는지 가명 ID가 필요하다.")
+        prior = [row for row in self.store.human_reviews(session_id)
+                 if row.get("respondentId") == respondent
+                 and row.get("episodeId") == body["episodeId"]
+                 and row.get("responseStage") == "pre_disclosure"]
+        if not prior:
+            raise ValueError(
+                "공개 전 독립 응답이 먼저 저장되어야 한다. 이 응답자(%s)의 이 장면에 대한 "
+                "공개 전 기록이 없다." % respondent)
+        record = DisclosureRecord(
+            id="dis-%s" % uuid.uuid4().hex[:10], sessionId=session_id,
+            packageId=body["packageId"], episodeId=body["episodeId"],
+            respondentId=respondent,
+            disclosedBy=str(body.get("disclosedBy") or "researcher"),
+            disclosedAt=now_iso(),
+            shownReviewIds=list(body.get("shownReviewIds") or []))
+        self.store.save_disclosure(record)
+        return record.model_dump(mode="json")
+
     def submit_human_review(self, session_id: str, body: dict[str, Any]) -> dict[str, Any]:
         """The only writer of ``source="human"``.
 
         Nothing in the automatic loop reaches this method, which is what makes
         "no human data exists until a person submits it" checkable rather than
         merely intended.
+
+        What it enforces, beyond storing the answer (26번 C06):
+
+        * a pre-disclosure answer carries no correspondence and no disclosure
+          reference - there is nothing yet to agree or disagree with;
+        * a post-disclosure answer must name a disclosure record that exists,
+          belongs to this respondent and this episode, and was made before the
+          answer;
+        * who answers and who is answered *about* are separate fields, so a
+          family member's answer is their own record rather than an overwrite
+          of the resident's.
         """
         package = self.store.field_package(body["packageId"])
         if package is None:
@@ -616,6 +787,35 @@ class IterationService:
         unknown = [e for e in body.get("selectedEpisodeIds", []) if e not in known]
         if unknown:
             raise ValueError("이 패키지에 없는 장면을 참조한다: %s" % unknown)
+        episode_id = body.get("episodeId")
+        if episode_id is not None and episode_id not in known:
+            raise ValueError("이 패키지에 없는 장면이다: %s" % episode_id)
+
+        stage = body.get("responseStage", "pre_disclosure")
+        disclosure_id = body.get("disclosureRecordId")
+        correspondence = body.get("correspondence")
+        if stage == "pre_disclosure":
+            if correspondence:
+                raise ValueError(
+                    "공개 전 응답에는 모의 평가와의 일치 여부를 적지 않는다. 아직 보여 주지 "
+                    "않았기 때문이다.")
+            if disclosure_id:
+                raise ValueError("공개 전 응답은 공개 기록을 참조할 수 없다.")
+        else:
+            if not disclosure_id:
+                raise ValueError(
+                    "공개 후 응답에는 언제 공개했는지의 기록이 필요하다. 공개를 먼저 "
+                    "기록해야 한다.")
+            record = self.store.disclosure(disclosure_id)
+            if record is None:
+                raise KeyError("공개 기록을 찾지 못했다: %s" % disclosure_id)
+            if record["respondentId"] != body.get("respondentId"):
+                raise ValueError("다른 응답자에게 공개한 기록이다.")
+            if episode_id is not None and record["episodeId"] != episode_id:
+                raise ValueError("다른 장면에 대한 공개 기록이다.")
+            if not correspondence:
+                raise ValueError(
+                    "공개 후 응답에는 일치·정정·충돌·모름 중 하나를 적어야 한다.")
 
         review = HumanReview(
             id="hum-%s" % uuid.uuid4().hex[:10], sessionId=session_id,
@@ -628,6 +828,17 @@ class IterationService:
             corrections=body.get("corrections", []),
             agreement=body.get("agreement", "unknown"),
             consentScope=body.get("consentScope", "unknown"),
+            respondentId=str(body.get("respondentId") or "unknown"),
+            respondentRole=body.get("respondentRole", "self"),
+            subjectActorId=body.get("subjectActorId") or body.get("actorId"),
+            episodeId=episode_id,
+            reviewItemRefs=list(body.get("reviewItemRefs") or []),
+            responseStage=stage,
+            disclosureRecordId=disclosure_id,
+            correspondence=correspondence,
+            correctionTarget=body.get("correctionTarget"),
+            reason=str(body.get("reason") or ""),
+            responseKind=body.get("responseKind", "resident_response"),
             submittedAt=now_iso())
         self.store.save_human_review(review)
         return review.model_dump(mode="json")
@@ -653,3 +864,16 @@ def _episode_order(reviews: list[AgentReview]) -> list[AgentReview]:
     residents = [r for r in reviews if r.actorRole != "health_staff"]
     institution = [r for r in reviews if r.actorRole == "health_staff"]
     return sorted(residents, key=key) + sorted(institution, key=key)
+
+
+def _plain_error(exc: Exception) -> str:
+    """A Pydantic error, reduced to the field and the bound it broke."""
+    errors = getattr(exc, "errors", None)
+    if callable(errors):
+        try:
+            rows = errors()
+            return "; ".join("%s: %s" % (".".join(str(x) for x in row.get("loc", ())),
+                                         row.get("msg", "")) for row in rows) or str(exc)
+        except Exception:  # noqa: BLE001
+            return str(exc)
+    return str(exc)

@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEDial 연구노트 2 — 평가에서 수정까지 끊기지 않게 (2026-09-15)</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1d2129; --ink:#e8eaed; --muted:#9aa4b2;
+    --line:#2a2f3a; --accent:#6ea8fe; --accent2:#7bdcb5; --warn:#ffb454; --bad:#ff6b6b;
+    --chip:#232936; --venue:#c8a6ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Segoe UI",system-ui,sans-serif;
+       line-height:1.7;font-size:15px}
+  .wrap{max-width:1040px;margin:0 auto;padding:48px 24px 96px}
+  header.hero{border:1px solid var(--line);border-radius:18px;
+       background:linear-gradient(135deg,#1a1f2b,#12151c);padding:36px 34px;margin-bottom:34px}
+  header.hero .kick{color:var(--accent);font-weight:700;letter-spacing:.12em;font-size:12px;text-transform:uppercase}
+  header.hero h1{margin:.35em 0 .2em;font-size:30px;line-height:1.25}
+  header.hero p{margin:.2em 0;color:var(--muted)}
+  .meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .chip{background:var(--chip);border:1px solid var(--line);border-radius:999px;
+        padding:5px 13px;font-size:12.5px;color:var(--muted)}
+  .chip b{color:var(--ink)}
+  h2{margin:52px 0 16px;font-size:21px;border-left:4px solid var(--accent);padding-left:12px}
+  h3{margin:26px 0 10px;font-size:16.5px;color:#cdd6e4}
+  p{margin:.55em 0}
+  .lead{color:var(--muted)}
+  .grid{display:grid;gap:16px}
+  .grid.two{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+  .paper{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px}
+  .paper .venue{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.06em;
+        color:#0f1115;background:var(--venue);border-radius:6px;padding:2px 9px;margin-bottom:8px}
+  .paper .venue.g{background:var(--accent2)}
+  .paper .venue.j{background:#ffd28a}
+  .paper .venue.r{background:var(--bad);color:#fff}
+  .paper h3{margin:.1em 0 .35em;font-size:16px}
+  .apply{margin-top:.7em;background:var(--panel2);border-left:3px solid var(--accent2);
+         border-radius:0 8px 8px 0;padding:10px 14px}
+  .apply b{color:var(--accent2)}
+  .tablewrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:#cdd6e4;font-weight:600}
+  code{background:#10131a;border:1px solid var(--line);border-radius:5px;
+        padding:1px 6px;font-family:"JetBrains Mono",Consolas,monospace;font-size:12.5px;color:#ffd5a8;
+        overflow-wrap:anywhere}
+  .flow{display:grid;gap:10px;margin:16px 0}
+  .step{display:grid;grid-template-columns:34px 1fr;gap:14px;align-items:start;
+        background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 16px}
+  .step .n{width:34px;height:34px;border-radius:9px;background:var(--accent);color:#0b0e13;
+        font-weight:800;display:grid;place-items:center;font-size:15px}
+  .step .n.new{background:var(--accent2)}
+  .step .n.bad{background:var(--bad);color:#fff}
+  .step h4{margin:0 0 3px;font-size:14.5px}
+  .step p{margin:0;color:var(--muted);font-size:13px}
+  .note{background:rgba(255,180,84,.08);border:1px solid rgba(255,180,84,.35);
+        border-radius:12px;padding:14px 18px;margin:16px 0}
+  .note b{color:var(--warn)}
+  .gap{background:rgba(255,107,107,.07);border:1px solid rgba(255,107,107,.32);
+        border-radius:12px;padding:6px 18px;margin:16px 0}
+  .gap b{color:var(--bad)}
+  ul,ol{margin:.5em 0;padding-left:22px}
+  li{margin:.3em 0}
+  .pill{font-size:11.5px;font-weight:700;border-radius:6px;padding:1px 7px;white-space:nowrap;background:var(--chip);color:var(--muted)}
+  .pill.ok{background:rgba(123,220,181,.15);color:var(--accent2)}
+  .pill.bad{background:rgba(255,107,107,.15);color:var(--bad)}
+  .pill.warn{background:rgba(255,180,84,.15);color:var(--warn)}
+  figure{margin:18px 0 24px}
+  figure img{display:block;width:100%;height:auto;border-radius:10px;border:1px solid #3a4150;background:#f7f8fa}
+  figure.narrow img{max-width:560px}
+  figcaption{margin-top:8px;color:var(--muted);font-size:13px}
+  figcaption b{color:var(--ink)}
+  figcaption .file{float:right;font-family:"JetBrains Mono",Consolas,monospace;font-size:11.5px;color:#7d8796}
+  .shots{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+  .shots figure{margin:0}
+  details.tech{background:#0b0e13;border:1px solid var(--line);border-radius:12px;padding:8px 16px;margin:12px 0}
+  details.tech summary{cursor:pointer;color:var(--muted);font-size:13px;font-weight:600}
+  details.tech > *:not(summary){margin-top:8px}
+  footer{margin-top:54px;border-top:1px solid var(--line);padding-top:18px;color:var(--muted);font-size:12.5px}
+  .toc{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin-bottom:8px}
+  .toc ol{columns:2;column-gap:30px;margin:0}
+  .toc a{color:#cdd6e4;text-decoration:none}
+  .toc a:hover{color:var(--accent)}
+  @media (max-width:640px){ .toc ol{columns:1} header.hero{padding:26px 20px} header.hero h1{font-size:24px} figcaption .file{float:none;display:block} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="kick">MEDial · Research Note 2 · Resident Agents as Evaluators</div>
+  <h1>평가에서 수정까지 끊기지 않게 — 리팩터링으로 정리한 연구 도구</h1>
+  <p>1탄(<code>RESEARCH_NOTE_2026-09-15.html</code>)이 마을을 세우고 어디서 실패하는지 쟀다면, 2탄은 그 결과로 드러난 도구의 구멍을 막은 기록이다.
+     연구 목표(1장)를 먼저 다시 적고, 무엇이 문제였는지(2장), 지금 도구가 어떻게 흘러가는지(3장, 화면과 함께), 그 뒤의 결정(4장),
+     그리고 <b>한 것과 하지 않은 것</b>(5–7장)을 쓴다.</p>
+  <p><b>화면의 주민은 모두 시뮬레이션 에이전트다.</b> 캡처는 전부 합성 마을(<code>fixtures/synthetic/</code>)과 규칙 어댑터(모델 호출 없음)에서 찍었다.
+     수치는 도구가 무엇을 보여 주는지의 예시이지 연구 결과가 아니다.</p>
+  <div class="meta">
+    <span class="chip">날짜 <b>2026-09-15</b></span>
+    <span class="chip">결정 <b>D093–D101</b></span>
+    <span class="chip">검증 서버 <b>418</b> · 화면 <b>63</b> · Playwright <b>6</b></span>
+    <span class="chip">캡처 <b>31장</b> · <code>npm run shots</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <ol>
+    <li><a href="#goal">연구 목표</a></li>
+    <li><a href="#diagnosis">무엇이 문제였나</a></li>
+    <li><a href="#flow">지금의 흐름 — 세 화면</a></li>
+    <li><a href="#decisions">바뀐 원칙 여덟</a></li>
+    <li><a href="#reading">한 번 돌린 결과를 읽는 법</a></li>
+    <li><a href="#transfer">다른 곳으로 옮길 수 있나</a></li>
+    <li><a href="#verify">검증 — 한 것과 하지 않은 것</a></li>
+    <li><a href="#next">남은 연구자 판단</a></li>
+    <li><a href="#shots">부록 A · 발표용 캡처 목록</a></li>
+    <li><a href="#index">부록 B · 결정 색인 D093–D101</a></li>
+  </ol>
+</nav>
+
+<!-- ============================================================ 1 -->
+<section id="goal">
+<h2>1. 연구 목표</h2>
+
+<div class="paper" style="margin-bottom:16px">
+  <span class="venue">연구 한 문장</span>
+  <h3>인터뷰에 근거한 주민 에이전트가 <u>자기가 겪은 사건으로</u> 서비스를 평가하고, 그 평가가 <u>사람이 이유를 적고 확정한 운영 규칙 수정</u>으로 이어지며,
+      같은 조건의 재실행과 실제 주민 검토를 통해 <u>어디에서 유용하고 어디에서 실패하는지</u> 드러나는 디자인 방법.</h3>
+  <p>평가 대상은 MEDial(시골 고령자 마을의 AI Care Orchestrator). 기여는 MEDial 자체도, 범용 사회 시뮬레이터도, 자동 최적화도 아니다.</p>
+  <div class="apply"><b>왜</b> 서비스를 지역에 넣으려면 지켜보고 · 묻고 · 고치고 · 다시 돌리는 반복이 필요한데, 그 반복이 가장 필요한 시골 고령자 마을이
+     그 반복이 가장 어려운 곳이다. 이 도구는 현장 방문을 대신하지 않고, <b>현장 방문 사이</b>를 채워 <b>다음에 무엇을 물어볼지</b>를 좁힌다.</div>
+</div>
+
+<div class="grid two">
+  <div class="paper">
+    <span class="venue g">한 번의 반복이 남겨야 하는 것</span>
+    <ol>
+      <li>서비스 경험 장면과, 그때 각 행위자에게 보였던 정보</li>
+      <li>주민별 평가 항목 · 사건 근거 · 인터뷰 근거 · 판단 불가</li>
+      <li>그 평가에서 출발한 변경 전후 규칙과 연구자의 이유</li>
+      <li>같은 조건의 재실행에서 바뀐 것과 바뀌지 않은 것</li>
+      <li>가정 의존 · 평가/종합 오류 · 미경험 · 자료 부족</li>
+      <li>실제 주민에게 물을 질문, 그리고 일치 · 정정 · 충돌 · 모름</li>
+    </ol>
+  </div>
+  <div class="paper">
+    <span class="venue g">연구 질문</span>
+    <ul>
+      <li><b>RQ1</b> 평가와 종합이 근거와 사건에 충실한가</li>
+      <li><b>RQ2</b> 주민 평가+근거가, 같은 사건·지표만 보는 것과 무엇이 다른가</li>
+      <li><b>RQ3</b> 실제 주민과 어디서 일치·정정·충돌하는가</li>
+      <li><b>RQ4</b> 자료 공백·거절 비용·관계 전가·미지원 서비스·모델 변경에서 어디까지 성립하는가</li>
+    </ul>
+    <div class="apply"><b>차별점</b> "LLM 주민이 피드백을 준다"만으로는 선행 연구와 겹친다. 기여는 <b>지역 맥락에 놓인 개인의 근거 제한 평가를,
+       사람이 결정하는 운영 수정과 실제 주민 정정으로 연결하는 방법, 그리고 그 실패 경계</b>다.</div>
+  </div>
+</div>
+
+<div class="note"><b>지키는 선</b> 주민 평가는 점수가 아니다(합계·순위·승자·자동 채택 없음). 주민은 자기가 겪은 사건과 허락된 인터뷰 근거만 인용한다.
+  저장은 실행 권한이 아니다. 모델 실패를 규칙 답으로 바꿔치우지 않는다. 규칙표와의 불일치는 실제 주민과의 불일치가 아니다. 사람 검토 전 AI 라벨은 초안이다.</div>
+</section>
+
+<!-- ============================================================ 2 -->
+<section id="diagnosis">
+<h2>2. 무엇이 문제였나</h2>
+<p class="lead">1탄의 실행 뒤 코드를 검토한 진단(26번 문서) 열한 가지. 목표와 직접 부딪히는 것부터.</p>
+
+<div class="tablewrap"><table>
+  <tr><th style="width:62px">진단</th><th>문제</th><th>이번에 한 것</th><th style="width:90px">닿는 곳</th></tr>
+  <tr><td><b>F01</b> <span class="pill bad">P0</span></td><td><b>설명과 실행의 진실이 둘.</b> 규칙 문장과 실행값을 따로 고칠 수 있어 "재연락 2회"라고 적고 실행은 1회로 저장돼도 통과했다.</td><td>지원 규칙 9종을 타입으로 두고 <b>한 값 집합에서</b> 문장·실행값·해시를 모두 만든다. 어긋나면 저장 거부.</td><td>RQ1 · 추적성</td></tr>
+  <tr><td><b>F02</b></td><td>주민 평가가 화면의 중심이 아니었다. 사람 하나를 찾아 토글을 열어야 읽혔다.</td><td>세 화면 중 하나가 <b>주민 평가</b>. 하루가 끝나면 그리로 안내.</td><td>RQ1 · RQ2</td></tr>
+  <tr><td><b>F03</b></td><td>AI 초안이 없으면 연구자가 가설을 쓸 수 없었고, "바꾸지 않는다"는 결정을 기록할 곳이 없었다.</td><td>규칙 카탈로그에서 직접 작성 · "이번에는 수정하지 않음" 종료 경로.</td><td>RQ2</td></tr>
+  <tr><td><b>F04·F05</b></td><td>공동체가 코드 안에 있었다(이장 ID 상수, 관계 리터럴, 장부 없음 = 이장 전지 가정).</td><td><code>CaseBundle</code>. 이장 없는 5인 공동체가 자기 자료로 같은 루프를 돈다.</td><td>RQ4 · 이전</td></tr>
+  <tr><td><b>F06</b></td><td>"차이 없음"과 "그 규칙이 발동할 상황이 없었음"이 구별되지 않았다.</td><td>규칙마다 <b>적용됨 / 적용 상황 없었음 / 판정 불가</b>를 로그에서 판정.</td><td>RQ2 · RQ4</td></tr>
+  <tr><td><b>F07</b></td><td>현장 검토의 공개 전/후가 드롭다운이었고 '충돌'이 없었다. 가족의 답이 본인 답과 섞일 수 있었다.</td><td>공개 전 응답 → 공개 기록 → 공개 후 비교를 서버가 강제. 응답자·대상 분리, 명시적 충돌.</td><td>RQ3</td></tr>
+  <tr><td><b>F08</b></td><td>종합이 걸러낸 주장을 원본으로 되짚을 수 없었다.</td><td>제외 주장마다 원본 항목 참조 · 기계 검사 · 의미 판정 · 라벨 주체.</td><td>RQ1</td></tr>
+  <tr><td><b>F09</b></td><td>저장 실패 시 입력이 사라질 수 있었다.</td><td>거부되면 입력은 그대로, 이유는 폼 옆에.</td><td>—</td></tr>
+  <tr><td><b>F10</b></td><td>새 실행을 만드는 길이 셋(수동 A/B · 정책 편집기 · 발견 적용).</td><td><b>Change Set 확정 하나</b>만 남김. 옛 기록은 읽기 전용 보존.</td><td>RQ2</td></tr>
+  <tr><td><b>F11</b></td><td>큰 파일, 잦은 전체 갱신.</td><td>규칙·적용 판정·사례·서비스 경계를 모듈로 분리. <b>성능은 재지 않았다.</b></td><td>—</td></tr>
+</table></div>
+</section>
+
+<!-- ============================================================ 3 -->
+<section id="flow">
+<h2>3. 지금의 흐름 — 세 화면</h2>
+<p class="lead">기본 작업: 사례 선택 → 실행 → <b>주민 평가</b> → 쟁점에서 규칙 값 수정 → <b>이유 적고 확정</b>(유일한 실행 권한) → 재실행 → 적용 여부와 변화 → 현장 질문. 초기안과 수정안 한 쌍이 기본 단위다.</p>
+
+<div class="flow">
+  <div class="step"><div class="n">A</div><div><h4>사례와 서비스 경험</h4><p>무엇을 고정하고 돌리는가, 그리고 그 하루에 무슨 일이 있었나.</p></div></div>
+  <div class="step"><div class="n">B</div><div><h4>주민 평가</h4><p>누구에게 어떤 도움과 부담이 생겼고, 무엇을 판단할 수 없었나. 근거 사건으로 왕복.</p></div></div>
+  <div class="step"><div class="n">C</div><div><h4>개선과 확인</h4><p>바꿀 규칙 → 이유와 확정 → 무엇이 달라졌나 → 바뀐 규칙이 실제로 실행됐나.</p></div></div>
+  <div class="step"><div class="n new">D</div><div><h4>현장 기록 (C의 하위 흐름)</h4><p>실제 사람에게 공개 전 → 공개 → 공개 후 순서로만 묻는다.</p></div></div>
+</div>
+
+<h3>A · 사례와 서비스 경험</h3>
+<figure>
+  <img src="screenshots/2026-09-15-ui/01-case-setup.png" alt="사례 준비 화면">
+  <figcaption><b>사례 준비.</b> 질문 · 초기 운영안(무엇을 하는지 세 줄) · 접힌 실험 설정 · 시작 버튼. 설명은 <code>?</code> 뒤에. <span class="file">01-case-setup.png</span></figcaption>
+</figure>
+<figure>
+  <img src="screenshots/2026-09-15-ui/03-observe.png" alt="관찰 화면">
+  <figcaption><b>그 하루.</b> 지도 · 일어난 일 · MEDial의 조율 판단 · 마을 사람들. 평가에서 "그 장면 열기"로 들어오면 그 사건 시점에서 열린다. <span class="file">03-observe.png</span></figcaption>
+</figure>
+<div class="shots">
+  <figure>
+    <img src="screenshots/2026-09-15-ui/06-observe-orchestrator.png" alt="조율 판단">
+    <figcaption><b>MEDial의 판단 이유와 거절.</b> 누구에게 부탁했고 뭐라고 했나, 엔진 키 없이. <span class="file">06</span></figcaption>
+  </figure>
+  <figure>
+    <img src="screenshots/2026-09-15-ui/09-observe-medial-view.png" alt="MEDial이 아는 것">
+    <figcaption><b>MEDial이 아는 것만.</b> 같은 하루를 조율자가 보고받은 정보로만 본다. 세계의 진실과 관측을 가르는 장치. <span class="file">09</span></figcaption>
+  </figure>
+</div>
+
+<h3>B · 주민 평가</h3>
+<figure>
+  <img src="screenshots/2026-09-15-ui/11-evaluations.png" alt="주민 평가 화면">
+  <figcaption><b>주민 평가.</b> 위의 숫자는 <b>항목의 개수</b>(점수 아님). 목록은 서비스를 만난 사람부터, 미경험은 불만으로 정렬하지 않는다. <span class="file">11-evaluations.png</span></figcaption>
+</figure>
+<div class="shots">
+  <figure>
+    <img src="screenshots/2026-09-15-ui/12-evaluations-card.png" alt="한 사람의 평가">
+    <figcaption><b>한 사람의 평가 순서.</b> 겪은 것 → 차원별 평가와 이유 → 요청 → 판단할 수 없는 것. '모의 주민 평가'와 페르소나 출처는 다른 축. <span class="file">12</span></figcaption>
+  </figure>
+  <figure>
+    <img src="screenshots/2026-09-15-ui/13-evaluations-evidence.png" alt="근거 펼침">
+    <figcaption><b>근거는 제자리에서.</b> 사건 근거를 펼치고 "그 장면 열기"로 기록으로 간다. 닫으면 같은 항목. <span class="file">13</span></figcaption>
+  </figure>
+</div>
+
+<h3>C · 개선과 확인</h3>
+<div class="shots">
+  <figure>
+    <img src="screenshots/2026-09-15-ui/16-improve-composer.png" alt="규칙 작성기">
+    <figcaption><b>값만 고친다.</b> 규칙을 고르고 값을 바꾸는 컨트롤은 서버의 규칙 카탈로그가 만든다. 문장 입력칸도 실행값 입력칸도 없다. <span class="file">16</span></figcaption>
+  </figure>
+  <figure>
+    <img src="screenshots/2026-09-15-ui/18-improve-saved-not-run.png" alt="저장은 실행이 아니다">
+    <figcaption><b>저장 ≠ 실행.</b> 저장한 뒤에도 버전은 하나. 확정 이유를 적기 전엔 실행 버튼이 잠겨 있다. <span class="file">18</span></figcaption>
+  </figure>
+</div>
+<figure class="narrow">
+  <img src="screenshots/2026-09-15-ui/17-improve-preview.png" alt="전후 문장">
+  <figcaption><b>값에서 만든 전후 문장.</b> 사람이 읽는 문장과 엔진이 실행하는 값이 같은 원천에서 나온다(F01). <span class="file">17</span></figcaption>
+</figure>
+<figure class="narrow">
+  <img src="screenshots/2026-09-15-ui/19-improve-confirm.png" alt="확정">
+  <figcaption><b>실행 권한은 이 버튼 하나.</b> 이유는 버튼 옆에 적고 기록에 남는다. <span class="file">19</span></figcaption>
+</figure>
+<figure>
+  <img src="screenshots/2026-09-15-ui/21-improve-table.png" alt="비교 표">
+  <figcaption><b>무엇이 달라졌나.</b> 바꾼 조건 · 규칙이 실제로 실행됐나 · 요청 · 시간 · 하루 · 일과 변화 · 거절 · 기록에 없던 것 · 이용 · 리뷰 · 새 문제. 각 행의 단서는 행 이름의 <code>?</code>에. <span class="file">21-improve-table.png</span></figcaption>
+</figure>
+<figure>
+  <img src="screenshots/2026-09-15-ui/24-improve-chain-crop.png" alt="바꾼 이유의 사슬">
+  <figcaption><b>바꾼 이유의 사슬.</b> 주민이 겪은 일 → 리뷰에서 묶인 문제 → 연구자가 확정한 Change Set → 실제로 바뀐 값. 연구 한 문장이 화면 한 단으로. <span class="file">24</span></figcaption>
+</figure>
+
+<h3>D · 현장 기록</h3>
+<div class="shots">
+  <figure>
+    <img src="screenshots/2026-09-15-ui/26-field-stage-1.png" alt="1단계">
+    <figcaption><b>1단계 · 공개 전.</b> 모의 평가를 보여 주지 않고 먼저 묻는다. <span class="file">26</span></figcaption>
+  </figure>
+  <figure>
+    <img src="screenshots/2026-09-15-ui/27-field-stage-2.png" alt="2단계">
+    <figcaption><b>2단계 · 공개.</b> 보여 준 시점이 사건으로 남는다. <span class="file">27</span></figcaption>
+  </figure>
+  <figure>
+    <img src="screenshots/2026-09-15-ui/28-field-stage-3.png" alt="3단계">
+    <figcaption><b>3단계 · 공개 후 비교.</b> 일치 · 정정 · <b>충돌</b> · 모름, 그리고 고칠 곳(주민 행동 모델 등). <span class="file">28</span></figcaption>
+  </figure>
+</div>
+</section>
+
+<!-- ============================================================ 4 -->
+<section id="decisions">
+<h2>4. 바뀐 원칙 여덟</h2>
+<div class="grid two">
+  <div class="paper"><span class="venue">D093</span><h3>하나의 의미 규칙</h3>
+    <p>규칙 값이 원천이고, 문장·실행값·해시는 그 파생이다. 설명만 바꾼 초안은 같은 해시다. 자유 서술은 <b>이유</b>이지 실행이 아니다.</p></div>
+  <div class="paper"><span class="venue">D094</span><h3>저장은 실행이 아니다</h3>
+    <p>초안 없이도 작성할 수 있고, "수정하지 않음"도 이유와 함께 기록되는 결론이다. 같은 확정을 두 번 보내도 실행은 하나.</p></div>
+  <div class="paper"><span class="venue g">D095</span><h3>공동체는 자료다</h3>
+    <p>주민·역할·관계·장부·시나리오를 한 묶음으로. 이장이 없는 공동체도 유효하고, 이장을 거치는 운영안은 "그 역할이 없다"로 거부된다.</p></div>
+  <div class="paper"><span class="venue g">D096</span><h3>'적용됐나'와 '차이가 있나'를 나눈다</h3>
+    <p>차이 0을 "효과 없음"으로 읽기 전에, 그 규칙이 발동할 상황이 있었는지와 실제로 그 분기를 지났는지를 먼저 본다. 모르면 모른다고 적는다.</p></div>
+  <div class="paper"><span class="venue j">D097</span><h3>현장 기록은 순서를 강제한다</h3>
+    <p>공개 전 응답 없이는 공개를, 공개 없이는 비교를 기록할 수 없다. 응답자와 대상 주민, 연구자 메모와 주민 응답을 분리한다.</p></div>
+  <div class="paper"><span class="venue j">D098</span><h3>제외된 주장은 원본으로 돌아간다</h3>
+    <p>종합이 걸러낸 주장마다 원본 평가 참조와 판정 주체를 남긴다. 참조 없는 주장은 "종합이 스스로 만든 주장"이다.</p></div>
+  <div class="paper"><span class="venue">D099</span><h3>새 실행의 길은 하나</h3>
+    <p>RQ2의 비교 조건은 옛 기능의 유무가 아니라, 같은 자료를 읽기 전용으로 다르게 제공하는 것으로 만든다.</p></div>
+  <div class="paper"><span class="venue">D100·D101</span><h3>화면의 기본값은 판단에 필요한 것만</h3>
+    <p>단서 조항은 지우지 않고 대상 옆 <code>?</code>와 접기로 옮긴다. 막는 문제·상태·실패 이유는 접지 않는다. 이름은 잘리지 않고, 좁으면 부가 정보가 먼저 준다.</p></div>
+</div>
+<figure class="narrow" style="margin-top:22px">
+  <img src="screenshots/2026-09-15-ui/14-hint.png" alt="힌트">
+  <figcaption><b>D100의 모양.</b> "점수가 아니다"는 문장은 그대로 있고, 숫자 옆 <code>?</code>를 누르면 열린다. <span class="file">14-hint.png</span></figcaption>
+</figure>
+</section>
+
+<!-- ============================================================ 5 -->
+<section id="reading">
+<h2>5. 한 번 돌린 결과를 읽는 법</h2>
+<p class="lead">캡처를 찍으려고 돌린 한 쌍(합성 마을 · 시나리오 2개 · 규칙 어댑터). <b>결과가 아니라 도구가 무엇을 가려 주는지의 예시</b>로만 읽는다.</p>
+
+<div class="tablewrap"><table>
+  <tr><th>무엇을 보나</th><th>v0 초기안 → v1 "본인에게 두 번 더 확인"</th><th>이 행이 막아 주는 오독</th></tr>
+  <tr><td>바꾼 조건</td><td>재연락 횟수 0 → 2 (간격 40분)</td><td>문장과 실행값이 다를 수 있다는 의심 — 같은 원천이다</td></tr>
+  <tr><td>규칙이 실행됐나</td><td>한 시나리오 <span class="pill ok">적용됨</span>(전화 재연락 2회 기록) · 다른 시나리오 <span class="pill warn">적용 상황 없었음</span>(첫 연락에 응답)</td><td>"한쪽에서 차이가 없으니 효과가 없다" — 그 사례에선 발동할 일이 없었다</td></tr>
+  <tr><td>해결까지 걸린 시간</td><td>80.7분 → 122.8분 (+42.1)</td><td>본인 확인을 늘리면 대기가 늘어난다는 대가가 숫자로 보인다. 좋다/나쁘다는 판단은 사람이 한다</td></tr>
+  <tr><td>누구의 일과가 바뀌었나</td><td>주민 합계 443.8분 → 448분</td><td>이 지표는 도와준 이웃과 도움받은 본인을 한 값에 섞는다(<code>?</code>에 명시)</td></tr>
+  <tr><td>주민 에이전트 리뷰</td><td>긍정 13 · 혼합 12 · 부정 4 · 판단 불가 127 — 양쪽 동일</td><td>규칙 어댑터의 리뷰는 이 변경에 반응하지 않았다. <b>규칙 리뷰가 무엇을 볼 수 없는지의 사례</b>이지, 주민이 차이를 느끼지 못했다는 증거가 아니다</td></tr>
+</table></div>
+<div class="note"><b>그래서</b> 이 도구가 내놓는 것은 "v1이 낫다"가 아니라 <b>"본인 확인 두 번은 대기 42분을 대가로 하고, 무응답 사례에서만 실제로 작동하며, 규칙 리뷰로는 그 체감이 잡히지 않는다 — 그러니 현장에서 무엇을 물어야 하나"</b>다.</div>
+</section>
+
+<!-- ============================================================ 6 -->
+<section id="transfer">
+<h2>6. 다른 곳으로 옮길 수 있나</h2>
+<div class="tablewrap"><table>
+  <tr><th>수준</th><th>무엇이 바뀌나</th><th>상태</th></tr>
+  <tr><td><b>G1</b> 다른 공동체</td><td>주민 · 관계 · 일과 · 자료 공백</td><td><span class="pill ok">검사함</span> P번호를 쓰지 않는 5인 · 이장 없음 · 장부 대부분 "안 물어봄"인 합성 공동체가 같은 루프를 돈다. 다른 공동체의 관계·시나리오가 섞이면 로드·생성·실행 모두 거부.</td></tr>
+  <tr><td><b>G2</b> 같은 공동체의 다른 서비스</td><td>접촉/경험 사건 · 고칠 수 있는 규칙 · 해결 기준</td><td><span class="pill bad">하지 않음</span> 서비스 어댑터 경계는 세웠지만 비의료 합성 서비스는 구현하지 않았다. 엔진의 사건 어휘와 워크플로가 안부 확인·동승에 묶여 있어, 새 사건 타입과 워크플로가 필요하다.</td></tr>
+  <tr><td><b>G3</b> 다른 분야</td><td>평가 차원 · 기관 · 참여 프로토콜</td><td><span class="pill">범위 밖</span> 확장 절차와 한계만 적는다.</td></tr>
+</table></div>
+<div class="gap"><p><b>주장할 수 있는 범위</b> 지금 보일 수 있는 것은 <b>"소프트웨어가 다른 공동체로 옮겨 간다"</b>까지다. "방법이 다른 서비스에도 적용된다"는 근거가 없고, 합성 5인이 돈다고 다른 주민 집단에서 방법이 타당하다는 뜻도 아니다.</p></div>
+</section>
+
+<!-- ============================================================ 7 -->
+<section id="verify">
+<h2>7. 검증 — 한 것과 하지 않은 것</h2>
+<div class="grid two">
+  <div class="paper"><span class="venue g">실행한 것 · 2026-09-15</span>
+    <ul>
+      <li>서버 테스트 <b>418</b> 통과 (착수 기준 386)</li>
+      <li>화면 mount 테스트 <b>63</b> 통과 (기준 53) · 타입검사·빌드 통과</li>
+      <li>Playwright 실브라우저 <b>6</b> 통과 — 세 화면 한 바퀴, 현장 기록 순서, 1440·1366·800 가로 넘침 0, 키보드만으로 근거까지</li>
+      <li>캡처 31장을 사람이 열어 보고 고친 결함: 다른 공동체 시나리오 혼입, 사례 구분 없는 중복 행, 확정 뒤 이전 쌍 비교, 첫 초안이 실행 대상, 잘린 이름·단계명·버튼, <b>거절 사유와 현장 장면 제목에 엔진 키 노출</b>(<code>driving_status_unknown</code>, <code>time_labour</code>), 2단계인데 남아 있던 1단계 입력칸</li>
+      <li>기존 DB는 추가만 하는 migration(<code>schemaVersion 2</code>). 연구 DB는 열지 않았다</li>
+    </ul>
+  </div>
+  <div class="paper"><span class="venue r">하지 않은 것 — 완료라고 쓰지 않는다</span>
+    <ul>
+      <li><b>실제 모델 호출 0회.</b> 개선 프롬프트가 규칙 값을 제안하는 형태(<code>medial-improve/2.0.0</code>)로 바뀌었는데 실모델에서 확인하지 않았다</li>
+      <li><b>실제 주민 응답 0건.</b> 기록 도구만 섰다 (RQ3 비어 있음)</li>
+      <li><b>종합 판정의 사람 라벨 0건.</b> 전부 <code>unreviewed</code></li>
+      <li><b>사용성 평가 0회.</b> 26번의 "2분 안에 설명" 같은 수치는 목표다</li>
+      <li><b>비의료 서비스(G2)</b> 미구현 · <b>성능 계측</b> 없음</li>
+      <li>접어 둔 단서를 사람이 실제로 찾아 읽는지 확인하지 않았다</li>
+    </ul>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================ 8 -->
+<section id="next">
+<h2>8. 남은 연구자 판단</h2>
+<div class="flow">
+  <div class="step"><div class="n">1</div><div><h4>개선 프롬프트를 실모델로 검증할까</h4><p>제한 예산으로 한 쌍. 기록 재생과 새 호출을 구분해 본다. 규칙표에 맞추려고 프롬프트를 조정하지 않는다.</p></div></div>
+  <div class="step"><div class="n">2</div><div><h4>RQ3 — 실제 주민 재방문 절차</h4><p>도구의 순서(공개 전 → 공개 → 공개 후)는 섰다. 누구에게, 어떤 장면을, 어떤 동의 범위로 물을지는 연구 설계의 몫이다.</p></div></div>
+  <div class="step"><div class="n">3</div><div><h4>RQ2 비교 조건의 구체화</h4><p>같은 사건·지표만 보는 조건과 평가+근거 조건을 읽기 전용 제공 방식으로. 과제·시간·순서 효과 통제.</p></div></div>
+  <div class="step"><div class="n">4</div><div><h4>G2를 지금 열까</h4><p>비의료 합성 서비스 하나 — 사건 타입 3~4개, 워크플로 하나, 그 사례의 CaseBundle. 열지 않으면 논문의 이전 가능성 주장은 G1까지로 쓴다.</p></div></div>
+  <div class="step"><div class="n bad">5</div><div><h4>종합 판정에 사람 라벨 달기</h4><p>이것이 없으면 RQ1의 "종합이 틀린다"는 AI 초안 기준의 관찰에 머문다.</p></div></div>
+</div>
+</section>
+
+<!-- ============================================================ A -->
+<section id="shots">
+<h2>부록 A · 발표용 캡처 목록</h2>
+<p class="lead">폴더 <code>docs/research/screenshots/2026-09-15-ui/</code> · 2880px 폭(레티나) · 합성 마을. 다시 찍기: <code>npm run shots</code> (<code>e2e/shots.spec.ts</code>). 이 캡처들은 아직 커밋하지 않았다.</p>
+<div class="tablewrap"><table>
+  <tr><th style="width:230px">파일</th><th>슬라이드 캡션</th></tr>
+  <tr><td><code>01-case-setup</code></td><td>사례 준비 — 질문, 초기 운영안, 시작</td></tr>
+  <tr><td><code>02-case-setup-settings</code></td><td>접힌 실험 설정 — 시나리오, 무엇을 모델이 하는가, 호출 상한</td></tr>
+  <tr><td><code>03-observe</code></td><td>그 하루 — 지도 · 일어난 일 · 조율 판단 · 마을 사람들</td></tr>
+  <tr><td><code>04-observe-map</code></td><td>마을 지도와 기록 재생</td></tr>
+  <tr><td><code>05-observe-happening</code></td><td>시간순으로 일어난 일</td></tr>
+  <tr><td><code>06-observe-orchestrator</code></td><td>MEDial의 판단 이유와 누구에게 부탁했나</td></tr>
+  <tr><td><code>07-observe-people</code></td><td>마을 사람들의 지금 상태</td></tr>
+  <tr><td><code>08-progress-bar</code></td><td>반복의 네 단계 (읽기 전용 진행 표시)</td></tr>
+  <tr><td><code>08b-observe-day-reviews</code></td><td>하루가 끝나면 같은 자리가 주민 리뷰로</td></tr>
+  <tr><td><code>09-observe-medial-view</code></td><td>MEDial이 아는 것만 — 세계와 관측의 분리</td></tr>
+  <tr><td><code>10-observe-person</code></td><td>한 주민의 하루와 그 뒤의 평가</td></tr>
+  <tr><td><code>11-evaluations</code></td><td>주민 평가 — 항목 개수, 점수 아님</td></tr>
+  <tr><td><code>12-evaluations-card</code></td><td>한 사람의 평가: 겪은 것 → 차원별 이유 → 모르는 것</td></tr>
+  <tr><td><code>13-evaluations-evidence</code></td><td>평가 항목에서 근거 사건으로</td></tr>
+  <tr><td><code>14-hint</code></td><td>단서는 지우지 않고 한 번 클릭 뒤로</td></tr>
+  <tr><td><code>15-evaluations-issues</code></td><td>쟁점 묶음 — 소수 의견과 반대 평가를 함께</td></tr>
+  <tr><td><code>16-improve-composer</code></td><td>규칙 값만 고친다 — 문장·실행값 입력 없음</td></tr>
+  <tr><td><code>17-improve-preview</code></td><td>값에서 만든 전후 문장</td></tr>
+  <tr><td><code>18-improve-saved-not-run</code></td><td>저장은 실행이 아니다</td></tr>
+  <tr><td><code>19-improve-confirm</code></td><td>실행 권한 — 이유를 적고 확정</td></tr>
+  <tr><td><code>20-improve-comparison</code></td><td>무엇이 달라졌나 (화면 전체)</td></tr>
+  <tr><td><code>21-improve-table</code></td><td>비교 표 전체 — 발표 핵심 한 장</td></tr>
+  <tr><td><code>22-improve-rule-applied</code></td><td>바뀐 규칙이 실제로 실행됐나</td></tr>
+  <tr><td><code>23-improve-chain</code></td><td>바꾼 이유 (화면 전체)</td></tr>
+  <tr><td><code>24-improve-chain-crop</code></td><td>주민이 겪은 일 → 묶인 문제 → 확정 → 바뀐 값</td></tr>
+  <tr><td><code>25-field-decision</code></td><td>현장에서 검토할 안 — 채택·보류·기각과 이유</td></tr>
+  <tr><td><code>26-field-stage-1</code></td><td>현장 1단계: 공개 전 독립 응답</td></tr>
+  <tr><td><code>27-field-stage-2</code></td><td>현장 2단계: 모의 평가 공개를 기록</td></tr>
+  <tr><td><code>28-field-stage-3</code></td><td>현장 3단계: 일치·정정·충돌·모름, 고칠 곳</td></tr>
+  <tr><td><code>29-field-records</code></td><td>기록된 실제 응답 — 단계와 대상이 붙은 채로</td></tr>
+  <tr><td><code>30-narrow-800</code></td><td>800px 폭에서도 잘리지 않는 화면</td></tr>
+</table></div>
+</section>
+
+<!-- ============================================================ B -->
+<section id="index">
+<h2>부록 B · 결정 색인 D093–D101</h2>
+<div class="tablewrap"><table>
+  <tr><th>번호</th><th>결정</th><th>근거</th><th>확인</th></tr>
+  <tr><td>D093</td><td>하나의 의미 규칙에서 문장·실행값·해시 생성</td><td>"재연락 2회" + 실행 1회가 통과했다</td><td><code>semantic_rules.py</code> · 위조 문장 거부 테스트</td></tr>
+  <tr><td>D094</td><td>저장 ≠ 실행, 초안 없이 작성, 수정하지 않음 종료</td><td>초안이 없으면 막다른 길</td><td>확정 시 자식 1개 · 재전송 중복 차단</td></tr>
+  <tr><td>D095</td><td>공동체는 자료(CaseBundle), 이장 상수 제거</td><td>P번호 재사용 시 관계 상속</td><td>5인·이장 없음 사례 · 섞이면 거부</td></tr>
+  <tr><td>D096</td><td>적용 여부와 차이 유무를 나눠 기록</td><td>재연락이 켜졌는데 로그 동일(D086)</td><td><code>rule_application.py</code> · 비교 표 행</td></tr>
+  <tr><td>D097</td><td>현장 기록 순서 강제, 응답자·대상 분리, 충돌</td><td>공개 전후가 드롭다운, 충돌 없음</td><td><code>test_field_protocol.py</code></td></tr>
+  <tr><td>D098</td><td>제외 주장의 원본 참조와 라벨 주체</td><td>종합이 스스로 만든 주장을 스스로 거름</td><td><code>ExcludedClaim</code></td></tr>
+  <tr><td>D099</td><td>새 실행 경로는 Change Set 확정 하나</td><td>세 경로가 구분 없이 revision 생성</td><td>편집기·발견 패널 삭제, 기록은 읽기 전용</td></tr>
+  <tr><td>D100</td><td>단서 조항은 <code>?</code>·접기로, 막는 문제는 접지 않음</td><td>무엇을 먼저 볼지 알 수 없었다</td><td>검사가 힌트를 열어 문장 확인</td></tr>
+  <tr><td>D101</td><td>잘리지 않게: 이름 우선, 좁으면 현재 단계만, 버튼 줄바꿈</td><td>'P..', '하루', 세로 한 글자</td><td>800·1366·1440 캡처</td></tr>
+</table></div>
+</section>
+
+<footer>
+  <b>근거 파일</b><br>
+  문서: <code>docs/research/26_REFACTOR_AUDIT_AND_PLAN_2026-09-15.md</code>(진단) · <code>28_REFACTOR_LOG_2026-09-15.md</code>(실행 기록) · <code>DECISIONS.md</code> · <code>DEVELOPMENT.md</code> · 1탄 <code>RESEARCH_NOTE_2026-09-15.html</code><br>
+  코드: <code>server/app/simulation/iteration/semantic_rules.py</code> · <code>rule_application.py</code> · <code>services.py</code> · <code>case_bundle.py</code> · <code>src/features/simulation/screens/EvaluationsScreen.tsx</code> · <code>components/ChangeComposer.tsx</code> · <code>components/FieldSheet.tsx</code><br>
+  캡처: <code>e2e/shots.spec.ts</code> → <code>docs/research/screenshots/2026-09-15-ui/</code><br>
+  <p style="margin-top:14px">MEDial · Resident Agents as Evaluators — 연구노트 2 · 2026-09-15 · 시뮬레이션 주민은 실제 참여자가 아니다</p>
+</footer>
+
+</div>
+</body>
+</html>

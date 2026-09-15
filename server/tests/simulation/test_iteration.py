@@ -21,6 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "server"))
 
 from app.simulation.contracts import HEALTH_STAFF, RESEARCHER  # noqa: E402
+from app.simulation.iteration import semantic_rules  # noqa: E402
 from app.simulation.iteration.contracts import (  # noqa: E402
     AgentReview,
     ChangeSet,
@@ -30,6 +31,7 @@ from app.simulation.iteration.contracts import (  # noqa: E402
     RuleChange,
     SessionStatus,
     UsageStatus,
+    materialize_change,
 )
 from app.simulation.iteration.engine import IterationEngine  # noqa: E402
 from app.simulation.iteration.experience import (  # noqa: E402
@@ -312,8 +314,22 @@ def test_a_version_carries_its_day_refusals_and_hand_offs_for_the_table():
 
 
 # ============================================== what a Change Set may never touch
-def change_set(binding: ExecutionBinding, *, field: str = "retry",
-               quest_id: str = "quest:no-response-welfare-check") -> ChangeSet:
+def semantic_change_set(rule_type: str, after: dict, *, policy: dict,
+                        before: dict | None = None) -> ChangeSet:
+    """A Change Set built the only way a new one can be: from a typed rule."""
+    semantic = semantic_rules.build_change(rule_type, policy, after)
+    if before is not None:
+        semantic = semantic.model_copy(update={
+            "before": type(semantic.before).model_validate(before)})
+    return ChangeSet(
+        id="c1", sessionId="s", generationIndex=0, baseRevisionId=policy["id"],
+        label="변경", reviewItemRefs=["rev-x#0"], mechanism="검증",
+        changes=[materialize_change(semantic)], createdAt="now")
+
+
+def legacy_change_set(binding: ExecutionBinding, *, field: str = "retry",
+                      quest_id: str = "quest:no-response-welfare-check") -> ChangeSet:
+    """The pre-2026-09-15 shape: free sentences plus hand-written bindings."""
     return ChangeSet(
         id="c1", sessionId="s", generationIndex=0, baseRevisionId=START,
         label="변경", reviewItemRefs=["rev-x#0"], mechanism="검증",
@@ -324,29 +340,36 @@ def change_set(binding: ExecutionBinding, *, field: str = "retry",
             executionBindings=[binding])], createdAt="now")
 
 
-@pytest.mark.parametrize(("quest_id", "field"), [
-    ("quest:edit-persona", "retry"),
-    ("quest:no-response-welfare-check", "persona"),
-    ("quest:no-response-welfare-check", "world"),
-    ("quest:no-response-welfare-check", "rubric"),
-])
-def test_a_change_outside_supported_quest_task_rules_is_refused(quest_id, field):
+def test_a_change_without_a_typed_rule_cannot_run():
+    """A sentence plus a binding is history, not an executable change (F01)."""
     service = iteration()
     policy = service.sim.policies[START].model_dump(mode="json")
     checked = validate_change_set(
-        change_set(ExecutionBinding(key="retryCount", before=0, after=1),
-                   field=field, quest_id=quest_id),
+        legacy_change_set(ExecutionBinding(key="retryCount", before=0, after=1)),
         policy=policy, capabilities=SUPPORTED_CAPABILITIES,
         known_review_items={"rev-x#0"})
     assert checked.validationStatus is ChangeSetValidation.rejected
-    assert checked.validationErrors
+    assert any("ruleType" in e for e in checked.validationErrors)
+
+
+@pytest.mark.parametrize("field", ["persona", "world", "environment", "ledger"])
+def test_a_change_aimed_at_fixed_case_input_is_refused_by_name(field):
+    service = iteration()
+    policy = service.sim.policies[START].model_dump(mode="json")
+    checked = validate_change_set(
+        legacy_change_set(ExecutionBinding(key="retryCount", before=0, after=1), field=field),
+        policy=policy, capabilities=SUPPORTED_CAPABILITIES,
+        known_review_items={"rev-x#0"})
+    assert checked.validationStatus is ChangeSetValidation.rejected
+    assert any("고정 사례 입력" in e for e in checked.validationErrors) or field == "world"
 
 
 def test_a_change_set_whose_before_value_is_stale_is_refused():
     service = iteration()
     policy = service.sim.policies[START].model_dump(mode="json")
     checked = validate_change_set(
-        change_set(ExecutionBinding(key="retryCount", before=99, after=1)),
+        semantic_change_set("retry_before_help", {"count": 2, "intervalMinutes": 40},
+                            policy=policy, before={"count": 1, "intervalMinutes": 40}),
         policy=policy, capabilities=SUPPORTED_CAPABILITIES,
         known_review_items={"rev-x#0"})
     assert checked.validationStatus is ChangeSetValidation.rejected
@@ -358,21 +381,61 @@ def test_a_policy_the_engine_would_refuse_is_not_a_candidate():
     service = iteration()
     policy = service.sim.policies[START].model_dump(mode="json")
     checked = validate_change_set(
-        change_set(ExecutionBinding(key="allowHeadContact", before=True, after=False)),
+        semantic_change_set("contact_order",
+                            {"strategy": "head_first", "allowHeadContact": False},
+                            policy=policy),
         policy=policy, capabilities=SUPPORTED_CAPABILITIES,
         known_review_items={"rev-x#0"})
     assert checked.validationStatus is ChangeSetValidation.rejected
     assert any("이장 우선" in e for e in checked.validationErrors)
 
 
-def test_an_out_of_range_value_is_refused():
+def test_an_out_of_range_value_is_refused_before_it_becomes_a_change():
+    service = iteration()
+    policy = service.sim.policies[START].model_dump(mode="json")
+    with pytest.raises(Exception):
+        semantic_rules.build_change("retry_before_help", policy,
+                                    {"count": 99, "intervalMinutes": 40})
+
+
+def test_a_forged_sentence_is_refused_even_when_the_values_are_right():
+    """The stored sentence must be the one the values produce (F01)."""
+    service = iteration()
+    policy = service.sim.policies[START].model_dump(mode="json")
+    change_set = semantic_change_set("retry_before_help", {"count": 1, "intervalMinutes": 40},
+                                     policy=policy)
+    forged = change_set.model_copy(update={"changes": [
+        change_set.changes[0].model_copy(update={"afterRule": "본인에게 2회 다시 연락한다."})]})
+    checked = validate_change_set(forged, policy=policy, capabilities=SUPPORTED_CAPABILITIES,
+                                  known_review_items={"rev-x#0"})
+    assert checked.validationStatus is ChangeSetValidation.rejected
+    assert any("문장" in e for e in checked.validationErrors)
+
+
+def test_a_rule_for_a_quest_the_session_does_not_run_is_not_applicable():
+    """A ride rule on a check-in-only session would run and show "no change";
+    the validator calls it inapplicable instead (F06)."""
     service = iteration()
     policy = service.sim.policies[START].model_dump(mode="json")
     checked = validate_change_set(
-        change_set(ExecutionBinding(key="retryCount", before=0, after=99)),
+        semantic_change_set("ride_detour_limit", {"maxDetourMinutes": 10}, policy=policy),
         policy=policy, capabilities=SUPPORTED_CAPABILITIES,
-        known_review_items={"rev-x#0"})
+        known_review_items={"rev-x#0"}, active_decks=[P1_DECK])
     assert checked.validationStatus is ChangeSetValidation.rejected
+    assert any("적용 불가" in e for e in checked.validationErrors)
+
+
+def test_only_the_explanation_changing_is_not_a_new_execution():
+    service = iteration()
+    policy = service.sim.policies[START].model_dump(mode="json")
+    a = semantic_change_set("retry_before_help", {"count": 1, "intervalMinutes": 40},
+                            policy=policy)
+    b = a.model_copy(update={"label": "다른 이름", "mechanism": "다른 이유"})
+    from app.simulation.iteration.validation import change_hash
+    assert change_hash(a) == change_hash(b)
+    c = semantic_change_set("retry_before_help", {"count": 2, "intervalMinutes": 40},
+                            policy=policy)
+    assert change_hash(a) != change_hash(c)
 
 
 def test_an_unsupported_feature_is_kept_as_a_suggestion_and_never_run():
@@ -402,17 +465,11 @@ def test_researcher_edit_is_a_new_valid_change_set_and_preserves_source():
     result = service.command(
         session.id, "save-edit", "save_researcher_change_set",
         payload={
-            "templateChangeSetId": original["id"],
             "sourceChangeSetId": original["id"],
             "label": "연구자가 다듬은 규칙",
             "mechanism": "같은 실행 변경을 연구자 가설로 명확히 기록한다.",
-            "afterRules": [change["afterRule"] + " (연구자 명시)"
-                           for change in original["changes"]],
-            "bindingValues": {
-                binding["key"]: binding["after"]
-                for change in original["changes"]
-                for binding in change["executionBindings"]
-            },
+            "rules": [{"ruleType": "retry_before_help",
+                       "after": {"count": 2, "intervalMinutes": 30}}],
             "expectedEffects": ["주민 평가에서 지적한 문제를 줄인다."],
             "possibleRegressions": ["다른 주민의 부담은 다음 실행에서 확인한다."],
             "watchNext": ["같은 장면의 재발 여부"],
@@ -420,34 +477,142 @@ def test_researcher_edit_is_a_new_valid_change_set_and_preserves_source():
     saved = result["changeSet"]
     assert saved["author"] == "researcher_hypothesis"
     assert saved["validationStatus"] == "valid"
+    change = saved["changes"][0]
+    assert change["semantic"]["after"] == {"count": 2, "intervalMinutes": 30}
+    assert "30분 간격으로 2회" in change["afterRule"], "문장은 값에서 만들어진다"
+    assert {b["key"]: b["after"] for b in change["executionBindings"]} == {
+        "retryCount": 2, "retryIntervalMin": 30}
     detail = service.detail(session.id)
     rows = detail["generations"][0]["changeSets"]
     assert next(row for row in rows if row["id"] == original["id"])["confirmationStatus"] == "superseded"
     assert len(detail["generations"]) == 1, "저장은 실행 권한 부여가 아니다"
 
 
-def test_researcher_can_author_an_independent_change_set_without_overwriting_draft():
+def test_researcher_can_author_from_the_catalogue_without_any_draft():
+    """F03: a session that found no usable draft still lets the researcher
+    write a supported change, and confirming it runs exactly one child."""
     service = iteration()
     session = service.create_session(
         label="새 가설", core_item="c", base_policy_id=START,
         development_decks=[P1_DECK], resource_id=T_RES, max_generations=2)
     service.command(session.id, "start-author", "start", blocking=True)
-    original = next(item for item in service.detail(session.id)["generations"][0]["changeSets"]
-                    if item["validationStatus"] == "valid")
-    service.command(
+    # Put the session where no draft is usable: decline them all... no - that
+    # ends the session. Instead simulate the loop having produced no drafts by
+    # forcing the state the loop reaches in that case.
+    session = service.load(session.id)
+    session.status = SessionStatus.no_valid_change
+    service.store.update_session(session)
+    saved = service.command(
         session.id, "save-author", "save_researcher_change_set",
         payload={
-            "templateChangeSetId": original["id"],
             "label": "독립 연구자 가설",
-            "mechanism": "실행 가능한 구조를 바탕으로 독립 가설을 기록한다.",
-            "afterRules": [change["afterRule"] for change in original["changes"]],
-            "bindingValues": {binding["key"]: binding["after"]
-                              for change in original["changes"]
-                              for binding in change["executionBindings"]},
-        })
+            "mechanism": "이웃에게 부탁하기 전에 본인에게 한 번 더 확인한다.",
+            "rules": [{"ruleType": "retry_before_help", "after": {"count": 1}}],
+        })["changeSet"]
+    assert saved["author"] == "researcher_hypothesis"
+    assert saved["validationStatus"] == "valid"
+    assert saved["changes"][0]["semantic"]["after"] == {"count": 1, "intervalMinutes": 40}, (
+        "적지 않은 매개변수는 현재 값을 유지한다")
+    assert service.load(session.id).status is SessionStatus.awaiting_confirmation
     rows = service.detail(session.id)["generations"][0]["changeSets"]
-    assert next(row for row in rows if row["id"] == original["id"])["confirmationStatus"] == "draft"
-    assert sum(row["author"] == "researcher_hypothesis" for row in rows) == 1
+    assert all(row["confirmationStatus"] == "draft" for row in rows
+               if row["id"] != saved["id"] and row["validationStatus"] == "valid"), (
+        "원본 초안은 덮어쓰지 않는다")
+    service.command(session.id, "confirm-author", "confirm_change_set",
+                    payload={"changeSetId": saved["id"], "reason": "연구자 판단"},
+                    blocking=True)
+    generations = service.detail(session.id)["generations"]
+    assert len(generations) == 2 and generations[1]["appliedChangeSetId"] == saved["id"]
+
+
+def test_a_save_that_fails_validation_saves_nothing_and_names_the_field():
+    service = iteration()
+    session = service.create_session(
+        label="저장 실패", core_item="c", base_policy_id=START,
+        development_decks=[P1_DECK], resource_id=T_RES, max_generations=2)
+    service.command(session.id, "start-fail", "start", blocking=True)
+    before = len(service.detail(session.id)["generations"][0]["changeSets"])
+    with pytest.raises(ValueError) as excinfo:
+        service.command(
+            session.id, "save-fail", "save_researcher_change_set",
+            payload={"label": "x", "mechanism": "y",
+                     "rules": [{"ruleType": "retry_before_help", "after": {"count": 99}}]})
+    assert "count" in str(excinfo.value)
+    assert len(service.detail(session.id)["generations"][0]["changeSets"]) == before
+    with pytest.raises(ValueError):
+        service.command(session.id, "save-noop", "save_researcher_change_set",
+                        payload={"label": "x", "mechanism": "y",
+                                 "rules": [{"ruleType": "retry_before_help",
+                                            "after": {"count": 0}}]})
+
+
+def test_the_sentence_and_the_run_agree_on_the_retry_count():
+    """Phase 1 acceptance: change the retry to 2 in the composer; the sentence
+    says 2 and the child's log shows two phone retries before anyone is asked."""
+    service = iteration()
+    session = service.create_session(
+        label="일치", core_item="c", base_policy_id=START,
+        development_decks=[P1_DECK], resource_id=T_RES, max_generations=2)
+    service.command(session.id, "start-agree", "start", blocking=True)
+    saved = service.command(
+        session.id, "save-agree", "save_researcher_change_set",
+        payload={"label": "재연락 2회", "mechanism": "본인 확인 기회를 늘린다",
+                 "rules": [{"ruleType": "retry_before_help",
+                            "after": {"count": 2, "intervalMinutes": 40}}]})["changeSet"]
+    assert "2회" in saved["changes"][0]["afterRule"]
+    service.command(session.id, "confirm-agree", "confirm_change_set",
+                    payload={"changeSetId": saved["id"], "reason": "검사"}, blocking=True)
+    child = service.detail(session.id)["generations"][1]
+    events = service.store.events(child["attemptIds"][0])
+    phone_retries = [e for e in events if e["type"] == "contact.attempted"
+                     and e["payload"].get("channel") == "phone"
+                     and e["payload"].get("toActorId") == "P1"]
+    assert len(phone_retries) == 2, "문장이 말한 횟수와 실제 연락 사건이 같아야 한다"
+    assert child["metrics"]["ruleApplication"][0]["executionStatus"] == "applied"
+
+
+def test_declining_every_change_is_an_explicit_recorded_end():
+    service = iteration()
+    session = service.create_session(
+        label="수정 안 함", core_item="c", base_policy_id=START,
+        development_decks=[P1_DECK], resource_id=T_RES, max_generations=2)
+    service.command(session.id, "start-decline", "start", blocking=True)
+    with pytest.raises(ValueError):
+        service.command(session.id, "decline-noreason", "decline_changes", payload={})
+    service.command(session.id, "decline", "decline_changes",
+                    payload={"reason": "초안이 주민 평가를 설명하지 못한다. 현장에서 먼저 묻는다."})
+    session = service.load(session.id)
+    assert session.status is SessionStatus.ready_for_designer
+    assert session.stopReason == "no_change_this_time"
+    detail = service.detail(session.id)
+    assert len(detail["generations"]) == 1, "아무것도 실행되지 않는다"
+    assert all(row["confirmationStatus"] in ("declined", "not_run")
+               for row in detail["generations"][0]["changeSets"])
+    with pytest.raises(Exception):
+        service.command(session.id, "confirm-after-decline", "confirm_change_set",
+                        payload={"changeSetId": "x", "reason": "r"})
+
+
+def test_confirming_twice_runs_one_child():
+    service = iteration()
+    session = service.create_session(
+        label="중복 확정", core_item="c", base_policy_id=START,
+        development_decks=[P1_DECK], resource_id=T_RES, max_generations=3)
+    service.command(session.id, "start-twice", "start", blocking=True)
+    draft = next(item for item in service.detail(session.id)["generations"][0]["changeSets"]
+                 if item["validationStatus"] == "valid")
+    service.command(session.id, "confirm-1", "confirm_change_set",
+                    payload={"changeSetId": draft["id"], "reason": "r"}, blocking=True)
+    # Same command id, same body: replayed, not re-executed.
+    replay = service.command(session.id, "confirm-1", "confirm_change_set",
+                             payload={"changeSetId": draft["id"], "reason": "r"}, blocking=True)
+    assert replay["deduplicated"] is True
+    # New command id for an already-processed draft: refused.
+    with pytest.raises(Exception):
+        service.command(session.id, "confirm-2", "confirm_change_set",
+                        payload={"changeSetId": draft["id"], "reason": "r"}, blocking=True)
+    generations = service.detail(session.id)["generations"]
+    assert len([g for g in generations if g["index"] == 1]) == 1
 
 
 def test_the_last_generation_is_not_marked_as_the_winner():

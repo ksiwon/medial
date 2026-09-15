@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 import { RUNNING_STATUSES, STATUS_LABELS, type SessionDetail } from '../api/iteration';
-import { Button, Select, Sub, Tag, versionName } from '../ui/primitives';
+import { Button, Hint, Select, Sub, Tag, versionName } from '../ui/primitives';
 import { colour, font } from '../ui/theme';
 
 // The 44 px strip under the header: where the loop is, which version is being
@@ -11,6 +11,37 @@ import { colour, font } from '../ui/theme';
 // are now *read-only progress*: they say where the server is, and pressing them
 // does nothing because they were never actions. And the versions are one
 // select, so adding a fifth generation does not add a fifth button.
+
+const Arrow = styled.span`
+  color: ${colour.border};
+`;
+
+const StepItem = styled.span`
+  display: flex;
+  gap: 6px;
+  align-items: center;
+`;
+
+const Steps = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+
+  /* Narrow, the four stages do not fit and the last visible one was being cut
+     through the middle of a word. Only the stage the loop is actually in is
+     shown; the others are not information the reader can act on. */
+  @media (max-width: 1040px) {
+    > ${StepItem}:not([data-current='true']) {
+      display: none;
+    }
+    ${Arrow} {
+      display: none;
+    }
+  }
+`;
 
 const Bar = styled.div`
   height: 44px;
@@ -24,14 +55,12 @@ const Bar = styled.div`
   font-size: ${font.small};
   color: ${colour.secondary};
   overflow: hidden;
-`;
 
-const Steps = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  overflow: hidden;
+  /* Only the four stage names give way when the bar is narrow; a status or a
+     control that shrinks is one that gets cut in half. */
+  > *:not(${Steps}) {
+    flex: none;
+  }
 `;
 
 const Step = styled.span<{ $state: 'done' | 'current' | 'future' }>`
@@ -39,10 +68,6 @@ const Step = styled.span<{ $state: 'done' | 'current' | 'future' }>`
   color: ${(p) =>
     p.$state === 'current' ? colour.text : p.$state === 'done' ? colour.primary : colour.unknown};
   font-weight: ${(p) => (p.$state === 'current' ? 600 : 400)};
-`;
-
-const Arrow = styled.span`
-  color: ${colour.border};
 `;
 
 const Spacer = styled.span`
@@ -106,7 +131,7 @@ export default function ProgressBar({
 
       <Steps aria-label="반복 진행 상태">
         {STEPS.map((step, index) => (
-          <span key={step.label} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <StepItem key={step.label} data-current={index === activeStep ? 'true' : 'false'}>
             {index > 0 && <Arrow>→</Arrow>}
             <Step
               $state={
@@ -121,7 +146,7 @@ export default function ProgressBar({
             >
               {step.label}
             </Step>
-          </span>
+          </StepItem>
         ))}
       </Steps>
 
@@ -143,11 +168,10 @@ export default function ProgressBar({
         {running ? '실행 중' : STATUS_LABELS[session.status]}
       </Tag>
 
-      {stopReasonText && !running && (
-        <Sub as="span" style={{ whiteSpace: 'nowrap' }}>
-          {stopReasonText}
-        </Sub>
-      )}
+      {/* The stop reason used to sit here as a full sentence with nowrap, which
+          the 44px bar then clipped at narrow widths. It is the same sentence,
+          one click away, and it no longer competes with the status itself. */}
+      {stopReasonText && !running && <Hint label="멈춘 이유">{stopReasonText}</Hint>}
 
       {/* One control, chosen by the state. Playback of the recording is a
           different thing with a different control, down on the map. */}

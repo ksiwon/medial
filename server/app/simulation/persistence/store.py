@@ -23,6 +23,13 @@ from typing import Any
 from .iteration_store import IterationTables
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
+
+#: Written to ``schema_meta`` on open. Bumped when the JSON shape of a stored
+#: record gains fields an older build cannot read (additive only; the DDL is
+#: never changed destructively). ``1`` is everything before 2026-09-15;
+#: ``2`` adds typed ``semantic`` rule changes, rule application records,
+#: staged human reviews and the run manifest.
+SCHEMA_VERSION = "2"
 DEFAULT_DB = REPO_ROOT / "local-data" / "runs" / "simulation.sqlite3"
 
 SCHEMA = """
@@ -167,7 +174,14 @@ class Store(IterationTables):
         self._conn.commit()
 
     def _migrate(self) -> None:
-        """Add columns a database written by an older build does not have."""
+        """Add columns a database written by an older build does not have.
+
+        Additive only, and recorded: ``schema_meta`` carries the version the
+        build that last opened this file wrote. Nothing is dropped or rewritten,
+        so an older build can still open the file - it simply will not
+        understand rows written in a newer JSON shape, which its readers
+        already treat as "이전 형식" rather than as an error.
+        """
         def columns(table: str) -> set[str]:
             return {row["name"] for row in
                     self._conn.execute("PRAGMA table_info(%s)" % table).fetchall()}
@@ -181,6 +195,14 @@ class Store(IterationTables):
                 self._conn.execute(
                     "ALTER TABLE %s ADD COLUMN %s TEXT NOT NULL DEFAULT %s"
                     % (table, column, default))
+        self._conn.execute(
+            "CREATE TABLE IF NOT EXISTS schema_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+        row = self._conn.execute(
+            "SELECT value FROM schema_meta WHERE key = 'schemaVersion'").fetchone()
+        self.previous_schema_version = row["value"] if row else None
+        self._conn.execute(
+            "INSERT OR REPLACE INTO schema_meta (key, value) VALUES ('schemaVersion', ?)",
+            (SCHEMA_VERSION,))
 
     def close(self) -> None:
         self._conn.close()

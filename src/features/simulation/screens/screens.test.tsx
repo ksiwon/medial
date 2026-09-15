@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import attemptFixture from '../../../../fixtures/ui/attempt.json';
 import neighboursFixture from '../../../../fixtures/ui/attempt-neighbours.json';
@@ -13,6 +13,7 @@ import { medialKnowledge, posesAt } from '../positions';
 import { dayChangeLines } from '../selectors/words';
 import { eventsUpTo } from '../store';
 import CompareScreen from './CompareScreen';
+import EvaluationsScreen from './EvaluationsScreen';
 import ObserveScreen from './ObserveScreen';
 
 // Mounting the two data-heavy screens against real API payloads built from the
@@ -40,6 +41,19 @@ const session = sessionFixture as unknown as SessionDetail;
 
 const noop = () => {};
 
+/**
+ * Open a hint and read what it says.
+ *
+ * The screens' careful sentences - what a number is not, which two things the
+ * measure mixes, why a blank is not a zero - now sit behind a "?" next to the
+ * thing they qualify rather than under every cell (2026-09-15). The claim is
+ * still the screen's; a test that wants it asks for it the way a reader does.
+ */
+function hint(label: string): string {
+  fireEvent.click(screen.getByLabelText(`${label} 설명`));
+  return screen.getByRole('tooltip').textContent ?? '';
+}
+
 /** Late in the day, so the log has something in every stage. */
 const CURSOR = events.length;
 
@@ -66,6 +80,8 @@ function observe(overrides: Partial<Parameters<typeof ObserveScreen>[0]> = {}) {
       detailActor="P1"
       personas={personas}
       generation={generation}
+      onNewCase={noop}
+      onReadEvaluations={noop}
       onSetViewMode={noop}
       onSelectCluster={noop}
       onOpenDetail={noop}
@@ -193,16 +209,16 @@ describe('ObserveScreen', () => {
     // The board's per-person number is a count of events up to the cursor, so
     // at the start of the day there is nothing to count. A whole-day total here
     // would show the reader the end of a day they are watching from 08:00.
-    const { container } = observe({ detailActor: null, cursorSeq: 0, visibleEvents: [] });
-    expect(container.textContent).toContain('만족도 점수가');
+    observe({ detailActor: null, cursorSeq: 0, visibleEvents: [] });
+    expect(hint('마을 사람들')).toContain('만족도 점수가 아닙니다');
   });
 
   it('shows the person column for the selected resident, with their own day', () => {
     observe({ detailActor: 'P1' });
     expect(screen.getAllByText(/P1/).length).toBeGreaterThan(0);
     // The satisfaction section is present and says what it is, without a score.
-    expect(screen.getByText('하루를 마친 뒤의 평가')).toBeDefined();
-    expect(screen.getByText(/점수가 아니고/)).toBeDefined();
+    expect(screen.getByText(/하루를 마친 뒤의 평가/)).toBeDefined();
+    expect(hint('하루를 마친 뒤의 평가')).toMatch(/점수가 아니고/);
   });
 
   it('says plainly when there is no recorded speech rather than inventing some', () => {
@@ -227,11 +243,11 @@ describe('CompareScreen', () => {
         onSetSides={noop}
         onOpenScene={noop}
         onConfirmChangeSet={noop}
-        onSaveResearcherChangeSet={noop}
+        onSaveResearcherChangeSet={async () => null}
+        onDeclineChanges={noop}
         onOpenFieldSheet={noop}
         onOpenAllAttempts={noop}
-        decisionReason=""
-        onDecisionReason={noop}
+        onReadEvaluations={noop}
         {...overrides}
       />,
     );
@@ -261,8 +277,7 @@ describe('CompareScreen', () => {
     // does not make.
     compare();
     expect(screen.getByText('누구의 일과가 바뀌었나')).toBeDefined();
-    // One caveat per column, so both sides carry it.
-    expect(screen.getAllByText(/둘을 구분하지 않습니다/).length).toBeGreaterThan(0);
+    expect(hint('누구의 일과가 바뀌었나')).toMatch(/둘을 구분하지 않습니다/);
   });
 
   it('labels a pair with no parent relationship as not a controlled comparison', () => {
@@ -296,8 +311,150 @@ describe('CompareScreen', () => {
     compare();
     const button = screen.queryByText('현장에서 검토할 안 선택');
     if (button) {
-      const region = button.closest('div')!;
-      expect(within(region).getByText(/서비스 도입 승인이 아닙니다/)).toBeDefined();
+      expect(hint('현장 검토 선택')).toMatch(/서비스 도입 승인이 아닙니다/);
     }
+  });
+});
+
+describe('EvaluationsScreen', () => {
+  function evaluations(overrides: Partial<Parameters<typeof EvaluationsScreen>[0]> = {}) {
+    const ordered = [...session.generations].sort((a, b) => a.index - b.index);
+    return render(
+      <EvaluationsScreen
+        detail={session}
+        generation={ordered[0]}
+        personas={personas}
+        onSelectGeneration={noop}
+        onOpenScene={noop}
+        onGoToImprove={noop}
+        {...overrides}
+      />,
+    );
+  }
+
+  it('reads one resident in doc 20 order and calls the evaluation simulated', () => {
+    const { container } = evaluations();
+    const text = container.textContent ?? '';
+    expect(text).toContain('모의 주민 평가');
+    expect(text).toContain('1 · 이번에 무엇을 경험했나');
+    expect(text).toContain('2 · 차원별 평가와 이유');
+    expect(text).toContain('4 · 판단할 수 없는 것');
+    // The four dimension assessments are said in Korean, never as their keys.
+    expect(text).not.toContain('help_resolution');
+    expect(text).not.toMatch(/\bmixed\b/);
+  });
+
+  it('counts items and says so, rather than showing a score', () => {
+    const { container } = evaluations();
+    const text = container.textContent ?? '';
+    expect(text).toContain('평가 항목의 개수');
+    expect(text).not.toMatch(/만족도\s*[0-9]/);
+    expect(text).not.toContain('평균');
+    expect(text).not.toContain('승자');
+  });
+
+  it('keeps 미경험 out of the complaints and says it is an observation', () => {
+    evaluations();
+    expect(hint('읽는 순서')).toContain('미경험과 제안 없음은 불만이 아니므로');
+  });
+
+  it('opens an evaluation item\'s evidence in place and closes back to it', () => {
+    const ordered = [...session.generations].sort((a, b) => a.index - b.index);
+    const review = ordered[0].reviews.find((r) =>
+      r.items.some((i) => i.eventRefs.length > 0),
+    );
+    if (!review) return;
+    evaluations();
+    // The person list is the left column; the same name also appears in the
+    // opened card, so the click target is the list row.
+    fireEvent.click(screen.getAllByText(new RegExp(`^${review.actorId}$`))[0]);
+    const open = screen.getAllByText(/사건 근거 [0-9]+건 보기/)[0];
+    fireEvent.click(open);
+    expect(screen.getAllByText('그 장면 열기').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getAllByText(/사건 근거 [0-9]+건 닫기/)[0]);
+    expect(screen.queryByText('그 장면 열기')).toBeNull();
+  });
+
+  it('shows the original evaluation items an issue was made of', () => {
+    const ordered = [...session.generations].sort((a, b) => a.index - b.index);
+    if ((ordered[0].synthesis?.issueGroups.length ?? 0) === 0) return;
+    const { container } = evaluations();
+    expect(container.textContent).toContain('원본 평가');
+  });
+});
+
+describe('ChangeComposer, through the improve screen', () => {
+  /** The fixture ends after its one pair, so authoring is re-enabled here to
+   *  exercise the composer; the flag is the server's own. */
+  const authoring: SessionDetail = { ...session, canAuthor: true };
+
+  function improve(overrides: Partial<Parameters<typeof CompareScreen>[0]> = {}) {
+    const ordered = [...authoring.generations].sort((a, b) => a.index - b.index);
+    const right = [...ordered].reverse().find((g) => g.parentGenerationId) ?? ordered[0];
+    return render(
+      <CompareScreen
+        detail={authoring}
+        comparison={null}
+        leftId={right.parentGenerationId ?? ordered[0].id}
+        rightId={right.id}
+        busy={false}
+        onSetSides={noop}
+        onOpenScene={noop}
+        onConfirmChangeSet={noop}
+        onSaveResearcherChangeSet={async () => null}
+        onDeclineChanges={noop}
+        onOpenFieldSheet={noop}
+        onOpenAllAttempts={noop}
+        onReadEvaluations={noop}
+        {...overrides}
+      />,
+    );
+  }
+
+  it('offers authoring from the rule catalogue with no draft in hand', () => {
+    improve();
+    expect(screen.getByText('지원 규칙에서 직접 작성')).toBeDefined();
+    fireEvent.click(screen.getByText('지원 규칙에서 직접 작성'));
+    // Typed controls, generated from the server's catalogue.
+    expect(screen.getByText('어떤 규칙을 바꾸나요')).toBeDefined();
+    expect(screen.getByText('바뀌기 전')).toBeDefined();
+  });
+
+  it('has no free-text field for the rule sentence and no binding input', () => {
+    improve();
+    fireEvent.click(screen.getByText('지원 규칙에서 직접 작성'));
+    const text = document.body.textContent ?? '';
+    expect(text).not.toContain('변경 후 Quest/Task 규칙');
+    expect(text).not.toContain('내부 실행값 수정');
+    expect(hint('이유')).toContain('글로 적은 내용이 실행을 바꾸지 않습니다');
+  });
+
+  it('keeps the input and shows the reason when a save is refused', async () => {
+    improve({ onSaveResearcherChangeSet: async () => '재연락 횟수는 0-6 사이여야 한다.' });
+    fireEvent.click(screen.getByText('지원 규칙에서 직접 작성'));
+    const nameBox = screen.getByText('이 수정안의 이름').querySelector('input')!;
+    fireEvent.change(nameBox, { target: { value: '내가 쓴 이름' } });
+    const why = screen.getByLabelText('변경을 시도하는 이유');
+    fireEvent.change(why, { target: { value: '본인 확인 기회를 한 번 더 준다' } });
+    fireEvent.click(screen.getByText('수정안으로 저장 (실행하지 않음)'));
+    await screen.findByText('재연락 횟수는 0-6 사이여야 한다.');
+    expect(screen.getByText(/입력은 그대로 두었습니다/)).toBeDefined();
+    expect((nameBox as HTMLInputElement).value).toBe('내가 쓴 이름');
+  });
+
+  it('offers "이번에는 수정하지 않음" as an explicit end that needs a reason', () => {
+    improve();
+    fireEvent.click(screen.getByText('이번에는 수정하지 않음'));
+    const button = screen.getByText('수정하지 않기로 기록') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+  });
+
+  it('tells "the rule ran" apart from "there was no difference"', () => {
+    const { container } = improve();
+    const text = container.textContent ?? '';
+    expect(text).toContain('바뀐 규칙이 실행됐나');
+    expect(hint('바뀐 규칙이 실행됐나')).toContain(
+      '지원됨 · 적용 상황이 생김 · 실제로 그 분기를 지남',
+    );
   });
 });

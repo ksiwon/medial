@@ -45,6 +45,8 @@ from .decks.registry import DECK_DEFAULTS, DECKS, POLICIES, RESOURCE_SETS
 from .metrics import compare as compare_runs
 from .persistence.store import Store
 from .runner import catalog, log_fingerprint, log_rows, run_attempt, stored_log_rows
+from .case_bundle import build_case
+from .relations import get_relations
 from .village import Village, load_village
 
 
@@ -93,9 +95,20 @@ class SimulationService:
         #: the environment: two attempts that disagreed about the village's
         #: relations are not a controlled pair.
         self.relation_id = relation_id
+        #: Who this community is (26번 C01). One per service instance, because
+        #: a session compares runs within one community; loading another is a
+        #: different service instance, not a setting.
+        self.case = build_case(
+            self.village, relations=get_relations(relation_id),
+            persona_revision=(self.personas_provenance().get("revisionId") or "none"))
         self.policies: dict[str, PolicyRevision] = dict(POLICIES)
         self._runs: dict[str, Any] = {}
         self._restore_policies()
+
+    def personas_provenance(self) -> dict[str, Any]:
+        from .runner import personas as _personas
+
+        return _personas(self.persona_path)[1]
 
     def _restore_policies(self) -> None:
         for row in self.store.list_policies():

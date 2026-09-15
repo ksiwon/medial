@@ -110,6 +110,15 @@ CREATE TABLE IF NOT EXISTS human_reviews (
     submitted_at TEXT NOT NULL,
     review_json TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS disclosure_records (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    package_id TEXT NOT NULL,
+    episode_id TEXT NOT NULL,
+    respondent_id TEXT NOT NULL,
+    disclosed_at TEXT NOT NULL,
+    record_json TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS iteration_commands (
     command_id TEXT PRIMARY KEY,
     session_id TEXT NOT NULL,
@@ -390,8 +399,41 @@ class IterationTables:
     def human_reviews(self, session_id: str) -> list[dict[str, Any]]:
         with self._lock:
             return [json.loads(r["review_json"]) for r in self._conn.execute(
+                # Insertion order breaks the tie, not the id: two answers a
+                # second apart must not be re-ordered into "the comparison came
+                # first", which is the one thing this record exists to show.
                 "SELECT review_json FROM human_reviews WHERE session_id = ?"
-                " ORDER BY submitted_at, id", (session_id,)).fetchall()]
+                " ORDER BY submitted_at, rowid", (session_id,)).fetchall()]
+
+    # -- field protocol ----------------------------------------------------
+    def save_disclosure(self, record: Any) -> None:
+        """When a respondent was shown the simulated evaluation. Insert-only:
+        a disclosure cannot be un-happened, and rewriting one would make an
+        anchored answer look independent."""
+        with self._lock, self._conn:
+            existing = self._conn.execute(
+                "SELECT 1 FROM disclosure_records WHERE id = ?", (record.id,)).fetchone()
+            if existing is not None:
+                raise ArtifactExists("disclosure %s already exists" % record.id)
+            self._conn.execute(
+                "INSERT INTO disclosure_records (id, session_id, package_id, episode_id,"
+                " respondent_id, disclosed_at, record_json) VALUES (?,?,?,?,?,?,?)",
+                (record.id, record.sessionId, record.packageId, record.episodeId,
+                 record.respondentId, record.disclosedAt,
+                 _dumps(record.model_dump(mode="json"))))
+
+    def disclosures(self, session_id: str) -> list[dict[str, Any]]:
+        with self._lock:
+            return [json.loads(r["record_json"]) for r in self._conn.execute(
+                "SELECT record_json FROM disclosure_records WHERE session_id = ?"
+                " ORDER BY disclosed_at, rowid", (session_id,)).fetchall()]
+
+    def disclosure(self, record_id: str) -> dict[str, Any] | None:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT record_json FROM disclosure_records WHERE id = ?",
+                (record_id,)).fetchone()
+        return json.loads(row["record_json"]) if row else None
 
     def human_review_count(self) -> int:
         with self._lock:
@@ -400,6 +442,26 @@ class IterationTables:
         return int(row["n"])
 
     # -- commands ---------------------------------------------------------
+    def find_iteration_command(self, command_id: str, session_id: str,
+                               request: dict[str, Any]) -> dict[str, Any] | None:
+        """The stored result of a command id already used with these exact
+        arguments; a conflict if it was used with different ones; ``None`` if
+        the id is new. Called before a command executes."""
+        from .store import CommandConflict
+
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT session_id, name, request_json, result_json FROM"
+                " iteration_commands WHERE command_id = ?", (command_id,)).fetchone()
+        if row is None:
+            return None
+        stored = json.loads(row["request_json"])
+        if (row["session_id"], row["name"], stored) != (session_id, request["name"], request):
+            raise CommandConflict(
+                "commandId %s was already used for %s/%s with %r"
+                % (command_id, row["session_id"], row["name"], stored))
+        return json.loads(row["result_json"])
+
     def record_iteration_command(self, command_id: str, session_id: str, name: str,
                                  received_at: str, request: dict[str, Any],
                                  result: dict[str, Any]) -> tuple[dict[str, Any], bool]:

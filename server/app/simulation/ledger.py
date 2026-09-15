@@ -145,13 +145,30 @@ def legacy_ledger(resident_ids: list[str], village_head_id: str) -> ElicitationL
 
 
 def locate_ledger(village_path: Path | None) -> Path | None:
+    """The ledger belonging to *this* community.
+
+    Matched on the village file's own suffix first (``village.small-case.json``
+    -> ``ledger.small-case.json``). A plain glob was enough while one community
+    lived in the folder; with two, it handed the second community's ledger to
+    the first, and the loader then refused ids it had never heard of. Which is
+    the right failure, but the wrong question.
+    """
     override = os.environ.get("MEDIAL_LEDGER_PATH")
     if override:
         p = Path(override)
         return p if p.exists() else None
     if village_path is None:
         return None
+    parts = village_path.name.split(".")
+    if len(parts) > 2:
+        paired = village_path.parent / ("ledger." + ".".join(parts[1:]))
+        if paired.exists():
+            return paired
     for candidate in sorted(village_path.parent.glob("ledger*.json")):
+        # Never a ledger that plainly belongs to a differently-named community.
+        other = candidate.name.split(".")
+        if len(other) > 2 and len(parts) > 2 and other[1:] != parts[1:]:
+            continue
         return candidate
     return None
 

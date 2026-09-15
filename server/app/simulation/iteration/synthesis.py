@@ -22,6 +22,7 @@ from typing import Any
 from ..contracts import HEALTH_STAFF
 from .contracts import (
     AgentReview,
+    ExcludedClaim,
     IssueGroup,
     ReviewConflict,
     ReviewDimensionKey as D,
@@ -153,7 +154,8 @@ class RuleSynthesisAdapter:
             objectiveMetrics=objective_metrics,
             noExperienceActors=sorted({r.actorId for r in reviews
                                        if r.usageStatus is UsageStatus.no_experience}),
-            ungroundedClaims=_ungrounded(reviews),
+            ungroundedClaims=[c.claim for c in _excluded(reviews, synthesis_id)],
+            excludedClaims=_excluded(reviews, synthesis_id),
             nextQuestions=sorted(set(requested))[:8],
             createdAt=created_at)
 
@@ -217,17 +219,55 @@ def _conflicts(reviews: list[AgentReview],
     return out
 
 
-def _ungrounded(reviews: list[AgentReview]) -> list[str]:
-    """Graded items with no event behind them.
+def _excluded(reviews: list[AgentReview], synthesis_id: str) -> list[ExcludedClaim]:
+    """Graded items with no event behind them, each pointing at its own item.
 
     Validation refuses these before they are stored, so in a healthy run this is
-    empty. It exists so that a loosened validator would show up here instead of
-    disappearing.
+    empty. It exists so that a loosened validator shows up here instead of
+    disappearing - and so that what was set aside can be read back to the item
+    it came from rather than being a sentence with no origin (26번 F08).
     """
-    out = []
+    out: list[ExcludedClaim] = []
     for review in reviews:
         for index, item in enumerate(review.items):
             if item.assessment != "unknown" and not item.eventRefs:
-                out.append("%s#%d (%s) 근거 사건 없음"
-                           % (review.id, index, item.dimension.value))
+                ref = "%s#%d" % (review.id, index)
+                out.append(ExcludedClaim(
+                    id="exc-%s-%d" % (review.id, index),
+                    claim="%s (%s) 근거 사건 없음" % (ref, item.dimension.value),
+                    reviewItemRefs=[ref],
+                    technicalCheck="no_refs",
+                    # A machine can see there is no reference. Whether the
+                    # sentence is nonetheless supported by something is a
+                    # judgement, and nobody has made it yet.
+                    semanticReview="unreviewed",
+                    labelledBy="none",
+                    reason="평가 항목이 unknown이 아닌데 인용한 사건이 없다."))
+    return out
+
+
+def check_excluded(claims: list[ExcludedClaim],
+                   reviews: list[AgentReview]) -> list[ExcludedClaim]:
+    """Attach the technical half of the judgement to claims from any adapter.
+
+    Says three separable things: whether the cited item exists at all, whether
+    the claim cites nothing (which means the synthesis wrote it itself), and -
+    never - whether the evidence supports the sentence. That last one stays
+    ``unreviewed`` until a person labels it.
+    """
+    known = {"%s#%d" % (r.id, i) for r in reviews for i in range(len(r.items))}
+    out = []
+    for claim in claims:
+        if not claim.reviewItemRefs:
+            out.append(claim.model_copy(update={
+                "technicalCheck": "no_refs",
+                "reason": (claim.reason or "") + (
+                    " 이 주장은 어느 평가 항목도 인용하지 않는다 — 종합이 스스로 만든 "
+                    "주장일 수 있다.").strip()}))
+            continue
+        missing = [ref for ref in claim.reviewItemRefs if ref not in known]
+        out.append(claim.model_copy(update={
+            "technicalCheck": "refs_missing" if missing else "refs_exist",
+            "reason": (claim.reason + (" 존재하지 않는 평가 항목을 가리킨다: %s" % missing
+                                       if missing else "")).strip()}))
     return out

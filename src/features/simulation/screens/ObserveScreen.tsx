@@ -204,6 +204,10 @@ interface Props {
   onStepBack: () => void;
   onRestart: () => void;
   onOpenScene: (attemptId: string, eventId: string) => void;
+  /** Leave this run and set a new case up. The run stays stored. */
+  onNewCase: () => void;
+  /** The day is over: the evaluations are the next thing to read. */
+  onReadEvaluations: () => void;
 }
 
 export default function ObserveScreen({
@@ -234,6 +238,8 @@ export default function ObserveScreen({
   onStepBack,
   onRestart,
   onOpenScene,
+  onNewCase,
+  onReadEvaluations,
 }: Props) {
   const flows = useMemo(() => requestFlows(visibleEvents), [visibleEvents]);
   const [requestId, setRequestId] = useState<string | null>(null);
@@ -301,7 +307,26 @@ export default function ObserveScreen({
         <MapPanel>
           <PanelHead style={{ justifyContent: 'space-between' }}>
             <PanelTitle>은점마을</PanelTitle>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {/* The map column is 460px wide and these five things do not fit
+                on one line there; left to shrink, the two buttons were rendered
+                as columns of single characters (seen in a browser). They wrap
+                instead. */}
+            <div
+              style={{
+                display: 'flex',
+                gap: 8,
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                justifyContent: 'flex-end',
+                minWidth: 0,
+              }}
+            >
+              {/* 실행이 끝나면 다음에 읽을 것은 주민 평가다 (doc 19 9장). 재생
+                  커서와는 다른 컨트롤이며, 재생을 멈추지 않는다. */}
+              {cursorSeq >= eventCount && eventCount > 0 && (
+                <IconButton onClick={onReadEvaluations}>주민 평가 읽기 →</IconButton>
+              )}
+              <IconButton onClick={onNewCase}>새 사례 준비</IconButton>
               <Tag $kind={village.isSynthetic ? 'warn' : 'unknown'}>
                 {village.isSynthetic ? '합성 지도' : '원자료 지형'}
               </Tag>

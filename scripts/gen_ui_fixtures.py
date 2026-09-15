@@ -65,4 +65,19 @@ session = it.create_session(
     development_decks=["deck-p1-no-response-v1"],
     resource_id="assumed-resources-v1", max_generations=2)
 it.command(session.id, "cmd-start", "start", blocking=True)
+
+# Confirm the first valid draft so the fixture carries a parent/child pair: the
+# comparison screen, the rule-application row and the evaluation screen's
+# version picker all need two versions to be exercised at all. The reason below
+# is a fixture's reason, not a research decision.
+detail = api.get("/api/sim/iteration/sessions/%s" % session.id).json()
+generation = next(g for g in detail["generations"]
+                  if g["index"] == detail["session"]["currentGenerationIndex"])
+draft = next((c for c in generation["changeSets"]
+              if c["validationStatus"] == "valid" and c["confirmationStatus"] == "draft"), None)
+if draft is not None:
+    it.command(session.id, "cmd-confirm", "confirm_change_set",
+               payload={"changeSetId": draft["id"],
+                        "reason": "화면 픽스처를 만들기 위한 확정. 연구 판단이 아니다."},
+               blocking=True)
 save("session.json", api.get("/api/sim/iteration/sessions/%s" % session.id).json())

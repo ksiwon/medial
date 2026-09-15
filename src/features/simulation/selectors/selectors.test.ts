@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest';
 import type { DayRealization, DecisionRecord, DomainEvent } from '../api/types';
 import { askedPeople, currentSentence, latestReasoning, requestFlows } from './requests';
 import { hiddenRows, personName, sentenceFor, storyRows, withParticle } from './story';
-import { dayChangeLines, dayLabel, inputName, paramName, ruleName, strategyName } from './words';
+import {
+  dayChangeLines,
+  dayLabel,
+  inputName,
+  paramName,
+  refusalReason,
+  ruleName,
+  strategyName,
+} from './words';
 
 // Behaviour of the two selectors the observe screen is built on.
 //
@@ -392,6 +400,16 @@ describe('words', () => {
     expect(strategyName('neighbour_first')).toBe('가까운 이웃에게 먼저');
     expect(paramName('neighbourAskLimit')).not.toBe('neighbourAskLimit');
     expect(ruleName('too_far')).toBe('너무 멀어서');
+    // The ride path stores its code in `reason` as well as `rule`, so a screen
+    // that trusted `reason` printed driving_status_unknown at the reader.
+    expect(refusalReason('driving_status_unknown', 'driving_status_unknown')).toBe(
+      '운전 여부가 기록에 없음',
+    );
+    expect(refusalReason('asked_too_often', '오늘은 가게를 비울 수 없다')).toBe(
+      '오늘은 가게를 비울 수 없다',
+    );
+    expect(refusalReason('brand_new_code', 'brand_new_code')).toContain('사유가 기록되지 않음');
+    expect(refusalReason(null, null)).toBe('사유가 기록되지 않음');
     expect(inputName('day')).toBe('뽑힌 하루');
   });
 

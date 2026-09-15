@@ -1,0 +1,161 @@
+{
+ "id": "ledger-small-case-v1",
+ "label": "두 번째 합성 공동체 장부 (대부분 안 물어봄)",
+ "entries": [
+  {
+   "actorId": "R1",
+   "topic": "companions",
+   "status": "asked_none",
+   "basis": "합성 사례 설정: '함께 다니는 사람' 문항"
+  },
+  {
+   "actorId": "R1",
+   "topic": "help_contacts",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R1",
+   "topic": "routine_knowers",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R1",
+   "topic": "reachability",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R1",
+   "topic": "decline_conditions",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R2",
+   "topic": "companions",
+   "status": "asked_none",
+   "basis": "합성 사례 설정: '함께 다니는 사람' 문항"
+  },
+  {
+   "actorId": "R2",
+   "topic": "help_contacts",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R2",
+   "topic": "routine_knowers",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R2",
+   "topic": "reachability",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R2",
+   "topic": "decline_conditions",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R3",
+   "topic": "companions",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R3",
+   "topic": "help_contacts",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R3",
+   "topic": "routine_knowers",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R3",
+   "topic": "reachability",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R3",
+   "topic": "decline_conditions",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R4",
+   "topic": "companions",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R4",
+   "topic": "help_contacts",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R4",
+   "topic": "routine_knowers",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R4",
+   "topic": "reachability",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R4",
+   "topic": "decline_conditions",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R5",
+   "topic": "companions",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R5",
+   "topic": "help_contacts",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R5",
+   "topic": "routine_knowers",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R5",
+   "topic": "reachability",
+   "status": "not_asked",
+   "basis": ""
+  },
+  {
+   "actorId": "R5",
+   "topic": "decline_conditions",
+   "status": "not_asked",
+   "basis": ""
+  }
+ ],
+ "routineKnowledge": [],
+ "assumptions": [
+  "이 공동체에는 이장 역할이 없다. 빈집 다음 단계에서 물을 사람이 없는 것은 구현의 한계가 아니라 이 자료의 상태다.",
+  "다섯 항목 중 넷은 아직 묻지 않았다. 빈칸은 '없음'이 아니다."
+ ]
+}

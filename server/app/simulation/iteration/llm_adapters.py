@@ -17,9 +17,12 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from . import semantic_rules
+from .synthesis import check_excluded
 from .contracts import (
     REVIEW_CONTRACT_VERSION,
     AgentReview,
+    ExcludedClaim,
     ChangeSet,
     IssueGroup,
     RuleChange,
@@ -28,7 +31,9 @@ from .contracts import (
     ReviewItem,
     ReviewSynthesis,
     UsageStatus,
+    materialize_change,
 )
+from .semantic_rules import ProposedRule
 from .experience import ActorExperience
 from .llm import PROMPT_VERSION, LlmClient, ModelCallError, ModelResult
 from .reviewers import ReviewAdapterError
@@ -48,10 +53,19 @@ class ReviewOutput(_Out):
     unknowns: list[str] = Field(default_factory=list)
 
 
+class ExcludedClaimOutput(_Out):
+    """A claim the model set aside, and what it says the claim was made of."""
+
+    claim: str
+    reviewItemRefs: list[str] = Field(default_factory=list)
+    eventRefs: list[str] = Field(default_factory=list)
+    reason: str = ""
+
+
 class SynthesisOutput(_Out):
     issueGroups: list[IssueGroup] = Field(default_factory=list)
     conflicts: list[ReviewConflict] = Field(default_factory=list)
-    ungroundedClaims: list[str] = Field(default_factory=list)
+    excludedClaims: list[ExcludedClaimOutput] = Field(default_factory=list)
     nextQuestions: list[str] = Field(default_factory=list)
 
 
@@ -62,7 +76,13 @@ class ChangeSetOutput(_Out):
     issueRefs: list[str] = Field(default_factory=list)
     eventRefs: list[str] = Field(default_factory=list)
     evidenceRefs: list[str] = Field(default_factory=list)
-    changes: list[RuleChange] = Field(default_factory=list)
+    #: Typed rule proposals: a rule type from the catalogue and the values
+    #: after. The server writes the sentences and the bindings from these; the
+    #: model never writes a rule sentence that the run could disagree with.
+    rules: list[ProposedRule] = Field(default_factory=list)
+    #: A change the model wants but the engine has no rule for. Recorded as
+    #: requires_implementation, never executed.
+    unsupportedChange: str | None = None
     expectedEffects: list[str] = Field(default_factory=list)
     possibleRegressions: list[str] = Field(default_factory=list)
     unknowns: list[str] = Field(default_factory=list)
@@ -110,23 +130,30 @@ SYNTHESIS_SYSTEM = f"""너는 여러 행위자의 리뷰를 정리하는 연구 
 리뷰를 실제 주민 의견이라고 부르지 마라. 객관 지표와 모의 평가를 구분하라.
 공통 문제, 소수의 큰 부담, 이해관계 충돌, 미경험 actor, 근거 부족을 모두 보존하라.
 각 이슈에 review item ref("<reviewId>#<index>")와 event id를 붙여라.
+근거가 부족하다고 판단해 제외한 주장은 excludedClaims에 적고, 그 주장이 나온 review item ref를
+반드시 함께 적어라. 어느 리뷰에도 없는 주장을 만들어 낸 뒤 제외했다고 적지 마라.
 리뷰의 원인 설명은 가설이며 대안 설명과 필요한 가정을 함께 적어라.
 다수결로 반대 의견을 지우거나 단일 만족도로 평균내지 마라.
 {DATA_NOT_INSTRUCTIONS}"""
 
-IMPROVEMENT_SYSTEM = f"""너는 세계 밖에서 MEDial의 다음 운영 정책을 제안하는 설계 보조자다.
+IMPROVEMENT_SYSTEM = f"""너는 세계 밖에서 MEDial의 다음 운영 규칙을 제안하는 설계 보조자다.
 너는 세계 안의 MEDial이 아니다. 주민에게 말을 걸거나 사건을 만들 수 없다.
-사용자가 정한 core item, 고정된 평가 기준, Quest/Task 필드와 기능 목록을 지켜라.
-각 Change Set은 어떤 리뷰를 해결하려는지, 사람이 읽는 beforeRule/afterRule, 기대 기제,
+사용자가 정한 core item, 고정된 평가 기준, 그리고 supportedRules에 있는 규칙만 지켜라.
+각 Change Set은 어떤 리뷰를 해결하려는지, 이 변경을 시도하는 이유(mechanism), 기대 기제,
 영향받을 actor, 부작용, 다음에 확인할 항목을 포함한다.
+규칙 변경은 rules[]에 ruleType과 바꿀 값만 적는다. 문장은 서버가 규칙 값에서 만든다.
+값을 적지 않은 매개변수는 현재 값이 유지된다. supportedRules의 current가 현재 값이며,
+applicable이 false인 규칙은 이 사례에서 실행될 상황이 없으므로 제안하지 않는다.
 최대 2개 Change Set 초안만 작성한다. 없으면 changeSets를 비우고 noSupportedChangeReason을 적어라.
-executionBindings의 before 값은 반드시 currentPolicy의 실제 값과 같아야 한다.
+지원되지 않는 변경은 rules를 비우고 unsupportedChange와 requiredCapabilities에 적어라.
 페르소나·초기 기억·deck·평가 기준·비관측 정보·임상 규칙·인력 증원을 수정하지 마라.
-지원되지 않는 기능은 requiredCapabilities에 적고 executionBindings는 비워라.
-Quest는 no-response-welfare-check 또는 medical-transport만, Task는 contact-subject,
-request-welfare-check, arrange-transport, institution-handoff, notify-close만 사용한다.
 다음 세대의 좋은 리뷰나 결과를 미리 만들어내지 마라.
 {DATA_NOT_INSTRUCTIONS}"""
+
+#: Bumped when the improvement prompt or its output shape changes. Separate
+#: from the resident/review prompt version so that a change here does not
+#: invalidate recorded resident answers.
+IMPROVEMENT_PROMPT_VERSION = "medial-improve/2.0.0"
 
 
 def _event_payload(event: dict[str, Any]) -> dict[str, Any]:
@@ -242,6 +269,15 @@ class LlmSynthesisAdapter:
             self._on_call(result.record)
         out = SynthesisOutput.model_validate(result.data)
         minority = [g.id for g in out.issueGroups if g.minority]
+        # The model says what it set aside; the server says whether those
+        # references exist. Whether the evidence supports the sentence is left
+        # unreviewed - a model labelling its own output is not a judgement.
+        excluded = check_excluded([
+            ExcludedClaim(id="exc-%s-%d" % (synthesis_id, index), claim=row.claim,
+                          reviewItemRefs=row.reviewItemRefs, eventRefs=row.eventRefs,
+                          semanticReview="unreviewed", labelledBy="none",
+                          reason=row.reason)
+            for index, row in enumerate(out.excludedClaims)], reviews)
         return ReviewSynthesis(
             id=synthesis_id, sessionId=session_id, generationIndex=generation_index,
             attemptIds=attempt_ids, reviewIds=[r.id for r in reviews], adapter="llm",
@@ -249,7 +285,8 @@ class LlmSynthesisAdapter:
             conflicts=out.conflicts, objectiveMetrics=objective_metrics,
             noExperienceActors=[r.actorId for r in reviews
                                 if r.usageStatus is UsageStatus.no_experience],
-            ungroundedClaims=out.ungroundedClaims, nextQuestions=out.nextQuestions,
+            ungroundedClaims=[c.claim for c in excluded],
+            excludedClaims=excluded, nextQuestions=out.nextQuestions,
             model={"provider": result.record.provider, "model": result.record.model,
                    "callId": result.record.id, "promptVersion": PROMPT_VERSION},
             createdAt=created_at)
@@ -267,18 +304,12 @@ class LlmImprovementAdapter:
                 criteria: list[dict[str, Any]], core_item: str,
                 max_change_sets: int, session_id: str, generation_index: int,
                 created_at: str, id_prefix: str,
-                already_tried: list[str]) -> tuple[list[ChangeSet], str | None]:
+                already_tried: list[str],
+                active_decks: list[str] | None = None) -> tuple[list[ChangeSet], str | None]:
         payload = {
             "coreItem": core_item,
             "currentPolicy": policy,
-            "supportedQuestIds": ["quest:no-response-welfare-check", "quest:medical-transport"],
-            "supportedTaskIds": ["task:contact-subject", "task:request-welfare-check",
-                                 "task:arrange-transport", "task:institution-handoff",
-                                 "task:notify-close"],
-            "supportedRuleFields": ["completion_evidence", "escalation", "fallback",
-                                    "task_flow", "assignment_order", "refusal_reassignment",
-                                    "retry", "quiet_period", "workload_limit", "travel_limit",
-                                    "explanation", "disclosure"],
+            "supportedRules": semantic_rules.catalog(active_decks, policy),
             "supportedCapabilities": capabilities,
             "fixedCriteria": criteria,
             "maxChangeSets": max_change_sets,
@@ -300,21 +331,44 @@ class LlmImprovementAdapter:
 
         change_sets: list[ChangeSet] = []
         for index, item in enumerate(out.changeSets[:max_change_sets], start=1):
+            changes: list[RuleChange] = []
+            problems: list[str] = []
+            for proposed in item.rules:
+                try:
+                    semantic = semantic_rules.build_change(
+                        proposed.ruleType.value, policy, proposed.after_values(policy))
+                except Exception as exc:  # noqa: BLE001 - the model's value, refused
+                    problems.append("%s: %s" % (proposed.ruleType.value, exc))
+                    continue
+                changes.append(materialize_change(semantic))
+            if item.unsupportedChange and not changes:
+                changes.append(RuleChange(
+                    scope="task", target="task_composition_flow",
+                    questId=semantic_rules.QUEST_WELFARE, taskIds=[], field="task_flow",
+                    beforeRule="현재 Task 흐름에는 이 단계가 없다.",
+                    afterRule=item.unsupportedChange))
             change_sets.append(ChangeSet(
                 id="%s-%d" % (id_prefix, index),
                 sessionId=session_id, generationIndex=generation_index,
                 baseRevisionId=policy["id"], label=item.label,
                 reviewItemRefs=item.reviewItemRefs, issueRefs=item.issueRefs,
                 eventRefs=item.eventRefs, evidenceRefs=item.evidenceRefs,
-                mechanism=item.mechanism, changes=item.changes,
+                mechanism=item.mechanism, changes=changes,
                 expectedEffects=item.expectedEffects,
                 possibleRegressions=item.possibleRegressions,
                 unknowns=item.unknowns,
                 affectedActors=item.affectedActors,
-                requiredCapabilities=item.requiredCapabilities,
+                requiredCapabilities=(item.requiredCapabilities
+                                      or (["unsupported"] if item.unsupportedChange
+                                          and not item.rules else [])),
                 watchNext=item.watchNext, author="ai_draft", adapter="llm",
+                # A value the model got wrong is recorded on the draft, so the
+                # validator's rejection reads as the model's mistake and not as
+                # a mysterious empty Change Set.
+                validationErrors=problems,
                 model={"provider": result.record.provider, "model": result.record.model,
-                       "callId": result.record.id, "promptVersion": PROMPT_VERSION},
+                       "callId": result.record.id,
+                       "promptVersion": IMPROVEMENT_PROMPT_VERSION},
                 createdAt=created_at))
         return change_sets, (None if change_sets else
                            (out.noSupportedChangeReason

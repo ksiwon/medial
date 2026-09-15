@@ -27,6 +27,10 @@ export default defineConfig({
   workers: 1,
   timeout: 60_000,
   reporter: [['list']],
+  // shots.spec.ts photographs the screens for slides rather than asserting
+  // claims about them, so the checking run leaves it alone. `npm run shots`
+  // runs it through playwright.shots.config.ts.
+  testIgnore: ['**/shots.spec.ts'],
   use: {
     baseURL: `http://localhost:${WEB_PORT}`,
     viewport: { width: 1440, height: 900 },

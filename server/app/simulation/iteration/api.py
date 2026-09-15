@@ -92,6 +92,28 @@ class HumanReviewBody(BaseModel):
     corrections: list[dict[str, Any]] = Field(default_factory=list)
     agreement: str = "unknown"
     consentScope: str = "unknown"
+    # -- the staged protocol (26번 C06)
+    respondentId: str | None = None
+    respondentRole: str = "self"
+    subjectActorId: str | None = None
+    episodeId: str | None = None
+    reviewItemRefs: list[str] = Field(default_factory=list)
+    responseStage: str = "pre_disclosure"
+    disclosureRecordId: str | None = None
+    correspondence: str | None = None
+    correctionTarget: str | None = None
+    reason: str = ""
+    responseKind: str = "resident_response"
+
+
+class DisclosureBody(BaseModel):
+    """Recording that a respondent has now seen the simulated evaluation."""
+
+    packageId: str
+    episodeId: str
+    respondentId: str
+    disclosedBy: str = "researcher"
+    shownReviewIds: list[str] = Field(default_factory=list)
 
 
 @router.get("/capabilities")
@@ -218,6 +240,23 @@ def submit_human_review(session_id: str, body: HumanReviewBody) -> dict[str, Any
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except ArtifactExists as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post("/sessions/{session_id}/disclosures")
+def record_disclosure(session_id: str, body: DisclosureBody) -> dict[str, Any]:
+    """The hinge of the field protocol: before this, the answer is independent.
+
+    Refused when this respondent has no pre-disclosure answer for the episode,
+    because the comparison the study rests on would then have nothing to
+    compare against.
+    """
+    service = get_iteration_service()
+    try:
+        return service.record_disclosure(session_id, body.model_dump())
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/sessions/{session_id}/human-reviews")

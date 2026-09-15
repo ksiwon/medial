@@ -8,6 +8,7 @@ import { personName, sentenceFor } from '../selectors/story';
 import {
   IconButton,
   Disclosure,
+  Hint,
   Mono,
   Panel,
   PanelHead,
@@ -406,11 +407,13 @@ export default function PersonPanel({
           </Section>
 
           <Section>
-            <SectionTitle>하루를 마친 뒤의 평가</SectionTitle>
-            <Sub>
-              모의 리뷰입니다. 점수가 아니고 실제 주민의 만족도도 아닙니다. 자기가 실제로 겪은
-              사건만 근거로 쓰며, 근거가 없으면 판단 불가로 남습니다.
-            </Sub>
+            <SectionTitle>
+              하루를 마친 뒤의 평가
+              <Hint label="하루를 마친 뒤의 평가">
+                모의 리뷰입니다. 점수가 아니고 실제 주민의 만족도도 아닙니다. 자기가 실제로 겪은
+                사건만 근거로 쓰며, 근거가 없으면 판단 불가로 남습니다.
+              </Hint>
+            </SectionTitle>
 
             {agentReview ? (
               <>
@@ -583,8 +586,11 @@ export default function PersonPanel({
               </div>
             </Disclosure>
             <Sub>
-              이 빌드에 아직 없는 것: 주민과의 자유 대화, 실제 본인·기관 담당자의 검토 입력.
-              요청 사건 수는 만족도를 뜻하지 않으므로 이용 통계로 만들지 않았습니다.
+              이 빌드에 아직 없는 것
+              <Hint label="아직 없는 것">
+                주민과의 자유 대화, 실제 본인·기관 담당자의 검토 입력. 요청 사건 수는 만족도를
+                뜻하지 않으므로 이용 통계로 만들지 않았습니다.
+              </Hint>
             </Sub>
           </Section>
         </Scroll>

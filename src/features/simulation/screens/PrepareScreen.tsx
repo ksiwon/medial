@@ -10,6 +10,7 @@ import {
   Callout,
   Disclosure,
   Field,
+  Hint,
   Input,
   Mono,
   PageTitle,
@@ -158,6 +159,10 @@ interface Props {
   busy: boolean;
   onStart: (body: StartRequest) => void;
   onRetryStart: () => void;
+  /** True when a run already exists, so setting up a new case is a choice
+   *  rather than the only thing on the screen. */
+  canReturn: boolean;
+  onReturn: () => void;
 }
 
 export default function PrepareScreen({
@@ -168,6 +173,8 @@ export default function PrepareScreen({
   busy,
   onStart,
   onRetryStart,
+  canReturn,
+  onReturn,
 }: Props) {
   const policies = useMemo(() => startingPolicies(catalog), [catalog]);
   const [question, setQuestion] = useState(
@@ -178,13 +185,22 @@ export default function PrepareScreen({
   const [basePolicyId, setBasePolicyId] = useState(
     policies.some((p) => p.id === startPolicyId) ? startPolicyId : (policies[0]?.id ?? ''),
   );
-  const [decks, setDecks] = useState<string[]>(catalog.decks.map((d) => d.id));
+  // Only the scenarios this community can run. The catalogue lists every deck
+  // the build ships, including another community's; offering those produced a
+  // session that failed on its first step (found in a browser, 2026-09-15).
+  const runnableDecks = useMemo(
+    () => catalog.decks.filter((d) => capabilities.decks.some((row) => row.id === d.id)),
+    [catalog.decks, capabilities.decks],
+  );
+  const [decks, setDecks] = useState<string[]>(runnableDecks.map((d) => d.id));
   const [resourceId, setResourceId] = useState(
     catalog.resourceSets.find((r) => r.id.includes('transport'))?.id ??
       catalog.resourceSets[0]?.id ??
       '',
   );
-  const [maxGenerations, setMaxGenerations] = useState(3);
+  // 기본은 초기안과 수정안 한 쌍이다 (26번 5장). 더 반복할지는 결과를 보고
+  // 연구자가 명시적으로 시작한다.
+  const [maxGenerations, setMaxGenerations] = useState(2);
   const [maxCandidates, setMaxCandidates] = useState(2);
   const [behaviourAdapter, setBehaviourAdapter] = useState('rule');
   const [reviewAdapter, setReviewAdapter] = useState('rule');
@@ -213,7 +229,7 @@ export default function PrepareScreen({
     blockers.push('LLM 어댑터를 켰습니다. 모델 호출 상한을 1 이상으로 정해 주세요 (0은 무제한).');
 
   const summary = [
-    `초기안 포함 최대 ${maxGenerations}개 버전`,
+    maxGenerations <= 2 ? '초기안과 수정안 한 쌍' : `초기안 포함 최대 ${maxGenerations}개 버전`,
     `시나리오 ${decks.length}개`,
     behaviourAdapter === 'rule' ? '규칙 기반 마을' : 'LLM 마을',
     reviewAdapter === 'rule' ? '규칙 기반 리뷰' : 'LLM 리뷰',
@@ -228,25 +244,37 @@ export default function PrepareScreen({
 
   return (
     <Sheet>
+      {canReturn && (
+        <Row>
+          <TextLink onClick={onReturn}>← 지금 보고 있던 실행으로 돌아가기</TextLink>
+        </Row>
+      )}
+
       <Group>
-        <PageTitle>어떤 서비스를 탐색할까요?</PageTitle>
+        <PageTitle>어떤 사례를 살펴볼까요?</PageTitle>
         <Body style={{ color: colour.secondary }}>
-          마을의 하루를 돌려 보고, 주민 에이전트가 남긴 리뷰를 근거로 운영안을 고쳐 가며 무엇이
-          달라지는지 비교합니다.
+          하루를 돌리고, 주민 평가를 근거로 규칙을 하나 고쳐 다시 돌립니다.
+          <Hint label="이 화면">
+            마을의 하루를 돌려 보고, 주민 에이전트가 남긴 평가를 근거로 운영 규칙을 하나 고쳐
+            다시 돌린 뒤, 무엇이 달라졌고 무엇을 실제 주민에게 물어야 하는지 정리합니다.
+          </Hint>
         </Body>
       </Group>
 
       <Field>
-        탐색할 질문
+        <span>
+          탐색할 질문
+          <Hint label="탐색할 질문">
+            이 문장은 실험을 부르는 이름이자 비교의 기준입니다. 실행 명령으로 해석되지 않으며,
+            여기 적은 말이 자동으로 운영 규칙이 되지도 않습니다. 규칙은 아래 초기 운영안이
+            정합니다.
+          </Hint>
+        </span>
         <Input
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="예: 응답이 없을 때 누구의 시간으로 해결할 것인가"
         />
-        <Sub>
-          이 문장은 실험을 부르는 이름이자 비교의 기준입니다. 실행 명령으로 해석되지 않으며, 여기
-          적은 말이 자동으로 운영 규칙이 되지도 않습니다. 규칙은 아래 초기 운영안이 정합니다.
-        </Sub>
       </Field>
 
       <Field>
@@ -324,10 +352,19 @@ export default function PrepareScreen({
             </Field>
           </Grid>
 
-          <SubHead>시나리오</SubHead>
-          <Sub>이 하루들의 초기 상태·자원·외생 사건을 모든 버전에 똑같이 고정합니다.</Sub>
+          <SubHead>
+            시나리오
+            <Hint label="시나리오">
+              이 하루들의 초기 상태·자원·외생 사건을 모든 버전에 똑같이 고정합니다. 지금 열려
+              있는 공동체
+              {capabilities.case
+                ? ` (${capabilities.case.label}, ${capabilities.case.residentCount}명)`
+                : ''}
+              의 사례만 나옵니다.
+            </Hint>
+          </SubHead>
           <Row style={{ marginTop: 8 }}>
-            {catalog.decks.map((deck) => (
+            {runnableDecks.map((deck) => (
               <label
                 key={deck.id}
                 style={{ fontSize: font.body, display: 'flex', gap: 6, alignItems: 'center' }}
@@ -342,15 +379,18 @@ export default function PrepareScreen({
             ))}
           </Row>
 
-          <SubHead>무엇을 모델이 하는가</SubHead>
-          <Sub>
-            마을을 모델로 돌리면 MEDial 머리와 주민 전원이 모델입니다
-            {capabilities.villageModel
-              ? ` (머리 ${capabilities.villageModel.headModel} · 주민 ${capabilities.villageModel.residentModel})`
-              : ''}
-            . 리뷰와 개선만 모델을 쓰면 hybrid로 표시합니다. 모델 호출이 실패하면 규칙 결과로
-            갈아치우지 않고 그대로 실패로 남깁니다. 호출은 전부 기록되고 재실행은 기록을 재생합니다.
-          </Sub>
+          <SubHead>
+            무엇을 모델이 하는가
+            <Hint label="모델이 하는 일">
+              마을을 모델로 돌리면 MEDial 머리와 주민 전원이 모델입니다
+              {capabilities.villageModel
+                ? ` (머리 ${capabilities.villageModel.headModel} · 주민 ${capabilities.villageModel.residentModel})`
+                : ''}
+              . 리뷰와 개선만 모델을 쓰면 hybrid로 표시합니다. 모델 호출이 실패하면 규칙 결과로
+              갈아치우지 않고 그대로 실패로 남깁니다. 호출은 전부 기록되고 재실행은 기록을
+              재생합니다.
+            </Hint>
+          </SubHead>
           <Grid style={{ marginTop: 12 }}>
             <Field>
               마을의 행동 (MEDial 머리 + 주민)
@@ -403,11 +443,16 @@ export default function PrepareScreen({
             </Sub>
           )}
 
-          <SubHead>Change Set이 다룰 수 있는 범위</SubHead>
+          <SubHead>
+            Change Set이 다룰 수 있는 범위
+            <Hint label="바꾸지 않는 것">
+              페르소나, 인터뷰 근거, 초기 기억, 시나리오, 외생 사건, 평가 기준, 세계 사실,
+              인력·차량 증원은 바꾸지 않습니다.
+            </Hint>
+          </SubHead>
           <Body>
             주민 평가와 연결된 <strong>Quest 완료·인계, Task 흐름·배정·거절, 시간·부담,
-            설명·정보 공개</strong> 규칙만 다룹니다. 페르소나, 인터뷰 근거, 초기 기억, 시나리오,
-            외생 사건, 평가 기준, 세계 사실, 인력·차량 증원은 바꾸지 않습니다.
+            설명·정보 공개</strong> 규칙만 다룹니다.
           </Body>
           <Disclosure>
             <summary>지원하는 Quest·Task·규칙 범위</summary>
@@ -499,9 +544,10 @@ export default function PrepareScreen({
                 ? '실행을 시작하는 중…'
                 : '실험 시작'}
           </Button>
-          <Sub>
-            시작하면 마을 관찰로 넘어가고, 정한 버전 수와 상한 안에서 매번 묻지 않고 진행합니다.
-          </Sub>
+          <Hint label="실험 시작">
+            시작하면 이 화면이 그 하루의 경험으로 바뀌고, 하루가 끝나면 주민 평가로 안내합니다.
+            기본 단위는 초기안과 수정안 한 쌍입니다.
+          </Hint>
         </Row>
       )}
     </Sheet>

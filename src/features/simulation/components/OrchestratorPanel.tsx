@@ -11,10 +11,11 @@ import {
   type RequestFlow,
 } from '../selectors/requests';
 import { personName, storyRows, withParticle } from '../selectors/story';
-import { ruleName } from '../selectors/words';
+import { refusalReason } from '../selectors/words';
 import { formatClock } from '../positions';
 import {
   Disclosure,
+  Hint,
   Mono,
   Panel,
   PanelHead,
@@ -195,8 +196,9 @@ function AskedList({ rows }: { rows: AskedRow[] }) {
               {answer.text}
               {row.answer === 'relayed' && row.passedTo && ` · ${personName(row.passedTo)}`}
             </Tag>
-            {row.reason && <span>{row.reason}</span>}
-            {row.rule && !row.reason && <span>{ruleName(row.rule)}</span>}
+            {(row.reason || row.rule) && (
+              <span>{refusalReason(row.rule, row.reason)}</span>
+            )}
             {row.tableSaid && (
               <Tag $kind="warn" title="원자료 조건으로 만든 거절 표는 이렇게 답했을 것입니다">
                 규칙표라면 {TABLE_WORD[row.tableSaid] ?? row.tableSaid}
@@ -353,7 +355,13 @@ export default function OrchestratorPanel({
               </Section>
 
               <Section>
-                <SectionTitle>누구에게 부탁했고, 뭐라고 했나</SectionTitle>
+                <SectionTitle>
+                  누구에게 부탁했고, 뭐라고 했나
+                  <Hint label="부탁받은 사람">
+                    이 요청의 사건에 실제로 등장한 사람만입니다. 거절 옆의 말은 그 사람이 남긴
+                    사유이고, 점수로 합치지 않습니다.
+                  </Hint>
+                </SectionTitle>
                 {asked.length === 0 ? (
                   <Empty style={{ padding: 0 }}>아직 아무에게도 부탁하지 않았습니다.</Empty>
                 ) : (
@@ -369,10 +377,6 @@ export default function OrchestratorPanel({
                       </Tag>
                     ))}
                 </div>
-                <Sub>
-                  이 요청의 사건에 실제로 등장한 사람만입니다. 거절 옆의 말은 그 사람이 남긴
-                  사유이고, 점수로 합치지 않습니다.
-                </Sub>
               </Section>
 
               <Section>

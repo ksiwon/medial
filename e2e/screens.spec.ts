@@ -4,9 +4,10 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // The three screens, in a real browser, against a real server on the synthetic
-// village. Each assertion is a claim the screen makes about the run - the same
-// rule the mount tests follow - and each screen is photographed into .run/e2e/
-// so a change can be looked at. Nothing under .run/ is committed.
+// village: 사례와 서비스 경험 / 주민 평가 / 개선과 확인. Each assertion is a claim
+// the screen makes about the run - the same rule the mount tests follow - and
+// each screen is photographed into .run/e2e/ so a change can be looked at.
+// Nothing under .run/ is committed.
 
 const SHOTS = resolve(dirname(fileURLToPath(import.meta.url)), '..', '.run', 'e2e', 'screens');
 mkdirSync(SHOTS, { recursive: true });
@@ -14,9 +15,17 @@ mkdirSync(SHOTS, { recursive: true });
 const shot = (page: Page, name: string) =>
   page.screenshot({ path: resolve(SHOTS, `${name}.png`), fullPage: true });
 
+/** Open the "?" beside something and read what it says. The screens keep their
+ *  careful sentences one click from the thing they qualify rather than printed
+ *  under every row, so a reader - and a test - asks for them. */
+async function hint(page: Page, label: string) {
+  await page.getByLabel(`${label} 설명`, { exact: true }).click();
+  return page.getByRole('tooltip');
+}
+
 /** Move the playback cursor to the last event: End on the range input. */
 async function seekToEnd(page: Page) {
-  const range = page.getByLabel('관찰 시점 (사건 번호)');
+  const range = page.getByLabel('관찰 시점 (사건 번호)', { exact: true });
   await range.focus();
   await range.press('End');
 }
@@ -45,7 +54,7 @@ test('관찰: 이웃 우선 정책에서 누가 거절했고 왜인지가 읽힌
   expect(refusals.length).toBeGreaterThan(0);
 
   await page.goto('/');
-  await page.getByRole('button', { name: '마을 관찰' }).click();
+  await page.getByRole('button', { name: '사례와 서비스 경험', exact: true }).click();
   await expect(page.getByText('MEDial · 조율 현황')).toBeVisible();
   await seekToEnd(page);
 
@@ -89,7 +98,7 @@ test('관찰: 정책 D는 재연락을 먼저 하고, 이장에게 가는 이유
   expect(created.ok()).toBeTruthy();
 
   await page.goto('/');
-  await page.getByRole('button', { name: '마을 관찰' }).click();
+  await page.getByRole('button', { name: '사례와 서비스 경험', exact: true }).click();
   await expect(page.getByText('MEDial · 조율 현황')).toBeVisible();
   await seekToEnd(page);
   await page.getByLabel('관찰 시점', { exact: true }).selectOption('medial');
@@ -105,39 +114,216 @@ test('관찰: 정책 D는 재연락을 먼저 하고, 이장에게 가는 이유
   await reasons.locator('xpath=..').screenshot({ path: resolve(SHOTS, 'observe-policy-d-reasons.png') });
 });
 
-test('준비 → 실행 → 비교: 어느 하루였나와 누가 거절했나가 표에 있다', async ({ page }) => {
-  test.setTimeout(180_000);
+test('사례 → 실행 → 주민 평가 → 개선과 확인: 한 바퀴가 실제로 돈다', async ({ page }) => {
+  test.setTimeout(240_000);
   await page.goto('/');
-  await page.getByRole('button', { name: '실험 준비' }).click();
-  await expect(page.getByRole('button', { name: '실험 시작' })).toBeEnabled();
-  await shot(page, 'prepare');
-  await page.getByRole('button', { name: '실험 시작' }).click();
+  await page.getByRole('button', { name: '사례와 서비스 경험', exact: true }).click();
+  // The earlier tests left runs in this database, so the case screen opens on
+  // one of them; setting up a new case is an explicit step.
+  const newCase = page.getByRole('button', { name: '새 사례 준비', exact: true });
+  const start = page.getByRole('button', { name: '실험 시작', exact: true });
+  // Whichever of the two this database leads to has to be on screen before the
+  // choice is made; asking immediately after the click read an empty page and
+  // skipped the step.
+  await expect(newCase.or(start).first()).toBeVisible({ timeout: 30_000 });
+  if (await newCase.count()) await newCase.click();
+  await expect(start).toBeEnabled({ timeout: 20_000 });
+  await shot(page, 'case-setup');
+  await page.getByRole('button', { name: '실험 시작', exact: true }).click();
 
-  // The loop runs offline (no key) and hands back after its versions. The
-  // compare tab becomes reachable as soon as one generation exists.
-  const compare = page.getByRole('button', { name: '결과 비교' });
-  await expect(compare).toBeEnabled({ timeout: 150_000 });
-  // Not before the loop has finished: a version still running has no metrics
-  // yet, and the table would show 미수집 in every row.
-  await expect(page.getByText('실행 중', { exact: true })).toHaveCount(0, { timeout: 150_000 });
-  await compare.click();
+  // The loop stops for the researcher, and the app lands on the evaluations
+  // rather than leaving the reader on the map.
+  // Exact: the experience screen also carries a "주민 평가 읽기 →" button.
+  const evaluations = page.getByRole('button', { name: '주민 평가', exact: true });
+  await expect(page.getByText('실행 중', { exact: true })).toHaveCount(0, { timeout: 180_000 });
+  await expect(evaluations).toBeEnabled({ timeout: 180_000 });
+  await evaluations.click();
+
+  // Screen B: one resident, read in doc 20's order, with no score anywhere.
+  await expect(page.getByText('평가 항목의 개수')).toBeVisible();
+  await expect(page.getByText('1 · 이번에 무엇을 경험했나')).toBeVisible();
+  await expect(page.getByText(/만족도\s*[0-9]/)).toHaveCount(0);
+  await expect(page.getByText('help_resolution')).toHaveCount(0);
+  await shot(page, 'evaluations');
+  // The ordering caveat is one click from the ordering it is about.
+  await expect(await hint(page, '읽는 순서')).toContainText('미경험과 제안 없음은 불만이 아니므로');
+  await shot(page, 'evaluations-hint');
+  await page.keyboard.press('Escape');
+
+  // Evidence opens in place, and closing returns to the same item.
+  const evidence = page.getByText(/사건 근거 [0-9]+건 보기/).first();
+  if (await evidence.count()) {
+    await evidence.click();
+    await expect(page.getByText('그 장면 열기').first()).toBeVisible();
+    await shot(page, 'evaluations-evidence');
+  }
+
+  await page.getByRole('button', { name: '개선과 확인', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '무엇이 달라졌나요?' })).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page.getByText('바꿀 운영 규칙')).toBeVisible({ timeout: 20_000 });
+  // The composer edits *values*, through controls the server's rule catalogue
+  // generated. There is no box for the rule sentence and none for a binding.
+  await page.getByText('지원 규칙에서 직접 작성').click();
+  await expect(page.getByText('어떤 규칙을 바꾸나요')).toBeVisible();
+  await expect(page.getByText('바뀌기 전')).toBeVisible();
+  await expect(page.getByText('내부 실행값 수정')).toHaveCount(0);
+  await expect(await hint(page, '이유')).toContainText(
+    '글로 적은 내용이 실행을 바꾸지 않습니다',
+  );
+  await shot(page, 'improve-composer');
+
+  // Author a change whose sentence and run must agree: two retries.
+  await page.getByLabel('바꿀 규칙', { exact: true }).selectOption('retry_before_help');
+  await page.getByLabel('재연락 횟수', { exact: true }).fill('2');
+  await page.getByLabel('수정안 이름', { exact: true }).fill('본인에게 두 번 더 확인');
+  await page
+    .getByLabel('변경을 시도하는 이유', { exact: true })
+    .fill('이웃의 시간을 쓰기 전에 본인 확인 기회를 늘린다');
+  await page.getByRole('button', { name: '수정안으로 저장 (실행하지 않음)', exact: true }).click();
+
+  // Saving is not executing: still one version until a reason is recorded.
+  await expect(page.getByText(/아직 실행되지 않았고/)).toBeVisible({ timeout: 20_000 });
+  const confirm = page.getByRole('button', { name: '이유를 기록하고 수정안 실행', exact: true });
+  await expect(confirm).toBeDisabled();
+  await page.getByLabel('확정 이유', { exact: true })
+    .fill('주민 평가에서 본인 확인 기회가 없다는 항목이 나왔다');
+  await expect(confirm).toBeEnabled();
+  // The draft about to run is the one just written, not whichever came first.
+  await expect(page.getByText('고른 안: 본인에게 두 번 더 확인')).toBeVisible();
+  await shot(page, 'improve-confirm');
+  await confirm.click();
+
+  // The comparison now has a pair, and says whether the changed rule ran.
+  await expect(page.getByText('바뀐 규칙이 실행됐나')).toBeVisible({ timeout: 180_000 });
+  // And it says which of the three questions was answered, about the rule that
+  // actually ran - not a difference of zero with no explanation.
+  await expect(
+    page.getByText(/적용됨|적용 상황 없었음|판정 불가/).first(),
+  ).toBeVisible({ timeout: 180_000 });
+  await expect(page.getByText(/본인에게 40분 간격으로 2회/).first()).toBeVisible();
   await expect(page.getByText('어느 하루였나')).toBeVisible();
   await expect(page.getByText('누가 거절했나')).toBeVisible();
-  // No score, no winner, no internal key.
-  await expect(page.getByText('persona_condition')).toHaveCount(0);
-  // A version that just ran has a day; only an old stored run may lack one.
-  await expect(page.getByText('하루 기록 없음')).toHaveCount(0);
-  await expect(page.getByText('미수집')).toHaveCount(0);
-  // Only v0 exists: the screen says there is nothing to compare yet, not that
-  // the comparison is uncontrolled.
-  await expect(page.getByText('통제 비교가 아닙니다')).toHaveCount(0);
-  // What the interview never asked is a row of its own, in words, never a key.
   await expect(page.getByText('기록에 없던 것')).toBeVisible();
-  await expect(page.getByText(/부탁하거나 도움을 청하는 사람/).first()).toBeAttached();
+  await expect(page.getByText('persona_condition')).toHaveCount(0);
   await expect(page.getByText(/not_asked|help_contacts/)).toHaveCount(0);
-  await shot(page, 'compare');
-  const gapsRow = page.getByText('기록에 없던 것', { exact: true });
-  await gapsRow.scrollIntoViewIfNeeded();
-  await page.locator('details summary', { hasText: '안 물어봤거나' }).first().click();
-  await gapsRow.locator('xpath=..').screenshot({ path: resolve(SHOTS, 'compare-gaps.png') });
+  // Refusal codes are engine keys too, and the ride path puts them in the
+  // field a sentence is read from (found in a capture, 2026-09-15).
+  await expect(
+    page.getByText(/driving_status_unknown|does_not_drive|asked_too_often|detour_too_long/),
+  ).toHaveCount(0);
+  await shot(page, 'improve-comparison');
+  const applied = page.getByText('바뀐 규칙이 실행됐나');
+  await applied.scrollIntoViewIfNeeded();
+  await applied.locator('xpath=..').screenshot({ path: resolve(SHOTS, 'improve-applied.png') });
+});
+
+test('현장 기록: 공개 전 응답 없이는 공개도 비교도 할 수 없다', async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.goto('/');
+  // Reuse whatever session the previous test left; the field sheet opens from
+  // the improve screen once the loop has stopped.
+  await page.getByRole('button', { name: '개선과 확인', exact: true }).click();
+  const open = page.getByRole('button', { name: '현장에서 검토할 안 선택', exact: true });
+  if (!(await open.count())) {
+    const link = page.getByText('지금까지의 결정 기록 보기');
+    await link.click();
+  } else {
+    await open.click();
+  }
+  await expect(page.getByRole('dialog', { name: '현장 검토 선택' })).toBeVisible();
+  await page.getByLabel('현장 검토 결정 이유', { exact: true })
+    .fill('이 장면을 실제 주민에게 물어본다');
+  await page.getByRole('button', { name: '이 결정으로 기록', exact: true }).click();
+
+  await expect(page.getByText('현장 기록 · 실제 응답')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText('1단계 · 공개 전')).toBeVisible();
+  // Scene titles used to end in the dimension key ("P6 · time_labour").
+  await expect(
+    page.getByRole('dialog').getByText(/time_labour|help_resolution|choice_refusal|reuse_condition/),
+  ).toHaveCount(0);
+  // Before an independent answer exists, there is nothing to disclose against.
+  await expect(page.getByText('모의 평가를 보여 주었음을 기록')).toHaveCount(0);
+  await page.getByLabel('응답자 가명 ID', { exact: true }).fill('R-01');
+  await page.getByLabel('공개 전 응답 내용', { exact: true }).fill('직접 가 봤을 것 같다');
+  await page.getByRole('button', { name: '공개 전 독립 응답으로 저장', exact: true }).click();
+
+  const disclose = page.getByRole('button', { name: '모의 평가를 보여 주었음을 기록', exact: true });
+  await expect(disclose).toBeVisible({ timeout: 30_000 });
+  await shot(page, 'field-stage-1');
+  await disclose.click();
+  await expect(page.getByText('3단계 · 공개 후 비교')).toBeVisible({ timeout: 30_000 });
+  // Explicit disagreement is sayable - the old form had only "일부 일치" - and
+  // what should change is its own question.
+  const compare = page.getByLabel('모의 평가와의 비교', { exact: true });
+  await compare.selectOption('disagreement');
+  await expect(compare).toHaveValue('disagreement');
+  await page.getByLabel('고쳐야 할 것', { exact: true }).selectOption('behaviour_model');
+  await page.getByLabel('공개 후 응답 내용', { exact: true }).fill('그 시간에는 그렇게 하지 않는다');
+  await shot(page, 'field-stage-3');
+  await page.getByRole('button', { name: '공개 후 응답으로 저장', exact: true }).click();
+  // Both records are on file, in order, and the comparison one is marked as a
+  // conflict rather than being folded into "일부 일치".
+  await expect(page.getByText('공개 후').first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/고칠 곳: 주민 행동 모델/)).toBeVisible();
+});
+
+test('세 화면이 1440·1366·800에서 가로로 넘치지 않는다', async ({ page }) => {
+  test.setTimeout(120_000);
+  // Not a stylesheet restatement: a screen that scrolls sideways hides half of
+  // itself, and jsdom cannot see it. The widths are the ones doc 26 section 5
+  // asks about; the loop's own data comes from whatever the earlier tests left.
+  await page.goto('/');
+  for (const width of [1440, 1366, 800]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const screenName of ['사례와 서비스 경험', '주민 평가', '개선과 확인']) {
+      const nav = page.getByRole('button', { name: screenName, exact: true });
+      if (await nav.isDisabled()) continue;
+      await nav.click();
+      await page.waitForTimeout(150);
+      const overflow = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        innerWidth: window.innerWidth,
+      }));
+      expect(
+        overflow.scrollWidth,
+        `${screenName} @ ${width}px: 가로 스크롤이 생겼다`,
+      ).toBeLessThanOrEqual(overflow.innerWidth);
+    }
+    await page.screenshot({ path: resolve(SHOTS, `width-${width}.png`), fullPage: false });
+  }
+});
+
+test('키보드만으로 세 화면과 평가 근거에 닿는다', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  // Wait for the workspace to load: a disabled screen name is not focusable,
+  // and tabbing before the session is restored would be a different test.
+  await expect(page.getByRole('button', { name: '개선과 확인', exact: true })).toBeEnabled({
+    timeout: 60_000,
+  });
+  await page.locator('body').click({ position: { x: 2, y: 2 } });
+  // Tab from the top: the three screen names are the first stops, in order.
+  const reached: string[] = [];
+  for (let i = 0; i < 12 && reached.length < 3; i += 1) {
+    await page.keyboard.press('Tab');
+    const label = await page.evaluate(() => document.activeElement?.textContent ?? '');
+    if (['사례와 서비스 경험', '주민 평가', '개선과 확인'].includes(label)) reached.push(label);
+  }
+  expect(reached).toEqual(['사례와 서비스 경험', '주민 평가', '개선과 확인']);
+
+  // Enter on a focused screen name navigates, and the evidence link inside an
+  // evaluation is reachable and operable without a pointer.
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: '무엇이 달라졌나요?' })).toBeVisible();
+  await page.getByRole('button', { name: '주민 평가', exact: true }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: '주민 평가' })).toBeVisible();
+  const evidence = page.getByText(/사건 근거 [0-9]+건 보기/).first();
+  if (await evidence.count()) {
+    await evidence.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByText('그 장면 열기').first()).toBeVisible();
+  }
 });

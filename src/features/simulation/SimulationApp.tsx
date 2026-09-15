@@ -2,11 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import styled from 'styled-components';
 import ComparePanel from './components/ComparePanel';
 import FieldSheet from './components/FieldSheet';
-import FindingPanel from './components/FindingPanel';
 import GenerationPanel from './components/GenerationPanel';
-import PolicyEditor from './components/PolicyEditor';
 import ProgressBar from './components/ProgressBar';
 import CompareScreen from './screens/CompareScreen';
+import EvaluationsScreen from './screens/EvaluationsScreen';
 import ObserveScreen from './screens/ObserveScreen';
 import PrepareScreen from './screens/PrepareScreen';
 import { useIterationStore, type Screen } from './iterationStore';
@@ -26,13 +25,21 @@ import { colour, font, radius } from './ui/theme';
 
 // Three screens, and the shell that holds them.
 //
-// The six research steps of doc 12 have not gone anywhere - the loop still runs
-// cycle, review, synthesis, Change Set validation, and researcher confirmation on the
-// server, and ProgressBar shows where it is. What changed is that they are no
-// longer six things to click. Reviews live at the bottom of the observe screen
-// when the day ends; improvement, generations and the field decision live in the
-// comparison; the manual A/B method and design findings stay available as a
-// secondary flow, because doc 12 wants the two methods comparable.
+//   사례와 서비스 경험 - the village, the conditions this comparison fixes, the
+//                        run, and the scenes an evaluation cites;
+//   주민 평가          - where the loop lands when a day ends (doc 19 section 9);
+//   개선과 확인        - the change, its confirmation, the before/after, and the
+//                        field record.
+//
+// The six research steps of doc 12 still run in that order on the server and
+// ProgressBar says where the loop is; they are not six things to click.
+//
+// Removed on 2026-09-15 (26번 F10): the manual A/B flow, the standalone policy
+// editor and "apply this finding", because each was a *second* way to create a
+// revision and an attempt. One new-execution path now exists - confirm a Change
+// Set - and the research condition RQ2 compares is a read-only difference in
+// what the same run offers, not the presence of an old feature. Stored findings
+// and every past attempt remain readable under 고급.
 
 const Root = styled.div`
   position: relative;
@@ -50,14 +57,23 @@ const Root = styled.div`
 `;
 
 const Header = styled.header`
-  height: 56px;
+  min-height: 56px;
   flex: none;
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 0 20px;
+  padding: 8px 20px;
   border-bottom: 1px solid ${colour.border};
   background: ${colour.surface};
+
+  /* Narrow, the three screen names and the badges were competing for one row
+     and the nav was clipped under the wordmark (seen at 800px in a browser).
+     The header takes a second row instead, and the badges - which are context,
+     not navigation - drop off first. */
+  @media (max-width: 900px) {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
 `;
 
 const Brand = styled.div`
@@ -69,10 +85,16 @@ const Brand = styled.div`
 const Nav = styled.nav`
   display: flex;
   gap: 4px;
+
+  @media (max-width: 900px) {
+    order: 3;
+    width: 100%;
+  }
 `;
 
 const NavItem = styled.button<{ $active: boolean }>`
   font-family: inherit;
+  white-space: nowrap;
   font-size: ${font.body};
   border: none;
   background: ${(p) => (p.$active ? colour.selected : 'transparent')};
@@ -118,24 +140,10 @@ const SecondaryInner = styled.div`
 `;
 
 const NAV: { key: Screen; label: string }[] = [
-  { key: 'prepare', label: '실험 준비' },
-  { key: 'observe', label: '마을 관찰' },
-  { key: 'compare', label: '결과 비교' },
+  { key: 'case', label: '사례와 서비스 경험' },
+  { key: 'evaluations', label: '주민 평가' },
+  { key: 'improve', label: '개선과 확인' },
 ];
-
-/** The transport deck's policies are the ``policy-T-*`` family; everything else
- *  belongs to the check-in deck. Revisions inherit their parent's prefix. */
-function policyFitsDeck(policyId: string, deckId: string): boolean {
-  const transport = policyId.startsWith('policy-T-');
-  return deckId.includes('transport') ? transport : !transport;
-}
-
-function resourceFor(deckId: string, sets: { id: string }[]): string {
-  const match = sets.find((r) =>
-    deckId.includes('transport') ? r.id.includes('transport') : !r.id.includes('transport'),
-  );
-  return match ? match.id : (sets[0]?.id ?? '');
-}
 
 export default function SimulationApp() {
   const s = useSimStore();
@@ -150,8 +158,12 @@ export default function SimulationApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // The audit comparison of two stored attempts is a read; it is refreshed only
+  // while that advanced view is open.
   useEffect(() => {
-    if (it.compareView === 'manual') void s.refreshComparison();
+    if (it.compareView === 'all_generations' && s.compareIds.length >= 2) {
+      void s.refreshComparison();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [it.compareView, s.compareIds.join(',')]);
 
@@ -236,8 +248,14 @@ export default function SimulationApp() {
   }
 
   const screen = it.screen;
-  const canObserve = loaded != null;
-  const canCompare = (it.detail?.generations.length ?? 0) > 0;
+  const hasRun = loaded != null;
+  const hasEvaluations = (it.detail?.generations ?? []).some((g) => g.reviews.length > 0);
+  // The case screen is either setting a run up or reading the one that ran.
+  // Unpinned, it follows the workspace: a stored run opens as the run.
+  const caseView =
+    it.caseView === 'auto' ? (hasRun ? 'experience' : 'setup')
+      : it.caseView === 'experience' && hasRun ? 'experience'
+        : 'setup';
 
   return (
     <Root>
@@ -250,13 +268,14 @@ export default function SimulationApp() {
               $active={screen === item.key}
               aria-current={screen === item.key ? 'page' : undefined}
               disabled={
-                (item.key === 'observe' && !canObserve) || (item.key === 'compare' && !canCompare)
+                (item.key === 'evaluations' && !hasEvaluations) ||
+                (item.key === 'improve' && !it.detail)
               }
               title={
-                item.key === 'observe' && !canObserve
-                  ? '먼저 실험을 시작하세요'
-                  : item.key === 'compare' && !canCompare
-                    ? '비교할 버전이 아직 없습니다'
+                item.key === 'evaluations' && !hasEvaluations
+                  ? '아직 이 사례의 주민 평가가 없습니다'
+                  : item.key === 'improve' && !it.detail
+                    ? '먼저 사례를 하나 실행하세요'
                     : undefined
               }
               onClick={() => it.setScreen(item.key)}
@@ -267,7 +286,8 @@ export default function SimulationApp() {
         </Nav>
         <span style={{ flex: 1 }} />
         {it.detail && (
-          <Sub as="span" style={{ whiteSpace: 'nowrap' }}>
+          <Sub as="span" style={{ whiteSpace: 'nowrap', overflow: 'hidden',
+                                  textOverflow: 'ellipsis', maxWidth: 360 }}>
             {it.detail.session.label}
           </Sub>
         )}
@@ -279,7 +299,7 @@ export default function SimulationApp() {
 
       {/* The loop's own progress, on every screen where a loop exists. Its
           controls are the run's; the map's playback bar is the recording's. */}
-      {it.detail && screen !== 'prepare' && (
+      {it.detail && !(screen === 'case' && caseView === 'setup') && (
         <ProgressBar
           detail={it.detail}
           viewGenerationId={it.viewGenerationId}
@@ -323,7 +343,7 @@ export default function SimulationApp() {
         </Notices>
       )}
 
-      {screen === 'prepare' &&
+      {screen === 'case' && caseView === 'setup' &&
         (it.capabilities ? (
           <Secondary>
             <PrepareScreen
@@ -334,58 +354,66 @@ export default function SimulationApp() {
               busy={it.busy}
               onStart={(body) => void it.startExperiment(body)}
               onRetryStart={() => void it.retryStart()}
+              canReturn={hasRun}
+              onReturn={() => it.setCaseView('experience')}
             />
           </Secondary>
         ) : (
           <Notices>
-            <Callout>반복 기능 정보를 불러오는 중입니다.</Callout>
+            <Callout>사례 정보를 불러오는 중입니다.</Callout>
           </Notices>
         ))}
 
-      {screen === 'observe' &&
-        (loaded ? (
-          <ObserveScreen
-            village={s.village}
-            detail={loaded.detail}
-            poses={poses}
-            visibleEvents={visible}
-            allEvents={loaded.events}
-            medialKnown={medialKnown}
-            reservations={reservations}
-            viewMode={s.viewMode}
-            cursorSeq={s.cursorSeq}
-            eventCount={loaded.detail.attempt.eventCount}
-            atMs={s.atMs}
-            playing={s.playing}
-            selectedCluster={s.selectedCluster}
-            selectedActor={s.selectedActor}
-            detailActor={s.detailActor}
-            personas={s.personas}
-            generation={viewGeneration}
-            onSetViewMode={s.setViewMode}
-            onSelectCluster={s.selectCluster}
-            onOpenDetail={s.setDetailActor}
-            onPlay={() => void s.play()}
-            onPause={() => void s.pause()}
-            onSeek={(seq) => void s.seekToSeq(seq)}
-            onStep={() => void s.step()}
-            onStepBack={() => void s.stepBack()}
-            onRestart={() => void s.restart()}
-            onOpenScene={(attemptId, eventId) => void it.openScene(attemptId, eventId)}
-          />
-        ) : (
-          <Notices>
-            <Callout>
-              <div>
-                아직 관찰할 하루가 없습니다.{' '}
-                <TextLink onClick={() => it.setScreen('prepare')}>실험 준비</TextLink>에서 실험을
-                시작하세요.
-              </div>
-            </Callout>
-          </Notices>
-        ))}
+      {screen === 'case' && caseView === 'experience' && loaded && (
+        <ObserveScreen
+          village={s.village}
+          detail={loaded.detail}
+          poses={poses}
+          visibleEvents={visible}
+          allEvents={loaded.events}
+          medialKnown={medialKnown}
+          reservations={reservations}
+          viewMode={s.viewMode}
+          cursorSeq={s.cursorSeq}
+          eventCount={loaded.detail.attempt.eventCount}
+          atMs={s.atMs}
+          playing={s.playing}
+          selectedCluster={s.selectedCluster}
+          selectedActor={s.selectedActor}
+          detailActor={s.detailActor}
+          personas={s.personas}
+          generation={viewGeneration}
+          onSetViewMode={s.setViewMode}
+          onSelectCluster={s.selectCluster}
+          onOpenDetail={s.setDetailActor}
+          onPlay={() => void s.play()}
+          onPause={() => void s.pause()}
+          onSeek={(seq) => void s.seekToSeq(seq)}
+          onStep={() => void s.step()}
+          onStepBack={() => void s.stepBack()}
+          onRestart={() => void s.restart()}
+          onOpenScene={(attemptId, eventId) => void it.openScene(attemptId, eventId)}
+          onNewCase={() => it.setCaseView('setup')}
+          onReadEvaluations={() => it.setScreen('evaluations')}
+        />
+      )}
 
-      {screen === 'compare' && it.detail && (
+      {screen === 'evaluations' && it.detail && (
+        <EvaluationsScreen
+          detail={it.detail}
+          generation={viewGeneration ?? it.detail.generations[0] ?? null}
+          personas={s.personas}
+          onSelectGeneration={(id) => {
+            it.setViewGeneration(id);
+            const generation = it.detail?.generations.find((g) => g.id === id);
+            if (generation?.attemptIds[0]) void s.setActive(generation.attemptIds[0]);
+          }}
+          onOpenScene={(attemptId, eventId) => void it.openScene(attemptId, eventId)}
+          onGoToImprove={() => it.setScreen('improve')}
+        />
+      )}
+
+      {screen === 'improve' && it.detail && (
         <>
           {it.compareView === 'summary' && (
             <CompareScreen
@@ -397,119 +425,77 @@ export default function SimulationApp() {
               onSetSides={it.setCompareSides}
               onOpenScene={(attemptId, eventId) => void it.openScene(attemptId, eventId)}
               onConfirmChangeSet={(id, reason) => void it.confirmChangeSet(id, reason)}
-              onSaveResearcherChangeSet={(body) => void it.saveResearcherChangeSet(body)}
+              onSaveResearcherChangeSet={(body) => it.saveResearcherChangeSet(body)}
+              onDeclineChanges={(reason) => void it.declineChanges(reason)}
               onOpenFieldSheet={() => it.setFieldSheet(true)}
               onOpenAllAttempts={() => it.setCompareView('all_generations')}
-              decisionReason={decisionReason}
-              onDecisionReason={setDecisionReason}
+              onReadEvaluations={() => it.setScreen('evaluations')}
             />
           )}
 
-          {/* Every version's table, and the manual A/B method, as the secondary
-              flow they are. Both are still fully runnable research methods; they
-              are simply not the default screen. */}
+          {/* Advanced, read-only: every version's row and the attempt-level
+              audit comparison. Nothing here starts a run. */}
           {it.compareView !== 'summary' && (
             <Secondary>
               <SecondaryInner>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <TextLink onClick={() => it.setCompareView('summary')}>← 결과 비교로</TextLink>
+                  <TextLink onClick={() => it.setCompareView('summary')}>← 개선과 확인으로</TextLink>
                   <span style={{ flex: 1 }} />
-                  <Select
-                    aria-label="추가 도구"
-                    style={{ maxWidth: 260 }}
-                    value={it.compareView}
-                    onChange={(e) => it.setCompareView(e.target.value as 'all_generations' | 'manual')}
-                  >
-                    <option value="all_generations">전체 시도 보기 (모든 버전 표)</option>
-                    <option value="manual">직접 비교 방식 (수동 A/B · 발견 기록)</option>
-                  </Select>
+                  <Sub as="span">고급 · 읽기 전용</Sub>
                 </div>
 
-                {it.compareView === 'all_generations' &&
-                  (it.comparison ? (
-                    <GenerationPanel
-                      comparison={it.comparison}
-                      viewGenerationId={it.viewGenerationId}
-                      onSelect={(id) => {
-                        it.setViewGeneration(id);
-                        const generation = it.detail?.generations.find((g) => g.id === id);
-                        if (generation?.attemptIds[0]) void s.setActive(generation.attemptIds[0]);
-                      }}
-                    />
-                  ) : (
-                    <Callout>아직 비교할 버전이 없습니다.</Callout>
-                  ))}
+                {it.comparison ? (
+                  <GenerationPanel
+                    comparison={it.comparison}
+                    viewGenerationId={it.viewGenerationId}
+                    onSelect={(id) => {
+                      it.setViewGeneration(id);
+                      const generation = it.detail?.generations.find((g) => g.id === id);
+                      if (generation?.attemptIds[0]) void s.setActive(generation.attemptIds[0]);
+                    }}
+                  />
+                ) : (
+                  <Callout>아직 비교할 버전이 없습니다.</Callout>
+                )}
 
-                {it.compareView === 'manual' && (
-                  <>
-                    <Callout>
-                      <div>
-                        <strong>직접 비교 방식</strong>
-                        <div style={{ marginTop: 4 }}>
-                          반복 루프와는 다른 연구 방법입니다. 시도를 손으로 골라 비교하고 발견을
-                          기록합니다. 두 방법을 방법론으로서 비교할 수 있도록 그대로 남겨 두었습니다.
-                        </div>
-                      </div>
-                    </Callout>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {s.catalog.attempts.slice(-12).map((attempt) => (
-                        <Button
-                          key={attempt.id}
-                          $pressed={s.compareIds.includes(attempt.id)}
-                          style={{ minHeight: 32, fontSize: font.small }}
-                          onClick={() => s.toggleCompare(attempt.id)}
-                        >
-                          {attempt.label || attempt.id}
-                        </Button>
-                      ))}
-                      <Select
-                        aria-label="다른 시나리오·정책 실행"
-                        style={{ minHeight: 32, fontSize: font.small, maxWidth: 260 }}
-                        value=""
-                        disabled={s.busy}
-                        onChange={(e) => {
-                          const choice = e.target.value;
-                          if (!choice) return;
-                          const [policyId, deckId, resourceId] = choice.split('|');
-                          void s.runPolicy(policyId, deckId, resourceId);
-                          e.target.value = '';
-                        }}
-                      >
-                        <option value="">+ 다른 시나리오·정책 실행…</option>
-                        {s.catalog.decks.map((deck) => (
-                          <optgroup key={deck.id} label={deck.label}>
-                            {s.catalog!.policies
-                              .filter((p) => policyFitsDeck(p.id, deck.id))
-                              .map((p) => (
-                                <option
-                                  key={p.id}
-                                  value={`${p.id}|${deck.id}|${resourceFor(deck.id, s.catalog!.resourceSets)}`}
-                                >
-                                  {p.label}
-                                </option>
-                              ))}
-                          </optgroup>
-                        ))}
-                      </Select>
+                <Callout>
+                  <div>
+                    <strong>시도 단위 감사 조회</strong>
+                    <div style={{ marginTop: 4 }}>
+                      저장된 시도 두 개를 골라 입력·정책·결과 차이를 읽습니다. 여기서는 아무것도
+                      실행되지 않습니다.
                     </div>
+                  </div>
+                </Callout>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {s.catalog.attempts.slice(-12).map((attempt) => (
+                    <Button
+                      key={attempt.id}
+                      $pressed={s.compareIds.includes(attempt.id)}
+                      style={{ minHeight: 32, fontSize: font.small }}
+                      onClick={() => s.toggleCompare(attempt.id)}
+                    >
+                      {attempt.label || attempt.id}
+                    </Button>
+                  ))}
+                </div>
+                {s.comparison ? (
+                  <ComparePanel comparison={s.comparison} />
+                ) : (
+                  <Callout>비교하려면 위에서 시도를 두 개 이상 고르세요.</Callout>
+                )}
 
-                    {s.comparison ? (
-                      <ComparePanel comparison={s.comparison} />
-                    ) : (
-                      <Callout>비교하려면 위에서 시도를 두 개 이상 고르세요.</Callout>
-                    )}
-
-                    {loaded && (
-                      <FindingPanel
-                        findings={s.findings}
-                        compareIds={s.compareIds}
-                        coreItem={loaded.detail.policy.coreItem}
-                        busy={s.busy}
-                        onCreate={(body) => void s.createFinding(body)}
-                        onApply={s.beginApplyFinding}
-                      />
-                    )}
-                  </>
+                {s.findings.length > 0 && (
+                  <Disclosure>
+                    <summary>기록된 발견 {s.findings.length}건 (읽기 전용 이력)</summary>
+                    <div>
+                      {s.findings.map((finding) => (
+                        <Sub key={finding.id}>
+                          <Mono>{finding.id}</Mono> — {finding.observation} → {finding.nextChange}
+                        </Sub>
+                      ))}
+                    </div>
+                  </Disclosure>
                 )}
 
                 {loaded && (
@@ -543,30 +529,11 @@ export default function SimulationApp() {
           onClose={() => it.setFieldSheet(false)}
           onDecide={(body) => void it.decide(body)}
           onSubmitHuman={(body) => void it.submitHumanReview(body)}
+          onRecordDisclosure={(body) => void it.recordDisclosure(body)}
           onOpenScene={(attemptId, eventId) => void it.openScene(attemptId, eventId)}
         />
       )}
 
-      {s.editorOpen && loaded && (
-        <PolicyEditor
-          detail={loaded.detail}
-          catalog={s.catalog}
-          cursorSeq={s.cursorSeq}
-          cursorClockMs={s.atMs}
-          busy={s.busy}
-          onRerun={(edit) =>
-            s.pendingFinding
-              ? void s.applyFinding('rerun', undefined, edit)
-              : void s.rerun(loaded.detail.attempt.id, edit)
-          }
-          onFork={(atSeq, edit) =>
-            s.pendingFinding
-              ? void s.applyFinding('fork', atSeq, edit)
-              : void s.forkAt(loaded.detail.attempt.id, atSeq, edit)
-          }
-          onClose={() => s.setEditorOpen(false)}
-        />
-      )}
     </Root>
   );
 }

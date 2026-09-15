@@ -124,3 +124,21 @@ def test_opening_it_twice_is_not_a_different_upgrade(legacy):
     second = Store(legacy)
     second.close()
     assert _tables(legacy) == before
+
+
+def test_an_old_database_gets_a_schema_version_without_losing_rows(tmp_path):
+    """The pre-MAS fixture has no ``schema_meta``; opening it records the
+    current version, keeps its rows, and a second open reads the version back."""
+    import shutil
+    from app.simulation.persistence.store import SCHEMA_VERSION, Store
+    target = tmp_path / "old.sqlite3"
+    shutil.copy(LEGACY_DB, target)
+    store = Store(target)
+    assert store.previous_schema_version is None
+    assert store._conn.execute(
+        "SELECT value FROM schema_meta WHERE key='schemaVersion'").fetchone()["value"] == SCHEMA_VERSION
+    assert store._conn.execute("SELECT COUNT(*) AS n FROM attempts").fetchone()["n"] >= 1
+    store.close()
+    again = Store(target)
+    assert again.previous_schema_version == SCHEMA_VERSION
+    again.close()

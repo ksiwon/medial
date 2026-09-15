@@ -1,23 +1,25 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import styled from 'styled-components';
+import ChangeComposer from '../components/ChangeComposer';
 import {
   DIMENSION_LABELS,
   USAGE_LABELS,
-  type ChangeSet,
   type GenerationComparison,
   type GenerationDetail,
+  type RuleApplicationRecord,
   type SessionDetail,
   type UsageStatus,
 } from '../api/iteration';
 import { nameList, personName, withParticle } from '../selectors/story';
 import { conditionDiff, versionFacts, type Measure, type VersionFacts } from '../selectors/versionFacts';
-import { inputName, paramName, paramValue, ruleName } from '../selectors/words';
+import { inputName, paramName, paramValue, refusalReason } from '../selectors/words';
 import {
   Body,
   Button,
   Callout,
   Disclosure,
   HScroll,
+  Hint,
   Input,
   Mono,
   PageTitle,
@@ -33,13 +35,23 @@ import {
 } from '../ui/primitives';
 import { colour, font } from '../ui/theme';
 
-// Screen C: two versions, side by side, with the reason the second one exists.
+// Screen C, 개선과 확인: the change, its confirmation, what actually changed,
+// and the questions to take to the field.
+//
+// Three acts, in the order the research loop runs them:
+//
+//   1 the issue and the change    - ChangeComposer, which owns authoring,
+//                                   saving, declining and confirming;
+//   2 what changed                - the before/after table, plus whether the
+//                                   changed rule *ran* at all (26번 F06);
+//   3 what to ask the residents   - the field sheet.
 //
 // What this screen refuses to do is as much of its design as what it shows. No
 // combined satisfaction score - the criteria have no shared unit. No percentage
 // the runs did not measure. No trophy and no automatic adoption: the primary
 // button at the end selects something *to take to the field*, which is a
-// research decision, not a deployment.
+// research decision, not a deployment. And a difference of zero is never
+// reported as "no effect" without saying whether the rule was reached.
 
 const Sheet = styled.div`
   flex: 1;
@@ -123,18 +135,36 @@ const Bad = styled.li`
   line-height: 1.6;
 `;
 
+/**
+ * A row label carrying its own caveat.
+ *
+ * Each of these rows has a sentence that keeps it honest - what the minutes mix
+ * together, why a blank is not a zero, that the counts are not a score. Printed
+ * under every cell, those sentences were most of the table's text and the
+ * numbers were the part you had to hunt for (2026-09-15). The sentence is the
+ * same, said once per row rather than twice, and it opens on the label.
+ */
+function RowLabel({ children, hint }: { children: string; hint?: ReactNode }) {
+  return (
+    <>
+      {children}
+      {hint ? <Hint label={children}>{hint}</Hint> : null}
+    </>
+  );
+}
+
 function show(measure: Measure): string {
   if (measure.value === null) return '미수집';
   return Number.isInteger(measure.value) ? String(measure.value) : measure.value.toFixed(1);
 }
 
-function measureCell(measure: Measure) {
+function measureCell(measure: Measure, sameBasis: boolean) {
   return (
     <>
       <strong style={{ color: measure.value === null ? colour.unknown : colour.text }}>
         {show(measure)}
       </strong>
-      <Label style={{ marginTop: 2, marginBottom: 0 }}>{measure.basis}</Label>
+      {!sameBasis && <Label style={{ marginTop: 2, marginBottom: 0 }}>{measure.basis}</Label>}
     </>
   );
 }
@@ -158,9 +188,6 @@ function usageCell(facts: VersionFacts) {
           {USAGE_LABELS[key]} <strong>{facts.usage[key]}</strong>명
         </span>
       ))}
-      <Label style={{ marginBottom: 0, marginTop: 2 }}>
-        시뮬레이션 기간 내 · 미경험과 제안 없음을 따로 셉니다
-      </Label>
     </div>
   );
 }
@@ -209,10 +236,6 @@ function burdenCell(facts: VersionFacts) {
           )}
         </span>
       )}
-      <Label style={{ marginBottom: 0, marginTop: 2 }}>
-        분 · 원래 일과에서 벗어난 시간입니다. 도와준 이웃과 도움을 받은 본인이 같은 값에
-        들어갑니다 — 이 지표는 둘을 구분하지 않습니다.
-      </Label>
     </div>
   );
 }
@@ -228,13 +251,10 @@ function refusalCell(facts: VersionFacts) {
       {facts.refusals.map((row) => (
         <span key={`${row.actorId}-${row.atMs}-${row.requestId ?? ''}`}>
           <strong>{personName(row.actorId)}</strong> {row.kind === 'deferred' ? '나중에' : '거절'}
-          {row.reason ? ` — ${row.reason}` : ` — ${ruleName(row.rule)}`}
+          {` — ${refusalReason(row.rule, row.reason)}`}
           {!row.seenByMedial && <Tag $kind="unknown" style={{ marginLeft: 6 }}>MEDial은 모름</Tag>}
         </span>
       ))}
-      <Label style={{ marginBottom: 0, marginTop: 2 }}>
-        거절 표에서 걸린 줄 하나가 곧 사유입니다. 합산 점수가 아닙니다.
-      </Label>
     </div>
   );
 }
@@ -278,9 +298,7 @@ function elicitationCell(facts: VersionFacts) {
           </div>
         </Disclosure>
       )}
-      <Label style={{ marginBottom: 0, marginTop: 2 }}>
-        빈칸은 '없음'이 아니라 '모름'입니다. 장부 {ledgerId}.
-      </Label>
+      <Label style={{ marginBottom: 0, marginTop: 2 }}>장부 {ledgerId}</Label>
     </div>
   );
 }
@@ -325,10 +343,7 @@ function reviewCell(facts: VersionFacts) {
         <Tag $kind="negative">부정 {c.negative}</Tag>
         <Tag $kind="unknown">판단 불가 {c.unknown}</Tag>
       </Row>
-      <Label style={{ marginBottom: 0 }}>
-        평가 항목 수입니다. 점수가 아니고 실제 주민 만족도가 아닙니다. 이 하루에 서비스를 만나지
-        않은 사람 {c.noExperience}명.
-      </Label>
+      <Label style={{ marginBottom: 0 }}>미경험 {c.noExperience}명</Label>
     </div>
   );
 }
@@ -342,12 +357,12 @@ interface Props {
   onSetSides: (left: string | null, right: string | null) => void;
   onOpenScene: (attemptId: string, eventId: string) => void;
   onConfirmChangeSet: (changeSetId: string, reason: string) => void;
-  onSaveResearcherChangeSet: (body: Record<string, unknown>) => void;
+  /** Resolves to the server's refusal text, so the composer can keep its input. */
+  onSaveResearcherChangeSet: (body: Record<string, unknown>) => Promise<string | null>;
+  onDeclineChanges: (reason: string) => void;
   onOpenFieldSheet: () => void;
   onOpenAllAttempts: () => void;
-  /** Researcher confirmation reason, held by the caller so it survives refreshes. */
-  decisionReason: string;
-  onDecisionReason: (value: string) => void;
+  onReadEvaluations: () => void;
 }
 
 export default function CompareScreen({
@@ -360,12 +375,11 @@ export default function CompareScreen({
   onOpenScene,
   onConfirmChangeSet,
   onSaveResearcherChangeSet,
+  onDeclineChanges,
   onOpenFieldSheet,
   onOpenAllAttempts,
-  decisionReason,
-  onDecisionReason,
+  onReadEvaluations,
 }: Props) {
-  const [editor, setEditor] = useState<ResearcherEditor | null>(null);
   const generations = useMemo(
     () => [...detail.generations].sort((a, b) => a.index - b.index),
     [detail.generations],
@@ -381,8 +395,7 @@ export default function CompareScreen({
           <PageTitle>무엇이 달라졌나요?</PageTitle>
           <Callout>
             <div>
-              아직 비교할 버전이 없습니다. 마을 관찰에서 첫 하루가 끝나고 개선안이 실행되면 여기에
-              나타납니다.
+              아직 읽을 버전이 없습니다. 사례와 서비스 경험에서 하루를 실행하면 여기에 나타납니다.
             </div>
           </Callout>
         </Inner>
@@ -427,17 +440,21 @@ export default function CompareScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [left, right]);
 
-  const confirmationPoint = useMemo(
-    () => [...generations].reverse().find((generation) =>
-      generation.changeSets.some(
-        (item) => item.validationStatus === 'valid' && item.confirmationStatus === 'draft',
-      ),
-    ) ?? null,
-    [generations],
+  // The generation the composer works on: the one the loop is currently
+  // reading, which is where a new Change Set may be authored even when it
+  // produced no usable draft (26번 F03).
+  const composerGeneration = useMemo(
+    () =>
+      generations.find((g) => g.index === detail.session.currentGenerationIndex) ??
+      generations[generations.length - 1] ??
+      null,
+    [generations, detail.session.currentGenerationIndex],
   );
-  const drafts = confirmationPoint?.changeSets.filter(
+  const drafts = (composerGeneration?.changeSets ?? []).filter(
     (item) => item.validationStatus === 'valid' && item.confirmationStatus === 'draft',
-  ) ?? [];
+  );
+  // Did the rule that was confirmed actually run in the right-hand version?
+  const application: RuleApplicationRecord[] = right.metrics.ruleApplication ?? [];
 
   return (
     <Sheet>
@@ -553,6 +570,48 @@ export default function CompareScreen({
               </tr>
 
               <tr>
+                <td>
+                  <RowLabel
+                    hint="지원됨 · 적용 상황이 생김 · 실제로 그 분기를 지남은 서로 다른 질문입니다. 차이가 0인 것과 그 규칙이 발동할 상황이 없었던 것은 다른 결과입니다.">
+                    바뀐 규칙이 실행됐나
+                  </RowLabel>
+                </td>
+                <td colSpan={2}>
+                  {/* "차이 0"과 "그 규칙이 발동할 상황이 없었다"는 다른 결과다.
+                      이 행이 없으면 디자이너는 전자를 후자로 읽는다 (26번 F06). */}
+                  {application.length === 0 ? (
+                    <span style={{ color: colour.unknown }}>
+                      이 버전에는 규칙 적용 기록이 없습니다 (예전 실행이거나 확정된 변경이
+                      없습니다).
+                    </span>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {application.map((row, index) => (
+                        <div key={`${row.ruleType}-${row.attemptId}-${index}`}>
+                          <Tag
+                            $kind={
+                              row.executionStatus === 'applied'
+                                ? 'positive'
+                                : row.executionStatus === 'not_reached'
+                                  ? 'warn'
+                                  : 'unknown'
+                            }
+                          >
+                            {row.executionStatus === 'applied'
+                              ? '적용됨'
+                              : row.executionStatus === 'not_reached'
+                                ? '적용 상황 없었음'
+                                : '판정 불가'}
+                          </Tag>{' '}
+                          {row.label ?? row.ruleType} — {row.reason}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </td>
+              </tr>
+
+              <tr>
                 <td>요청 해결 / 미해결</td>
                 <td>
                   <strong>
@@ -573,10 +632,28 @@ export default function CompareScreen({
               </tr>
 
               <tr>
-                <td>해결까지 걸린 시간</td>
-                <td>{measureCell(leftFacts.meanWaitMinutes)}</td>
                 <td>
-                  {measureCell(rightFacts.meanWaitMinutes)}
+                  <RowLabel
+                    hint={
+                      leftFacts.meanWaitMinutes.basis === rightFacts.meanWaitMinutes.basis
+                        ? leftFacts.meanWaitMinutes.basis
+                        : `${leftFacts.meanWaitMinutes.basis} / ${rightFacts.meanWaitMinutes.basis}`
+                    }
+                  >
+                    해결까지 걸린 시간
+                  </RowLabel>
+                </td>
+                <td>
+                  {measureCell(
+                    leftFacts.meanWaitMinutes,
+                    leftFacts.meanWaitMinutes.basis === rightFacts.meanWaitMinutes.basis,
+                  )}
+                </td>
+                <td>
+                  {measureCell(
+                    rightFacts.meanWaitMinutes,
+                    leftFacts.meanWaitMinutes.basis === rightFacts.meanWaitMinutes.basis,
+                  )}
                   {leftFacts.meanWaitMinutes.value !== null &&
                     rightFacts.meanWaitMinutes.value !== null && (
                       <Tag
@@ -604,25 +681,41 @@ export default function CompareScreen({
               </tr>
 
               <tr>
-                <td>누구의 일과가 바뀌었나</td>
+                <td>
+                  <RowLabel hint="분 단위로, 원래 일과에서 벗어난 시간입니다. 도와준 이웃과 도움을 받은 본인이 같은 값에 들어갑니다 — 이 지표는 둘을 구분하지 않습니다.">
+                    누구의 일과가 바뀌었나
+                  </RowLabel>
+                </td>
                 <td>{burdenCell(leftFacts)}</td>
                 <td>{burdenCell(rightFacts)}</td>
               </tr>
 
               <tr>
-                <td>누가 거절했나</td>
+                <td>
+                  <RowLabel hint="걸린 줄 하나가 곧 사유입니다. 합산 점수가 아닙니다.">
+                    누가 거절했나
+                  </RowLabel>
+                </td>
                 <td>{refusalCell(leftFacts)}</td>
                 <td>{refusalCell(rightFacts)}</td>
               </tr>
 
               <tr>
-                <td>기록에 없던 것</td>
+                <td>
+                  <RowLabel hint="빈칸은 '없음'이 아니라 '모름'입니다. 인터뷰에서 안 물어본 것이 마을에 없는 것은 아닙니다.">
+                    기록에 없던 것
+                  </RowLabel>
+                </td>
                 <td>{elicitationCell(leftFacts)}</td>
                 <td>{elicitationCell(rightFacts)}</td>
               </tr>
 
               <tr>
-                <td>서비스 이용</td>
+                <td>
+                  <RowLabel hint="시뮬레이션 기간 안의 수치입니다. 미경험과 제안 없음을 따로 셉니다.">
+                    서비스 이용
+                  </RowLabel>
+                </td>
                 <td>
                   {usageCell(leftFacts)}
                   <Label style={{ marginTop: 4, marginBottom: 0 }}>
@@ -641,7 +734,11 @@ export default function CompareScreen({
               </tr>
 
               <tr>
-                <td>주민 에이전트 리뷰</td>
+                <td>
+                  <RowLabel hint="평가 항목의 개수입니다. 점수가 아니고 실제 주민 만족도가 아닙니다.">
+                    주민 에이전트 리뷰
+                  </RowLabel>
+                </td>
                 <td>{reviewCell(leftFacts)}</td>
                 <td>{reviewCell(rightFacts)}</td>
               </tr>
@@ -717,9 +814,7 @@ export default function CompareScreen({
                   supports. Both are the difference between a finding and a
                   guess, so neither is folded away silently. */}
               <Disclosure>
-                <summary>
-                  다르게 설명할 수 있는 것 · 근거가 약한 주장 · 이해관계 충돌
-                </summary>
+                <summary>대안 설명 · 약한 근거 · 충돌</summary>
                 <div>
                   {(left.synthesis?.issueGroups ?? [])
                     .filter((issue) => issue.alternativeExplanations.length > 0)
@@ -813,10 +908,13 @@ export default function CompareScreen({
                   있습니다).
                 </span>
               )}
-              <Sub>
-                초안은 세계 밖 개선 에이전트가 만들 수 있지만, 연구자가 이유와 함께 확정한 뒤에만
-                MEDial의 다음 운영 조건으로 실행됩니다.
-              </Sub>
+              <Row style={{ gap: 2 }}>
+                <Sub as="span">확정 권한</Sub>
+                <Hint label="확정 권한">
+                  초안은 세계 밖 개선 에이전트가 만들 수 있지만, 연구자가 이유와 함께 확정한
+                  뒤에만 MEDial의 다음 운영 조건으로 실행됩니다.
+                </Hint>
+              </Row>
             </Link_>
             <Link_>
               <Label>4 · 실제로 바뀐 것과 결과 차이</Label>
@@ -830,173 +928,42 @@ export default function CompareScreen({
                 <span style={{ color: colour.unknown }}>기록된 조건 차이 없음</span>
               )}
               {left.synthesis?.nextQuestions.length ? (
-                <Sub style={{ marginTop: 4 }}>
-                  아직 답하지 못한 것: {left.synthesis.nextQuestions.join(' · ')}
-                </Sub>
+                <Disclosure>
+                  <summary>아직 답하지 못한 것 {left.synthesis.nextQuestions.length}건</summary>
+                  <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
+                    {left.synthesis.nextQuestions.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                </Disclosure>
               ) : null}
             </Link_>
           </Chain>
         </div>
 
-        {needsConfirmation && drafts.length === 0 && (
-          <Callout $tone="warn">
-            <div>
-              <strong>확인이 필요한 상태인데 실행할 Change Set을 찾지 못했습니다.</strong>
-              <div style={{ marginTop: 4 }}>
-                서버는 <Mono>awaiting_confirmation</Mono>에서 멈춰 있습니다. 실행을 중지한 뒤
-                주민 평가와 Change Set 기록을 확인하세요.
-              </div>
-              <div style={{ marginTop: 12 }}>
-                <Button onClick={onOpenAllAttempts}>전체 시도 보기</Button>
-              </div>
-            </div>
-          </Callout>
+        {composerGeneration && (detail.canAuthor || drafts.length > 0) && (
+          <ChangeComposer
+            generation={composerGeneration}
+            drafts={drafts}
+            busy={busy}
+            canAuthor={detail.canAuthor}
+            onSave={onSaveResearcherChangeSet}
+            onConfirm={onConfirmChangeSet}
+            onDecline={onDeclineChanges}
+            onOpenScene={onOpenScene}
+          />
         )}
 
-        {needsConfirmation && drafts.length > 0 && (
-          <Callout $tone="warn">
-            <div style={{ width: '100%' }}>
-              <strong>실행할 MEDial Change Set을 연구자가 확정해야 합니다.</strong>
+        {!detail.canAuthor && drafts.length === 0 && !detail.running && (
+          <Callout>
+            <div>
+              <strong>지금은 새 수정안을 작성할 수 없습니다.</strong>
               <div style={{ marginTop: 4 }}>
-                아래 초안은 아직 실행되지 않았습니다. 주민 평가 근거와 예상 부담을 확인하세요.
+                {detail.stopReasonText ?? '실행이 끝난 상태입니다.'} 다음 반복은 이 버전을
+                기준으로 새 사례를 준비해 시작합니다.
               </div>
-              {confirmationPoint && (
-                <Sub style={{ marginTop: 4 }}>
-                  {versionName(confirmationPoint.index, confirmationPoint.label)}의 주민 평가에서 나온 초안입니다.
-                </Sub>
-              )}
-              <Sides style={{ marginTop: 12 }}>
-                {drafts.map((changeSet) => (
-                  <div key={changeSet.id}>
-                    <strong>{changeSet.label}</strong>
-                    <Body style={{ marginTop: 4 }}>{changeSet.mechanism}</Body>
-                    {changeSet.changes.map((change) => (
-                      <div key={`${change.questId}-${change.field}`} style={{ marginTop: 6 }}>
-                        <Tag $kind="neutral">{change.scope === 'quest' ? 'Quest' : 'Task'}</Tag>{' '}
-                        {change.beforeRule} → <strong>{change.afterRule}</strong>
-                      </div>
-                    ))}
-                    {changeSet.expectedEffects.length > 0 && (
-                      <Sub>기대: {changeSet.expectedEffects.join(' · ')}</Sub>
-                    )}
-                    {changeSet.possibleRegressions.length > 0 && (
-                      <Sub style={{ color: colour.error }}>
-                        가능한 부담: {changeSet.possibleRegressions.join(' · ')}
-                      </Sub>
-                    )}
-                    {changeSet.affectedActors.length > 0 && (
-                      <Sub>영향: {nameList(changeSet.affectedActors)}</Sub>
-                    )}
-                    <div style={{ marginTop: 8 }}>
-                      <Button
-                        $primary
-                        disabled={busy || decisionReason.trim().length === 0}
-                        title={
-                          decisionReason.trim().length === 0
-                            ? '아래에 확정 이유를 적어야 실행할 수 있습니다'
-                            : undefined
-                        }
-                        onClick={() => onConfirmChangeSet(changeSet.id, decisionReason.trim())}
-                      >
-                        확정하고 새 revision 실행
-                      </Button>
-                      <TextLink
-                        style={{ marginLeft: 12 }}
-                        onClick={() => setEditor(makeEditor(changeSet, true))}
-                      >
-                        이 초안 직접 수정
-                      </TextLink>
-                      <TextLink
-                        style={{ marginLeft: 12 }}
-                        onClick={() => setEditor(makeEditor(changeSet, false))}
-                      >
-                        새 연구자 가설로 작성
-                      </TextLink>
-                    </div>
-                  </div>
-                ))}
-              </Sides>
-              {editor && (
-                <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${colour.border}` }}>
-                  <SectionTitle>
-                    {editor.sourceChangeSetId ? '초안 수정본' : '새 연구자 가설'}
-                  </SectionTitle>
-                  <Sub style={{ marginTop: 4 }}>
-                    저장하면 새 Change Set이 됩니다. 원본과 실행 기록은 덮어쓰지 않습니다.
-                  </Sub>
-                  <Label style={{ marginTop: 12 }}>이름</Label>
-                  <Input
-                    value={editor.label}
-                    onChange={(e) => setEditor({ ...editor, label: e.target.value })}
-                  />
-                  <Label style={{ marginTop: 10 }}>변경 원리</Label>
-                  <TextArea
-                    value={editor.mechanism}
-                    onChange={(e) => setEditor({ ...editor, mechanism: e.target.value })}
-                  />
-                  {editor.afterRules.map((rule, index) => (
-                    <div key={`rule-${index}`}>
-                      <Label style={{ marginTop: 10 }}>변경 후 Quest/Task 규칙 {index + 1}</Label>
-                      <TextArea
-                        value={rule}
-                        onChange={(e) => setEditor({
-                          ...editor,
-                          afterRules: editor.afterRules.map((item, i) => i === index ? e.target.value : item),
-                        })}
-                      />
-                    </div>
-                  ))}
-                  <Disclosure style={{ marginTop: 10 }}>
-                    <summary>기술 세부사항 · 내부 실행값 수정</summary>
-                    {Object.entries(editor.bindingValues).map(([key, value]) => (
-                      <div key={key}>
-                        <Label style={{ marginTop: 10 }}>{paramName(key)} · 실행값</Label>
-                        <Input
-                          value={value}
-                          onChange={(e) => setEditor({
-                            ...editor,
-                            bindingValues: { ...editor.bindingValues, [key]: e.target.value },
-                          })}
-                        />
-                      </div>
-                    ))}
-                  </Disclosure>
-                  <Label style={{ marginTop: 10 }}>기대 효과 (한 줄에 하나)</Label>
-                  <TextArea
-                    value={editor.expectedEffects}
-                    onChange={(e) => setEditor({ ...editor, expectedEffects: e.target.value })}
-                  />
-                  <Label style={{ marginTop: 10 }}>가능한 부담 (한 줄에 하나)</Label>
-                  <TextArea
-                    value={editor.possibleRegressions}
-                    onChange={(e) => setEditor({ ...editor, possibleRegressions: e.target.value })}
-                  />
-                  <Label style={{ marginTop: 10 }}>다음 실행에서 볼 것 (한 줄에 하나)</Label>
-                  <TextArea
-                    value={editor.watchNext}
-                    onChange={(e) => setEditor({ ...editor, watchNext: e.target.value })}
-                  />
-                  <Row style={{ marginTop: 12 }}>
-                    <Button
-                      $primary
-                      disabled={busy || !editor.label.trim() || !editor.mechanism.trim() || editor.afterRules.some((x) => !x.trim())}
-                      onClick={() => {
-                        onSaveResearcherChangeSet(editorPayload(editor));
-                        setEditor(null);
-                      }}
-                    >
-                      연구자 Change Set으로 저장
-                    </Button>
-                    <Button onClick={() => setEditor(null)}>취소</Button>
-                  </Row>
-                </div>
-              )}
-              <div style={{ marginTop: 12 }}>
-                <Label>왜 이 변경을 실행하는지 (기록에 남습니다)</Label>
-                <TextArea
-                  value={decisionReason}
-                  onChange={(e) => onDecisionReason(e.target.value)}
-                />
+              <div style={{ marginTop: 8 }}>
+                <TextLink onClick={onReadEvaluations}>주민 평가 다시 읽기</TextLink>
               </div>
             </div>
           </Callout>
@@ -1006,13 +973,15 @@ export default function CompareScreen({
           <div>
             {loopFinished ? (
               <>
-                <Button $primary onClick={onOpenFieldSheet}>
-                  현장에서 검토할 안 선택
-                </Button>
-                <Sub style={{ marginTop: 6 }}>
-                  고르는 것은 현장에서 물어볼 운영안입니다. 서비스 도입 승인이 아닙니다. 유지·보류·
-                  기각도 여기서 기록합니다.
-                </Sub>
+                <Row style={{ gap: 2 }}>
+                  <Button $primary onClick={onOpenFieldSheet}>
+                    현장에서 검토할 안 선택
+                  </Button>
+                  <Hint label="현장 검토 선택">
+                    고르는 것은 현장에서 물어볼 운영안입니다. 서비스 도입 승인이 아닙니다.
+                    유지·보류·기각도 여기서 기록합니다.
+                  </Hint>
+                </Row>
               </>
             ) : (
               <Sub>
@@ -1029,68 +998,16 @@ export default function CompareScreen({
           <TextLink onClick={onOpenAllAttempts}>전체 시도 보기 ({generations.length}개 버전)</TextLink>
         </Row>
 
-        <Sub>
-          운영안을 더 바꾸고 싶으면 고른 버전을 기준으로 실험 준비로 돌아가 새 실험을 만듭니다.
-          기존 결과는 덮어쓰지 않습니다.
-        </Sub>
+        <Row style={{ gap: 2 }}>
+          <Sub as="span">더 바꾸고 싶다면</Sub>
+          <Hint label="더 바꾸고 싶다면">
+            고른 버전을 기준으로 사례와 서비스 경험에서 새 실험을 만듭니다. 기존 결과는 덮어쓰지
+            않습니다.
+          </Hint>
+        </Row>
       </Inner>
     </Sheet>
   );
-}
-
-interface ResearcherEditor {
-  templateChangeSetId: string;
-  sourceChangeSetId: string | null;
-  label: string;
-  mechanism: string;
-  afterRules: string[];
-  bindingValues: Record<string, string>;
-  bindingOriginals: Record<string, unknown>;
-  expectedEffects: string;
-  possibleRegressions: string;
-  watchNext: string;
-}
-
-function makeEditor(changeSet: ChangeSet, supersede: boolean): ResearcherEditor {
-  const bindings = changeSet.changes.flatMap((change) => change.executionBindings);
-  return {
-    templateChangeSetId: changeSet.id,
-    sourceChangeSetId: supersede ? changeSet.id : null,
-    label: supersede ? changeSet.label : `${changeSet.label} · 연구자 가설`,
-    mechanism: changeSet.mechanism,
-    afterRules: changeSet.changes.map((change) => change.afterRule),
-    bindingValues: Object.fromEntries(bindings.map((binding) => [binding.key, String(binding.after)])),
-    bindingOriginals: Object.fromEntries(bindings.map((binding) => [binding.key, binding.after])),
-    expectedEffects: changeSet.expectedEffects.join('\n'),
-    possibleRegressions: changeSet.possibleRegressions.join('\n'),
-    watchNext: changeSet.watchNext.join('\n'),
-  };
-}
-
-function editorPayload(editor: ResearcherEditor): Record<string, unknown> {
-  return {
-    templateChangeSetId: editor.templateChangeSetId,
-    sourceChangeSetId: editor.sourceChangeSetId,
-    label: editor.label.trim(),
-    mechanism: editor.mechanism.trim(),
-    afterRules: editor.afterRules.map((item) => item.trim()),
-    bindingValues: Object.fromEntries(Object.entries(editor.bindingValues).map(([key, value]) => {
-      const original = editor.bindingOriginals[key];
-      if (typeof original === 'number') return [key, Number(value)];
-      if (typeof original === 'boolean') return [key, value.trim().toLowerCase() === 'true'];
-      if (Array.isArray(original)) {
-        try { return [key, JSON.parse(value)]; } catch { return [key, value.split(',').map((x) => x.trim())]; }
-      }
-      return [key, value.trim()];
-    })),
-    expectedEffects: lines(editor.expectedEffects),
-    possibleRegressions: lines(editor.possibleRegressions),
-    watchNext: lines(editor.watchNext),
-  };
-}
-
-function lines(value: string): string[] {
-  return value.split('\n').map((line) => line.trim()).filter(Boolean);
 }
 
 function ProblemList({ items, empty }: { items: string[]; empty: string }) {

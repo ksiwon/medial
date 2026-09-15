@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import type { DomainEvent, ViewMode, VillagePayload } from '../api/types';
 import { placeLabel, type ActorPose, type MedialKnown } from '../positions';
 import { personName } from '../selectors/story';
-import { Panel, PanelHead, PanelTitle, Scroll, Sub, Tag } from '../ui/primitives';
+import { Hint, Panel, PanelHead, PanelTitle, Scroll, Sub, Tag } from '../ui/primitives';
 import { colour, font } from '../ui/theme';
 import { FaceChip } from './Marks';
 
@@ -138,6 +138,10 @@ export default function PeopleBoard({
     <Panel>
       <PanelHead style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
         <PanelTitle>마을 사람들</PanelTitle>
+        <Hint label="마을 사람들">
+          한 사람을 누르면 그 사람의 하루가 열립니다. 지금은 이 시점의 상태이고, 오른쪽 숫자는 이
+          시점까지 그 사람이 겪거나 전달받은 사건 수입니다. 만족도 점수가 아닙니다.
+        </Hint>
         <Sub as="span">
           {medial
             ? 'MEDial이 보고받은 것만'
@@ -146,10 +150,6 @@ export default function PeopleBoard({
               : '모두 원래 일과대로'}
         </Sub>
       </PanelHead>
-
-      <Sub style={{ padding: '8px 16px 0' }}>
-        한 사람을 누르면 그 사람의 하루가 열립니다. 지금은 이 시점의 상태입니다.
-      </Sub>
 
       <Scroll>
         {actorIds.map((id) => {
@@ -195,10 +195,6 @@ export default function PeopleBoard({
         })}
       </Scroll>
 
-      <Sub style={{ padding: '8px 16px 12px', borderTop: `1px solid ${colour.border}` }}>
-        오른쪽 숫자는 이 시점까지 그 사람이 겪거나 전달받은 사건 수입니다. 만족도 점수가
-        아닙니다.
-      </Sub>
     </Panel>
   );
 }

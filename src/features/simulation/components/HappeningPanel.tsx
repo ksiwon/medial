@@ -10,6 +10,7 @@ import type { DomainEvent } from '../api/types';
 import { hiddenRows, personName, storyRows, type StoryTone } from '../selectors/story';
 import {
   Disclosure,
+  Hint,
   Mono,
   Panel,
   PanelHead,
@@ -215,8 +216,10 @@ export default function HappeningPanel({
                       </div>
                     ))}
                     <Sub style={{ marginTop: 6 }}>
-                      원 로그는 그대로입니다. 위 목록은 화면에서만 줄인 것이고, 각 줄은 원 사건
-                      번호로 되돌아갈 수 있습니다.
+                      화면에서만 줄인 목록입니다
+                      <Hint label="줄인 목록">
+                        원 로그는 그대로입니다. 각 줄은 원 사건 번호로 되돌아갈 수 있습니다.
+                      </Hint>
                     </Sub>
                   </div>
                 </Disclosure>
@@ -227,9 +230,12 @@ export default function HappeningPanel({
           <>
             <Block>
               <Sub>
-                주민 에이전트가 <strong>자기가 실제로 겪은 사건만</strong> 근거로 남긴 모의
-                리뷰입니다. 실제 주민의 발언도 만족도도 아니며, 점수로 합산하지 않습니다.
-                미경험은 관찰 결과이지 불만이 아닙니다.
+                모의 리뷰 · 겪은 사건만 근거
+                <Hint label="모의 리뷰">
+                  주민 에이전트가 자기가 실제로 겪은 사건만 근거로 남긴 모의 리뷰입니다. 실제
+                  주민의 발언도 만족도도 아니며, 점수로 합산하지 않습니다. 미경험은 관찰
+                  결과이지 불만이 아닙니다.
+                </Hint>
               </Sub>
             </Block>
             {shownReviews.map((review) => (

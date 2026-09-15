@@ -20,6 +20,9 @@ from typing import Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from . import semantic_rules
+from .semantic_rules import SemanticChange
+
 #: Bumped when the prompts or the rule reviewers can produce a different review
 #: from the same cycle. Stored on every review so two generations reviewed by
 #: different versions are never silently compared.
@@ -148,6 +151,39 @@ class ReviewConflict(Base):
     note: str = ""
 
 
+class ExcludedClaim(Base):
+    """A claim the synthesis set aside, with what it was made of (26번 C05, F08).
+
+    A bare sentence was not enough. The audit of 2026-09-15 found the synthesis
+    filtering two grounded claims as unsupported - and filtering one claim no
+    reviewer had made at all, which it had written itself. Both are invisible
+    when the record is a list of strings.
+
+    Three things are kept apart here:
+
+    * ``reviewItemRefs`` - the original evaluation items this claim came from.
+      Empty means the synthesis authored the claim itself, which is a different
+      kind of error from mislabelling one;
+    * ``technicalCheck`` - what a machine can settle: do the references exist,
+      was the actor allowed to see them, is the timing possible;
+    * ``semanticReview`` - whether the cited events actually support the
+      sentence. A model's own opinion on this is an ``ai_draft`` label, never a
+      human judgement, and ``unreviewed`` is the honest default.
+    """
+
+    id: str
+    claim: str
+    reviewItemRefs: list[str] = Field(default_factory=list)
+    eventRefs: list[str] = Field(default_factory=list)
+    technicalCheck: Literal["refs_exist", "refs_missing", "no_refs"] = "no_refs"
+    semanticReview: Literal["supported", "contradicted", "insufficient",
+                            "unreviewed"] = "unreviewed"
+    #: Who applied ``semanticReview``. A model labelling its own output is a
+    #: draft; only a person's label is counted in the audit's ratios.
+    labelledBy: Literal["human", "ai_draft", "none"] = "none"
+    reason: str = ""
+
+
 class ReviewSynthesis(Base):
     id: str
     sessionId: str
@@ -163,7 +199,11 @@ class ReviewSynthesis(Base):
     #: Researcher metrics, kept *beside* the reviews and never merged into them.
     objectiveMetrics: dict[str, Any] = Field(default_factory=dict)
     noExperienceActors: list[str] = Field(default_factory=list)
+    #: Historic form: the sentences alone. Kept because syntheses stored before
+    #: 2026-09-15 have only this, and rewriting them would change the record.
     ungroundedClaims: list[str] = Field(default_factory=list)
+    #: The same thing with its provenance attached. New syntheses fill this.
+    excludedClaims: list[ExcludedClaim] = Field(default_factory=list)
     nextQuestions: list[str] = Field(default_factory=list)
     model: dict[str, Any] | None = None
     createdAt: str
@@ -193,6 +233,17 @@ class ExecutionBinding(Base):
 
 
 class RuleChange(Base):
+    """One meaningful rule change.
+
+    Since 2026-09-15 the source of truth is ``semantic``: a typed rule change
+    from :mod:`semantic_rules`. Every other field here is *derived* from it by
+    :func:`materialize_change` - the sentences, the bindings, the Quest/Task
+    routing - and the validator refuses a change whose stored derivations do
+    not match its semantic values. ``semantic`` is optional only so that Change
+    Sets stored before this existed still load; those are read-only history and
+    cannot be re-used as templates.
+    """
+
     scope: ChangeScope
     target: ImprovementTarget
     questId: str
@@ -201,6 +252,21 @@ class RuleChange(Base):
     beforeRule: str
     afterRule: str
     executionBindings: list[ExecutionBinding] = Field(default_factory=list)
+    semantic: SemanticChange | None = None
+
+
+def materialize_change(semantic: Any) -> RuleChange:
+    """The one constructor for a new :class:`RuleChange`."""
+    s = semantic_rules.spec(semantic.ruleType)
+    return RuleChange(
+        scope=ChangeScope(s.scope), target=ImprovementTarget(s.target),
+        questId=s.quest_id, taskIds=list(s.task_ids), field=s.field,
+        beforeRule=semantic_rules.format_rule(semantic.ruleType, semantic.before),
+        afterRule=semantic_rules.format_rule(semantic.ruleType, semantic.after),
+        executionBindings=[ExecutionBinding(**b)
+                           for b in semantic_rules.compile_bindings(semantic)],
+        semantic=semantic,
+    )
 
 
 class ChangeSetValidation(str, Enum):
@@ -349,6 +415,7 @@ STOP_REASON_TEXT: dict[str, str] = {
     "stalled": "같은 Change Set이 반복되거나 새 발견이 없다. 반복을 멈춘다.",
     "model_failure": "모델 호출이 실패했다. 주민의 거절이나 unknown 평가와 다르다.",
     "cancelled": "사용자가 중단했다.",
+    "no_change_this_time": "연구자가 이번에는 운영 규칙을 수정하지 않기로 했다. 현장 질문만 남긴다.",
 }
 
 
@@ -496,6 +563,28 @@ class HumanReview(Base):
 
     Nothing in this package writes one of these; it is created solely by the
     field-review submission endpoint, from a body a person filled in.
+
+    The 2026-09-15 fields (26번 C06) exist because the protocol has an order and
+    the record has to carry it:
+
+    * ``responseStage`` - ``pre_disclosure`` answers are given *before* the
+      person is shown what the agent said. A pre-disclosure record carries no
+      ``correspondence``: there is nothing yet to agree with;
+    * ``respondentId`` / ``respondentRole`` / ``subjectActorId`` - who answered,
+      in what capacity, about which modelled resident. A family member's answer
+      is their own record and never overwrites the resident's;
+    * ``correspondence`` - ``disagreement`` is sayable. The old four values had
+      no way to record an explicit conflict, only ``partial``;
+    * ``correctionTarget`` - what the person says should change: the material,
+      the world assumption, the behaviour model, the service rule, one
+      evaluation, or the synthesis. A correction does not edit a past run; it is
+      an input to the next one;
+    * ``responseKind`` - a researcher's note is a human record but not a
+      resident's answer, and the two are never counted together.
+
+    Legacy values (``agreement``, ``elicitation``, ``reviewerRole``) are kept as
+    stored. A ``partial`` from an earlier session is not silently rewritten into
+    the new vocabulary; somebody may add a new correction record instead.
     """
 
     id: str
@@ -515,6 +604,49 @@ class HumanReview(Base):
     consentScope: str = "unknown"
     source: Literal["human"] = "human"
     submittedAt: str
+
+    # -- 2026-09-15 (26번 C06). Optional so that stored rows still load.
+    #: Pseudonymous and stable within a study, never a name.
+    respondentId: str = "unknown"
+    respondentRole: Literal["self", "family", "institution_staff",
+                            "researcher"] = "self"
+    #: The modelled resident the answer is *about*, kept apart from who is
+    #: answering: a family member speaking about P1 is not P1.
+    subjectActorId: str | None = None
+    episodeId: str | None = None
+    reviewItemRefs: list[str] = Field(default_factory=list)
+    responseStage: Literal["pre_disclosure", "post_disclosure"] = "pre_disclosure"
+    #: Which disclosure this answer came after. Required for a post-disclosure
+    #: record and refused on a pre-disclosure one.
+    disclosureRecordId: str | None = None
+    correspondence: Literal["agreement", "correction", "disagreement",
+                            "unknown"] | None = None
+    correctionTarget: Literal["case_material", "world_assumption",
+                              "behaviour_model", "service_rule",
+                              "evaluation", "synthesis"] | None = None
+    reason: str = ""
+    responseKind: Literal["resident_response", "researcher_note"] = "resident_response"
     note: str = (
         "실제 사람이 제출한 응답이다. 시뮬레이션 리뷰와 같은 표에 합산하지 않는다."
     )
+
+
+class DisclosureRecord(Base):
+    """When a respondent was shown the simulated evaluation, and by whom.
+
+    The app can only record what it did itself. Somebody may have been told
+    outside it, so this is a record, not a guarantee of an unanchored answer -
+    and the screen says exactly that where it matters.
+    """
+
+    id: str
+    sessionId: str
+    packageId: str
+    episodeId: str
+    respondentId: str
+    disclosedBy: str = "researcher"
+    disclosedAt: str
+    #: What was shown: the evaluation ids the respondent saw.
+    shownReviewIds: list[str] = Field(default_factory=list)
+    note: str = ("앱에서 공개한 시점의 기록이다. 앱 밖에서 이미 들었을 수 있으므로 "
+                 "무편향 응답을 보증하지 않는다.")

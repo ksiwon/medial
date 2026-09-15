@@ -68,7 +68,9 @@ class PolicyContext:
     attempt_number: int
     #: Per-subject routine projection MEDial holds. ``home_or_away`` granularity.
     routines: dict[str, dict[str, Any]]
-    village_head_id: str
+    #: ``None`` when this community has no village head. Every head-dependent
+    #: branch checks; none of them substitutes somebody.
+    village_head_id: str | None
     horizon_ms: int
     raised_ms: int = 0
     last_contact_ms: int = 0
@@ -86,7 +88,7 @@ class PolicyContext:
 
 
 class MedialPolicy:
-    def __init__(self, revision: PolicyRevision, village_head_id: str = "P6") -> None:
+    def __init__(self, revision: PolicyRevision, village_head_id: str | None) -> None:
         self.revision = revision
         self.village_head_id = village_head_id
         self._decisions = 0
@@ -200,6 +202,8 @@ class MedialPolicy:
         elif self.revision.contactStrategy == ContactStrategy.head_first:
             if not params.allowHeadContact:
                 raise ValueError("head_first policy with allowHeadContact disabled")
+            if self.village_head_id is None:
+                raise ValueError("head_first policy on a case with no village head role")
             chosen = self.village_head_id
             rationale = ("이장은 이 마을에서 안부 확인을 실제로 해 온 사람이고, 확인만 요청하고 "
                          "판단은 넘기지 않는다. 공개 일과로는 지금 갈 수 있는지 알 수 없으므로 "
@@ -252,8 +256,9 @@ class MedialPolicy:
             Candidate(actorId=ctx.subject_id, included=False,
                       reason="%d회 연락했으나 응답 없음. 위치와 상태는 여전히 미확인"
                              % ctx.attempt_number),
-            Candidate(actorId=self.village_head_id, included=False,
-                      reason="이 정책은 이웃 연락을 사용하지 않는다"),
+            *([Candidate(actorId=self.village_head_id, included=False,
+                         reason="이 정책은 이웃 연락을 사용하지 않는다")]
+              if self.village_head_id is not None else []),
             Candidate(actorId=HEALTH_STAFF, included=True,
                       reason="보건소 담당자에게 확인을 인계. 인계는 종결이 아니다"),
         ]
@@ -299,8 +304,10 @@ class MedialPolicy:
                 if chosen is None:
                     chosen = k
         if not ctx.routine_knowers:
+            # Said about the case, not about a person: with no head role there
+            # is nobody to name here, and that is this community's result.
             candidates.append(Candidate(
-                actorId=head, included=False,
+                actorId=head or ctx.subject_id, included=False,
                 reason="%s의 평소 장소를 아는 사람이 장부에 없다 (채록 공백)" % ctx.subject_id))
         if chosen is None:
             return (self._decision(
@@ -487,7 +494,9 @@ class MedialPolicy:
         head = self.village_head_id
         related = [a for a in order if a != head]
         others = [r["actorId"] for r in ctx.relations if r["actorId"] != head]
-        tail = "마지막에 이장에게 간다." if head in order else "이장에게는 묻지 않는다."
+        tail = ("마지막에 이장에게 간다." if head is not None and head in order
+                else "이 사례에는 이장 역할이 없다." if head is None
+                else "이장에게는 묻지 않는다.")
         if related:
             return "기록된 가까운 관계(%s)에게 먼저 부탁하고, %s" % (", ".join(related), tail)
         if not others:
@@ -515,7 +524,7 @@ class MedialPolicy:
         ties = {r["actorId"] for r in ctx.relations}
         related = [c.actorId for c in candidates
                    if c.included and c.actorId in ties and c.actorId != self.village_head_id]
-        if params.allowHeadContact:
+        if params.allowHeadContact and self.village_head_id is not None:
             return related[:max(0, params.neighbourAskLimit - 1)] + [self.village_head_id]
         return related[:params.neighbourAskLimit]
 

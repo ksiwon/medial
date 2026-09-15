@@ -182,6 +182,21 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ commandId, name, payload }),
       }),
+    /** Record that a respondent has now been shown the simulated evaluation.
+     *  Refused by the server when their independent answer is not on file. */
+    recordDisclosure: (
+      id: string,
+      body: {
+        packageId: string;
+        episodeId: string;
+        respondentId: string;
+        shownReviewIds: string[];
+      },
+    ) =>
+      request<{ id: string; disclosedAt: string }>(
+        `/iteration/sessions/${id}/disclosures`,
+        { method: 'POST', body: JSON.stringify(body) },
+      ),
     decide: (
       id: string,
       body: {
@@ -215,6 +230,17 @@ export const api = {
         corrections: Record<string, unknown>[];
         agreement: string;
         consentScope: string;
+        respondentId?: string;
+        respondentRole?: string;
+        subjectActorId?: string | null;
+        episodeId?: string | null;
+        reviewItemRefs?: string[];
+        responseStage?: string;
+        disclosureRecordId?: string | null;
+        correspondence?: string | null;
+        correctionTarget?: string | null;
+        reason?: string;
+        responseKind?: string;
       },
     ) =>
       request<{ id: string; source: 'human' }>(`/iteration/sessions/${id}/human-reviews`, {

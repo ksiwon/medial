@@ -57,8 +57,9 @@ from .contracts import (
     ScenarioDeck,
     validate_proposal,
 )
+from .case_bundle import build_case, empty_ledger_for
 from .environment import get_environment, resolve_place
-from .ledger import ElicitationLedger, legacy_ledger
+from .ledger import ElicitationLedger
 from .relations import get_relations
 from .institution import Desk, ShiftExhausted
 from .observations import ActorView, ObservationLog, home_window, shared_routine
@@ -71,7 +72,11 @@ from .world import MIN_MS, Segment, WorldState
 
 CHECK_ON_SITE_MS = 5 * MIN_MS
 CALL_BUFFER_MS = 15 * MIN_MS
-VILLAGE_HEAD_ID = "P6"
+
+#: Kept as a name for the tests and scripts that referred to 은점's head before
+#: roles became case data. Nothing in the engine reads it: the head - if the
+#: community has one at all - comes from ``CaseBundle.roleAssignments``.
+LEGACY_VILLAGE_HEAD_ID = "P6"
 
 #: What the institution is told when the disclosure setting is ``named``. The
 #: string is matched, not guessed: the routine only reaches the centre when the
@@ -122,8 +127,14 @@ class Engine:
                  model_calls: Any | None = None,
                  provider: Any | None = None,
                  relations: Any | None = None,
-                 ledger: Any | None = None) -> None:
+                 ledger: Any | None = None,
+                 case: Any | None = None) -> None:
         self.attempt = attempt
+        #: Who this community is, and which roles it has. The engine never
+        #: names a resident; the village head is a role this bundle may or may
+        #: not fill (26번 C01).
+        self.case = case if case is not None else build_case(village)
+        self.village_head_id = self.case.village_head_id
         #: World rules as data. The attempt records which revision it ran on so
         #: that changing an assumption shows up as a different input rather than
         #: as a policy effect.
@@ -160,8 +171,7 @@ class Engine:
         #: What was asked of whom. Says which "none" is a real none, and who
         #: knows whose usual places - with provenance - instead of the head
         #: being assumed to know everybody's.
-        self.ledger: ElicitationLedger = ledger or legacy_ledger(
-            [r["id"] for r in village.residents], VILLAGE_HEAD_ID)
+        self.ledger: ElicitationLedger = ledger or empty_ledger_for(self.case)
         #: Which of the ledger's gaps and assumptions this run actually leaned
         #: on, so the metrics can say "this outcome rests on an assumed pair".
         self.leaned_on: list[dict[str, Any]] = []
@@ -194,9 +204,9 @@ class Engine:
         are models, so is the head. The designer sees one choice, not two.
         """
         if self.attempt.adapter != "llm":
-            return MedialPolicy(revision, VILLAGE_HEAD_ID)
+            return MedialPolicy(revision, self.village_head_id)
         return LlmMedialPolicy(
-            revision, VILLAGE_HEAD_ID, ask=self._ask_head,
+            revision, self.village_head_id, ask=self._ask_head,
             events_for=self._medial_events,
             resident_ids=[r["id"] for r in self.village.residents],
             max_tokens=self.attempt.modelPolicy.maxOutputTokens)
@@ -394,7 +404,7 @@ class Engine:
         Derived from the finished run, so the map, the trace and the metrics all
         describe the same log. Nothing here re-invokes an adapter.
         """
-        head = VILLAGE_HEAD_ID
+        head = self.village_head_id
 
         def dump(segments: list[Segment], actor_id: str) -> list[dict[str, Any]]:
             out = []
@@ -1783,7 +1793,7 @@ class Engine:
             # the failure it was, never as "unconfirmed, all fine".
             self.adapter_failures.append({"actorId": MEDIAL, "atMs": at_ms,
                                           "error": str(exc)})
-            classified = MedialPolicy(self.policy_revision, VILLAGE_HEAD_ID).classify(
+            classified = MedialPolicy(self.policy_revision, self.village_head_id).classify(
                 self._context(at_ms, subject, request, 1))
             classified["rationale"] = "MEDial 머리(모델)가 상황을 읽지 못했다: %s" % exc
             classified["source"] = "adapter_error"
@@ -1812,7 +1822,7 @@ class Engine:
             request_id=request["id"],
             attempt_number=attempt_number,
             routines=self.routines[MEDIAL],
-            village_head_id=VILLAGE_HEAD_ID,
+            village_head_id=self.village_head_id,
             horizon_ms=self.deck.horizonMs,
             raised_ms=int(request.get("raisedMs", at_ms)),
             last_contact_ms=int(request.get("lastContactMs", at_ms)),

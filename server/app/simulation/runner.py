@@ -38,7 +38,8 @@ from .contracts import (
 )
 from .decks.registry import DECK_DEFAULTS, DECKS, POLICIES, RESOURCE_SETS
 from .agents.model_calls import ModelCallLog
-from .engine import VILLAGE_HEAD_ID, Engine, RunResult
+from .case_bundle import CaseValidationError, build_case, empty_ledger_for, unsupported_reason
+from .engine import Engine, RunResult
 from .persona import load_personas
 from .village import Village, load_village
 
@@ -73,8 +74,9 @@ def build_attempt(attempt_id: str, label: str, policy: PolicyRevision, deck: Sce
     environment = environment or get_environment()
     model_policy = model_policy or ModelPolicy()
     relations = relations or get_relations()
+    case = build_case(village, relations=relations)
     ledger = ledger or load_ledger(village.path, [r["id"] for r in village.residents],
-                                   VILLAGE_HEAD_ID)
+                                   case.village_head_id) or empty_ledger_for(case)
     return Attempt(
         id=attempt_id,
         parentId=parent_id,
@@ -156,8 +158,26 @@ def run_attempt(attempt_id: str, policy_id: str, deck_id: str, resource_id: str,
     profiles, provenance = personas(persona_path)
     env = get_environment(environment_id)
     relations = get_relations(relation_id)
+    # Who this community is, and which roles it has. A case whose ids the
+    # shipped relation revision does not know keeps no relations rather than
+    # inheriting another village's (26번 F04).
+    if {a for e in relations.edges for a in (e.a, e.b)} - {r["id"] for r in village.residents}:
+        relations = get_relations("rel-none")
+    case = build_case(village, relations=relations,
+                      persona_revision=provenance.get("revisionId", "none"),
+                      scenario_ids=[deck.id], resource_id=resources.id)
+    # A deck belongs to a community. Refused here, by name, rather than as a
+    # KeyError from the world model three layers down.
+    strangers = sorted({e.subjectId for e in deck.events} - set(case.resident_ids))
+    if strangers:
+        raise CaseValidationError(
+            "시나리오 %s는 이 사례에 없는 사람(%s)에 대한 것이다. 다른 공동체의 사례를 "
+            "그대로 돌릴 수 없다." % (deck.id, ", ".join(strangers)))
+    reason = unsupported_reason(case, policy.contactStrategy.value)
+    if reason is not None:
+        raise CaseValidationError(reason)
     ledger = ledger or load_ledger(village.path, [r["id"] for r in village.residents],
-                                   VILLAGE_HEAD_ID)
+                                   case.village_head_id) or empty_ledger_for(case)
     model_policy = model_policy or ModelPolicy()
     # The day is drawn before anything runs, from (village, environment, seed)
     # alone. A rerun and a fork inherit the parent's seed, so they land on this
@@ -179,7 +199,7 @@ def run_attempt(attempt_id: str, policy_id: str, deck_id: str, resource_id: str,
     engine = Engine(attempt, policy, deck, resources, village, script=script,
                     personas=profiles, policy_switch=policy_switch, environment=env,
                     model_calls=log, provider=provider, relations=relations,
-                    ledger=ledger)
+                    ledger=ledger, case=case)
     result = engine.run()
     result.attempt.status = AttemptStatus.completed
     result.attempt.eventCount = len(result.events)

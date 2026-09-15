@@ -40,6 +40,7 @@ from .improvement import SUPPORTED_CAPABILITIES, RuleImprovementAdapter
 from .llm import BudgetExhausted, LlmClient, ModelCallError, ModelNotConfigured, content_hash
 from .llm_adapters import LlmImprovementAdapter, LlmReviewAdapter, LlmSynthesisAdapter
 from .reviewers import ReviewAdapterError, RuleReviewAdapter, ScriptedReviewAdapter
+from .rule_application import rule_application
 from .evaluation_metrics import (
     DEFAULT_CRITERIA,
     outcome_vector,
@@ -326,7 +327,8 @@ class IterationEngine:
                 max_change_sets=self.session.maxChangeSetsPerGeneration,
                 session_id=self.session.id, generation_index=generation.index,
                 created_at=now_iso(), id_prefix="change-%s" % generation.id,
-                already_tried=self.store.session_change_hashes(self.session.id))
+                already_tried=self.store.session_change_hashes(self.session.id),
+                active_decks=list(self.session.developmentDeckRefs))
             if change_sets:
                 self.store.save_change_sets(generation.id, change_sets)
                 generation.changeSetIds = [item.id for item in change_sets]
@@ -356,7 +358,8 @@ class IterationEngine:
                 change_set, policy=policy, capabilities=SUPPORTED_CAPABILITIES,
                 known_review_items=known_items,
                 world_truth_event_ids=world_truth,
-                applied_change_hashes=applied)
+                applied_change_hashes=applied,
+                active_decks=list(self.session.developmentDeckRefs))
             self.store.update_change_set(result)
             checked.append(result)
 
@@ -423,6 +426,10 @@ class IterationEngine:
             child.reviewIds = [r.id for r in reviews]
             child.metrics = self._generation_metrics(child, reviews)
             child.metrics["comparedToParent"] = self._compare(generation, child)
+            # Did the changed rule run? Answered from the child's own log, per
+            # rule, so "no difference" can be told apart from "never reached".
+            child.metrics["ruleApplication"] = rule_application(
+                change_set, [(a, self.store.events(a)) for a in attempt_ids])
             child.outcome = GenerationOutcome.evaluated
             self.store.update_generation(child)
             change_set = change_set.model_copy(update={
@@ -470,9 +477,25 @@ class IterationEngine:
                             reviews: list[AgentReview]) -> dict[str, Any]:
         vectors = []
         objective: dict[str, Any] = {}
+        manifest: dict[str, Any] = {}
         for attempt_id in generation.attemptIds:
             row = self.store.get_attempt(attempt_id)
             vectors.append(outcome_vector(row["metrics"]))
+            attempt = row["attempt"]
+            manifest[attempt_id] = {
+                "deckId": attempt["scenarioDeckId"], "seed": attempt["seed"],
+                "engineVersion": attempt["engineVersion"],
+                "adapter": attempt["adapter"],
+                "policyRevisionId": attempt["policyId"],
+                "environmentRevisionId": attempt.get("environmentRevisionId"),
+                "relationRevisionId": attempt.get("relationRevisionId"),
+                "ledgerRevisionId": attempt.get("ledgerRevisionId"),
+                "dayRealizationId": attempt.get("dayRealizationId"),
+                "modelPolicy": attempt.get("modelPolicy"),
+                "inputHashes": attempt.get("inputHashes", {}),
+                "reviewAdapter": self.session.reviewAdapter,
+                "improvementAdapter": self.session.improvementAdapter,
+            }
             objective[attempt_id] = {
                 "deckId": row["attempt"]["scenarioDeckId"],
                 "requests": row["metrics"]["requests"],
@@ -495,6 +518,9 @@ class IterationEngine:
         return {
             "vector": vector,
             "objective": objective,
+            # The run manifest (26번 C04): everything a controlled comparison
+            # has to hold fixed, per attempt, straight from the attempt record.
+            "manifest": manifest,
             "requiredViolations": violates_required(vector,
                                                     self.session.criteriaRevision),
             "reviewCounts": _review_counts(reviews),
@@ -522,12 +548,27 @@ class IterationEngine:
         return comparison
 
     def _world_truth_event_ids(self, generation: Generation) -> set[str]:
-        out: set[str] = set()
+        """Event ids no reviewer could have cited.
+
+        Event ids are per attempt (``ev-14`` exists in every attempt), so
+        "researcher-only in *some* attempt" is not enough: the same id is an
+        ordinary experienced event in the other deck's run. What a Change Set
+        must not lean on is an event that is researcher-only in an attempt
+        *and* was cited by no validated review of this generation - a review
+        citation is already checked against the actor's own experience, so an
+        id that appears there names a real experienced event somewhere.
+        """
+        world: set[str] = set()
         for attempt_id in generation.attemptIds:
             for event in self.store.events(attempt_id):
                 if event.get("visibility") == ["RESEARCHER"]:
-                    out.add(event["id"])
-        return out
+                    world.add(event["id"])
+        cited: set[str] = set()
+        for review in self.store.agent_reviews(generation.id):
+            cited.update(review.get("experiencedEventIds") or [])
+            for item in review.get("items") or []:
+                cited.update(item.get("eventRefs") or [])
+        return world - cited
 
     def _applied_change_hashes(self) -> set[str]:
         """Change Sets that already produced a generation, so the loop can notice

@@ -72,9 +72,37 @@ const RULE: Record<string, string> = {
   asked_too_often: '오늘 부탁을 너무 많이 받음',
   too_far: '너무 멀어서',
   llm_judgement: '본인 판단 (모델)',
+  // The ride path writes its codes into both `rule` and `reason`, so these
+  // were reaching the comparison table as bare keys (seen in a capture,
+  // 2026-09-15). doc 15 / D089: no engine key stands where a sentence belongs.
+  does_not_drive: '운전을 하지 않음',
+  driving_status_unknown: '운전 여부가 기록에 없음',
+  detour_too_long: '우회가 너무 길어서',
+  no_route: '갈 수 있는 길을 찾지 못함',
+  outside_shift: '근무 시간이 아님',
+  unspecified: '사유가 기록되지 않음',
 };
 
 export const ruleName = (rule: string): string => RULE[rule] ?? rule;
+
+/** A machine key, as opposed to something a person said. */
+const isKey = (text: string): boolean => /^[a-z][a-z0-9_]*$/.test(text);
+
+/**
+ * What to print for one refusal.
+ *
+ * ``reason`` is meant to be the sentence the person gave, but the ride path
+ * stores its rule code there as well. Anything that is still a key is named
+ * through the table; a key the table does not know is said as an unnamed rule
+ * rather than printed raw.
+ */
+export function refusalReason(rule: string | null | undefined, reason: string | null | undefined): string {
+  const said = (reason ?? '').trim();
+  if (said && !isKey(said)) return said;
+  const key = (rule ?? '').trim() || said;
+  if (!key) return '사유가 기록되지 않음';
+  return RULE[key] ?? `사유가 기록되지 않음 (규칙 ${key})`;
+}
 
 // ---------------------------------------------------------------- the day
 

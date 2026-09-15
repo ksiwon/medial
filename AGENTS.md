@@ -5,8 +5,10 @@
 1. `docs/research/19_RESIDENT_AGENTS_AS_EVALUATORS.md` — 최우선 연구 기준
 2. `docs/research/22_MEDIAL_IMPROVEMENT_TARGETS.md` — MEDial 개선 대상과 편집 경계
 3. `docs/research/23_QUEST_TASK_CHANGE_SET.md` — Quest/Task 최소 모델과 Change Set 계약
-4. `DEVELOPMENT.md` — 구현됨/부분 구현/미구현 상태
-5. 작업과 관련된 `docs/research/` 문서와 `DECISIONS.md`
+4. `DEVELOPMENT.md` — 구현됨/부분 구현/미구현 상태. **맨 위 "2026-09-15 리팩터링" 절이 현재
+   상태이고 그 아래는 역사다**
+5. `docs/research/28_REFACTOR_LOG_2026-09-15.md` — 지금 구조가 왜 이런지, 무엇을 하지 않았는지
+6. 작업과 관련된 `docs/research/` 문서와 `DECISIONS.md`
 
 문서가 충돌하면 연구 방향은 19번 문서, 구현 사실은 `DEVELOPMENT.md`, 세부 데이터 계약은
 13번 문서와 코드/테스트를 따른다. 12~18번 문서는 역사적 맥락이며 19번 문서에 반하는 기능
@@ -57,8 +59,14 @@ MEDial 자체, 범용 사회 시뮬레이터, 3D 마을, 자동 정책 최적화
 자유 주민 채팅, 완전 자율 일상, 장식적 3D, 자동 최적안 선정은 연구 질문이 직접 요구하기
 전에는 확장하지 않는다.
 
-기본 UI의 중심은 `Village Scenario / Resident Evaluations / Improve & Validate`다. 원시 로그,
-해시, fork/rerun, 모델·예산, 전체 계보는 필요한 경우 고급/감사 영역에서 제공한다.
+기본 UI의 중심은 `Village Scenario / Resident Evaluations / Improve & Validate`이며, 화면에서는
+`사례와 서비스 경험 / 주민 평가 / 개선과 확인`이다. 원시 로그, 해시, fork/rerun, 모델·예산,
+전체 계보는 필요한 경우 고급/감사 영역에서 제공한다.
+
+새 실행을 만드는 경로는 **Change Set 확정 하나**다. 두 번째 실행 경로를 다시 만들지 않는다.
+운영 규칙은 `iteration/semantic_rules.py`의 타입에서만 나오고, 전후 문장과 실행 바인딩은 거기서
+생성된다 — 문장이나 바인딩을 따로 편집하는 입력을 다시 만들지 않는다. 공동체 자료(주민·역할·
+관계·장부·시나리오)는 `case_bundle.py`의 CaseBundle에 있고, 엔진에 특정 주민 id를 적지 않는다.
 
 ## 변경 완료 조건
 

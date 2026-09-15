@@ -133,6 +133,59 @@ export interface ExecutionBinding {
   after: unknown;
 }
 
+/** One rule MEDial can operate on, as the server's rule catalogue describes it.
+ *  The composer builds its controls from this; there is no second list of
+ *  fields on this side to drift out of date (server semantic_rules.py). */
+export interface RuleParamSpec {
+  key: string;
+  label: string;
+  kind: 'int' | 'bool' | 'enum';
+  binding: string;
+  minimum: number | null;
+  maximum: number | null;
+  options: { value: string; label: string }[];
+  unit: string;
+  nullable: boolean;
+  nullLabel: string;
+}
+
+export interface RuleSpec {
+  ruleType: string;
+  label: string;
+  description: string;
+  scope: 'quest' | 'task';
+  target: ImprovementTarget;
+  questId: string;
+  taskIds: string[];
+  field: string;
+  /** False when this session's scenarios never exercise the rule: changing it
+   *  would run and show no difference, which is not the same as no effect. */
+  applicable: boolean;
+  params: RuleParamSpec[];
+  /** Present on a generation's catalogue: that revision's current values. */
+  current?: Record<string, unknown>;
+  currentRule?: string;
+}
+
+/** The typed change itself: rule type plus the values before and after. The
+ *  sentences and the engine bindings are derived from this on the server. */
+export interface SemanticChange {
+  ruleType: string;
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+}
+
+/** Did the changed rule actually run (server rule_application.py)? */
+export interface RuleApplicationRecord {
+  ruleType: string | null;
+  attemptId: string | null;
+  label?: string;
+  conditionStatus: 'occurred' | 'not_occurred' | 'unknown';
+  executionStatus: 'applied' | 'not_reached' | 'unknown';
+  reason: string;
+  eventRefs: string[];
+}
+
 export type ImprovementTarget =
   | 'quest_completion_escalation'
   | 'task_composition_flow'
@@ -149,6 +202,9 @@ export interface RuleChange {
   beforeRule: string;
   afterRule: string;
   executionBindings: ExecutionBinding[];
+  /** Absent on Change Sets stored before 2026-09-15; those are read-only
+   *  history and cannot be executed or used as a template. */
+  semantic: SemanticChange | null;
 }
 
 export interface ChangeSet {
@@ -212,7 +268,7 @@ export const STATUS_LABELS: Record<SessionStatus, string> = {
   ready_for_designer: '디자이너 검토 대기',
   budget_exhausted: '예산 종료 (완료 아님)',
   no_valid_change: '실행 가능한 개선안 없음',
-  stalled: '정체 (새 진전 없음)',
+  stalled: '정체 (같은 변경이 반복됨)',
   paused: '일시정지',
   failed: '실패',
   cancelled: '사용자 중단',
@@ -277,6 +333,11 @@ export interface GenerationMetrics {
   objective?: Record<string, Record<string, unknown>>;
   requiredViolations?: string[];
   reviewCounts?: Record<string, number>;
+  /** Per confirmed rule, per attempt: supported / condition occurred /
+   *  actually executed. Absent on generations stored before this existed. */
+  ruleApplication?: RuleApplicationRecord[];
+  /** What a controlled comparison holds fixed, per attempt. */
+  manifest?: Record<string, Record<string, unknown>>;
   comparedToParent?: {
     controlled: boolean;
     differingInputs: string[];
@@ -318,6 +379,8 @@ export interface GenerationDetail extends Generation {
   synthesis: ReviewSynthesis | null;
   changeSets: ChangeSet[];
   policy: { id: string; label: string; changes: string[] } | null;
+  /** The rule catalogue with this generation's current values. */
+  ruleCatalog: RuleSpec[];
 }
 
 export interface EpisodeCard {
@@ -376,14 +439,77 @@ export interface HumanReview {
   source: 'human';
   submittedAt: string;
   note: string;
+  // The staged protocol (26번 C06). Present on records written from
+  // 2026-09-15; older rows keep their own values untouched.
+  respondentId: string;
+  respondentRole: 'self' | 'family' | 'institution_staff' | 'researcher';
+  /** Which modelled resident this is *about* - not who is answering. */
+  subjectActorId: string | null;
+  episodeId: string | null;
+  reviewItemRefs: string[];
+  responseStage: 'pre_disclosure' | 'post_disclosure';
+  disclosureRecordId: string | null;
+  correspondence: 'agreement' | 'correction' | 'disagreement' | 'unknown' | null;
+  correctionTarget:
+    | 'case_material'
+    | 'world_assumption'
+    | 'behaviour_model'
+    | 'service_rule'
+    | 'evaluation'
+    | 'synthesis'
+    | null;
+  reason: string;
+  responseKind: 'resident_response' | 'researcher_note';
 }
 
+/** When a respondent was shown the simulated evaluation, and what they saw. */
+export interface DisclosureRecord {
+  id: string;
+  sessionId: string;
+  packageId: string;
+  episodeId: string;
+  respondentId: string;
+  disclosedBy: string;
+  disclosedAt: string;
+  shownReviewIds: string[];
+  note: string;
+}
+
+export const CORRESPONDENCE_LABELS: Record<string, string> = {
+  agreement: '대체로 일치',
+  correction: '정정 필요',
+  disagreement: '충돌 (다르다)',
+  unknown: '판단 불가',
+  // Kept for records written before 2026-09-15, shown as stored.
+  partial: '일부 일치 (옛 기록)',
+};
+
+export const CORRECTION_TARGET_LABELS: Record<string, string> = {
+  case_material: '자료 (채록·관계·일과)',
+  world_assumption: '세계 가정 (연락·거리 등)',
+  behaviour_model: '주민 행동 모델',
+  service_rule: '서비스 운영 규칙',
+  evaluation: '이 평가 자체',
+  synthesis: '평가 종합',
+};
+
 export interface Capabilities {
+  /** Which service is being evaluated (server iteration/services.py). */
+  service?: { serviceId: string; label: string; category: string };
+  /** Which community is loaded, and which roles it has (server case_bundle.py). */
+  case?: {
+    caseId: string;
+    label: string;
+    sourceKind: string;
+    residentCount: number;
+    roleAssignments: Record<string, string>;
+  };
   supportedCapabilities: string[];
   supportedQuestIds: string[];
   supportedTaskIds: string[];
   supportedRuleFields: string[];
-  decks: { id: string; label: string }[];
+  supportedRules: RuleSpec[];
+  decks: { id: string; label: string; questId?: string | null }[];
   modes: Record<string, boolean>;
   notImplemented: string[];
   model: {
@@ -414,10 +540,14 @@ export interface SessionStatusPayload {
 }
 
 export interface SessionDetail extends SessionStatusPayload {
+  /** True when the researcher may author, save, confirm or decline a change
+   *  for the current generation - including when no valid draft exists. */
+  canAuthor: boolean;
   generations: GenerationDetail[];
   decisions: DesignerDecision[];
   fieldPackages: FieldReviewPackage[];
   humanReviews: HumanReview[];
+  disclosures: DisclosureRecord[];
   modelCalls: Record<string, unknown>[];
   capabilities: Capabilities;
 }
