@@ -1385,8 +1385,36 @@ P1 사례, 같은 하루, 고친 뒤:
   `recorded/asked_none`, 나머지 대부분 `not_asked`, 이장의 지식은 동행군·사촌·Q3만
   `source-adapted`이고 P1·P2·P3·P5·P9·P10·P11은 `researcher-assumption`.
 
+### 시뮬레이터 검사 세 가지 — 노브·하루·모델 주민 (D091·D092)
+
+일반화 검토 ②③④. `server/app/simulation/audit.py`(순수 함수, 엔진 변경 없음) + `scripts/audit.py`
+(`.run/audit/`에 씀) + `scripts/llm_shadow.py` + `test_audit.py` 5건. 결과 표와 해석은 연구노트 15장.
+
+- **노브 효과** `knob_effects`: 지원 노브 10개 × 정책 6개, 값을 뒤집고 같은 하루(seed 17, env-v3-fixed)의
+  로그 지문(`log_fingerprint`)을 비교. 정책 id는 그대로 두고 돌린다 — 로그의 `medial.decided`에 policyId가
+  실려서 이름만 바꿔도 지문이 달라진다. 읽을 수 없는 칸(재연락 0회의 간격, head_first의 allowHeadContact)은
+  이유를 적고 `logChanged=None`. 죽은 노브 0. 표는 `test_audit.py`의 `EXPECTED`에 고정.
+- 검사 중 고친 것: `helperContactCap`이 동승 부탁(`_on_ride_offer`)에서 읽히지 않았음 → 안부 확인 표와 같은
+  `asked_too_often` 줄 추가. `catalog().policyFields.strategies`가 넷 중 둘만 → `ContactStrategy` 전부.
+  `registry.py`의 "모든 조건이 두 덱에서 읽힌다" 주석 → 사실대로. runner의 죽은 `adapters` 블록 삭제
+  (service가 덮어쓰고 있었다). 수락 사건에도 `ruleTableSaid`를 최상위에 실음(전에는 `params` 안에만).
+- **안정성** `stability`: seed 1–20(env-v3, ±10분)에서 정책별 최소/중앙/최대와, 중앙값 순서가 유지된 날 수.
+  D는 3/20일 미해결(seed 3·7·15: 10:10 이장이 순찰 중 자리를 못 떠 P4에게 넘기고 P4 유예, MEDial 장부엔
+  수락). 이동 덱은 20일 모두 같은 숫자 — 하루 변이가 동승 결정에 안 닿는다.
+- **모델 주민 vs 표** `table_disagreement`(llm_repeat 행) + `shadow_summary`(llm_shadow 행). 모델 머리 아래
+  20/20 일치는 전부 수락 칸. 그림자(규칙 마을을 돌리며 같은 view로 모델 주민에게도 묻고 기록만) 82문항:
+  수락·관측 56/56 일치, 거절·유예·전달 26건 중 모델이 안 된다고 한 것 1건. D083 유지, prompt-v5는 연구자 결정.
+- **종합 오분류** `synthesis_sheet` → `.run/audit/synthesis-labels-<세션>.json`에 `humanLabel`/`draftLabel`.
+  비율은 사람 라벨로만; AI 초안 기준 13개 중 2개(근거 없음 6 중 2가 사실은 근거 있음).
+- 연구노트의 결과 표마다 engine·prompt·마을 해시를 달았다(11.2·11.3은 engine 0.2.0·prompt-v2, 11.4·15장은
+  0.4.0·prompt-v4).
+
 ### 아직 안 한 것
 
+- 모델 주민이 거절 조건을 알면서도 수락·전달하는 문제(15.3)는 재기만 했다. 고치려면 prompt-v5인데, 표 쪽으로
+  조정하는 것이라 전사 대조(식당 부부가 실제로 "못 간다"고 했는지) 뒤 연구자가 정한다.
+- 종합 오분류의 사람 라벨은 아직 0개다. 시트의 `humanLabel`을 채우면 `scripts/audit.py`가 사람 기준 비율을 낸다.
+- 이동 덱의 감도 분석은 하루가 아니라 다른 입력(운전 가능 여부 등)을 흔들어야 한다.
 - 실제 마을 장부 초안은 익명본 페르소나 JSON의 '관계'·'하루' 필드만 보고 적었다. 전사 확인 후 확정.
 - 연락 조건·거절 조건은 장부에 상태만 있고, 값은 여전히 `environment.py`·`decline_rules`에 있다.
   장부에서 읽도록 옮기는 것은 하지 않았다.

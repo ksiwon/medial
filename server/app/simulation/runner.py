@@ -239,12 +239,8 @@ def catalog() -> dict[str, Any]:
         ],
         "resourceSets": [r.model_dump(mode="json") for r in RESOURCE_SETS.values()],
         "policyFields": _policy_field_spec(),
-        "adapters": {
-            "available": ["rule", "scripted"],
-            "unavailable": ["llm"],
-            "note": ("LLM 어댑터는 모델 공급자가 연결되어 있지 않다. 기록된 호출을 재생하는 "
-                     "경로는 동작하지만 새로 호출하지는 않으며, API 키가 필요 없다."),
-        },
+        # ``adapters`` is filled by the service, which knows whether a model
+        # key is present.
     }
 
 
@@ -254,7 +250,7 @@ def _policy_field_spec() -> dict[str, Any]:
     The screen builds its form from this, so a field the engine does not read
     cannot appear as an editable condition.
     """
-    from .contracts import PolicyParams
+    from .contracts import ContactStrategy, PolicyParams
 
     schema = PolicyParams.model_json_schema()
     fields = []
@@ -283,7 +279,10 @@ def _policy_field_spec() -> dict[str, Any]:
     return {
         "supported": list(PolicyParams.SUPPORTED),
         "fields": fields,
-        "strategies": ["head_first", "retry_then_clinic"],
+        # Every order the engine implements. Until the knob audit of 2026-09-15
+        # this listed two of the four, so the editor could not offer the
+        # neighbour-first or relation-first orders at all.
+        "strategies": [s.value for s in ContactStrategy],
         "note": ("여기 없는 조건은 API가 400으로 거절한다. 화면에 있는데 엔진이 읽지 않는 "
                  "조건은 두지 않는다."),
     }

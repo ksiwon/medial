@@ -655,6 +655,7 @@ class Engine:
             self._emit(at_ms, EventType.request_accepted, to_actor, request["id"],
                        [MEDIAL, to_actor],
                        {"requestId": request["id"], "params": proposal.params,
+                        **_yardstick(proposal.params),
                         "utterance": proposal.utterance,
                         "evidenceRefs": proposal.evidenceRefs})
             self._start_check(at_ms, request, to_actor, "HOME:" + request["subjectId"])
@@ -872,6 +873,7 @@ class Engine:
             self._emit(at_ms, EventType.request_accepted, target, request["id"],
                        [from_actor, target, RESEARCHER],
                        {"requestId": request["id"], "params": proposal.params,
+                        **_yardstick(proposal.params),
                         "utterance": proposal.utterance,
                         "evidenceRefs": proposal.evidenceRefs,
                         "note": "이웃을 통해 받은 부탁에 대한 수락이며 MEDial은 보지 못한다."})
@@ -1443,6 +1445,7 @@ class Engine:
         self._emit(at_ms, EventType.request_accepted, to_actor, request["id"],
                    [MEDIAL, to_actor],
                    {"requestId": request["id"], "params": proposal.params,
+                    **_yardstick(proposal.params),
                     "utterance": proposal.utterance,
                     "evidenceRefs": proposal.evidenceRefs})
         self._book_ride(at_ms, request, to_actor, plan,

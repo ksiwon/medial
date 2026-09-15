@@ -1,7 +1,8 @@
 """The same day, several times, on real models - does the head's choice hold?
 
-    python scripts/llm_repeat.py                     # A, B, C x 5 runs, seed 17
+    python scripts/llm_repeat.py                     # A, B, C, D x 5 runs, seed 17
     python scripts/llm_repeat.py 3 policy-C-v1       # 3 runs of one policy
+    LLM_SEED=1 python scripts/llm_repeat.py 5 policy-C-v1   # another drawn day
 
 SYNTHETIC village only, same seed every run, so the day is identical and any
 difference between runs is the model's. Each run gets its own in-memory store,
@@ -46,8 +47,11 @@ from app.simulation.service import SimulationService  # noqa: E402
 from app.simulation.village import load_village  # noqa: E402
 
 RUNS = int(sys.argv[1]) if len(sys.argv) > 1 else 5
-POLICIES = sys.argv[2:] or ["policy-A-v1", "policy-B-v1", "policy-C-v1"]
-DECK, RES, SEED = "deck-p1-no-response-v1", "assumed-resources-v1", 17
+POLICIES = sys.argv[2:] or ["policy-A-v1", "policy-B-v1", "policy-C-v1", "policy-D-v1"]
+DECK, RES = "deck-p1-no-response-v1", "assumed-resources-v1"
+#: Another seed is another drawn day (env-v3). Seed 1 puts the shop couple at
+#: home at 09:30, so a head that asks them meets the persona's decline.
+SEED = int(os.environ.get("LLM_SEED", "17"))
 OUT = ROOT / ".run" / "llm-repeat"
 OUT.mkdir(parents=True, exist_ok=True)
 
@@ -94,9 +98,10 @@ def one(policy_id: str, n: int) -> dict:
         if e["type"] in ("request.accepted", "request.declined", "request.deferred",
                          "request.relayed", "medial.observed") and e["actorId"] not in ("MEDial",):
             p = e["payload"]
+            table = p.get("ruleTableSaid") or {}
             residents.append({"actor": e["actorId"], "type": e["type"],
                               "utterance": p.get("utterance") or p.get("reason"),
-                              "table": (p.get("ruleTableSaid") or {}).get("action"),
+                              "table": table.get("action"), "rule": table.get("rule"),
                               "agrees": p.get("agreesWithRuleTable")})
     failures = [e["payload"].get("detail") for e in events
                 if e["type"] == "medial.waiting" and e["payload"].get("reason") == "adapter_error"]

@@ -194,6 +194,16 @@ class RuleResidentAdapter:
                 uncertainty=persona.get("unknowns") and
                 "; ".join(persona["unknowns"][:3]) or None)]
 
+        # The same cap the check-in table applies (``asked_too_often``): a
+        # ride is a coordination contact too. Until the knob audit of
+        # 2026-09-15 this was the one place the cap was not read.
+        cap = int(view.policy.get("helperContactCap", 2))
+        if view.contacts_received_today > cap:
+            return make(ProposalAction.decline, "asked_too_often",
+                        "오늘은 벌써 여러 번 불려서요.",
+                        extra={"contactsToday": view.contacts_received_today,
+                               "capFromPolicy": cap, "provenance": "researcher-assumption"})
+
         if drives is False:
             return make(ProposalAction.decline, "does_not_drive",
                         "저는 운전을 안 합니다.")

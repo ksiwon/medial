@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MEDial 연구노트 — 마을이 모델로 말하고, 연락 순서를 다시 세우다 (2026-09-14~15)</title>
+<title>MEDial 연구노트 — 마을이 모델로 말하고, 연락 순서를 다시 세우고, 시뮬레이터를 검사하다 (2026-09-14~15)</title>
 <style>
   :root{
     --bg:#0f1115; --panel:#171a21; --panel2:#1d2129; --ink:#e8eaed; --muted:#9aa4b2;
@@ -93,16 +93,18 @@
   <h1>마을이 모델로 말하고, 연락 순서를 다시 세우다</h1>
   <p>은점마을 시뮬레이터에서 <b>MEDial 머리와 주민을 실제 LLM으로</b> 붙이고, 실제 모델로 같은 하루를 반복해 돌리다가
      드러난 구멍(재연락이 실행되지 않음 · 빈집에서 요청이 닫힘)을 고친 이틀의 기록이다. 각 로직이 <b>무엇을 하고</b>,
-     <b>왜 그렇게 정했고</b>, <b>무엇으로 확인했는지</b>를 결정 번호(D076–D089)와 함께 남긴다.</p>
+     <b>왜 그렇게 정했고</b>, <b>무엇으로 확인했는지</b>를 결정 번호(D076–D092)와 함께 남긴다.
+     뒤쪽 14·15장은 그 뒤에 이어진 <b>일반화 검토</b>의 기록이다: 채록 장부(D090), 그리고 시뮬레이터 자체에 대한
+     세 가지 검사 — 노브가 살아 있는가, 결과가 하루에 따라 흔들리는가, 모델 주민이 표와 얼마나 어긋나는가(D091·D092).</p>
   <p><b>여기 나오는 주민은 모두 시뮬레이션 에이전트다.</b> 실제 참여자가 아니며, 실행은 전부 <b>합성 마을</b>
      (<code>fixtures/synthetic/</code>)에서 했다. 주민의 말은 모델이 만든 출력이다.</p>
   <div class="meta">
     <span class="chip">기간 <b>2026-09-14 ~ 09-15</b></span>
     <span class="chip">엔진 <b>medial-sim/0.4.0</b> · 프롬프트 <b>prompt-v4</b></span>
     <span class="chip">모델 <b>gemini-3.8-flash</b>(머리) · <b>gemini-3.1-flash-lite</b>(주민)</span>
-    <span class="chip">결정 <b>D076–D089</b></span>
-    <span class="chip">검증 서버 <b>373</b> · 화면 <b>53</b> · Playwright <b>3</b></span>
-    <span class="chip">커밋 <b>68edebe → 57c89a2</b></span>
+    <span class="chip">결정 <b>D076–D092</b></span>
+    <span class="chip">검증 서버 <b>386</b> · 화면 <b>53</b> · Playwright <b>3</b></span>
+    <span class="chip">커밋 <b>68edebe → 4c14206 → (이번)</b></span>
   </div>
 </header>
 
@@ -121,7 +123,9 @@
     <li><a href="#results">실제 모델 실행 결과</a></li>
     <li><a href="#findings">발견과 해석</a></li>
     <li><a href="#open">아직 안 한 것 · 열린 질문</a></li>
-    <li><a href="#index">결정 색인 D076–D089</a></li>
+    <li><a href="#ledger">채록 장부 — 물었고 없는 것과 안 물어본 것</a></li>
+    <li><a href="#audit">시뮬레이터 검사 세 가지 — 노브·하루·모델 주민</a></li>
+    <li><a href="#index">결정 색인 D076–D092</a></li>
   </ol>
 </nav>
 
@@ -432,6 +436,7 @@ _ask_whereabouts(이장):                              # 전화 한 통 — 연�
 <section id="results">
 <h2>11. 실제 모델 실행 결과</h2>
 <p class="lead">모두 합성 마을, seed 17(같은 하루), 머리 gemini-3.8-flash · 주민 gemini-3.1-flash-lite. 스크립트: <code>scripts/llm_smoke.py</code> · <code>llm_repeat.py</code> · <code>llm_iteration.py</code>. 원자료는 쓰지 않았다.</p>
+<p class="lead"><b>표마다 어느 버전에서 나온 결과인지</b>를 적는다. 엔진·프롬프트·마을 해시가 다른 표끼리는 숫자를 나란히 놓을 수 없다 (15장의 검사도 같은 방식으로 버전을 단다).</p>
 
 <h3>11.1 첫 끝까지 실행 (새 키, 고치기 전후)</h3>
 <ul>
@@ -439,7 +444,7 @@ _ask_whereabouts(이장):                              # 전화 한 통 — 연�
   <li>2차: read → decide(P9·P10·P11, "retryCount가 0이라 재연락 없음"을 스스로 언급) → P9 수락 → 빈집 → 미해결. 호출 3회, 실패 0.</li>
 </ul>
 
-<h3>11.2 같은 하루 15번 (A·B·C × 5) — 재연락·빈집 수정 <b>전</b></h3>
+<h3>11.2 같은 하루 15번 (A·B·C × 5) — 재연락·빈집 수정 <b>전</b> <span class="pill">engine 0.2.0 · prompt-v2 · 마을 1666cf9ccb87e954</span></h3>
 <div class="tablewrap"><table>
   <tr><th>정책</th><th>모델 머리</th><th>규칙 머리</th></tr>
   <tr><td>A</td><td>5/5 이장 → 빈집 → 밭 → 해결. 첫 후보 명단은 <code>[P6]</code> 3회 등 흔들림, 한도 초과 1회(되돌림 후 통과)</td><td>같음</td></tr>
@@ -448,7 +453,7 @@ _ask_whereabouts(이장):                              # 전화 한 통 — 연�
 </table></div>
 <p>어댑터 실패 0 · 되돌림 2회(둘 다 <code>neighbourAskLimit</code> 초과) · 주민 답이 규칙표와 어긋난 것 0(모두 수락한 하루). 3.8-flash 60회 이상에 429 없음 → 유료 등급.</p>
 
-<h3>11.3 반복 루프 2세대 (행동·리뷰·개선 모두 llm)</h3>
+<h3>11.3 반복 루프 2세대 (행동·리뷰·개선 모두 llm) <span class="pill">engine 0.2.0 · prompt-v2 · 세션 iter-aecf307097f9</span></h3>
 <ul>
   <li>끝까지 돎: 291초, 루프 호출 34 + 마을 호출 10, 실패 0. 확정은 스크립트가 첫 유효안으로 대신 했다(<b>연구자 판단 아님</b>).</li>
   <li>리뷰는 겪은 사람(P1·P6)만 등급을 매겼고 나머지는 <code>no_experience</code>.</li>
@@ -456,7 +461,7 @@ _ask_whereabouts(이장):                              # 전화 한 통 — 연�
   <li>1세대 확정안 <code>retryCount 0→1</code>이 아무것도 바꾸지 않음 → 7장의 발견.</li>
 </ul>
 
-<h3>11.4 P1 사례 — 수정 <b>후</b> (engine 0.4.0)</h3>
+<h3>11.4 P1 사례 — 수정 <b>후</b> <span class="pill">engine 0.4.0 · prompt-v4 · 마을 1666cf9ccb87e954 · <code>.run/llm-repeat/runs-20260915-133624.json</code></span></h3>
 <div class="tablewrap"><table>
   <tr><th>정책</th><th>규칙 머리 (같은 하루)</th><th>모델 머리 (3회)</th></tr>
   <tr><td>A 이장 우선</td><td>09:30 이장 → 집 빈집 → 밭 09:38 해결. <b>이장 18.8분</b>, 연락 1명</td><td>3/3 같음</td></tr>
@@ -505,7 +510,7 @@ _ask_whereabouts(이장):                              # 전화 한 통 — 연�
   <ul>
     <li>이장에게도 짐작이 없는 경우(<code>no_local_knowledge</code>)는 코드와 화면 문구만 있고, 이 덱에서는 일어나지 않아 실행으로 확인하지 못했다.</li>
     <li>모델 머리가 D에서 "관계가 이장뿐"을 스스로 말하는지는 보지 않았다(화면 검사는 규칙 머리의 사유).</li>
-    <li>종합 역할이 근거 있는 주장을 근거 없음으로 잘못 분류한 문제(11.3)는 고치지 않았다.</li>
+    <li>종합 역할이 근거 있는 주장을 근거 없음으로 잘못 분류한 문제(11.3)는 고치지 않았다. → 15.4에서 비율로 재었다(고치지는 않았다).</li>
   </ul>
 </div>
 <ul>
@@ -514,13 +519,120 @@ _ask_whereabouts(이장):                              # 전화 한 통 — 연�
   <li><b>어르신이 원하는 순서</b> — 시뮬레이션은 순서마다 치르는 대가를 보여 줄 뿐, 선호를 답하지 않는다.</li>
   <li><b>P9 접근성</b> — 원자료에는 "펜션이 오르막 끝, 본인 운전 안 함"이 있으나 페르소나 기록에 없다. 전사 확인 필요.</li>
   <li><b>남은 단계</b> — 5 보건소 다건·소장 / 6 119 / 7 감도 분석 / 8 문서 19·23 경계 갱신. 이동(동승)과 보건소 담당자는 여전히 규칙이다.</li>
-  <li><b>여러 하루</b> — 지금은 seed 17 하나. 감도 분석(7단계)에서 하루를 바꿔 A·C·D의 차이가 유지되는지 봐야 한다.</li>
+  <li><b>여러 하루</b> — 지금은 seed 17 하나. → 15.2에서 20일로 봤다. D는 3/20일 미해결.</li>
 </ul>
 </section>
 
+
 <!-- ============================================================ 14 -->
+<section id="ledger">
+<h2>14. 채록 장부 — 물었고 없는 것과 안 물어본 것 <span class="pill ok">D090</span></h2>
+<p class="lead">"나중에 다른 사람이 MEDial이 아닌 것으로 일반화해 검증할 때 어려울 것"을 찾는 검토에서 첫째로 꼽힌 문제. 관계·지역 지식·연락 조건이 인터뷰에서 손으로 옮겨졌고, 인터뷰가 <b>묻지 않은</b> 항목의 빈칸이 코드 안에서 <b>"없음"</b>으로 읽히고 있었다.</p>
+<div class="grid two">
+  <div class="paper">
+    <span class="venue g">무엇</span>
+    <h3>사람 × 항목 다섯 개, 상태 넷</h3>
+    <p class="says">함께 다니는 사람 · 부탁하거나 도움을 청하는 사람 · 내 일과를 아는 사람 · 연락이 닿는 조건 · 부탁을 못 받는 조건. 각각 <code>recorded</code> / <code>partial</code> / <code>asked_none</code>(물었고 없음) / <code>not_asked</code>(안 물어봄). 마을 파일 옆 <code>ledger*.json</code>, 없으면 <code>ledger-legacy</code>(모두 안 물어봄, 이장이 전원의 일과를 안다고 가정).</p>
+    <div class="apply"><b>은점마을 인터뷰</b>는 첫째만 물었다. P1·P3·P9가 "없다"고 답했고(<code>asked_none</code>), 나머지 넷은 <code>not_asked</code>다. 이것은 데이터의 결함이 아니라 <b>다음 인터뷰에서 물을 목록</b>이다 (<code>docs/research/25_ELICITATION_GUIDE.md</code>).</div>
+  </div>
+  <div class="paper">
+    <span class="venue g">엔진에서 바뀐 것</span>
+    <h3>"이장은 모두의 일과를 안다"가 코드에서 장부로</h3>
+    <p class="says">누가 누구의 평소 장소를 아는가(<code>routineKnowledge</code>)를 provenance와 함께 장부에서 읽는다. 근거가 있는 쌍(동행군·사촌·Q3의 P1)은 <code>source-adapted</code>, 나머지는 <code>researcher-assumption</code>. 결정이 가정에 기대면 <code>metrics.elicitation.leanedOn</code>과 비교 화면 "기록에 없던 것" 행에 보인다. 장부는 attempt 입력 해시에 들어간다.</p>
+    <div class="apply"><b>정책 D의 사유가 달라졌다</b> — 전: "기록된 관계는 이장뿐". 후: "…이장뿐이다. <b>누구에게 도움을 청하는지는 묻지 않았다(채록 공백) — 없는 것이 아니라 모르는 것이다.</b>" 12장 발견 1의 서술 강도가 이만큼 내려간다.</div>
+  </div>
+</div>
+<p class="lead">실제 마을 장부 초안(<code>local-data/normalized/ledger.v1.json</code>, git 제외)은 익명본 페르소나의 관계·하루 필드만 보고 적은 것이라 <b>전사 대조 전</b>이다. 특히 이장이 P1·P2·P3·P5·P9·P10·P11의 일과를 안다고 적은 부분은 전부 연구자 가정 표시가 붙어 있다.</p>
+</section>
+
+<!-- ============================================================ 15 -->
+<section id="audit">
+<h2>15. 시뮬레이터 검사 세 가지 — 노브·하루·모델 주민 <span class="pill ok">D091</span> <span class="pill ok">D092</span></h2>
+<p class="lead">일반화 검토의 나머지 셋(②③④)을 한 모듈(<code>server/app/simulation/audit.py</code>)과 한 스크립트(<code>scripts/audit.py</code>)로 묶었다. 정책을 평가하는 것이 아니라 <b>시뮬레이터가 비교를 할 자격이 있는지</b>를 재는 검사다. 엔진에 새 로직은 넣지 않았고, 전부 <code>run_attempt</code>와 저장된 실행 파일을 읽는다. 원본은 <code>.run/audit/</code>(커밋하지 않음).</p>
+<div class="note"><b>버전</b> engine <code>medial-sim/0.4.0</code> · prompt <code>prompt-v4</code> · 합성 마을 <code>1666cf9ccb87e954</code> · 주민 모델 gemini-3.1-flash-lite · <code>.run/audit/audit-20260915-134200.json</code></div>
+
+<h3>15.1 노브마다: 바꾸면 로그가 달라지는가 (seed 17, 일과 변이 없음)</h3>
+<p>지원하는 노브 10개를 정책마다 하나씩 뒤집어(0↔1, named↔minimal, 기한 없음→5분 …) 같은 하루를 다시 돌리고, 커밋된 로그의 지문이 달라졌는지 본다. 결과값이 아니라 로그 지문이므로 사건 하나의 순서가 바뀌어도 잡힌다. 엔진이 읽을 수 없는 칸(재연락 0회일 때의 간격, head_first의 <code>allowHeadContact</code>)은 <b>이유를 적고</b> 건너뛰어, 죽은 노브처럼 보이지 않게 했다.</p>
+<div class="tablewrap"><table>
+  <tr><th>노브</th><th>A 이장 우선</th><th>B 재연락→보건소</th><th>C 이웃 우선</th><th>D 관계 우선</th><th>T-A 동승</th><th>T-B 동승</th></tr>
+  <tr><td><code>retryCount</code></td><td>달라짐</td><td>달라짐</td><td>달라짐</td><td>달라짐</td><td>같음</td><td>같음</td></tr>
+  <tr><td><code>retryIntervalMin</code></td><td>—</td><td>달라짐</td><td>—</td><td>달라짐</td><td>—</td><td>—</td></tr>
+  <tr><td><code>quietWindowMin</code></td><td>—</td><td>달라짐</td><td>—</td><td>달라짐</td><td>—</td><td>—</td></tr>
+  <tr><td><code>helperContactCap</code></td><td>달라짐</td><td>같음</td><td>달라짐</td><td>달라짐</td><td>달라짐*</td><td>달라짐*</td></tr>
+  <tr><td><code>neighbourAskLimit</code></td><td>같음</td><td>같음</td><td>달라짐</td><td>같음</td><td>같음</td><td>같음</td></tr>
+  <tr><td><code>disclosure</code></td><td>달라짐</td><td>달라짐</td><td>달라짐</td><td>달라짐</td><td>달라짐</td><td>달라짐</td></tr>
+  <tr><td><code>escalateToInstitutionAfterMin</code></td><td>달라짐</td><td>달라짐</td><td>달라짐</td><td>달라짐</td><td>같음</td><td>같음</td></tr>
+  <tr><td><code>allowHeadContact</code></td><td>—</td><td>같음</td><td>달라짐</td><td>달라짐</td><td>—</td><td>—</td></tr>
+  <tr><td><code>rideCandidateOrder</code></td><td>같음</td><td>같음</td><td>같음</td><td>같음</td><td>달라짐</td><td>달라짐</td></tr>
+  <tr><td><code>maxRideDetourMin</code></td><td>같음</td><td>같음</td><td>같음</td><td>같음</td><td>달라짐</td><td>달라짐</td></tr>
+</table></div>
+<p>죽은 노브(어디서도 로그를 못 바꾸는 것)는 <b>없다</b>. 읽히는 범위는 분명하다: 재연락 셋·기한·이장 허용·이웃 한도는 안부 확인 덱의 노브이고, 동승 둘은 이동 덱의 노브다. 등록부 주석은 "모든 조건이 두 덱에서 읽힌다"고 적혀 있었는데 사실이 아니어서 고쳤다. 검사 중에 찾아 고친 것 둘: (*) <code>helperContactCap</code>이 동승 부탁에서는 읽히지 않고 있었다(안부 확인 표의 <code>asked_too_often</code>과 같은 줄을 동승 규칙에도 넣음), 그리고 정책 편집기의 연락 순서 목록이 넷 중 둘(<code>head_first</code>·<code>retry_then_clinic</code>)만 보여 주고 있어서 C·D의 순서를 화면에서 고를 수 없었다. 이 표는 <code>test_audit.py</code>에 그대로 박혀 있어, 어떤 칸이 조용히 "같음"으로 바뀌면 테스트가 깨진다.</p>
+
+<h3>15.2 20일에 걸쳐: 결과가 하루에 따라 흔들리는가 (env-v3, 시각 ±10분)</h3>
+<p>seed 1–20의 하루를 뽑아 규칙 머리로 네 정책을 돌렸다. 표는 최소~최대(중앙값)이고, "유지"는 중앙값으로 매긴 정책 순서가 그날에도 뒤집히지 않은 날 수다.</p>
+<div class="tablewrap"><table>
+  <tr><th>측정</th><th>A</th><th>B</th><th>C</th><th>D</th><th>중앙값 순서 · 유지</th></tr>
+  <tr><td>해결된 건</td><td>1</td><td>1</td><td>1</td><td><b>0~1 (17/20일 해결)</b></td><td>A ≥ B ≥ C ≥ D · 17/20</td></tr>
+  <tr><td>해결까지(분)</td><td>6.3~11.4 (8.8)</td><td>156.5~174.7 (166.2)</td><td>9.7~12.2 (9.7)</td><td>53.0 (미해결 3일 제외)</td><td>A ≤ C ≤ D ≤ B · 17/20</td></tr>
+  <tr><td>연락 횟수</td><td>1</td><td>4</td><td>1</td><td>2</td><td>A ≤ C ≤ D ≤ B · 20/20</td></tr>
+  <tr><td>이웃이 쓴 시간(분)</td><td>16.3~21.4 (18.8)</td><td>0</td><td>19.7~22.2 (19.7)</td><td>0~23.0 (23.0)</td><td>B ≤ A ≤ C ≤ D · 17/20</td></tr>
+  <tr><td>하루가 건드려진 사람</td><td>1</td><td>0</td><td>2</td><td>0~1</td><td>B ≤ A ≤ D ≤ C · 17/20</td></tr>
+</table></div>
+<div class="grid two">
+  <div class="paper">
+    <span class="venue j">발견 4</span>
+    <h3>D의 결과는 10:10의 이장이 어디 있느냐에 달렸다</h3>
+    <p class="says">3/20일(seed 3·7·15)에 D는 미해결로 끝난다. 재연락 40분 뒤 10:10에 이장이 순찰 중 자리를 뜰 수 없는 곳에 있어 동행군 P4에게 <b>넘기고</b>(relay), P4는 마을식품 일 때문에 유예한다. MEDial의 장부에는 "이장이 수락"으로 남아 있어 아무도 가지 않는다 — 전가가 보이지 않는 구조가 그대로 일어난 것이다. A·C는 20/20일 같은 결말이다.</p>
+    <div class="apply"><b>해석</b> 12장 발견 1("D는 A보다 4.2분 늦을 뿐")은 seed 17의 이야기였다. 20일로 보면 D는 <b>재연락으로 40분을 미루는 동안 이장의 하루가 바뀔 수 있다</b>는 대가를 하나 더 치른다. 순서 자체의 비용이 아니라 <b>늦게 물어보는 것</b>의 비용이다.</div>
+  </div>
+  <div class="paper">
+    <span class="venue j">발견 5</span>
+    <h3>이동 덱은 하루 변이에 반응하지 않는다</h3>
+    <p class="says">T-A·T-B는 20일 모두 같은 숫자(152.5분 / 151.5분, 이웃 시간 425 / 423분)다. 일과 변이가 출발 시각 ±10분인데 동승 결정은 목적지·우회 거리로 정해지기 때문이다.</p>
+    <div class="apply"><b>해석</b> 이동 덱에서 "여러 하루"는 아직 아무 정보도 주지 않는다. 감도 분석(7단계)은 이 덱에서 하루가 아니라 다른 입력(누가 차를 몰 수 있는가)을 흔들어야 한다. 425분이라는 이웃 시간의 크기도 따로 볼 일이다.</div>
+  </div>
+</div>
+
+<h3>15.3 모델 주민 vs 거절 표 — "모델 주민은 거절하지 않는다" <span class="pill ok">D092</span></h3>
+<p><code>llm_repeat.py</code>(모델 머리, 6파일 56실행)에서 표 판정이 붙은 주민 답 20건은 모두 표와 같았다 — 그러나 전부 <b>수락</b> 칸이다. 모델 머리는 C에서 늘 P9를 먼저 고르고 P9는 늘 수락하므로, 모델 머리 아래서는 주민이 거절 상황에 놓이지 않는다. 그래서 <code>scripts/llm_shadow.py</code>를 만들었다: <b>규칙 마을</b>(규칙 머리·규칙 주민, 하루는 표가 보내는 대로 간다)을 돌리면서, 주민에게 질문이 갈 때마다 <b>같은 view로 모델 주민에게도 묻고</b> 답을 적기만 한다(적용하지 않음). 이렇게 하면 표가 실제로 만들어 내는 상황 — 09:30의 식당 부부, 자리를 뜰 수 없는 동행군, 순찰 중인 이장 — 에서의 어긋남을 셀 수 있다.</p>
+<div class="tablewrap"><table>
+  <tr><th>표가 말한 것</th><th>물은 횟수</th><th>모델이 다르게 답한 횟수</th><th>모델의 답</th></tr>
+  <tr><td>accept</td><td>28</td><td><b>0</b></td><td>accept 28</td></tr>
+  <tr><td>report_observation (빈집 → 밭)</td><td>28</td><td><b>0</b></td><td>report_observation 28</td></tr>
+  <tr><td>decline · <code>persona_condition</code> (식당을 비울 수 없음)</td><td>22</td><td><b>22</b></td><td>relay 12 · accept 10 (P10은 옆의 배우자에게 넘기고, P11은 "제가 다녀오겠습니다")</td></tr>
+  <tr><td>defer · <code>cannot_leave_here</code> (P4, 일 중)</td><td>2</td><td><b>2</b></td><td>accept 1 ("조금 늦을 수는 있겠지만 가겠다") · decline 1</td></tr>
+  <tr><td>relay · <code>cannot_leave_here</code> (이장, 순찰 중)</td><td>2</td><td><b>2</b></td><td>accept ("순찰 마치는 대로")</td></tr>
+  <tr><th>합계</th><th>82</th><th>26 (32%)</th><th>C·D·A × seed 1–10, 17 · <code>.run/llm-shadow/shadow-20260915-134014·134408.json</code></th></tr>
+</table></div>
+<div class="grid two">
+  <div class="paper">
+    <span class="venue j">발견 6</span>
+    <h3>표가 "안 된다"고 한 26번 중 모델 주민이 안 된다(거절·유예) 쪽으로 답한 것은 한 번뿐이다</h3>
+    <p class="says">25번은 수락(13)하거나 옆 사람에게 넘겼다(12). 프롬프트에는 본인의 <code>declineConditions</code>("영업 중에는 가게를 비울 수 없다")가 들어 있고 "그 말과 어긋나려면 관측에 이유가 있어야 한다"고 적혀 있다. 모델은 그 조건을 <b>알고 말하면서</b>("가게 일이 바빠서요") 거절 대신 수락하거나 넘긴다. 수락·관측 칸은 56/56 일치하므로 이것은 형식 오류가 아니라 <b>방향이 한쪽으로 치우친 것</b>이다.</p>
+    <div class="apply"><b>해석</b> 모델 마을은 마을의 <b>응할 의사를 높게 잡는다</b>. 12장 발견 3("모델 머리는 거절을 만들지 않았다")은 머리 이야기였는데, 주민도 같다. 모델 마을에서 나온 "연락 2명으로 해결"은 실제 마을이 아니라 <b>거절하지 않는 마을</b>의 결과다. D083(표는 옆에 기록만)은 유지한다 — 표로 덮어쓰면 LLM 주민이 아니라 표에 말을 입힌 것이 되기 때문이다. 대신 이 비율을 모델 마을 결과 옆에 항상 같이 놓는다.</div>
+  </div>
+  <div class="paper">
+    <span class="venue">열린 결정</span>
+    <h3>prompt-v5를 만들 것인가</h3>
+    <p class="says">고치는 방법은 있다: 답하기 전에 "내 조건 중 지금 걸리는 것"을 먼저 쓰게 하고(자기 검토), 거절이 정당한 답임을 시스템 문장으로 말해 주는 것. 그러나 그것은 표 쪽으로 <b>조정</b>하는 일이고, 어느 쪽이 실제 마을에 가까운지는 전사와 대조해야 안다(식당 부부가 실제로 "못 간다"고 했는지). 연구자 결정으로 남긴다.</p>
+    <div class="apply"><b>지금 할 수 있는 것</b> 어느 쪽을 택하든 <code>llm_shadow.py</code>를 다시 돌리면 같은 82문항 표가 나오므로, 프롬프트 개정의 효과를 이 표로 잰다.</div>
+  </div>
+</div>
+
+<h3>15.4 종합의 분류 — 근거 있음 / 없음</h3>
+<p>11.3의 반복 세션(<code>iter-aecf307097f9</code>) 종합이 낸 항목 13개(근거 없음으로 걸러낸 주장 6 + 사건 참조가 붙은 쟁점 7)를 라벨 시트(<code>.run/audit/synthesis-labels-*.json</code>)로 뽑았다. 시트에는 <code>humanLabel</code>(사람)과 <code>draftLabel</code>(AI 초안) 칸이 따로 있고, <b>비율은 사람 라벨로만 센다</b>. 지금은 사람 라벨이 0개라 사람 기준 비율은 없다.</p>
+<div class="tablewrap"><table>
+  <tr><th>종합이 고른 분류</th><th>항목</th><th>AI 초안 라벨과 다른 것</th><th>내용</th></tr>
+  <tr><td>근거 없음</td><td>6</td><td><b>2</b></td><td>"P1은 왕래하는 이웃이 없다"(P1의 페르소나·장부 <code>asked_none</code>에 있음) · "P6이 일과로 미루어 밭으로"(<code>local_knowledge</code> 사건이 있음)</td></tr>
+  <tr><td>근거 있음 (사건 참조)</td><td>7</td><td>0</td><td>참조된 사건이 모두 실행 로그에 있다</td></tr>
+  <tr><th>합계</th><th>13</th><th>2 (15%) — AI 초안 기준, 연구자 확인 전</th><th>근거 없음으로 걸러낸 것 6 중 2가 사실은 근거 있음 (2/6)</th></tr>
+</table></div>
+<p>초안 라벨에서 눈에 띈 것 하나: 종합이 걸러낸 "경험 없는 주민 대다수가 중립·긍정일 것이라는 추정"은 <b>어느 리뷰어도 하지 않은 주장</b>이다. 종합이 스스로 만든 주장을 스스로 걸렀다. 이것은 오분류가 아니라 다른 종류의 오류라 시트의 <code>draftReason</code>에만 적어 두었다.</p>
+</section>
+
+<!-- ============================================================ 16 -->
 <section id="index">
-<h2>14. 결정 색인 D076–D089</h2>
+<h2>16. 결정 색인 D076–D092</h2>
 <div class="tablewrap"><table>
   <tr><th>번호</th><th>결정</th><th>근거</th><th>확인</th></tr>
   <tr><td>D076</td><td>거절 사유는 순서 있는 규칙 목록, 먼저 걸리는 줄이 이유</td><td>합산하면 측정과 추측이 구분되지 않는다</td><td>줄마다 provenance, 하나씩 끌 수 있음</td></tr>
@@ -537,6 +649,9 @@ _ask_whereabouts(이장):                              # 전화 한 통 — 연�
   <tr><td>D087</td><td><code>relation_first</code> · 정책 D, 기록된 관계만, 이장 마지막</td><td>연구자 제안을 비교할 정책으로</td><td>규칙 D 이장 23.0분</td></tr>
   <tr><td>D088</td><td>빈집 + 단서 없음 → 이장에게 어디 있을지 전화</td><td>C의 미해결은 구멍이었다</td><td>C 해결, 0.4.0 · prompt-v4</td></tr>
   <tr><td>D089</td><td>판단 이유를 모두 시간순으로, 엔진 키 없이, 같은 버전 비교는 안내</td><td>D의 핵심 이유가 가려짐</td><td>Playwright 키 0건 검사</td></tr>
+  <tr><td>D090</td><td>채록 장부: 사람×항목 상태 넷, 일과를 아는 사람은 provenance와 함께 장부에서</td><td>안 물어본 것이 없음으로 읽혔다</td><td><code>test_ledger.py</code> 8건, D 사유 "채록 공백"</td></tr>
+  <tr><td>D091</td><td>시뮬레이터 검사 셋을 한 모듈로: 노브 효과 표·20일 안정성·모델 주민 그림자. 표는 테스트에 고정</td><td>노브가 죽어도, 결과가 하루에 흔들려도 알 길이 없었다</td><td><code>test_audit.py</code> 5건, <code>scripts/audit.py</code></td></tr>
+  <tr><td>D092</td><td>모델 주민의 표 이탈은 <b>규칙 마을을 그림자로</b> 잰다(같은 view, 기록만). 결과: 표가 안 된다고 한 26건 중 모델도 안 된다고 한 것 1건. D083 유지, 비율을 결과 옆에 둔다</td><td>모델 머리 아래서는 주민이 거절 상황에 놓이지 않아 이탈률이 0으로 보였다</td><td><code>scripts/llm_shadow.py</code>, 82문항</td></tr>
 </table></div>
 </section>
 
@@ -548,6 +663,7 @@ _ask_whereabouts(이장):                              # 전화 한 통 — 연�
   <code>server/app/simulation/agents/llm.py</code> · <code>agents/provider.py</code> · <code>iteration/llm.py</code>(Gemini 하나) · <code>relations.py</code> · <code>decks/p1_no_response.py</code>(POLICY_D)<br>
   <code>server/tests/simulation/test_contact_order.py</code> · <code>test_llm_village.py</code> · <code>e2e/screens.spec.ts</code><br>
   <code>scripts/llm_repeat.py</code> · <code>scripts/llm_iteration.py</code> · 실행 원본은 <code>.run/llm-repeat/</code> · <code>.run/llm-iteration/</code>(커밋하지 않음)<br>
+  <code>server/app/simulation/ledger.py</code> · <code>audit.py</code> · <code>scripts/audit.py</code> · <code>scripts/llm_shadow.py</code> · <code>test_ledger.py</code> · <code>test_audit.py</code> · 원본 <code>.run/audit/</code> · <code>.run/llm-shadow/</code><br>
   <span style="color:var(--muted)">→ 상세 기록: <code>DEVELOPMENT.md</code> "MAS 재구축 3단계" 절 · 결정 원문: <code>docs/research/DECISIONS.md</code></span>
   <p style="margin-top:14px">MEDial · Resident Agents as Evaluators — 연구노트 · 2026-09-15 · 시뮬레이션 주민은 실제 참여자가 아니다</p>
 </footer>

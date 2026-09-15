@@ -30,7 +30,9 @@ POLICIES = _merge("policy", [p1.POLICY_A, p1.POLICY_B, p1.POLICY_C, p1.POLICY_D]
 RESOURCE_SETS = _merge("resource revision", [p1.RESOURCES], [p9.RESOURCES_T])
 
 #: The policy an iteration session starts from. It runs on both development
-#: decks because every condition it sets is read by the engine in both.
+#: decks. Not every condition is read on both: the retry, escalation and
+#: neighbour-limit knobs belong to the check-in deck and the ride knobs to the
+#: transport deck (``audit.knob_effects`` has the table).
 ITERATION_START_POLICY = it.POLICY_ITER_V0.id
 
 #: Which resource revision and policies belong with which deck. The UI uses this
