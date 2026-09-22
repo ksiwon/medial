@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Resident Agents as Evaluators · Jungwon Park</title>
+<style>
+  :root{
+    --paper:#f4efe9;
+    --ink:#141414;
+    --muted:#57524c;
+    --rule:#d8d1c8;
+    --red:#cf4535;
+    --dark:#191b1f;
+    --cream:#f2ece3;
+    --salmon:#f2765f;
+    --dimcream:#a8a29a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:#8c8880;
+    font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,
+      "Segoe UI",system-ui,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    display:flex;flex-direction:column;align-items:center;gap:28px;padding:28px 0;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- slide frame ---------- */
+  .slide{
+    width:1600px;height:900px;flex:none;
+    display:flex;flex-direction:column;
+    padding:58px 88px 64px;
+    background:var(--paper);color:var(--ink);
+    overflow:hidden;
+  }
+  .slide.dark{background:var(--dark);color:var(--cream)}
+
+  .top{display:flex;flex-direction:row;align-items:center;justify-content:space-between;
+       width:100%;flex:none;margin-bottom:44px}
+  .kick{display:flex;flex-direction:row;align-items:center;gap:14px;
+        font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--red)}
+  .slide.dark .kick{color:var(--salmon)}
+  .dash{width:36px;height:2px;background:var(--red);flex:none}
+  .slide.dark .dash{background:var(--salmon)}
+  .pg{font-size:13px;font-weight:800;letter-spacing:.08em;color:#8d8880}
+
+  .main{display:flex;flex-direction:column;flex:1 1 auto;width:100%}
+
+  /* ---------- type ---------- */
+  h1{font-size:96px;line-height:1.06;font-weight:800;letter-spacing:-.02em}
+  h2{font-size:46px;line-height:1.18;font-weight:800;letter-spacing:-.015em}
+  h2.sm{font-size:40px}
+  h3{font-size:23px;line-height:1.3;font-weight:800}
+  p{font-size:21px;line-height:1.65;color:var(--ink)}
+  .slide.dark p{color:var(--cream)}
+  p.mut{color:var(--muted)}
+  .slide.dark p.mut{color:var(--dimcream)}
+  p.sm{font-size:19px;line-height:1.6}
+  p.xs{font-size:15px;line-height:1.5;color:var(--muted)}
+  .slide.dark p.xs{color:var(--dimcream)}
+  b{font-weight:800}
+  .r{color:var(--red);font-weight:800}
+  .slide.dark .r{color:var(--salmon)}
+
+  .lab{font-size:12.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .lab.red{color:var(--red)}
+  .slide.dark .lab{color:var(--dimcream)}
+  .slide.dark .lab.red{color:var(--salmon)}
+
+  .hr{width:100%;height:1px;background:var(--rule);flex:none}
+  .slide.dark .hr{background:#33373e}
+  .redline{width:240px;height:3px;background:var(--red);flex:none}
+  .slide.dark .redline{background:var(--salmon)}
+
+  .stack{display:flex;flex-direction:column}
+  .row{display:flex;flex-direction:row}
+  .g12{gap:12px}.g16{gap:16px}.g20{gap:20px}.g24{gap:24px}.g32{gap:32px}.g48{gap:48px}
+  .grow{flex:1 1 0}
+  .spacer{flex:1 1 auto}
+
+  /* ---------- column blocks ---------- */
+  .cols{display:flex;flex-direction:row;gap:40px;width:100%}
+  .col{display:flex;flex-direction:column;gap:12px;flex:1 1 0;
+       border-top:2px solid var(--ink);padding-top:16px}
+  .slide.dark .col{border-top-color:var(--cream)}
+  .col.red{border-top-color:var(--red)}
+
+  /* ---------- figures ---------- */
+  figure{display:flex;flex-direction:column;gap:10px;width:100%}
+  figure img{display:block;width:100%;height:auto;border:1px solid var(--rule);background:#fff}
+  figcaption{font-size:14.5px;line-height:1.45;color:var(--muted)}
+
+  /* ---------- gantt ---------- */
+  .gantt{display:flex;flex-direction:column;gap:12px;width:100%}
+  .ghead{display:flex;flex-direction:row;gap:0;width:100%;padding-left:300px}
+  .gcell{width:224px;flex:none;font-size:13px;font-weight:800;letter-spacing:.06em;
+         color:var(--muted);text-transform:uppercase}
+  .gcell.on{color:var(--red)}
+  .grow2{display:flex;flex-direction:row;align-items:center;gap:0;width:100%}
+  .gname{width:300px;flex:none;font-size:18px;font-weight:800;line-height:1.3;padding-right:20px}
+  .gpad{flex:none;height:1px}
+  .bar{height:30px;background:var(--ink);display:flex;flex-direction:row;align-items:center;
+       padding-left:14px;flex:none}
+  .bar span{font-size:13px;font-weight:800;color:var(--paper);letter-spacing:.04em;white-space:nowrap}
+  .bar.red{background:var(--red)}
+  .bar.open{background:#c9c2b8}
+  .bar.open span{color:#4a463f}
+
+  /* ---------- venue plan ---------- */
+  .plan{display:flex;flex-direction:row;gap:0;width:100%;height:270px;border:1px solid var(--rule)}
+  .zone{display:flex;flex-direction:column;gap:10px;padding:22px;border-right:1px solid var(--rule);
+        align-items:center;justify-content:center}
+  .zone:last-child{border-right:none}
+  .portrait{width:78px;height:190px;border:2px solid var(--ink);flex:none;
+            display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .portrait span{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--muted);
+                 transform:rotate(-90deg);white-space:nowrap}
+  .wall{width:100%;height:112px;border:2px solid var(--ink);display:flex;
+        flex-direction:row;align-items:center;justify-content:center}
+  .wall span{font-size:13px;font-weight:800;letter-spacing:.08em;color:var(--muted)}
+  .desk{width:100%;height:62px;background:var(--ink);display:flex;flex-direction:row;
+        align-items:center;justify-content:center}
+  .desk span{font-size:13px;font-weight:800;letter-spacing:.08em;color:var(--paper)}
+  .clock{width:96px;height:96px;border:2px solid var(--ink);border-radius:96px;flex:none;
+         display:flex;align-items:center;justify-content:center}
+  .clock span{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--muted);text-align:center}
+
+  /* ---------- receipt ---------- */
+  .receipt{display:flex;flex-direction:column;gap:10px;width:420px;flex:none;
+           background:#fffdf8;border:1px solid var(--rule);padding:24px 26px}
+  .receipt .rl{font-size:11.5px;font-weight:800;letter-spacing:.14em;
+               text-transform:uppercase;color:var(--muted)}
+  .receipt .rv{font-size:18px;line-height:1.45;font-weight:700;color:var(--ink)}
+  .receipt .rv.n{font-weight:400;font-size:16px;line-height:1.5}
+
+  /* ---------- misc ---------- */
+  .tag{font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+       border:1px solid var(--rule);padding:6px 13px;color:var(--muted);flex:none}
+  .slide.dark .tag{border-color:#3a3f47;color:var(--dimcream)}
+</style>
+</head>
+<body>
+
+<!-- ============================== 01 · COVER ============================== -->
+<section class="slide dark">
+  <div class="main stack">
+    <div class="spacer"></div>
+    <div class="kick" style="margin-bottom:26px"><span>KAIST Department of Industrial Design · Graduation Exhibition 2026</span></div>
+    <h1>Resident Agents as Evaluators</h1>
+    <h1 style="color:var(--dimcream)">A Tool for Service Designers</h1>
+    <div class="redline" style="margin:38px 0 26px"></div>
+    <h3>Jungwon Park</h3>
+    <p class="mut sm" style="margin-top:10px">A tool for reviewing service designs by running MEDial, an AI Care Orchestrator that started from interviews in Eunjeom Village, inside a Village Simulator. And the plan for the exhibition.</p>
+    <div class="spacer"></div>
+  </div>
+</section>
+
+<!-- ============================== 02 · WHAT I AM BUILDING ============================== -->
+<section class="slide">
+  <div class="top">
+    <div class="kick"><span class="dash"></span><span>The tool · What I am building</span></div>
+    <div class="pg">02</div>
+  </div>
+  <div class="main stack g24">
+    <h2 class="sm">MEDial: an AI Care Orchestrator<br>that started from interviews in Eunjeom Village.</h2>
+    <p>In the interviews, I kept seeing the same gap. When someone doesn't answer a check-in call, or needs to get to hospital, who checks on them, and who helps next? That question became <b>MEDial</b>.</p>
+    <p><b>MEDial is an AI Care Orchestrator. When someone doesn't answer, or needs a lift or care, it finds a neighbour or a public service to check and help,</b> using only what people agreed to share. Today, people do this with phone calls and home visits.</p>
+    <p>A rural service needs to be tested and fixed many times, but you can't keep going back to the village. So <b>I built a Village Simulator from the interviews and field notes of the 12 participants.</b> A service designer runs MEDial inside it and reads what each resident went through.</p>
+  </div>
+</section>
+
+<!-- ============================== 03 · ONE DAY ============================== -->
+<section class="slide">
+  <div class="top">
+    <div class="kick"><span class="dash"></span><span>Village Simulator · Replaying a day</span></div>
+    <div class="pg">03</div>
+  </div>
+  <div class="main row g48">
+    <div class="stack g20" style="width:520px;flex:none">
+      <h2 class="sm">Run the Village Simulator,<br>and a day in the village plays out.</h2>
+      <p class="sm">You can see who goes where, and who MEDial asked to check in or give a lift. You can pause at any time.</p>
+      <p class="sm">The bar at the bottom runs from 5 a.m. to 10 p.m. Each request that is under way gets its own colour, so you can follow it.</p>
+      <p class="sm">Nothing on screen is made up. Schedules, relationships and places come from the interviews. What we don't know stays blank, because guessing would give us a village that looks right but is wrong.</p>
+      <p class="sm"><b>This week, I wrote down for each of the 12 people what they know, what their day looks like, and who they are close to.</b></p>
+    </div>
+    <figure class="grow">
+      <img src="screenshots/2026-09-16-eunjeom/01-day.png" alt="A day in Eunjeom Village: the map, what happened, what MEDial decided, and the residents">
+      <figcaption>8:18 in the morning. Two people are driving into town in one car, and the circle on the map marks a request that is still going. <b>Everyone on screen is simulated.</b> They are called P1 to P12, never by name.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============================== 04 · TWELVE PEOPLE ============================== -->
+<section class="slide">
+  <div class="top">
+    <div class="kick"><span class="dash"></span><span>The tool · Two: Reading each person's experience</span></div>
+    <div class="pg">04</div>
+  </div>
+  <div class="main row g48">
+    <figure class="grow">
+      <img src="screenshots/2026-09-16-eunjeom/02-evaluations.png" alt="Each resident's own account of the day">
+      <figcaption>The numbers at the top count items. They are not scores. People who used the service are listed first, and people who never used it are not counted as unhappy.</figcaption>
+    </figure>
+    <div class="stack g20" style="width:520px;flex:none">
+      <h2 class="sm">At ten at night,<br>each agent looks back<br>on its own day.</h2>
+      <p class="sm">Each agent only rates what happened to it. When it doesn't know something, it says <b>“I don't know”</b>, and that answer is kept as it is.</p>
+      <p class="sm">There are no scores and no rankings. We read one person at a time, side by side.</p>
+      <div class="hr"></div>
+      <p class="sm">On paper a request can be solved, while one neighbour spent over an hour on it and someone was sent without being asked. One number won't show that, so the tool shows each person separately.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== 05 · ONE SETTING ============================== -->
+<section class="slide">
+  <div class="top">
+    <div class="kick"><span class="dash"></span><span>The tool · Three: Run it again, change one setting</span></div>
+    <div class="pg">05</div>
+  </div>
+  <div class="main stack g16">
+    <h2 class="sm">The designer reads the agents' evaluations<br>and picks one change.</h2>
+    <p class="sm">The designer picks one problem from the residents' accounts and changes the setting behind it. Here: if a second call gets no answer, go to the health centre instead of a neighbour.</p>
+    <div class="row g48" style="align-items:flex-start;margin-top:2px">
+      <figure style="width:660px;flex:none">
+        <div style="width:660px;height:194px;overflow:hidden;border:1px solid var(--rule);background:#fff">
+          <img src="screenshots/2026-09-16-eunjeom/03-reason-locked.png" alt="The reason box and the locked run button" style="width:1320px;max-width:none;height:auto;border:none">
+        </div>
+        <figcaption>You have to type a reason before the change can run.</figcaption>
+      </figure>
+      <div class="stack g16 grow" style="padding-top:2px;border-top:2px solid var(--red);padding-left:2px">
+        <div class="lab red">An example reason</div>
+        <p style="font-size:25px;line-height:1.5">“If they still don't pick up, pass it to the health centre. Neighbours shouldn't have to keep checking.”</p>
+      </div>
+    </div>
+    <div class="hr"></div>
+    <p class="sm"><b>Then the same day runs again with only that setting changed.</b> Everything else is the same, so any difference comes from this setting. We check that the setting was actually used, then whether neighbours were asked less and whether more people waited on the health centre. If the situation never came up, we record that.</p>
+  </div>
+</section>
+
+<!-- ============================== 06 · WHAT COMES NEXT ============================== -->
+<section class="slide">
+  <div class="top">
+    <div class="kick"><span class="dash"></span><span>What exists and what comes next</span></div>
+    <div class="pg">06</div>
+  </div>
+  <div class="main stack g32">
+    <h2 class="sm">To make a 10-day experience,<br>the Village Simulator needs three more things.</h2>
+    <p class="sm mut"><b>Right now</b>, routines follow the interviews, set rules decide who helps and how people rate the day, and it runs one day at a time.</p>
+    <div class="cols">
+      <div class="col red">
+        <div class="lab red">1. Resident behaviour</div>
+        <h3>From rules to agents</h3>
+        <p class="sm mut">Whether someone can go is still checked by place, schedule and travel time. Within that, persona agents decide how to answer and how to rate their day.</p>
+      </div>
+      <div class="col">
+        <div class="lab">2. Making changes</div>
+        <h3>Three changes MEDial can really make</h3>
+        <p class="sm mut">From that day's events and ratings, it offers three changes MEDial can actually make, each with a reason.</p>
+      </div>
+      <div class="col">
+        <div class="lab">3. Carrying into the next day</div>
+        <h3>Days that follow on</h3>
+        <p class="sm mut">Unfinished requests, time spent and settings carry over. When different choices lead to the same state, they merge, so every branch can be worked out in advance as a <b>state graph</b>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== 07 · THE EXHIBITION ============================== -->
+<section class="slide dark">
+  <div class="top">
+    <div class="kick"><span class="dash"></span><span>The exhibition</span></div>
+    <div class="pg">07</div>
+  </div>
+  <div class="main stack">
+    <div class="spacer"></div>
+    <h2>At the exhibition, visitors become<br><span class="r">service designers reviewing MEDial<br>over ten days in the village</span>.</h2>
+    <div class="redline" style="margin:36px 0 30px"></div>
+    <p style="max-width:1180px">The tool is made for service designers. At the exhibition, that job is cut down to ten days and handed to visitors. <b>Each day, a visitor picks one change and sees how the next day turns out.</b></p>
+    <p class="mut" style="max-width:1180px;margin-top:20px">Earlier, we ran the same day again with one setting changed. The exhibition works differently: choices build up, so each day is the result of everything chosen so far. At the end, visitors see their choices and what happened on one page.</p>
+    <div class="spacer"></div>
+    <div class="row g12">
+      <div class="tag">About 10 minutes</div>
+      <div class="tag">10 days · 3 changes a day</div>
+      <div class="tag">State graph worked out in advance</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== 08 · TEN DAYS ============================== -->
+<section class="slide">
+  <div class="top">
+    <div class="kick"><span class="dash"></span><span>What happens at the venue · 10 days</span></div>
+    <div class="pg">08</div>
+  </div>
+  <div class="main row g48">
+    <div class="stack g24 grow">
+      <h2 class="sm">Choose the next day on a tablet,<br>see what happens on the big screen.</h2>
+      <div class="cols" style="gap:32px">
+        <div class="col">
+          <div class="lab red">Day n · 20 sec</div>
+          <h3>See where things stand</h3>
+          <p class="sm mut">The big screen shows that day's requests and what residents went through. The tablet shows three possible changes.</p>
+        </div>
+        <div class="col">
+          <div class="lab red">Tablet · 15 sec</div>
+          <h3>Pick a change</h3>
+          <p class="sm mut">Pick one of the three changes, then pick a reason from two or three ready-made lines. A short note is optional.</p>
+        </div>
+        <div class="col red">
+          <div class="lab red">Day n+1 · 25 sec</div>
+          <h3>The next day</h3>
+          <p class="sm mut">See the next day, with every choice so far built in. On day ten, see how the village ends up.</p>
+        </div>
+      </div>
+    </div>
+    <div class="stack g16" style="width:420px;flex:none">
+      <div class="receipt">
+        <div class="rl">Day 07 · Change chosen</div>
+        <div class="rv">Before asking a neighbour, call the person twice more</div>
+        <div class="hr"></div>
+        <div class="rl">Reason chosen</div>
+        <div class="rv">“Ease the load on neighbours first.”</div>
+        <div class="hr"></div>
+        <div class="rl">Day 08 · The next day</div>
+        <div class="rv n">Calls back to the person · 0 → 2 (answered the second)<br>Check-ins asked of neighbours · 1 → 0<br>Time until someone checked · about 80 min longer</div>
+        <div class="hr"></div>
+        <div class="rl">Design record</div>
+        <div class="rv n">Keeps the choices, reasons and village state from Day 01 to Day 08.</div>
+      </div>
+      <p class="xs">Example only. The numbers have not been worked out yet. The real screen shows results calculated from what the visitor picked.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== 09 · THE VENUE ============================== -->
+<section class="slide">
+  <div class="top">
+    <div class="kick"><span class="dash"></span><span>The venue</span></div>
+    <div class="pg">09</div>
+  </div>
+  <div class="main stack g32">
+    <h2 class="sm">One wide projector and one tablet<br>show what the next day brings.</h2>
+
+    <div class="row g48" style="align-items:flex-start">
+      <figure style="width:820px;flex:none">
+        <img src="screenshots/2026-09-16-eunjeom/04-exhibition-space-mockup.png" alt="Mock-up of a small exhibition room: a projector on the wall and a tablet for choosing changes">
+        <figcaption>Setup for a small room. Visitors pick one of three changes for MEDial on the tablet in front, and see the next day in the Village Simulator projected on the wall.</figcaption>
+      </figure>
+      <div class="stack g24 grow" style="padding-top:8px">
+        <p class="sm"><b>A wide projector puts the Village Simulator on the wall.</b> Requests, who MEDial is asking, and how residents are doing are all on one screen. After each choice, the next day plays right there.</p>
+        <div class="hr"></div>
+        <p class="sm"><b>The tablet is only for choosing.</b> The change and the reason are both picked from a list, so each day takes under 15 seconds. That's about 10 minutes a person, up to six an hour. People waiting can watch on the wall.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== 10 · EIGHT WEEKS ============================== -->
+<section class="slide">
+  <div class="top">
+    <div class="kick"><span class="dash"></span><span>Eight weeks</span></div>
+    <div class="pg">10</div>
+  </div>
+  <div class="main stack g32">
+    <h2 class="sm">From 16 September to 11 October,<br>finish the core of the exhibition.</h2>
+
+    <div class="gantt">
+      <div class="ghead">
+        <div class="gcell">16–22 Sep</div><div class="gcell">23–29 Sep</div>
+        <div class="gcell">30 Sep–6 Oct</div><div class="gcell">7–11 Oct</div>
+        <div class="gcell on">12 Oct–Show</div>
+      </div>
+      <div class="grow2">
+        <div class="gname">Resident behaviour agents</div>
+        <div class="bar red" style="width:336px"><span>REPLIES · DAY RATINGS</span></div>
+      </div>
+      <div class="grow2">
+        <div class="gname">Making three changes</div>
+        <div class="gpad" style="width:224px"></div>
+        <div class="bar" style="width:224px"><span>PROPOSE · CHECK</span></div>
+      </div>
+      <div class="grow2">
+        <div class="gname">Carrying into the next day</div>
+        <div class="gpad" style="width:448px"></div>
+        <div class="bar" style="width:224px"><span>WHAT CARRIES OVER</span></div>
+      </div>
+      <div class="grow2">
+        <div class="gname">State graph for the show</div>
+        <div class="gpad" style="width:560px"></div>
+        <div class="bar red" style="width:336px"><span>MERGE STATES · PRECOMPUTE</span></div>
+      </div>
+      <div class="grow2">
+        <div class="gname">10-day rehearsal · record</div>
+        <div class="gpad" style="width:672px"></div>
+        <div class="bar" style="width:224px"><span>REHEARSAL 11 OCT</span></div>
+      </div>
+      <div class="grow2">
+        <div class="gname">Tablet and big screen</div>
+        <div class="gpad" style="width:448px"></div>
+        <div class="bar" style="width:448px"><span>CHOICE SCREEN · NEXT-DAY SCREEN</span></div>
+      </div>
+      <div class="grow2">
+        <div class="gname">Visitor testing · setup</div>
+        <div class="gpad" style="width:896px"></div>
+        <div class="bar open" style="width:224px"><span>TESTING · SETUP</span></div>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+    <p><b>By 11 October, the state graph is ready and a full ten-day rehearsal is done.</b> That needs the change proposals and the carry-over finished first. From 12 October: visitor testing and setup.</p>
+  </div>
+</section>
+
+<!-- ============================== 11 · CLOSING ============================== -->
+<section class="slide dark">
+  <div class="top">
+    <div class="kick"><span class="dash"></span><span>In closing</span></div>
+    <div class="pg">11</div>
+  </div>
+  <div class="main stack">
+    <div class="spacer"></div>
+    <p>MEDial started from interviews in Eunjeom Village. I am building a way to run it inside the Village Simulator, read what residents went through, and try fixing the next day.</p>
+    <div class="hr" style="margin:26px 0"></div>
+    <p>At the exhibition, visitors pick changes over ten days in the village and watch the results build up on the big screen.</p>
+    <div class="hr" style="margin:26px 0"></div>
+    <h1 style="margin-top:16px">Thank you.</h1>
+    <div class="spacer"></div>
+  </div>
+</section>
+
+</body>
+</html>
