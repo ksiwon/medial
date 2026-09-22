@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Resident Agents as Evaluators · Follow-up · Jungwon Park</title>
+<style>
+  :root{
+    --paper:#f4efe9;
+    --ink:#141414;
+    --muted:#57524c;
+    --rule:#d8d1c8;
+    --red:#cf4535;
+    --dark:#191b1f;
+    --cream:#f2ece3;
+    --salmon:#f2765f;
+    --dimcream:#a8a29a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:#8c8880;
+    font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,
+      "Segoe UI",system-ui,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    display:flex;flex-direction:column;align-items:center;gap:28px;padding:28px 0;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- slide frame ---------- */
+  .slide{
+    width:1600px;height:900px;flex:none;
+    display:flex;flex-direction:column;
+    padding:58px 88px 64px;
+    background:var(--paper);color:var(--ink);
+    overflow:hidden;
+  }
+  .slide.dark{background:var(--dark);color:var(--cream)}
+
+  .top{display:flex;flex-direction:row;align-items:center;justify-content:space-between;
+       width:100%;flex:none;margin-bottom:44px}
+  .kick{display:flex;flex-direction:row;align-items:center;gap:14px;
+        font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--red)}
+  .slide.dark .kick{color:var(--salmon)}
+  .dash{width:36px;height:2px;background:var(--red);flex:none}
+  .slide.dark .dash{background:var(--salmon)}
+  .pg{font-size:13px;font-weight:800;letter-spacing:.08em;color:#8d8880}
+
+  .main{display:flex;flex-direction:column;flex:1 1 auto;width:100%}
+
+  /* ---------- type ---------- */
+  h1{font-size:96px;line-height:1.06;font-weight:800;letter-spacing:-.02em}
+  h2{font-size:46px;line-height:1.18;font-weight:800;letter-spacing:-.015em}
+  h2.sm{font-size:40px}
+  h3{font-size:23px;line-height:1.3;font-weight:800}
+  p{font-size:21px;line-height:1.65;color:var(--ink)}
+  .slide.dark p{color:var(--cream)}
+  p.mut{color:var(--muted)}
+  .slide.dark p.mut{color:var(--dimcream)}
+  p.sm{font-size:19px;line-height:1.6}
+  p.xs{font-size:15px;line-height:1.5;color:var(--muted)}
+  .slide.dark p.xs{color:var(--dimcream)}
+  b{font-weight:800}
+  .r{color:var(--red);font-weight:800}
+  .slide.dark .r{color:var(--salmon)}
+
+  .lab{font-size:12.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .lab.red{color:var(--red)}
+  .slide.dark .lab{color:var(--dimcream)}
+  .slide.dark .lab.red{color:var(--salmon)}
+
+  .hr{width:100%;height:1px;background:var(--rule);flex:none}
+  .slide.dark .hr{background:#33373e}
+  .redline{width:240px;height:3px;background:var(--red);flex:none}
+  .slide.dark .redline{background:var(--salmon)}
+
+  .stack{display:flex;flex-direction:column}
+  .row{display:flex;flex-direction:row}
+  .g12{gap:12px}.g16{gap:16px}.g20{gap:20px}.g24{gap:24px}.g32{gap:32px}.g48{gap:48px}
+  .grow{flex:1 1 0}
+  .spacer{flex:1 1 auto}
+
+  /* ---------- column blocks ---------- */
+  .cols{display:flex;flex-direction:row;gap:40px;width:100%}
+  .col{display:flex;flex-direction:column;gap:12px;flex:1 1 0;
+       border-top:2px solid var(--ink);padding-top:16px}
+  .slide.dark .col{border-top-color:var(--cream)}
+  .col.red{border-top-color:var(--red)}
+
+  /* ---------- figures ---------- */
+  figure{display:flex;flex-direction:column;gap:10px;width:100%}
+  figure img{display:block;width:100%;height:auto;border:1px solid var(--rule);background:#fff}
+  figcaption{font-size:14.5px;line-height:1.45;color:var(--muted)}
+
+  /* ---------- gantt ---------- */
+  .gantt{display:flex;flex-direction:column;gap:12px;width:100%}
+  .ghead{display:flex;flex-direction:row;gap:0;width:100%;padding-left:300px}
+  .gcell{width:224px;flex:none;font-size:13px;font-weight:800;letter-spacing:.06em;
+         color:var(--muted);text-transform:uppercase}
+  .gcell.on{color:var(--red)}
+  .grow2{display:flex;flex-direction:row;align-items:center;gap:0;width:100%}
+  .gname{width:300px;flex:none;font-size:18px;font-weight:800;line-height:1.3;padding-right:20px}
+  .gpad{flex:none;height:1px}
+  .bar{height:30px;background:var(--ink);display:flex;flex-direction:row;align-items:center;
+       padding-left:14px;flex:none}
+  .bar span{font-size:13px;font-weight:800;color:var(--paper);letter-spacing:.04em;white-space:nowrap}
+  .bar.red{background:var(--red)}
+  .bar.open{background:#c9c2b8}
+  .bar.open span{color:#4a463f}
+
+  /* ---------- venue plan ---------- */
+  .plan{display:flex;flex-direction:row;gap:0;width:100%;height:270px;border:1px solid var(--rule)}
+  .zone{display:flex;flex-direction:column;gap:10px;padding:22px;border-right:1px solid var(--rule);
+        align-items:center;justify-content:center}
+  .zone:last-child{border-right:none}
+  .portrait{width:78px;height:190px;border:2px solid var(--ink);flex:none;
+            display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .portrait span{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--muted);
+                 transform:rotate(-90deg);white-space:nowrap}
+  .wall{width:100%;height:112px;border:2px solid var(--ink);display:flex;
+        flex-direction:row;align-items:center;justify-content:center}
+  .wall span{font-size:13px;font-weight:800;letter-spacing:.08em;color:var(--muted)}
+  .desk{width:100%;height:62px;background:var(--ink);display:flex;flex-direction:row;
+        align-items:center;justify-content:center}
+  .desk span{font-size:13px;font-weight:800;letter-spacing:.08em;color:var(--paper)}
+  .clock{width:96px;height:96px;border:2px solid var(--ink);border-radius:96px;flex:none;
+         display:flex;align-items:center;justify-content:center}
+  .clock span{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--muted);text-align:center}
+
+  /* ---------- receipt ---------- */
+  .receipt{display:flex;flex-direction:column;gap:10px;width:420px;flex:none;
+           background:#fffdf8;border:1px solid var(--rule);padding:24px 26px}
+  .receipt .rl{font-size:11.5px;font-weight:800;letter-spacing:.14em;
+               text-transform:uppercase;color:var(--muted)}
+  .receipt .rv{font-size:18px;line-height:1.45;font-weight:700;color:var(--ink)}
+  .receipt .rv.n{font-weight:400;font-size:16px;line-height:1.5}
+
+  /* ---------- misc ---------- */
+  .tag{font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+       border:1px solid var(--rule);padding:6px 13px;color:var(--muted);flex:none}
+  .slide.dark .tag{border-color:#3a3f47;color:var(--dimcream)}
+
+  /* ---------- printing: one slide per page, 1600x900 ---------- */
+  @page{size:1600px 900px;margin:0}
+  @media print{
+    body{background:#ffffff;gap:0;padding:0;display:block}
+    .slide{width:1600px;height:900px;overflow:hidden;
+           break-after:page;page-break-after:always;break-inside:avoid}
+    .slide:last-child{break-after:auto;page-break-after:auto}
+  }
+</style>
+</head>
+<body>
+
+<section class="slide dark">
+  <div class="main stack">
+    <div class="spacer"></div>
+    <div class="kick" style="margin-bottom:26px"><span>KAIST Department of Industrial Design · Graduation Exhibition 2026</span></div>
+    <h1>Resident Agents as Evaluators</h1>
+    <h1 style="color:var(--dimcream)">Follow-up · 23 September</h1>
+    <div class="redline" style="margin:38px 0 26px"></div>
+    <h3>Jungwon Park</h3>
+    <p class="mut sm" style="margin-top:10px">One week on from 16 September. Three days in Eunjeom Village now run end to end.</p>
+    <div class="spacer"></div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="top">
+    <div class="kick"><span class="dash"></span><span>What works now</span></div>
+    <div class="pg">02</div>
+  </div>
+  <div class="main row g48">
+    <div class="stack g20" style="width:520px;flex:none">
+      <h2 class="sm">Three days now run<br>end to end.</h2>
+      <p class="sm">Day 1 has three requests, day 2 has six, day 3 has eight. At the end of each day you pick one of three changes, so there are <span class="r">27 paths</span>.</p>
+      <p class="sm">People move on the real road map now. I pulled 268 points out of the source map, and every route is the shortest path on it.</p>
+      <p class="sm">All 27 paths are written out in advance — 39 nodes, 2,285 lines of talk, 202 resident comments. Nothing calls a model while a visitor is standing there.</p>
+    </div>
+    <figure class="grow">
+      <img src="screenshots/2026-09-23-eunjeom/01-wall-screen.png" alt="The wall screen: map on the left, today's events and MEDial's coordination on the right">
+      <figcaption>Day 1, 9:52. Nobody answered at 9:30 or 9:40, so the village head is walking over to look. The map stays on the left, and what happened today is on the right.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="top">
+    <div class="kick"><span class="dash"></span><span>The end of the day</span></div>
+    <div class="pg">03</div>
+  </div>
+  <div class="main stack g24">
+    <h2 class="sm">At ten at night the clock stops, and the residents say what happened to them.</h2>
+    <div class="cols" style="gap:32px">
+      <figure>
+        <img src="screenshots/2026-09-23-eunjeom/02-day-end.png" alt="The wall screen at 22:00 with the end-of-day bar">
+        <figcaption>The day is over: one request, thirty minutes to check, one favour asked of the village head, no refusals. Then the button.</figcaption>
+      </figure>
+      <figure>
+        <img src="screenshots/2026-09-23-eunjeom/03-reviews.png" alt="Each resident's own account of the day">
+        <figcaption>Everyone who was in it speaks first. The rest are listed below as 'did not use it', and are not counted as unhappy. Nothing is scored.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="top">
+    <div class="kick"><span class="dash"></span><span>Rules and model</span></div>
+    <div class="pg">04</div>
+  </div>
+  <div class="main row g48">
+    <div class="stack g20" style="width:520px;flex:none">
+      <h2 class="sm">The rules decide what happens.<br>The model only writes the words.</h2>
+      <p class="sm">Rules say where each person is, whether they can go, whether they say yes or no, how long the walk takes, and which three changes come up at the end of the day.</p>
+      <p class="sm">The model writes the talk, and the one line each resident leaves at ten at night. That is all it does. I never ask it who should help, or whether the day went well.</p>
+      <p class="sm">A script re-reads all 39 nodes and looks for times nobody recorded, people talking who are not there, gaps in where someone is, comments in the wrong mouth, and choices that lead to the same day anyway. <span class="r">It found none of them.</span></p>
+    </div>
+    <figure class="grow">
+      <img src="screenshots/2026-09-23-eunjeom/05-emergency.png" alt="Evening emergency on day 3: the two brothers stand as one marker, and the voice guidance runs on the right">
+      <figcaption>Day 3, a quarter to nine. The two brothers are one marker because they are standing in the same place — that is the rules. What they say to each other is the model.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="top">
+    <div class="kick"><span class="dash"></span><span>What is not done</span></div>
+    <div class="pg">05</div>
+  </div>
+  <div class="main stack g32">
+    <h2>Three things are still open.</h2>
+    <div class="cols">
+      <div class="col red">
+        <div class="lab red">1. Resident behaviour</div>
+        <h3>Not started</h3>
+        <p class="sm mut">Replies and day ratings still come from rules. Persona agents deciding for themselves has not moved at all, and that is the part the research claim needs.</p>
+      </div>
+      <div class="col">
+        <div class="lab">2. Ten days</div>
+        <h3>Works for three</h3>
+        <p class="sm mut">Ten days needs the rule values grouped into steps, so that branches merge and I can still write them out in advance.</p>
+      </div>
+      <div class="col">
+        <div class="lab">3. The venue</div>
+        <h3>Not started</h3>
+        <p class="sm mut">The tablet and the projector are still one window on my laptop. They have to come apart before the rehearsal on 11 October.</p>
+      </div>
+    </div>
+    <p class="sm mut">The other two from September — offering three changes, and carrying them into the next day — both work now.</p>
+  </div>
+</section>
+
+<section class="slide dark">
+  <div class="top">
+    <div class="kick"><span class="dash"></span><span>In closing</span></div>
+    <div class="pg">06</div>
+  </div>
+  <div class="main stack g32">
+    <div class="spacer"></div>
+    <h2>Three days run on the real map,<br>and the change you pick shows up the next morning.</h2>
+    <div class="redline"></div>
+    <p class="sm mut">Next: resident agents, then ten days, then the two screens.</p>
+    <div class="spacer"></div>
+    <h3>Thank you.</h3>
+  </div>
+</section>
+
+</body>
+</html>

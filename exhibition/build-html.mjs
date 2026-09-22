@@ -729,7 +729,6 @@ function renderDash(){
   if (sig === dbSig) return;
   dbSig = sig;
   const changed = node.choice.kind === 'change' ? node.choice.ruleType : null;
-  const unbound = changed && !node.binding.includes(changed);
   document.getElementById('body-db').innerHTML = live.map(q => {
     const running = t <= toMin(q.endAt);
     return '<div class="q"><div class="qh"><div class="dot" style="background:'+q.color+'"></div>'
@@ -740,7 +739,6 @@ function renderDash(){
         .map(([k,v]) => '<div class="kv"><b>'+k+'</b><ul>'+v.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>').join('')
     + '</div>';
   }).join('')
-  + (unbound ? '<div class="warn">어제 고친 규칙은 오늘 걸리는 자리가 없었습니다. 바뀐 채로 돌았지만 오늘 결과에는 그 규칙이 쓰이지 않았습니다.</div>' : '')
   + '<details class="rules"><summary>지금 적용 중인 운영 규칙 9개'+(changed?' — 어제 하나를 고쳤다':'')+'</summary>'
   + node.policy.map(r => '<div class="rule'+(r.ruleType===changed?' chg':'')+'"><b>'+esc(r.label)+'</b><span>'+esc(r.sentence)+'</span></div>').join('')
   + '</details>';
@@ -866,6 +864,9 @@ function showReview(){
   document.getElementById('to-choose').onclick = () => node.options.length ? showChoose() : showEnd();
 }
 
+// 고른 규칙이 걸릴 자리가 있었는지 없었는지는 화면에서 말하지 않는다. 고르기 전에 말하려면
+// 내일을 미리 알아야 하는데 그건 미리 계산해 둔 이 데모만 할 수 있는 일이고, 하루가 끝난 뒤에
+// 말하는 것도 화면을 규칙 설명으로 만들 뿐이라 둘 다 뺐다 (2026-09-23, 연구자 판단).
 function showChoose(){
   openFull('<div class="kick">'+node.day+'일차 → '+(node.day+1)+'일차 · 수정안 고르기</div><h1>무엇을 고칠 것인가</h1>'
     + '<p class="sub">오늘 주민들이 겪은 일에서 나온 세 가지입니다. 하나만 고를 수 있고, 고른 것이 내일의 규칙이 됩니다. 나머지 조건은 그대로 둡니다.</p>'
@@ -873,7 +874,6 @@ function showChoose(){
         '<button class="card" data-pick="'+i+'"><div class="cl">'+esc(o.label)+'</div><div class="ct">'+esc(o.title)+'</div>'
         + '<div class="cw">'+esc(o.because)+'</div>'
         + '<div class="cd"><div class="b">'+esc(o.beforeSentence)+'</div><div class="a">'+esc(o.afterSentence)+'</div></div>'
-        + (o.bindsTomorrow === false ? '<div class="warn">내일은 이 규칙이 걸리는 상황이 없을 수 있습니다. 그래도 고르면 바뀐 채로 돌립니다.</div>' : '')
         + '</button>').join('')
     + '</div>');
 }
