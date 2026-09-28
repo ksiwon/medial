@@ -10,6 +10,9 @@ import { fileURLToPath } from 'node:url';
 // and drives a headless Chromium through the same three screens a researcher
 // uses, so a change can be looked at rather than reasoned about.
 //
+// It is the real version (it runs what the test starts), with the rule adapters
+// and no key: nothing here calls a model.
+//
 // Everything points away from the researcher's data: the API is given its own
 // database under .run/ and the SYNTHETIC village and personas, so the run
 // never writes into local-data/runs and a screenshot never carries a real
@@ -39,12 +42,15 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: 'node e2e/reset-db.mjs && python server/sim_main.py',
+      command: 'node e2e/reset-db.mjs && python server/sim_main.py --mode real',
       url: `http://127.0.0.1:${API_PORT}/api/sim/health`,
       reuseExistingServer: false,
       timeout: 60_000,
       env: {
         MEDIAL_SIM_PORT: String(API_PORT),
+        // Set, and empty: the real server reads server/.env only for keys that
+        // are not already in its environment, so this keeps the key out.
+        OPENAI_API_KEY: '',
         MEDIAL_SIM_DB: resolve(RUN_DIR, 'simulation.sqlite3'),
         MEDIAL_VILLAGE_PATH: resolve(ROOT, 'fixtures', 'synthetic', 'village.synthetic.json'),
         MEDIAL_PERSONA_PATH: resolve(ROOT, 'fixtures', 'synthetic', 'personas.synthetic.json'),

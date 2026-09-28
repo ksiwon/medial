@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api, ApiError } from './api/client';
+import { usePlayback } from './scene/playback';
 import { learnPlaces } from './selectors/story';
 import type {
   AttemptDetail,
@@ -7,24 +8,17 @@ import type {
   Comparison,
   DesignFinding,
   DomainEvent,
-  Observation,
   PersonasPayload,
-  ViewMode,
   VillagePayload,
 } from './api/types';
 
-// The replay cursor is a *sequence number*, not a time. Those were treated as
-// interchangeable before, so stepping onto the first of ten events sharing a
-// timestamp displayed all ten. ``cursorSeq`` is what the server stores and what
-// this store trusts; ``atMs`` is derived from it for the map, and only runs
-// ahead of it while the clock is playing.
+// The workspace: the village, the catalogue, and the stored runs that have been
+// opened. Watching a run is the playback store's (scene/playback.ts); this one
+// only loads what it plays and keeps the advanced attempt comparison.
 
 interface Loaded {
   detail: AttemptDetail;
   events: DomainEvent[];
-  /** What MEDial itself observed. The 'MEDial이 아는 것' view is projected from
-   *  this, so the screen cannot show more than the orchestrator held. */
-  medialObservations: Observation[];
 }
 
 interface SimState {
@@ -34,93 +28,26 @@ interface SimState {
   village: VillagePayload | null;
   catalog: Catalog | null;
   personas: PersonasPayload | null;
+  /** Names of the scene pictures that exist for this village. */
+  art: Set<string>;
   /** Recorded design findings, read-only. The manual A/B flow that created
-   *  them is gone (26번 F10): a second way to start runs and revisions meant
-   *  two new-execution paths, and the research condition RQ2 compares is a
-   *  read-only difference in what the same data offers, not an old feature. */
+   *  them is gone (26번 F10): one new-execution path remains. */
   findings: DesignFinding[];
   attempts: Record<string, Loaded>;
-  order: string[];
   activeId: string | null;
   compareIds: string[];
   comparison: Comparison | null;
-  tab: 'run' | 'compare';
-  viewMode: ViewMode;
-  cursorSeq: number;
-  atMs: number;
-  playing: boolean;
-  speed: number;
-  selectedCluster: string | null;
-  selectedActor: string | null;
-  detailActor: string | null;
-  busy: boolean;
 
   bootstrap: () => Promise<void>;
   setActive: (id: string) => Promise<void>;
-  setTab: (tab: 'run' | 'compare') => void;
-  setViewMode: (mode: ViewMode) => void;
   dismissNotice: () => void;
   toggleCompare: (id: string) => void;
   refreshComparison: () => Promise<void>;
-  play: () => Promise<void>;
-  pause: () => Promise<void>;
-  step: () => Promise<void>;
-  stepBack: () => Promise<void>;
-  seekToSeq: (seq: number) => Promise<void>;
-  restart: () => Promise<void>;
-  scrubTo: (atMs: number) => void;
-  /** Persist where a scrub stopped. The clock stays where it was dragged. */
-  commitScrub: () => Promise<void>;
-  setSpeed: (speed: number) => void;
-  selectCluster: (key: string | null, actorId?: string | null) => void;
-  setDetailActor: (id: string | null) => void;
-  tick: (deltaMs: number) => void;
 }
-
-let commandCounter = 0;
-const nextCommandId = (name: string) => `cmd-${name}-${Date.now()}-${commandCounter++}`;
-
-/** The village day runs 05:00-22:00, as in the source diorama; the server's
- *  day_started event is stamped at 05:00 too. Exported for the slider. */
-export const DAY_START_MS = 5 * 60 * 60 * 1000;
-export const DAY_END_MS = 22 * 60 * 60 * 1000;
 
 function describe(error: unknown): string {
   if (error instanceof ApiError) return error.message;
   return error instanceof Error ? error.message : String(error);
-}
-
-/** The clock a cursor position corresponds to. Cursor 0 is "before anything
- *  happened", which is the start of the working day, not 00:00. */
-export function msAtSeq(events: DomainEvent[], seq: number): number {
-  if (seq <= 0) return DAY_START_MS;
-  const event = events.find((e) => e.seq === seq) ?? events[Math.min(seq, events.length) - 1];
-  return event ? event.simTimeMs : DAY_START_MS;
-}
-
-/** The last event at or before a wall-clock time. Used only while playing, where
- *  the clock leads and the cursor follows. */
-export function seqAt(events: DomainEvent[], atMs: number): number {
-  let seq = 0;
-  for (const event of events) {
-    if (event.simTimeMs <= atMs) seq = event.seq;
-    else break;
-  }
-  return seq;
-}
-
-/** Events the current view is allowed to show, filtered by sequence rather than
- *  by time so that events sharing a millisecond stay separable. */
-export function eventsUpTo(
-  events: DomainEvent[],
-  cursorSeq: number,
-  viewMode: ViewMode,
-): DomainEvent[] {
-  return events.filter((event) => {
-    if (event.seq > cursorSeq) return false;
-    if (viewMode === 'researcher') return true;
-    return event.visibility.includes('MEDial');
-  });
 }
 
 export const useSimStore = create<SimState>((set, get) => ({
@@ -130,50 +57,33 @@ export const useSimStore = create<SimState>((set, get) => ({
   village: null,
   catalog: null,
   personas: null,
+  art: new Set(),
   findings: [],
   attempts: {},
-  order: [],
   activeId: null,
   compareIds: [],
   comparison: null,
-  tab: 'run',
-  viewMode: 'researcher',
-  cursorSeq: 0,
-  atMs: DAY_START_MS,
-  playing: false,
-  speed: 180,
-  selectedCluster: null,
-  selectedActor: null,
-  detailActor: null,
-  busy: false,
 
   bootstrap: async () => {
-    // React StrictMode invokes effects twice in development; without this guard
-    // the first run would create two attempts per policy.
+    // React StrictMode invokes effects twice in development.
     if (get().status !== 'idle') return;
     set({ status: 'loading', error: null });
     try {
-      const [village, catalog, personas] = await Promise.all([
+      const [village, catalog, personas, art] = await Promise.all([
         api.village(),
         api.catalog(),
         api.personas(),
+        // Pictures are optional: without them every figure is the schematic one.
+        api.art().catch(() => ({ names: [] as string[] })),
       ]);
       learnPlaces(Object.fromEntries(Object.entries(village.places).map(([k, v]) => [k, v.label])));
-      set({ village, catalog, personas, findings: catalog.findings, status: 'ready' });
-      // Loading the workspace *reads*. It does not run experiments: the old
-      // bootstrap started policy A and policy B whenever the log happened to be
-      // empty, so simply opening the tool in a fresh browser manufactured two
-      // attempts nobody asked for. The empty state is now the prepare screen.
-      //
-      // Nor does it eagerly open every stored attempt. The catalogue already
-      // carries the list; a run's events are fetched when something actually
-      // shows it, which also means one unreadable record can no longer blank
-      // the tool at startup.
+      set({ village, catalog, personas, art: new Set(art.names), findings: catalog.findings, status: 'ready' });
+      // Loading the workspace *reads*: it never starts a run. The last stored
+      // run is reopened where it was left; a record that fails to load is
+      // reported and leaves the others usable.
       const last = catalog.attempts[catalog.attempts.length - 1];
       if (last) {
         try {
-          // Reopen where the researcher left off: the cursor lives in the
-          // database, so a restart lands on the same event.
           await get().setActive(last.id);
           set({ compareIds: catalog.attempts.slice(-2).map((a) => a.id) });
         } catch (error) {
@@ -187,27 +97,13 @@ export const useSimStore = create<SimState>((set, get) => ({
     }
   },
 
-
-
-
-
-
-
   setActive: async (id) => {
-    const loaded = get().attempts[id] ?? (await loadAttempt(set, get, id));
-    const cursor = loaded.detail.attempt.cursorSeq ?? 0;
-    set({
-      activeId: id,
-      playing: false,
-      selectedCluster: null,
-      detailActor: null,
-      cursorSeq: cursor,
-      atMs: msAtSeq(loaded.events, cursor),
-    });
+    const loaded = get().attempts[id] ?? (await load(set, id));
+    const village = get().village;
+    set({ activeId: id });
+    if (village) usePlayback.getState().load({ attemptId: id, ...loaded, village });
   },
 
-  setTab: (tab) => set({ tab }),
-  setViewMode: (viewMode) => set({ viewMode, selectedCluster: null }),
   dismissNotice: () => set({ notice: null }),
 
   toggleCompare: (id) =>
@@ -230,162 +126,14 @@ export const useSimStore = create<SimState>((set, get) => ({
       set({ error: describe(error) });
     }
   },
-
-  play: async () => {
-    const id = get().activeId;
-    if (!id) return;
-    set({ playing: true });
-    try {
-      await api.command(id, nextCommandId('play'), 'play');
-    } catch (error) {
-      set({ error: describe(error), playing: false });
-    }
-  },
-
-  pause: async () => {
-    const id = get().activeId;
-    if (!id) return;
-    set({ playing: false });
-    const loaded = get().attempts[id];
-    const seq = loaded ? seqAt(loaded.events, get().atMs) : 0;
-    try {
-      // Record where the researcher actually stopped, so the stored cursor and
-      // the screen agree after a reload.
-      await api.command(id, nextCommandId('seek'), 'seek', seq);
-      await api.command(id, nextCommandId('pause'), 'pause');
-      set({ cursorSeq: seq });
-      await loadAttempt(set, get, id);
-    } catch (error) {
-      set({ error: describe(error) });
-    }
-  },
-
-  step: async () => {
-    const id = get().activeId;
-    if (!id) return;
-    set({ playing: false });
-    try {
-      // The server advances by exactly one sequence number. Ten events can share
-      // a millisecond and each is its own step.
-      const result = await api.command(id, nextCommandId('step'), 'step');
-      applyCursor(set, get, id, result.cursorSeq);
-    } catch (error) {
-      set({ error: describe(error) });
-    }
-  },
-
-  stepBack: async () => {
-    const id = get().activeId;
-    if (!id) return;
-    await get().seekToSeq(Math.max(0, get().cursorSeq - 1));
-  },
-
-  seekToSeq: async (seq) => {
-    const id = get().activeId;
-    if (!id) return;
-    set({ playing: false });
-    try {
-      const result = await api.command(id, nextCommandId('seek'), 'seek', seq);
-      applyCursor(set, get, id, result.cursorSeq);
-    } catch (error) {
-      set({ error: describe(error) });
-    }
-  },
-
-  restart: async () => {
-    const id = get().activeId;
-    if (!id) return;
-    set({ playing: false });
-    try {
-      const result = await api.command(id, nextCommandId('cancel'), 'cancel');
-      applyCursor(set, get, id, result.cursorSeq);
-    } catch (error) {
-      set({ error: describe(error) });
-    }
-  },
-
-  scrubTo: (atMs) => {
-    const { activeId, attempts } = get();
-    const loaded = activeId ? attempts[activeId] : null;
-    set({ atMs, cursorSeq: loaded ? seqAt(loaded.events, atMs) : 0, playing: false });
-  },
-
-  commitScrub: async () => {
-    const { activeId, cursorSeq } = get();
-    if (!activeId) return;
-    try {
-      await api.command(activeId, nextCommandId('seek'), 'seek', cursorSeq);
-    } catch (error) {
-      set({ error: describe(error) });
-    }
-  },
-
-  setSpeed: (speed) => set({ speed }),
-
-  selectCluster: (key, actorId = null) => set({ selectedCluster: key, selectedActor: actorId }),
-  setDetailActor: (id) => set({ detailActor: id }),
-
-  tick: (deltaMs) => {
-    const { playing, atMs, speed, activeId, attempts } = get();
-    if (!playing || !activeId) return;
-    const loaded = attempts[activeId];
-    const horizon = loaded?.detail.timeline?.horizonMs ?? DAY_END_MS;
-    const next = atMs + deltaMs * speed;
-    if (next >= horizon) {
-      set({ atMs: horizon, cursorSeq: loaded ? loaded.events.length : 0 });
-      void get().pause();
-      return;
-    }
-    set({ atMs: next, cursorSeq: loaded ? seqAt(loaded.events, next) : 0 });
-  },
 }));
 
-function applyCursor(
-  set: (partial: Partial<SimState>) => void,
-  get: () => SimState,
-  id: string,
-  cursorSeq: number,
-) {
-  const loaded = get().attempts[id];
-  if (!loaded) return;
-  set({ cursorSeq, atMs: msAtSeq(loaded.events, cursorSeq) });
-}
-
-async function adopt(
-  set: (partial: Partial<SimState> | ((s: SimState) => Partial<SimState>)) => void,
-  get: () => SimState,
-  detail: AttemptDetail,
-) {
-  const id = detail.attempt.id;
-  const [{ events }, { observations }] = await Promise.all([
-    api.events(id),
-    api.observations(id, 'MEDial'),
-  ]);
-  set((state) => ({
-    attempts: { ...state.attempts, [id]: { detail, events, medialObservations: observations } },
-    order: state.order.includes(id) ? state.order : [...state.order, id],
-    activeId: id,
-    cursorSeq: detail.attempt.cursorSeq ?? 0,
-    atMs: msAtSeq(events, detail.attempt.cursorSeq ?? 0),
-    playing: false,
-  }));
-}
-
-async function loadAttempt(
-  set: (partial: Partial<SimState> | ((s: SimState) => Partial<SimState>)) => void,
-  get: () => SimState,
+async function load(
+  set: (partial: (s: SimState) => Partial<SimState>) => void,
   id: string,
 ): Promise<Loaded> {
-  const detail = await api.attempt(id);
-  const [{ events }, { observations }] = await Promise.all([
-    api.events(id),
-    api.observations(id, 'MEDial'),
-  ]);
-  const loaded: Loaded = { detail, events, medialObservations: observations };
-  set((state) => ({
-    attempts: { ...state.attempts, [id]: loaded },
-    order: state.order.includes(id) ? state.order : [...state.order, id],
-  }));
+  const [detail, { events }] = await Promise.all([api.attempt(id), api.events(id)]);
+  const loaded: Loaded = { detail, events };
+  set((state) => ({ attempts: { ...state.attempts, [id]: loaded } }));
   return loaded;
 }
-

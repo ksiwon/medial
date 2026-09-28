@@ -2,7 +2,7 @@
 
     python scripts/llm_smoke.py                 # policy-C, head/resident from server/.env
     python scripts/llm_smoke.py policy-A-v1     # another policy
-    MEDIAL_LLM_HEAD_MODEL=gemini-3.7-flash python scripts/llm_smoke.py
+    MEDIAL_LLM_HEAD_MODEL=gpt-6-luna python scripts/llm_smoke.py
 
 Synthetic on purpose: the payload shapes are identical and nothing from the
 source village leaves the machine. Nothing is stored; the database is in

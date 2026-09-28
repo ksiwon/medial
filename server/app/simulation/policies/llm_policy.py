@@ -31,7 +31,7 @@ from typing import Any, Callable
 
 from ..agents.base import AdapterError
 from ..agents.provider import CallSpec
-from ..contracts import HEALTH_STAFF, Candidate, Channel, ContactStrategy, DecisionRecord, PolicyRevision
+from ..contracts import HEALTH_STAFF, Candidate, ContactStrategy, DecisionRecord, PolicyRevision
 from ..observations import routine_says_home
 from .rule_policies import (
     CLASSIFICATION,
@@ -195,7 +195,6 @@ class LlmMedialPolicy(MedialPolicy):
 
     # -- stage 2: what now -------------------------------------------------
     def on_unanswered_checkin(self, ctx: PolicyContext) -> tuple[DecisionRecord, list[Intent]]:
-        params = self.revision.params
         question = "응답이 없는 상태를 누가 어떻게 확인할 것인가"
 
         # A deadline is a deadline. The head is not asked whether to honour it.

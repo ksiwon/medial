@@ -68,6 +68,57 @@ def make_attempt(api: TestClient, deck: str = TRANSPORT_DECK,
     return response.json()["attempt"]["id"]
 
 
+# -- the observe screen's MEDial panel and scene pictures -------------------
+
+def test_the_attempt_says_which_rules_each_request_went_through():
+    """The judgement panel lists only the rules a request actually ran through.
+
+    It reads them off ``rules``: one record per supported rule with the
+    revision's own sentence, and ``eventRefs`` that point at real events of this
+    attempt. A reference to an event that does not exist would put a rule on a
+    request it never touched.
+    """
+    api = client()
+    attempt_id = make_attempt(api, deck=CHECKIN_DECK, policy_id="policy-A-v1", resource_id=RES_ID)
+    detail = api.get("/api/sim/attempts/%s" % attempt_id).json()
+    events = api.get("/api/sim/attempts/%s/events" % attempt_id).json()["events"]
+    ids = {event["id"] for event in events}
+
+    rules = detail["rules"]
+    assert len(rules) == 9
+    assert all(rule["label"] and rule["sentence"] for rule in rules)
+    for rule in rules:
+        assert set(rule["eventRefs"]) <= ids, rule["ruleType"]
+    fired = [rule for rule in rules if rule["executionStatus"] == "applied" and rule["eventRefs"]]
+    assert fired, "a no-response day runs at least the retry or the contact-order rule"
+
+
+def test_a_synthetic_village_gets_no_scene_pictures():
+    """The pictures are drawn for the source village's pseudonymous residents.
+
+    A synthetic village must not borrow them - the screen draws its schematic
+    figure instead - so the index is empty and a named picture is a 404.
+    """
+    api = client()
+    assert api.get("/api/sim/village/art").json() == {"names": []}
+    assert api.get("/api/sim/village/art/P1.stand").status_code == 404
+
+
+def test_scene_pictures_are_served_only_from_their_index(tmp_path, monkeypatch):
+    """Only names in the index are served; the name is never a path."""
+    (tmp_path / "FARM.webp").write_bytes(b"RIFF0000WEBP")
+    (tmp_path / "index.json").write_text(
+        '{"FARM": {"file": "FARM.webp"}, "GONE": {"file": "missing.webp"}}', encoding="utf-8")
+    monkeypatch.setenv("MEDIAL_ART_DIR", str(tmp_path))
+    api = client()
+    from app.simulation.api import routes
+    monkeypatch.setattr(type(routes.get_service().village), "is_synthetic", property(lambda self: False))
+    assert api.get("/api/sim/village/art").json() == {"names": ["FARM"]}
+    assert api.get("/api/sim/village/art/FARM").status_code == 200
+    assert api.get("/api/sim/village/art/GONE").status_code == 404
+    assert api.get("/api/sim/village/art/..%2Findex.json").status_code == 404
+
+
 # -- the per-request grouping selector --------------------------------------
 
 def test_every_event_carries_a_correlation_id():
@@ -276,7 +327,6 @@ def test_change_sets_stop_before_execution_and_stay_on_the_source_generation():
 
 def test_the_loop_does_not_choose_for_the_designer():
     """Draft generation stops without making a final research decision."""
-    from app.simulation.iteration.contracts import SessionStatus  # noqa: PLC0415
 
     api = client()
     session_id = _create_session(api)

@@ -21,6 +21,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..contracts import HEALTH_STAFF, MEDIAL
+from .semantic_rules import format_rule, read_values, spec
 
 Condition = str      # occurred | not_occurred | unknown
 Execution = str      # applied | not_reached | unknown
@@ -243,17 +244,38 @@ def rule_application(change_set: Any, attempts: list[tuple[str, list[dict[str, A
                         "reason": "규칙 종류가 없는 옛 형식의 변경이라 적용 여부를 판정하지 않는다.",
                         "eventRefs": [], "attemptId": None})
             continue
-        probe = PROBES.get(semantic.ruleType)
         for attempt_id, events in attempts:
-            subject_ids = {e["payload"].get("subjectId") for e in events
-                           if e["type"] in ("request.raised", "transport.need_raised")}
-            subject_ids.discard(None)
-            if probe is None:
-                record = _record(semantic.ruleType, "unknown", "unknown",
-                                 "이 규칙의 적용 여부를 로그에서 읽는 검사가 없다.", [])
-            else:
-                record = probe(semantic.after.model_dump(mode="json"), subject_ids, events)
+            record = _probe(semantic.ruleType, semantic.after.model_dump(mode="json"), events)
             record["attemptId"] = attempt_id
             record["label"] = change.afterRule
             out.append(record)
+    return out
+
+
+def _probe(rule_type: str, values: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any]:
+    probe = PROBES.get(rule_type)
+    if probe is None:
+        return _record(rule_type, "unknown", "unknown",
+                       "이 규칙의 적용 여부를 로그에서 읽는 검사가 없다.", [])
+    subject_ids = {e["payload"].get("subjectId") for e in events
+                   if e["type"] in ("request.raised", "transport.need_raised")}
+    subject_ids.discard(None)
+    return probe(values, subject_ids, events)
+
+
+def rule_trace(policy: dict[str, Any], events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Every rule MEDial ran under in one attempt, and whether it fired.
+
+    ``rule_application`` answers that for the one rule a Change Set changed;
+    this asks it of all of them, with the revision's own values, so the observe
+    screen can say which rules a request actually went through (its
+    ``eventRefs``) instead of listing all nine. The label and the sentence
+    come from ``semantic_rules`` - the only place rule words are made."""
+    out = []
+    for rule_type in PROBES:
+        values = read_values(rule_type, policy)
+        record = _probe(rule_type, values.model_dump(mode="json"), events)
+        record["label"] = spec(rule_type).label
+        record["sentence"] = format_rule(rule_type, values)
+        out.append(record)
     return out

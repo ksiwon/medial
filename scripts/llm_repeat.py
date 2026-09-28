@@ -58,7 +58,7 @@ OUT.mkdir(parents=True, exist_ok=True)
 provider = ModelProvider.from_env(env)
 policy = policy_from_env(env, mode="off")
 if not provider.available:
-    sys.exit("no GOOGLE_API_KEY in server/.env")
+    sys.exit("no OPENAI_API_KEY in server/.env")
 missing = provider.verify_models(policy)
 if missing:
     sys.exit("models not offered: %s" % missing)

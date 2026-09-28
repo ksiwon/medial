@@ -20,7 +20,6 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from ..contracts import PolicyRevision
 from ..decks.registry import DECKS
 from ..metrics import compare as compare_runs
 from .contracts import (
@@ -42,7 +41,6 @@ from .llm_adapters import LlmImprovementAdapter, LlmReviewAdapter, LlmSynthesisA
 from .reviewers import ReviewAdapterError, RuleReviewAdapter, ScriptedReviewAdapter
 from .rule_application import rule_application
 from .evaluation_metrics import (
-    DEFAULT_CRITERIA,
     outcome_vector,
     per_actor_delta,
     violates_required,

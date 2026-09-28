@@ -1,6 +1,6 @@
 {
  "attempt": {
-  "id": "att-A-v1-b2300d240293",
+  "id": "att-A-v1-55f88b503c79",
   "parentId": null,
   "parentSeq": null,
   "lineage": "root",
@@ -15,8 +15,9 @@
   "status": "completed",
   "engineVersion": "medial-sim/0.4.0",
   "adapter": "rule",
+  "institutionAdapter": "rule",
   "environmentRevisionId": "env-v3",
-  "dayRealizationId": "day-58d7f0c850257455",
+  "dayRealizationId": "day-ec9772b9d24e0946",
   "modelPolicy": {
    "provider": "none",
    "headModelId": "none",
@@ -28,20 +29,20 @@
   },
   "relationRevisionId": "rel-v1",
   "ledgerRevisionId": "ledger-synthetic-v1",
-  "createdAt": "2026-09-15T06:05:27+00:00",
+  "createdAt": "2026-09-28T10:02:09+00:00",
   "cursorSeq": 0,
-  "eventCount": 24,
+  "eventCount": 26,
   "dataSource": "synthetic",
   "inputHashes": {
    "village": "1666cf9ccb87e954",
    "policy": "03629affb95da9bf",
-   "deck": "553907b4679a9aa1",
-   "resources": "fa080f60dffd5e61",
-   "environment": "93fe4eaa98c3eed7",
-   "day": "day-58d7f0c850257455",
+   "deck": "585c62fb581010aa",
+   "resources": "54d66c4548d0e432",
+   "environment": "1f62f48bda7af4cb",
+   "day": "day-ec9772b9d24e0946",
    "modelPolicy": "1e989ad065f7cc60",
    "relations": "7053caf608616a2e",
-   "ledger": "ae0323e8661e73e4",
+   "ledger": "169daf24c7673b13",
    "persona": "persona-synthetic-b7889f7457bde193",
    "personaSource": "synthetic"
   }
@@ -67,7 +68,7 @@
    "note": "미해결 건은 평균에 넣지 않고 censored로 센다."
   },
   "contacts": {
-   "attempts": 1,
+   "attempts": 2,
    "byResult": {
     "answered": 0,
     "no_response": 1
@@ -208,7 +209,7 @@
   "adapterFailures": 0,
   "rejectedProposals": 0,
   "decisionCount": 2,
-  "eventCount": 24,
+  "eventCount": 26,
   "personaProvenance": {
    "dataSource": "synthetic",
    "revisionId": "persona-synthetic-b7889f7457bde193",
@@ -224,7 +225,7 @@
    "note": "이름·인터뷰 인용·역할 프롬프트는 컴파일 결과에 담기지 않는다. 근거 카드는 원자료의 JSON pointer만 가리킨다."
   },
   "dayRealization": {
-   "id": "day-58d7f0c850257455",
+   "id": "day-ec9772b9d24e0946",
    "seed": 17,
    "villageContentHash": "1666cf9ccb87e954",
    "environmentRevisionId": "env-v3",
@@ -1137,8 +1138,8 @@
       },
       {
        "car": false,
-       "departMin": 1199.0,
-       "departMs": 71940000,
+       "departMin": 1258.63355,
+       "departMs": 75518013,
        "fixedDurationMin": null,
        "index": 5,
        "provenance": "source-baseline",
@@ -1166,11 +1167,11 @@
       },
       {
        "index": 4,
-       "kind": "clamp",
+       "kind": "jitter",
        "target": "HOME",
        "beforeMs": 75600000,
-       "afterMs": 71940000,
-       "note": "이동에 걸리는 시간을 지키도록 되돌렸다. 한 사람이 동시에 두 곳에 있을 수는 없고, 순서는 원본이 고정한 구조다."
+       "afterMs": 75518013,
+       "note": "원본 시각은 하루치 기록이므로 ±10분 안에서 흔들었다."
       }
      ],
      "excludedReason": null
@@ -1220,9 +1221,9 @@
    "assumption-phone-reachability"
   ]
  },
- "logFingerprint": "e0eccb5b698a8b09",
+ "logFingerprint": "dec7ce8b8b6a93a9",
  "timeline": {
-  "horizonMs": 72000000,
+  "horizonMs": 79200000,
   "actors": {
    "P1": {
     "id": "P1",
@@ -1444,7 +1445,7 @@
      },
      {
       "startMs": 57557292,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -1673,7 +1674,7 @@
      },
      {
       "startMs": 57557292,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -1741,7 +1742,19 @@
       "polyline": [
        [
         300.0,
-        570.0
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        90.0
        ],
        [
         300.0,
@@ -1789,13 +1802,25 @@
        ],
        [
         300.0,
-        570.0
+        90.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
        ]
       ]
      },
      {
       "startMs": 62822097,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -1850,7 +1875,19 @@
       "polyline": [
        [
         300.0,
-        570.0
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        90.0
        ],
        [
         300.0,
@@ -1898,13 +1935,25 @@
        ],
        [
         300.0,
-        570.0
+        90.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
        ]
       ]
      },
      {
       "startMs": 62822097,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -1972,7 +2021,23 @@
       "polyline": [
        [
         300.0,
-        750.0
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        90.0
        ],
        [
         300.0,
@@ -2020,13 +2085,29 @@
        ],
        [
         300.0,
-        750.0
+        90.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
        ]
       ]
      },
      {
       "startMs": 50220000,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -2081,7 +2162,23 @@
       "polyline": [
        [
         300.0,
-        750.0
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        90.0
        ],
        [
         300.0,
@@ -2129,13 +2226,29 @@
        ],
        [
         300.0,
-        750.0
+        90.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
        ]
       ]
      },
      {
       "startMs": 50220000,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -2313,7 +2426,7 @@
      },
      {
       "startMs": 68791919,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -2478,7 +2591,7 @@
      },
      {
       "startMs": 68791919,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -2720,7 +2833,7 @@
      },
      {
       "startMs": 42435144,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -2949,7 +3062,7 @@
      },
      {
       "startMs": 42435144,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -3321,7 +3434,7 @@
      },
      {
       "startMs": 58087697,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -3817,7 +3930,7 @@
      },
      {
       "startMs": 58087697,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -4243,7 +4356,7 @@
      },
      {
       "startMs": 68763047,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -4656,7 +4769,7 @@
      },
      {
       "startMs": 68763047,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -5063,7 +5176,7 @@
      },
      {
       "startMs": 68235579,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -5457,7 +5570,7 @@
      },
      {
       "startMs": 68235579,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -5491,7 +5604,7 @@
     "baseline": [
      {
       "startMs": 0,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -5512,7 +5625,7 @@
     "realized": [
      {
       "startMs": 0,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -5546,7 +5659,7 @@
     "baseline": [
      {
       "startMs": 0,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -5567,7 +5680,7 @@
     "realized": [
      {
       "startMs": 0,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -5601,7 +5714,7 @@
     "baseline": [
      {
       "startMs": 0,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -5622,7 +5735,7 @@
     "realized": [
      {
       "startMs": 0,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -5690,7 +5803,23 @@
       "polyline": [
        [
         300.0,
-        870.0
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        90.0
        ],
        [
         300.0,
@@ -5738,7 +5867,23 @@
        ],
        [
         300.0,
-        870.0
+        90.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
        ]
       ]
      },
@@ -5804,7 +5949,7 @@
      },
      {
       "startMs": 69231816,
-      "endMs": 71940000,
+      "endMs": 75518013,
       "kind": "stay",
       "origin": "baseline",
       "label": "가게",
@@ -5822,8 +5967,8 @@
       ]
      },
      {
-      "startMs": 71940000,
-      "endMs": 72629503,
+      "startMs": 75518013,
+      "endMs": 76207516,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -5860,6 +6005,25 @@
         300.0,
         810.0
        ]
+      ]
+     },
+     {
+      "startMs": 76207516,
+      "endMs": 79200000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P12",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": true,
+      "riders": [],
+      "xy": [
+       300.0,
+       870.0
       ]
      }
     ],
@@ -5900,7 +6064,23 @@
       "polyline": [
        [
         300.0,
-        870.0
+        810.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        90.0
        ],
        [
         300.0,
@@ -5948,7 +6128,23 @@
        ],
        [
         300.0,
-        870.0
+        90.0
+       ],
+       [
+        300.0,
+        270.0
+       ],
+       [
+        300.0,
+        450.0
+       ],
+       [
+        300.0,
+        630.0
+       ],
+       [
+        300.0,
+        810.0
        ]
       ]
      },
@@ -6014,7 +6210,7 @@
      },
      {
       "startMs": 69231816,
-      "endMs": 71940000,
+      "endMs": 75518013,
       "kind": "stay",
       "origin": "baseline",
       "label": "가게",
@@ -6032,8 +6228,8 @@
       ]
      },
      {
-      "startMs": 71940000,
-      "endMs": 72629503,
+      "startMs": 75518013,
+      "endMs": 76207516,
       "kind": "travel",
       "origin": "baseline",
       "label": "이동",
@@ -6071,6 +6267,25 @@
         810.0
        ]
       ]
+     },
+     {
+      "startMs": 76207516,
+      "endMs": 79200000,
+      "kind": "stay",
+      "origin": "baseline",
+      "label": "자택",
+      "place": "HOME:P12",
+      "fromPlace": null,
+      "toPlace": null,
+      "mode": "stay",
+      "metres": 0.0,
+      "requestId": null,
+      "interruptible": true,
+      "riders": [],
+      "xy": [
+       300.0,
+       870.0
+      ]
      }
     ],
     "planChanged": false,
@@ -6105,7 +6320,7 @@
  "decisions": [
   {
    "id": "dec-1",
-   "attemptId": "att-A-v1-b2300d240293",
+   "attemptId": "att-A-v1-55f88b503c79",
    "simTimeMs": 34200000,
    "policyId": "policy-A-v1",
    "question": "응답이 없는 상태를 누가 어떻게 확인할 것인가",
@@ -6184,7 +6399,7 @@
   },
   {
    "id": "dec-2",
-   "attemptId": "att-A-v1-b2300d240293",
+   "attemptId": "att-A-v1-55f88b503c79",
    "simTimeMs": 34452257,
    "policyId": "policy-A-v1",
    "question": "자택에 없을 때 확인을 계속할 것인가",
@@ -6209,10 +6424,101 @@
    "excludedByPermission": []
   }
  ],
+ "rules": [
+  {
+   "ruleType": "retry_before_help",
+   "conditionStatus": "occurred",
+   "executionStatus": "applied",
+   "reason": "무응답 뒤 본인에게 전화 재연락 0회가 기록됐다.",
+   "eventRefs": [
+    "ev-4"
+   ],
+   "label": "본인 재연락",
+   "sentence": "응답이 없으면 본인에게 다시 연락하지 않고 바로 다음 단계로 간다."
+  },
+  {
+   "ruleType": "quiet_period",
+   "conditionStatus": "not_occurred",
+   "executionStatus": "not_reached",
+   "reason": "같은 사람에게 두 번 연락한 경우가 없어 최소 간격이 검사될 상황이 없었다.",
+   "eventRefs": [],
+   "label": "연락 최소 간격",
+   "sentence": "같은 사람에게 다시 연락하기까지 비워 두는 시간이 없다."
+  },
+  {
+   "ruleType": "helper_daily_cap",
+   "conditionStatus": "not_occurred",
+   "executionStatus": "not_reached",
+   "reason": "아무도 하루 2번까지 부탁받지 않았다 (최대 1번).",
+   "eventRefs": [],
+   "label": "한 사람이 받는 부탁 상한",
+   "sentence": "한 사람이 하루에 받는 조율 부탁은 2번까지다. 넘으면 그 사람에게는 묻지 않는다."
+  },
+  {
+   "ruleType": "neighbour_ask_limit",
+   "conditionStatus": "not_occurred",
+   "executionStatus": "not_reached",
+   "reason": "첫 사람이 받아들여 다음 사람에게 갈 상황이 없었다.",
+   "eventRefs": [
+    "ev-9"
+   ],
+   "label": "한 건에 묻는 이웃 수",
+   "sentence": "한 건에 대해 이웃 3명까지 차례로 물어본다."
+  },
+  {
+   "ruleType": "disclosure_scope",
+   "conditionStatus": "occurred",
+   "executionStatus": "applied",
+   "reason": "제3자 전달 1건의 공개 항목 수: [2]",
+   "eventRefs": [
+    "ev-8"
+   ],
+   "label": "제3자에게 알리는 범위",
+   "sentence": "제3자에게 연락 시각과 공개 동의된 평소 일과까지 함께 전달한다."
+  },
+  {
+   "ruleType": "institution_deadline",
+   "conditionStatus": "unknown",
+   "executionStatus": "applied",
+   "reason": "기한이 없으므로 기한 인계가 일어나지 않아야 한다 (기록 0건).",
+   "eventRefs": [],
+   "label": "기관 인계 기한",
+   "sentence": "미해결이어도 기관으로 넘기는 기한이 없다."
+  },
+  {
+   "ruleType": "contact_order",
+   "conditionStatus": "occurred",
+   "executionStatus": "applied",
+   "reason": "첫 부탁 상대: P6.",
+   "eventRefs": [
+    "ev-8"
+   ],
+   "label": "본인에게 닿지 않을 때의 연락 순서",
+   "sentence": "본인에게 닿지 않으면 이장에게 확인을 부탁한다."
+  },
+  {
+   "ruleType": "ride_candidate_order",
+   "conditionStatus": "not_occurred",
+   "executionStatus": "not_reached",
+   "reason": "이동 필요가 발생하지 않았다.",
+   "eventRefs": [],
+   "label": "동승 부탁 순서",
+   "sentence": "동승은 동선이 가장 가까운 사람에게 먼저 부탁한다."
+  },
+  {
+   "ruleType": "ride_detour_limit",
+   "conditionStatus": "not_occurred",
+   "executionStatus": "not_reached",
+   "reason": "이동 필요가 발생하지 않았다.",
+   "eventRefs": [],
+   "label": "동승 우회 한도",
+   "sentence": "운전자에게 최대 20분까지의 우회를 부탁한다."
+  }
+ ],
  "reviews": [
   {
    "id": "rev-1",
-   "attemptId": "att-A-v1-b2300d240293",
+   "attemptId": "att-A-v1-55f88b503c79",
    "actorId": "P1",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6253,7 +6559,7 @@
   },
   {
    "id": "rev-10",
-   "attemptId": "att-A-v1-b2300d240293",
+   "attemptId": "att-A-v1-55f88b503c79",
    "actorId": "P7",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6268,7 +6574,7 @@
   },
   {
    "id": "rev-11",
-   "attemptId": "att-A-v1-b2300d240293",
+   "attemptId": "att-A-v1-55f88b503c79",
    "actorId": "P8",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6283,7 +6589,7 @@
   },
   {
    "id": "rev-12",
-   "attemptId": "att-A-v1-b2300d240293",
+   "attemptId": "att-A-v1-55f88b503c79",
    "actorId": "P9",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6298,22 +6604,46 @@
   },
   {
    "id": "rev-13",
-   "attemptId": "att-A-v1-b2300d240293",
+   "attemptId": "att-A-v1-55f88b503c79",
    "actorId": "HC_NURSE",
    "source": "simulated",
    "scope": "day_end_retrospective",
-   "experiencedEventIds": [],
-   "dimensions": [],
+   "experiencedEventIds": [
+    "ev-24",
+    "ev-25"
+   ],
+   "dimensions": [
+    {
+     "key": "resolution",
+     "assessment": "unknown",
+     "reason": "종료 여부를 이 사람이 경험한 사건에서 알 수 없다"
+    },
+    {
+     "key": "time_respected",
+     "assessment": "unknown",
+     "reason": "이 시도에서 시간을 쓴 기록이 없다"
+    },
+    {
+     "key": "choice",
+     "assessment": "unknown",
+     "reason": "선택지가 주어지는 상황을 경험하지 않았다"
+    },
+    {
+     "key": "disclosure",
+     "assessment": "unknown",
+     "reason": "이 사람이 겪은 사건 중 정보 공개를 알 수 있는 것이 없다"
+    }
+   ],
    "assessment": "unknown",
-   "comment": "이 시도에서 이 사람이 경험한 사건이 없다. 평가할 근거가 없다.",
+   "comment": "규칙 기반 시뮬레이션 경험 평가이며 실제 주민 만족도가 아니다.",
    "unknowns": [
-    "경험 없음",
-    "실제 본인 평가"
+    "실제 본인 평가",
+    "실제 감정 반응"
    ]
   },
   {
    "id": "rev-2",
-   "attemptId": "att-A-v1-b2300d240293",
+   "attemptId": "att-A-v1-55f88b503c79",
    "actorId": "P10",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6328,7 +6658,7 @@
   },
   {
    "id": "rev-3",
-   "attemptId": "att-A-v1-b2300d240293",
+   "attemptId": "att-A-v1-55f88b503c79",
    "actorId": "P11",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6343,7 +6673,7 @@
   },
   {
    "id": "rev-4",
-   "attemptId": "att-A-v1-b2300d240293",
+   "attemptId": "att-A-v1-55f88b503c79",
    "actorId": "P12",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6358,7 +6688,7 @@
   },
   {
    "id": "rev-5",
-   "attemptId": "att-A-v1-b2300d240293",
+   "attemptId": "att-A-v1-55f88b503c79",
    "actorId": "P2",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6373,7 +6703,7 @@
   },
   {
    "id": "rev-6",
-   "attemptId": "att-A-v1-b2300d240293",
+   "attemptId": "att-A-v1-55f88b503c79",
    "actorId": "P3",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6388,7 +6718,7 @@
   },
   {
    "id": "rev-7",
-   "attemptId": "att-A-v1-b2300d240293",
+   "attemptId": "att-A-v1-55f88b503c79",
    "actorId": "P4",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6403,7 +6733,7 @@
   },
   {
    "id": "rev-8",
-   "attemptId": "att-A-v1-b2300d240293",
+   "attemptId": "att-A-v1-55f88b503c79",
    "actorId": "P5",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6418,7 +6748,7 @@
   },
   {
    "id": "rev-9",
-   "attemptId": "att-A-v1-b2300d240293",
+   "attemptId": "att-A-v1-55f88b503c79",
    "actorId": "P6",
    "source": "simulated",
    "scope": "day_end_retrospective",
@@ -6480,7 +6810,7 @@
    "기관 가용성(근무시간·검토시간·대기열)은 실험 가정이며 남해군 실제 인력 통계가 아니다.",
    "장소별 전화 응답 여부는 연구자 가정이다. 밭 미응답만 원본 사건에서 왔다."
   ],
-  "horizonMs": 72000000,
+  "horizonMs": 79200000,
   "events": [
    {
     "id": "exo-checkin-1",
@@ -6507,6 +6837,8 @@
   "visitMinutes": 20,
   "initialQueueDepth": 1,
   "assumedVehicleSeats": 3,
+  "emsResponseMinutes": 22,
+  "dailyReportAtMs": 61200000,
   "assumptions": [
    "담당자 1명, 09:00-18:00 근무는 연구용 가정이다.",
    "검토 20분·통화 5분·방문 왕복 25분은 연구용 가정이며 측정값이 아니다.",

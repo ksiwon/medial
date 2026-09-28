@@ -23,8 +23,8 @@ import { ActivityIcon, FaceChip, FaceMark, VehicleMark } from './Marks';
 // Three rules from doc 15 section 5 shape the drawing:
 //
 //  - the raster already carries the road network and the street names, so this
-//    layer does not draw them again. Roads appear only as the highlighted route
-//    of the request being read;
+//    layer does not draw them again, and no route lines either: a marker moving
+//    along the road is the route;
 //  - marker sizes are screen pixels, not map units. At full extent one SVG unit
 //    is about a quarter of a pixel, so a face specified in map units is two
 //    pixels wide;
@@ -232,17 +232,14 @@ const PersonPick = styled.button<{ $active: boolean }>`
 
 const PopBody = styled.div`
   padding: 8px 12px 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
   font-size: ${font.small};
   line-height: 1.5;
   color: ${colour.text};
 `;
 
-/** Who is in the chip row; where and what are the two facts below it. The
- *  utterance that used to be quoted here is on the person's page. */
+/** Who is in the chip row; who they are, where they are and what they are doing
+ *  below it. This card is the person's page now - the observe screen has no
+ *  person column - so it carries the registry's age, job and group too. */
 const Facts = styled.dl`
   margin: 0;
   display: grid;
@@ -259,28 +256,6 @@ const Facts = styled.dl`
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-`;
-
-const MoreButton = styled.button`
-  margin: 0;
-  flex: none;
-  white-space: nowrap;
-  border: 1px solid ${colour.border};
-  background: ${colour.surface};
-  border-radius: ${radius.control};
-  min-height: 26px;
-  padding: 2px 6px;
-  font-family: inherit;
-  font-size: ${font.small};
-  cursor: pointer;
-  color: ${colour.text};
-  &:hover {
-    border-color: ${colour.primary};
-  }
-  &:focus-visible {
-    outline: 2px solid ${colour.primary};
-    outline-offset: 1px;
   }
 `;
 
@@ -313,26 +288,14 @@ const Outside = styled.details`
   }
 `;
 
-const OutRow = styled.button`
+const OutRow = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
-  text-align: left;
-  border: none;
   border-top: 1px solid ${colour.border};
-  background: none;
   padding: 8px 0;
-  font-family: inherit;
   font-size: ${font.small};
   color: ${colour.text};
-  cursor: pointer;
-  &:hover {
-    color: ${colour.primary};
-  }
-  &:focus-visible {
-    outline: 2px solid ${colour.primary};
-  }
 `;
 
 /** Place names worth a label at all. Houses are never labelled: which named
@@ -341,13 +304,6 @@ const LABELLED_PLACES = new Set(['HALL', 'PORT', 'EXP', 'FOOD', 'MIGA', 'FARM', 
 /** …and at low zoom, only these few. */
 const ALWAYS_LABELLED = new Set(['HALL', 'PORT', 'TOWNEXIT']);
 
-export interface MapHighlight {
-  /** People involved in the request being read. Everyone else stays quiet. */
-  actorIds: Set<string>;
-  /** The route(s) of that request, in map coordinates. */
-  routes: [number, number][][];
-}
-
 interface Props {
   village: VillagePayload;
   poses: ActorPose[];
@@ -355,17 +311,13 @@ interface Props {
   medialKnown: Map<string, MedialKnown>;
   reservations: Reservation[];
   seatsPerVehicle: number;
-  highlight: MapHighlight | null;
   selectedCluster: string | null;
   /** Colour per still-running request: the ring on whoever is doing it. */
   taskColours?: Map<string, string>;
   selectedActor: string | null;
-  /** One short line from the current scene for the selected person, or null.
-   *  Never invented: the observe screen passes an actual event's words. */
   /** Shown as a small badge over the map's top-left corner. */
   title: string;
   onSelectCluster: (key: string | null, actorId?: string | null) => void;
-  onOpenDetail: (actorId: string) => void;
 }
 
 export default function VillageMap({
@@ -375,13 +327,11 @@ export default function VillageMap({
   medialKnown,
   reservations,
   seatsPerVehicle,
-  highlight,
   selectedCluster,
   taskColours,
   selectedActor,
   title,
   onSelectCluster,
-  onOpenDetail,
 }: Props) {
   const [vx, vy, vw, vh] = village.geometry.viewBox;
   const home: View = useMemo(() => ({ x: vx, y: vy, w: vw, h: vh }), [vx, vy, vw, vh]);
@@ -579,6 +529,7 @@ export default function VillageMap({
 
   const selectedMember =
     active?.members.find((m) => m.id === selectedActor) ?? active?.members[0] ?? null;
+  const resident = (id: string) => village.residents.find((r) => r.id === id) ?? null;
   const popWhere = selectedMember
     ? selectedMember.moving
       ? '이동 중'
@@ -634,11 +585,6 @@ export default function VillageMap({
               />
             ))}
 
-          {/* No route lines. The request's path used to be drawn in green; the
-              reader asked for it gone - the marker moving along the road is
-              the path, and the line only covered the map (2026-09-15).
-              `highlight` still dims everyone not in the request. */}
-
           {/* Confirmed residences, at the source coordinates, kept quiet: a
               small outline, no label, no cartoon roof. */}
           {Object.entries(village.homes).map(([id, h]) => (
@@ -661,7 +607,7 @@ export default function VillageMap({
             .map((place) => {
               const label =
                 LABELLED_PLACES.has(place.id) &&
-                (zoomedIn || ALWAYS_LABELLED.has(place.id) || isInHighlight(place.id, highlight));
+                (zoomedIn || ALWAYS_LABELLED.has(place.id));
               return (
                 <g key={place.id} style={{ pointerEvents: 'none' }}>
                   <circle
@@ -694,8 +640,6 @@ export default function VillageMap({
             const anchor = anchors.get(cluster.key);
             if (!at || !anchor) return null;
             const drawn = project.toSvg(at.left, at.top);
-            const dim =
-              highlight != null && !cluster.members.some((m) => highlight.actorIds.has(m.id));
             return (
               <ClusterMark
                 key={cluster.key}
@@ -708,7 +652,6 @@ export default function VillageMap({
                 k={k}
                 seats={seatsPerVehicle}
                 medial={medial}
-                dim={dim}
                 taskColours={taskColours}
                 selected={cluster.key === selectedCluster}
                 hovered={cluster.key === hovered}
@@ -785,6 +728,14 @@ export default function VillageMap({
             {selectedMember && (
               <PopBody>
                 <Facts>
+                  {resident(selectedMember.id) && (
+                    <>
+                      <dt>누구</dt>
+                      <dd>{[resident(selectedMember.id)!.age != null ? `${resident(selectedMember.id)!.age}세` : null,
+                            resident(selectedMember.id)!.job,
+                            village.groups[resident(selectedMember.id)!.group]?.label].filter(Boolean).join(' · ')}</dd>
+                    </>
+                  )}
                   <dt>어디서</dt>
                   <dd>{popWhere}</dd>
                   <dt>무엇을</dt>
@@ -795,7 +746,6 @@ export default function VillageMap({
                     {selectedMember.ridingWith && ' · 차량 동승'}
                   </dd>
                 </Facts>
-                <MoreButton onClick={() => { onOpenDetail(selectedMember.id); setDismissed(active.key); onSelectCluster(null, null); }}>더 알아보기 ↗</MoreButton>
               </PopBody>
             )}
           </Popover>
@@ -818,7 +768,7 @@ export default function VillageMap({
         </summary>
         <div>
           {outside.map((pose) => (
-            <OutRow key={pose.id} onClick={() => onOpenDetail(pose.id)}>
+            <OutRow key={pose.id}>
               <FaceChip id={pose.id} size={22} isVillageHead={pose.isVillageHead} />
               <span style={{ flex: 1 }}>
                 <strong>{personName(pose.id)}</strong> ·{' '}
@@ -830,7 +780,7 @@ export default function VillageMap({
 
           {projected && (
             <>
-              <OutRow as="div" style={{ cursor: 'default' }}>
+              <OutRow>
                 <span style={{ flex: 1 }}>
                   MEDial이 위치를 모르는 사람 {projected.unlocated.length}명 —{' '}
                   {projected.unlocated.map(({ pose }) => pose.displayName).join(', ') || '없음'}
@@ -844,7 +794,7 @@ export default function VillageMap({
           )}
 
           {reservations.length > 0 && (
-            <OutRow as="div" style={{ cursor: 'default', display: 'block' }}>
+            <OutRow style={{ display: 'block' }}>
               <strong>진행 중인 동승 {reservations.length}건</strong>
               {reservations.map((r) => (
                 <div key={r.id} style={{ marginTop: 2 }}>
@@ -863,10 +813,6 @@ export default function VillageMap({
       </Outside>
     </>
   );
-}
-
-function isInHighlight(placeId: string, highlight: MapHighlight | null): boolean {
-  return highlight != null && highlight.actorIds.has(placeId);
 }
 
 function placeName(cluster: Cluster, village: VillagePayload): string {
@@ -902,7 +848,6 @@ function ClusterMark({
   k,
   seats,
   medial,
-  dim,
   taskColours,
   selected,
   hovered,
@@ -921,7 +866,6 @@ function ClusterMark({
   k: number;
   seats: number;
   medial: boolean;
-  dim: boolean;
   taskColours?: Map<string, string>;
   selected: boolean;
   hovered: boolean;
@@ -959,7 +903,7 @@ function ClusterMark({
       aria-label={`${lead.displayName} ${lead.activity}${
         cluster.members.length > 1 ? ` 외 ${cluster.members.length - 1}명` : ''
       }`}
-      style={{ cursor: 'pointer', outline: 'none', opacity: dim && !selected && !hovered ? 0.85 : 1 }}
+      style={{ cursor: 'pointer', outline: 'none' }}
       onClick={onSelect}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {

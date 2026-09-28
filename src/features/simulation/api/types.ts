@@ -20,19 +20,6 @@ export interface DomainEvent {
   payload: Record<string, unknown>;
 }
 
-export interface Observation {
-  id: string;
-  attemptId: string;
-  actorId: string;
-  simTimeMs: number;
-  kind: string;
-  subjectId: string | null;
-  payload: Record<string, unknown>;
-  sourceEventId: string;
-  ttlMs: number | null;
-  confidence: 'observed' | 'reported' | 'assumed';
-}
-
 export interface Candidate {
   actorId: string;
   included: boolean;
@@ -383,6 +370,19 @@ export interface ResourceRevision {
   assumptions: string[];
 }
 
+/** Whether one of the revision's rules fired in this attempt, and on which
+ *  events (server iteration/rule_application.py `rule_trace`). The label and
+ *  sentence are the rule's own words from semantic_rules. */
+export interface RuleTraceRecord {
+  ruleType: string;
+  label: string;
+  sentence: string;
+  conditionStatus: 'occurred' | 'not_occurred' | 'unknown';
+  executionStatus: 'applied' | 'not_reached' | 'unknown';
+  reason: string;
+  eventRefs: string[];
+}
+
 export interface AttemptDetail {
   attempt: Attempt;
   metrics: Metrics;
@@ -391,6 +391,7 @@ export interface AttemptDetail {
   timeline: Timeline | null;
   trace: TraceStep[];
   decisions: DecisionRecord[];
+  rules: RuleTraceRecord[];
   reviews: ExperienceReview[];
   deck: DeckPayload;
   resources: ResourceRevision;
@@ -552,7 +553,12 @@ export interface DesignFinding {
   author: 'researcher';
 }
 
+/** Which version the server is. ``sim`` plays what ``real`` ran earlier and
+ *  never calls a model; ``real`` generates as it goes. See server ``mode.py``. */
+export type ServerMode = 'sim' | 'real';
+
 export interface Catalog {
+  mode: ServerMode;
   engineVersion: string;
   village: { dataSource: string; isSynthetic: boolean; contentHash: string;
              residentCount: number; dataIssues: DataIssue[] };

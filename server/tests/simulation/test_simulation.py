@@ -17,10 +17,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "server"))
 
-from app.simulation.agents.base import AdapterError, ProposalFactory  # noqa: E402
-from app.simulation.agents.llm import LlmAdapter, build_prompt_payload  # noqa: E402
+from app.simulation.agents.llm import build_prompt_payload  # noqa: E402
 from app.simulation.contracts import (  # noqa: E402
-    HEALTH_STAFF,
     MEDIAL,
     RESEARCHER,
     WORLD_TRUTH_EVENTS,

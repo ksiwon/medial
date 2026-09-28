@@ -27,7 +27,6 @@ from app.simulation.iteration.contracts import (  # noqa: E402
     ChangeSet,
     ChangeSetValidation,
     ExecutionBinding,
-    Generation,
     RuleChange,
     SessionStatus,
     UsageStatus,
@@ -44,7 +43,6 @@ from app.simulation.iteration.llm import (  # noqa: E402
     ModelCallError,
     ModelNotConfigured,
 )
-from app.simulation.iteration.evaluation_metrics import DEFAULT_CRITERIA  # noqa: E402
 from app.simulation.iteration.service import IterationService  # noqa: E402
 from app.simulation.iteration.validation import (  # noqa: E402
     validate_change_set,
@@ -707,17 +705,65 @@ def test_the_model_description_never_carries_the_key():
     assert described["configured"] is True
 
 
-def test_a_google_key_alone_configures_the_client_and_nothing_else_does():
-    """One provider, on purpose (2026-09-15). GOOGLE_API_KEY is the whole
-    configuration; the base URL is Gemini's OpenAI-compatible endpoint."""
-    client = LlmClient.from_env({"GOOGLE_API_KEY": "k"})
-    assert client.provider == "google"
-    assert client.model == "gemini-3.8-flash"
-    assert client.base_url.startswith("https://generativelanguage.googleapis.com/")
+def test_an_openai_key_alone_configures_the_client_and_nothing_else_does():
+    """One provider, on purpose (2026-09-15; OpenAI since 2026-09-28).
+    OPENAI_API_KEY is the whole configuration; reviews take the higher tier."""
+    client = LlmClient.from_env({"OPENAI_API_KEY": "k"})
+    assert client.provider == "openai"
+    assert client.model == "gpt-6-sol"
+    assert client.base_url.startswith("https://api.openai.com/")
     assert client.available
     # Keys for providers this code no longer knows do nothing.
-    assert not LlmClient.from_env({"OPENAI_API_KEY": "k"}).available
+    assert not LlmClient.from_env({"GOOGLE_API_KEY": "k"}).available
     assert not LlmClient.from_env({"ANTHROPIC_API_KEY": "k"}).available
+
+
+def test_a_dropped_connection_is_retried_and_a_bad_request_is_not():
+    """A live session once ended on its first review because the provider hung
+    up without answering and that error was not counted as transient."""
+    import httpx
+
+    from app.simulation.iteration.llm import _retryable
+
+    assert _retryable(httpx.RemoteProtocolError("Server disconnected without sending a response."))
+    assert _retryable(httpx.ReadTimeout("slow"))
+    assert _retryable(httpx.ConnectError("refused"))
+    assert not _retryable(ValueError("schema"))
+    assert LlmClient.from_env({"OPENAI_API_KEY": "k"}).max_retries == 6
+    assert LlmClient.from_env({"OPENAI_API_KEY": "k", "MEDIAL_LLM_MAX_RETRIES": "2"}).max_retries == 2
+
+
+def test_the_answer_is_read_from_a_stream(monkeypatch):
+    """Streamed so a long think is never a silent connection (cut at 60 s)."""
+    import contextlib
+
+    import httpx
+
+    sent = {}
+
+    class Response:
+        def raise_for_status(self):
+            return None
+
+        def iter_lines(self):
+            yield 'data: {"choices":[{"delta":{"role":"assistant"}}]}'
+            yield ""
+            yield 'data: {"choices":[{"delta":{"content":"{\\"ok\\": "}}]}'
+            yield 'data: {"choices":[{"delta":{"content":"true}"}}]}'
+            yield 'data: {"choices":[],"usage":{"prompt_tokens":7,"completion_tokens":3}}'
+            yield "data: [DONE]"
+
+    @contextlib.contextmanager
+    def fake_stream(method, url, json=None, **kwargs):
+        sent.update(json)
+        yield Response()
+
+    monkeypatch.setattr(httpx, "stream", fake_stream)
+    client = LlmClient(model="m", api_key="k")
+    data, usage = client._post("sys", {"a": 1}, {"type": "object"}, "s", 100)
+    assert data == {"ok": True}
+    assert usage == {"input": 7, "output": 3}
+    assert sent["stream"] is True and sent["stream_options"] == {"include_usage": True}
 
 
 # ============================================================ restart behaviour

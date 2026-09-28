@@ -89,7 +89,9 @@ interface Props {
   viewGenerationId: string | null;
   busy: boolean;
   onSelectGeneration: (id: string) => void;
-  onCommand: (name: string) => void;
+  /** Start, pause, resume, cancel. Absent in the sim version, which runs
+   *  nothing: the bar then only says where the recording got to. */
+  onCommand?: (name: string) => void;
 }
 
 export default function ProgressBar({
@@ -175,43 +177,47 @@ export default function ProgressBar({
 
       {/* One control, chosen by the state. Playback of the recording is a
           different thing with a different control, down on the map. */}
-      {session.status === 'created' && (
-        <Button
-          $primary
-          style={{ minHeight: 30, padding: '2px 12px', fontSize: font.small }}
-          disabled={busy}
-          onClick={() => onCommand('start')}
-        >
-          실행 시작
-        </Button>
-      )}
-      {RUNNING_STATUSES.includes(session.status) && running && (
-        <Button
-          style={{ minHeight: 30, padding: '2px 12px', fontSize: font.small }}
-          disabled={busy}
-          onClick={() => onCommand('pause')}
-        >
-          실행 일시정지
-        </Button>
-      )}
-      {session.status === 'paused' && (
-        <Button
-          $primary
-          style={{ minHeight: 30, padding: '2px 12px', fontSize: font.small }}
-          disabled={busy}
-          onClick={() => onCommand('resume')}
-        >
-          실행 재개
-        </Button>
-      )}
-      {(running || session.status === 'paused') && (
-        <Button
-          style={{ minHeight: 30, padding: '2px 12px', fontSize: font.small }}
-          disabled={busy}
-          onClick={() => onCommand('cancel')}
-        >
-          실행 중지
-        </Button>
+      {onCommand && (
+        <>
+          {session.status === 'created' && (
+            <Button
+              $primary
+              style={{ minHeight: 30, padding: '2px 12px', fontSize: font.small }}
+              disabled={busy}
+              onClick={() => onCommand('start')}
+            >
+              실행 시작
+            </Button>
+          )}
+          {RUNNING_STATUSES.includes(session.status) && running && (
+            <Button
+              style={{ minHeight: 30, padding: '2px 12px', fontSize: font.small }}
+              disabled={busy}
+              onClick={() => onCommand('pause')}
+            >
+              실행 일시정지
+            </Button>
+          )}
+          {session.status === 'paused' && (
+            <Button
+              $primary
+              style={{ minHeight: 30, padding: '2px 12px', fontSize: font.small }}
+              disabled={busy}
+              onClick={() => onCommand('resume')}
+            >
+              실행 재개
+            </Button>
+          )}
+          {(running || session.status === 'paused') && (
+            <Button
+              style={{ minHeight: 30, padding: '2px 12px', fontSize: font.small }}
+              disabled={busy}
+              onClick={() => onCommand('cancel')}
+            >
+              실행 중지
+            </Button>
+          )}
+        </>
       )}
     </Bar>
   );

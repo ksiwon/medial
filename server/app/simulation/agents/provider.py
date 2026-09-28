@@ -25,11 +25,13 @@ from typing import Any
 from ..contracts import ModelPolicy
 from ..iteration.llm import LlmClient, ModelNotConfigured, _retryable
 
-#: What the two tiers default to. Checked against Google's model list on
-#: 2026-09-15 with the project key; ``MEDIAL_LLM_HEAD_MODEL`` and
-#: ``MEDIAL_LLM_RESIDENT_MODEL`` override them.
-DEFAULT_HEAD_MODEL = "gemini-3.8-flash"
-DEFAULT_RESIDENT_MODEL = "gemini-3.1-flash-lite"
+#: What the two tiers default to. Checked against OpenAI's model list on
+#: 2026-09-28; ``MEDIAL_LLM_HEAD_MODEL`` and ``MEDIAL_LLM_RESIDENT_MODEL``
+#: override them. The head reads the whole situation and chooses among
+#: candidates, so it takes the higher tier; a resident gives one person's one
+#: answer, so the lighter tier is enough.
+DEFAULT_HEAD_MODEL = "gpt-6-sol"
+DEFAULT_RESIDENT_MODEL = "gpt-6-luna"
 
 
 @dataclass
@@ -100,7 +102,7 @@ class ModelProvider:
 
     # -- the pre-flight check -------------------------------------------
     def verify_models(self, policy: ModelPolicy) -> list[str]:
-        """Names Google does not offer. Empty means both tiers exist."""
+        """Names the provider does not offer. Empty means both tiers exist."""
         if not self.available:
             return [policy.headModelId, policy.residentModelId]
         import httpx  # lazy: the offline path must not need it

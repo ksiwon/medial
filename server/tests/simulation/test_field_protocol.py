@@ -21,15 +21,10 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "server"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from app.simulation.iteration.contracts import (  # noqa: E402
-    AgentReview,
-    ExcludedClaim,
-    ReviewItem,
-    SessionStatus,
-)
+from app.simulation.iteration.contracts import AgentReview, ExcludedClaim, ReviewItem
 from app.simulation.iteration.synthesis import check_excluded  # noqa: E402
 
-from test_iteration import P1_DECK, START, T_RES, iteration, run_session  # noqa: E402
+from test_iteration import P1_DECK, START, iteration, run_session  # noqa: E402
 
 
 def session_with_package():

@@ -1,6 +1,7 @@
 import type {
   Capabilities,
   GenerationComparison,
+  IterationSession,
   SessionDetail,
   SessionStatusPayload,
 } from './iteration';
@@ -11,7 +12,6 @@ import type {
   Comparison,
   DesignFinding,
   DomainEvent,
-  Observation,
   PersonasPayload,
   PolicyRevision,
   Snapshot,
@@ -66,21 +66,20 @@ export interface PolicyEdit {
 }
 
 export const api = {
-  health: () => request<{ status: string; dataSource: string; isSynthetic: boolean }>('/health'),
   catalog: () => request<Catalog>('/catalog'),
   village: () => request<VillagePayload>('/village'),
   /** The raster is served by the local API from the git-ignored registry, so it
    *  is never part of the built bundle. */
   mapImageUrl: () => `${BASE}/village/map`,
+  /** Scene pictures (scripts/art.mjs → local-data/art/), same arrangement as
+   *  the map: served locally, never bundled. Empty for a synthetic village. */
+  art: () => request<{ names: string[] }>('/village/art'),
+  artUrl: (name: string) => `${BASE}/village/art/${encodeURIComponent(name)}`,
   personas: () => request<PersonasPayload>('/personas'),
 
   attempt: (id: string) => request<AttemptDetail>(`/attempts/${id}`),
   events: (id: string, after = 0) =>
     request<{ events: DomainEvent[] }>(`/attempts/${id}/events?after=${after}`),
-  observations: (id: string, actorId?: string) =>
-    request<{ observations: Observation[] }>(
-      `/attempts/${id}/observations${actorId ? `?actorId=${actorId}` : ''}`,
-    ),
   snapshot: (id: string, seq: number) =>
     request<Snapshot>(`/attempts/${id}/snapshot?seq=${seq}`),
 
@@ -153,7 +152,8 @@ export const api = {
   iteration: {
     capabilities: () => request<Capabilities>('/iteration/capabilities'),
     sessions: () =>
-      request<{ sessions: unknown[]; startPolicyId: string; capabilities: Capabilities }>(
+      request<{ sessions: IterationSession[]; startPolicyId: string;
+                capabilities: Capabilities }>(
         '/iteration/sessions',
       ),
     create: (body: {

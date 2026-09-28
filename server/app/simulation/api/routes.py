@@ -1,22 +1,26 @@
 """HTTP surface for the research simulator.
 
-This module starts with no API key and no model: the default adapters are rules,
-and an online adapter can only be chosen when the server process was given a key
-(see server/.env.example).
+Which version this server is - ``sim`` (plays what was run earlier, never calls a
+model) or ``real`` (generates as it goes) - is decided once, from ``MEDIAL_MODE``,
+and enforced here: a sim server answers reads and moves playback cursors, and
+turns every other write away (see ``mode.py``). A real server can pick an online
+adapter only when its process was given a key (see server/.env.example).
 """
 from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, FastAPI, HTTPException, Query
+from fastapi import APIRouter, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from ..contracts import ContactStrategy, ENGINE_VERSION
 from ..iteration.api import router as iteration_router, set_iteration_service
 from ..iteration.service import IterationService
+from ..mode import REAL, SIM_REFUSAL, database_path, refuses, server_mode
 from ..persistence.store import AttemptExists, CommandConflict
+from ..village import art_dir
 from ..service import (
     ForkPrefixMismatch,
     SimulationService,
@@ -29,15 +33,19 @@ _service: SimulationService | None = None
 
 
 def get_service() -> SimulationService:
-    global _service
     if _service is None:
-        # The real server reads its model configuration from the environment
-        # (server/.env via run.sh). Tests inject a service with no provider.
+        # Only the real version reads its model configuration from the
+        # environment (server/.env via run-real). The sim version builds no
+        # provider at all, so a key left in its environment reaches nothing.
+        # Tests inject a service instead.
         from ..agents.provider import ModelProvider, policy_from_env
-        provider = ModelProvider.from_env()
+        from ..persistence.store import Store
+        mode = server_mode()
+        provider = ModelProvider.from_env() if mode == REAL else None
         set_service(SimulationService(
-            provider=provider if provider.available else None,
-            model_policy=policy_from_env(mode="off")))
+            store=Store(database_path(mode)),
+            provider=provider if provider is not None and provider.available else None,
+            model_policy=policy_from_env(mode="off"), mode=mode))
     return _service  # type: ignore[return-value]
 
 
@@ -115,6 +123,7 @@ def health() -> dict[str, Any]:
     model = get_iteration_service().llm.describe()
     return {
         "status": "ok",
+        "mode": service.mode,
         "engineVersion": ENGINE_VERSION,
         "dataSource": service.village.data_source,
         "isSynthetic": service.village.is_synthetic,
@@ -122,8 +131,9 @@ def health() -> dict[str, Any]:
         # runs offline by default, and reports honestly when a model is wired.
         "modelCalls": "available" if model["configured"] else "none",
         "model": model,
-        "note": ("규칙 어댑터만 쓰면 API 키가 필요 없습니다. 온라인 리뷰·개선 어댑터는 "
-                 "서버 환경변수에 키가 있을 때만 선택할 수 있습니다."),
+        "note": (SIM_REFUSAL if service.mode != REAL else
+                 "규칙 어댑터만 쓰면 API 키가 필요 없습니다. 온라인 어댑터는 서버 환경변수에 "
+                 "키가 있을 때만 선택할 수 있습니다."),
     }
 
 
@@ -151,6 +161,21 @@ def village_map() -> Any:
             detail=("이 레지스트리에는 원본 지도 래스터가 없다. "
                     "python -m import_village 로 다시 만들면 포함된다."))
     return FileResponse(path, media_type="image/png")
+
+
+@router.get("/village/art")
+def village_art_index() -> dict[str, Any]:
+    """Which scene pictures exist. The screen falls back to a schematic figure
+    for any name missing here; nothing is fetched speculatively."""
+    return {"names": sorted(get_service().village.art_index())}
+
+
+@router.get("/village/art/{name}")
+def village_art(name: str) -> Any:
+    index = get_service().village.art_index()
+    if name not in index:
+        raise HTTPException(status_code=404, detail="이 그림은 없다: %s" % name)
+    return FileResponse(art_dir() / index[name], media_type="image/webp")
 
 
 @router.post("/attempts")
@@ -330,6 +355,16 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # The sim version's one rule, in one place: read anything, move a playback
+    # cursor, write nothing else. Checked before any route runs, so no new
+    # endpoint can forget it.
+    @app.middleware("http")
+    async def sim_writes_nothing(request: Request, call_next: Any) -> Any:
+        if refuses(get_service().mode, request.method, request.url.path):
+            return JSONResponse(status_code=403, content={"detail": SIM_REFUSAL})
+        return await call_next(request)
+
     app.include_router(router)
     app.include_router(iteration_router)
     return app

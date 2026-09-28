@@ -17,12 +17,10 @@ import json
 import sys
 from pathlib import Path
 
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "server"))
 
-from app.simulation.agents.base import AdapterError  # noqa: E402
 from app.simulation.contracts import (  # noqa: E402
     EMS_CREW,
     EMS_DISPATCH,

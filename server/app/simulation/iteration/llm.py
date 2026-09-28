@@ -1,4 +1,4 @@
-"""Model access for the review and improvement roles - Gemini only.
+"""Model access for the review and improvement roles - OpenAI only.
 
 Three rules are enforced here rather than trusted to the caller:
 
@@ -11,12 +11,12 @@ Three rules are enforced here rather than trusted to the caller:
   response content hashes, token usage, latency, and whether the response
   validated. The bodies themselves stay out of the public export.
 
-The HTTP calls go straight to Gemini's OpenAI-compatible chat endpoint (it
-accepts ``response_format: json_schema``), not through a vendor SDK, so the code
-does not drift when an SDK's major version changes. There is one provider on
-purpose: a second one was more to keep straight than it was worth (2026-09-15),
-and adding one back is a small, separate change. Model names change more often
-than this file does - check Google's current list before changing a default.
+The HTTP calls go straight to OpenAI's chat completions endpoint (it accepts
+``response_format: json_schema``), not through a vendor SDK, so the code does not
+drift when an SDK's major version changes. There is one provider on purpose: a
+second one was more to keep straight than it was worth (D107). Model names
+change more often than this file does - check OpenAI's current list before
+changing a default.
 """
 from __future__ import annotations
 
@@ -34,19 +34,21 @@ PROMPT_VERSION = "medial-prompts/1.0.0"
 DEFAULT_TIMEOUT_S = 60.0
 DEFAULT_MAX_TOKENS = 2048
 
-PROVIDER = "google"
+PROVIDER = "openai"
 
 #: Default only. Model ids move; ``MEDIAL_LLM_MODEL`` overrides this and the
 #: health endpoint reports whichever one is actually configured. Checked against
-#: Google's model list on 2026-09-15.
+#: OpenAI's model list on 2026-09-28.
 #:
-#: The mid tier is the default on purpose. A generation asks for one review per
-#: actor (13) plus a synthesis and a proposal round, so a cycle is tens of calls,
-#: and the work is grounded extraction - read these events, grade these six
-#: dimensions, cite the event ids - rather than open-ended reasoning.
-DEFAULT_MODEL = "gemini-3.8-flash"
+#: Two tiers are used across the project: ``gpt-6-sol`` where the judgement is
+#: the result, ``gpt-6-luna`` where a lighter model is enough. Reviews are the
+#: research's evaluations - a resident's grade and the events it cites are what
+#: the whole study reads - and a proposal round reasons over all of them, so this
+#: role takes the higher tier. A cycle is tens of calls (13 reviews, a synthesis,
+#: a proposal round), which is affordable at that tier.
+DEFAULT_MODEL = "gpt-6-sol"
 
-GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
+OPENAI_BASE_URL = "https://api.openai.com/v1"
 
 
 class ModelNotConfigured(RuntimeError):
@@ -114,7 +116,7 @@ class LlmClient:
                  max_retries: int = 2) -> None:
         self.model = model or ""
         self._api_key = api_key
-        self.base_url = base_url or GEMINI_BASE_URL
+        self.base_url = base_url or OPENAI_BASE_URL
         self.timeout_s = timeout_s
         self.max_retries = max_retries
 
@@ -122,11 +124,15 @@ class LlmClient:
     @classmethod
     def from_env(cls, env: dict[str, str] | None = None) -> "LlmClient":
         env = dict(env if env is not None else os.environ)
-        key = env.get("GOOGLE_API_KEY") or None
-        base = env.get("MEDIAL_LLM_BASE_URL") or GEMINI_BASE_URL
+        key = env.get("OPENAI_API_KEY") or None
+        base = env.get("MEDIAL_LLM_BASE_URL") or OPENAI_BASE_URL
         model = env.get("MEDIAL_LLM_MODEL") or DEFAULT_MODEL
         timeout = float(env.get("MEDIAL_LLM_TIMEOUT_S") or DEFAULT_TIMEOUT_S)
-        return cls(model=model, api_key=key, base_url=base, timeout_s=timeout)
+        # The same patience as the village's calls (provider.py): a cycle is
+        # tens of calls, and one dropped connection should not end it.
+        retries = int(env.get("MEDIAL_LLM_MAX_RETRIES") or 6)
+        return cls(model=model, api_key=key, base_url=base, timeout_s=timeout,
+                   max_retries=retries)
 
     @property
     def available(self) -> bool:
@@ -143,7 +149,7 @@ class LlmClient:
             "note": ("키는 서버 환경변수에서만 읽고 응답·로그·문서에 포함하지 않는다. "
                      "키가 없으면 온라인 어댑터를 선택할 수 없고, 실패를 scripted 성공으로 "
                      "대체하지 않는다."),
-            "envKeys": ["GOOGLE_API_KEY", "MEDIAL_LLM_MODEL", "MEDIAL_LLM_BASE_URL"],
+            "envKeys": ["OPENAI_API_KEY", "MEDIAL_LLM_MODEL", "MEDIAL_LLM_BASE_URL"],
         }
 
     # -- the call ---------------------------------------------------------
@@ -166,7 +172,7 @@ class LlmClient:
         if not self.available:
             raise ModelNotConfigured(
                 "온라인 어댑터를 선택했지만 모델 키·모델 id가 설정되지 않았다. "
-                "서버 환경변수 GOOGLE_API_KEY(그리고 필요하면 MEDIAL_LLM_MODEL)를 "
+                "서버 환경변수 OPENAI_API_KEY(그리고 필요하면 MEDIAL_LLM_MODEL)를 "
                 "설정하거나 rule/scripted 어댑터로 실행한다.")
 
         request_body = {"system": system, "payload": payload, "schema": schema_name}
@@ -205,6 +211,17 @@ class LlmClient:
     # -- the wire ---------------------------------------------------------
     def _post(self, system: str, payload: dict[str, Any], schema: dict[str, Any],
               schema_name: str, max_tokens: int) -> tuple[Any, dict[str, int]]:
+        """One chat completion, received as a stream.
+
+        Streamed so the connection is never silent: somewhere between this
+        machine and the provider an idle connection is cut at 60 s, and a
+        higher-tier synthesis thinks for longer than that before its first
+        word. Unstreamed, that call was dropped at 60.7 s every time
+        ("Server disconnected without sending a response"), whatever the
+        client's own timeout; streamed, the same call answered in 74 s
+        (2026-09-28). ``timeout_s`` is therefore the longest wait *between*
+        chunks, not for the whole answer.
+        """
         import httpx  # imported lazily: the offline path must not need it
 
         user = json.dumps(payload, ensure_ascii=False)
@@ -216,22 +233,38 @@ class LlmClient:
                 "type": "json_schema",
                 "json_schema": {"name": schema_name, "schema": schema},
             },
+            "stream": True,
+            "stream_options": {"include_usage": True},
         }
-        response = httpx.post(
-            self.base_url.rstrip("/") + "/chat/completions", json=body,
-            timeout=self.timeout_s,
-            headers={"Authorization": "Bearer %s" % (self._api_key or ""),
-                     "content-type": "application/json"})
-        response.raise_for_status()
-        data = response.json()
-        usage = {"input": (data.get("usage") or {}).get("prompt_tokens", 0),
-                 "output": (data.get("usage") or {}).get("completion_tokens", 0)}
-        text = (data.get("choices") or [{}])[0].get("message", {}).get("content")
-        return (json.loads(text) if text else None), usage
+        parts: list[str] = []
+        usage: dict[str, Any] = {}
+        with httpx.stream(
+                "POST", self.base_url.rstrip("/") + "/chat/completions", json=body,
+                timeout=self.timeout_s,
+                headers={"Authorization": "Bearer %s" % (self._api_key or ""),
+                         "content-type": "application/json"}) as response:
+            response.raise_for_status()
+            for line in response.iter_lines():
+                if not line.startswith("data: ") or line == "data: [DONE]":
+                    continue
+                chunk = json.loads(line[len("data: "):])
+                usage = chunk.get("usage") or usage
+                for choice in chunk.get("choices") or []:
+                    parts.append((choice.get("delta") or {}).get("content") or "")
+        text = "".join(parts)
+        return (json.loads(text) if text else None), {
+            "input": usage.get("prompt_tokens", 0), "output": usage.get("completion_tokens", 0)}
 
 
 def _retryable(exc: Exception) -> bool:
+    """A 429, a 5xx, or a request that may never have reached the model."""
     status = getattr(getattr(exc, "response", None), "status_code", None)
     if status is not None:
         return status == 429 or status >= 500
-    return "timeout" in type(exc).__name__.lower() or "connect" in type(exc).__name__.lower()
+    # A dropped connection, a read that never came back, a timeout: httpx calls
+    # all of them TransportError. Matching on the class name used to miss
+    # RemoteProtocolError ("Server disconnected without sending a response"),
+    # which ended a live session on its first review (2026-09-28).
+    import httpx  # lazy: the offline path must not need it
+
+    return isinstance(exc, httpx.TransportError)

@@ -38,6 +38,7 @@ from .contracts import (
 )
 from .engine import IterationEngine, now_iso
 from .improvement import SUPPORTED_CAPABILITIES
+from ..mode import REAL
 from .llm import LlmClient, content_hash
 from .evaluation_metrics import DEFAULT_CRITERIA
 from . import semantic_rules
@@ -72,7 +73,11 @@ class IterationService:
                  llm_client: LlmClient | None = None) -> None:
         self.sim = simulation_service
         self.store = simulation_service.store
-        self.llm = llm_client if llm_client is not None else LlmClient.from_env()
+        # Only the real version may read a key. A sim server's client is built
+        # empty, so its review and improvement roles cannot reach a model.
+        if llm_client is None:
+            llm_client = LlmClient.from_env() if simulation_service.mode == REAL else LlmClient()
+        self.llm = llm_client
         self._engines: dict[str, IterationEngine] = {}
         self._threads: dict[str, threading.Thread] = {}
         self._lock = threading.Lock()

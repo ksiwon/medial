@@ -1,6 +1,6 @@
 # MEDial 구현 지시서: 주민 리뷰 기반 자동 반복
 
-최우선 사용자 기획: [12_FINAL_RESEARCH_PLAN.md](12_FINAL_RESEARCH_PLAN.md).
+최우선 사용자 기획: [12_FINAL_RESEARCH_PLAN.md](history/12_FINAL_RESEARCH_PLAN.md).
 현재 구현 사실은 DEVELOPMENT.md. 이전 09~11의 큰 서비스 편집기는 본 반복 흐름의 확장 기능이며 첫 구현의 선행 조건으로 전체 구현하지 않는다.
 이 문서는 요구사항이다. 아래 API/객체는 제안이며 이미 동작한다는 뜻이 아니다.
 

@@ -43,42 +43,12 @@ export const placeWord = (place: string | null | undefined): string => {
 
 // Events, in sentences a person can read.
 //
-// This is a *presentation* mapper only. The stored log is untouched: every row
-// keeps its own event id and seq, so "무엇을 요약했는지" can always be reopened
-// as the original technical record. Nothing here merges two events into a claim
-// neither of them makes, and nothing invents speech - an utterance is printed
-// only when the payload carries one.
-
-/** Engine bookkeeping that says nothing to a reader. Reachable under the technical
- *  disclosure, never in the default list. */
-const BOOKKEEPING = new Set([
-  'world.actor_moved',
-  'world.actor_arrived',
-  'world.copresence',
-  'task.started',
-  'attempt.completed',
-]);
-
-/** Researcher-only world facts: why a phone was not answered is knowledge the
- *  caller does not have. Kept out of the readable list even in researcher mode,
- *  where it stays available under the technical disclosure.
- *
- *  `world.relay_resolved` is *not* here. It is researcher-only too, but it is
- *  the one sentence the hand-off mechanism exists to produce - MEDial credits
- *  one person, another went - and it reads as a sentence. The view-mode filter
- *  upstream keeps it out of MEDial's view; in the researcher's it is shown. */
-const WORLD_ONLY = new Set(['world.reachability_resolved']);
+// A *presentation* mapper only. The stored log is untouched, nothing here
+// merges two events into a claim neither makes, and nothing invents speech:
+// the observe screen shows an event's words when its payload carries them and
+// this sentence, as a caption, when it does not.
 
 export type StoryTone = 'plain' | 'good' | 'attention' | 'bad';
-
-export interface StoryRow {
-  /** The originating event. Clicking a row seeks to exactly this seq. */
-  event: DomainEvent;
-  clock: string;
-  text: string;
-  tone: StoryTone;
-  utterance: string | null;
-}
 
 const str = (value: unknown): string | null => (typeof value === 'string' ? value : null);
 const num = (value: unknown): number | null => (typeof value === 'number' ? value : null);
@@ -230,7 +200,7 @@ export function sentenceFor(event: DomainEvent): { text: string; tone: StoryTone
       return { text: `${subject}의 안부를 확인할 필요가 생겼습니다.`, tone: 'attention' };
     case 'transport.need_raised':
       return {
-        text: `${subject}에게 ${str(p.destination) ?? '읍내'}까지 갈 방법이 필요합니다.`,
+        text: `${subject}에게 ${placeWord(str(p.destination) ?? 'TOWN')}까지 갈 방법이 필요합니다.`,
         tone: 'attention',
       };
     case 'contact.attempted':
@@ -298,9 +268,16 @@ export function sentenceFor(event: DomainEvent): { text: string; tone: StoryTone
     case 'request.offered':
       // Two different asks: go and look, or - after the house was empty -
       // say where they would be. The second costs a phone call, not a walk.
-      return p.purpose === 'whereabouts'
-        ? { text: `집이 비어 있어, ${to}에게 ${withParticle(subject, 'subject')} 어디 있을지 물었습니다.`, tone: 'plain' }
-        : { text: `${to}에게 ${subject} 확인을 부탁했습니다.`, tone: 'plain' };
+      if (p.purpose === 'whereabouts') {
+        return { text: `집이 비어 있어, ${to}에게 ${withParticle(subject, 'subject')} 어디 있을지 물었습니다.`, tone: 'plain' };
+      }
+      if (p.need === 'transport') {
+        return { text: `${to}에게 ${withParticle(subject, 'object')} ${placeWord(str(p.destination))}까지 태워 달라고 부탁했습니다.`, tone: 'plain' };
+      }
+      if (p.purpose === 'stay_with') {
+        return { text: `${to}에게 ${subject} 곁에 가 있어 달라고 부탁했습니다.`, tone: 'plain' };
+      }
+      return { text: `${to}에게 ${subject} 확인을 부탁했습니다.`, tone: 'plain' };
     case 'request.accepted':
       return { text: `${withParticle(who, 'subject')} 하겠다고 했습니다.`, tone: 'good' };
     case 'request.declined':
@@ -454,34 +431,10 @@ export function sentenceFor(event: DomainEvent): { text: string; tone: StoryTone
   }
 }
 
-/**
- * The readable list. ``events`` must already be cut at the cursor and filtered
- * by view mode; this only decides what a reader can be shown.
- */
-export function storyRows(events: DomainEvent[]): StoryRow[] {
-  const rows: StoryRow[] = [];
-  for (const event of events) {
-    if (BOOKKEEPING.has(event.type) || WORLD_ONLY.has(event.type)) continue;
-    const sentence = sentenceFor(event);
-    if (!sentence) continue;
-    rows.push({
-      event,
-      clock: formatClock(event.simTimeMs),
-      text: sentence.text,
-      tone: sentence.tone,
-      utterance:
-        str((event.payload as Record<string, unknown>).utterance) ??
-        // What MEDial said when it asked. Only a model head writes one.
-        str((event.payload as Record<string, unknown>).message),
-    });
-  }
-  return rows;
-}
-
-/** Everything the readable list left out, so a summary can always be traced
- *  back to the raw record rather than replacing it. */
-export function hiddenRows(events: DomainEvent[]): DomainEvent[] {
-  return events.filter(
-    (event) => BOOKKEEPING.has(event.type) || WORLD_ONLY.has(event.type) || !sentenceFor(event),
+/** A policy's question names the destination by its engine key ("TOWN까지의
+ *  이동을 …"); the reader gets the place's word. */
+export function questionWords(question: string): string {
+  return question.replace(/^([A-Z][A-Z0-9_]*(?::P\d+)?)(까지|에서|으로|로|에)/, (_m, key, particle) =>
+    `${placeWord(key)}${particle}`,
   );
 }

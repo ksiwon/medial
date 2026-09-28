@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 // under .run/e2e/, so no capture can carry a real place name or a real person.
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const OUT = resolve(ROOT, 'docs', 'research', 'screenshots', '2026-09-15-ui');
+const OUT = resolve(ROOT, 'docs', 'presentations', 'screenshots', '2026-09-15-ui');
 mkdirSync(OUT, { recursive: true });
 
 // Retina-sized: a 1440px screen lands as 2880px, which survives a projector.
@@ -30,10 +30,6 @@ async function crop(target: Locator, name: string) {
   await target.first().waitFor({ state: 'visible', timeout: 20_000 });
   await target.first().screenshot({ path: resolve(OUT, `${name}.png`) });
 }
-
-/** The panel a title belongs to. */
-const panel = (page: Page, title: string) =>
-  page.getByRole('heading', { name: title }).locator('xpath=ancestor::section[1]');
 
 async function openHint(page: Page, label: string) {
   await page.getByLabel(`${label} 설명`, { exact: true }).click();
@@ -72,43 +68,34 @@ test('@shots A 사례와 서비스 경험', async ({ page }) => {
   await page.getByText(/사건 근거 [0-9]+건 보기/).first().click();
   await page.getByText('그 장면 열기').first().click();
 
+  // The cited event opens as its scene: frames at eye level, the words said,
+  // and MEDial's judgement where MEDial would stand.
   const range = page.getByLabel('시각', { exact: true });
   await expect(range).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByText('MEDial · 조율 현황')).toBeVisible();
-  await shot(page, '03-observe');
-  await crop(panel(page, '합성 마을'), '04-observe-map');
-  await crop(panel(page, '지금 일어난 일'), '05-observe-happening');
-  await crop(
-    page.getByText('MEDial · 조율 현황').locator('xpath=ancestor::section[1]'),
-    '06-observe-orchestrator',
-  );
-  // Opening a scene can leave the third column on one person; the board is the
-  // resting state and the shot is of the board.
-  const backToBoard = page.getByTitle('마을 사람들로 돌아가기');
-  if (await backToBoard.count()) await backToBoard.click();
-  await crop(panel(page, '마을 사람들'), '07-observe-people');
+  await page.getByRole('button', { name: '▶ 재생', exact: true }).click();
+  await page.waitForTimeout(4_000);
+  await page.getByRole('button', { name: '⏸ 정지', exact: true }).click();
+  await shot(page, '03-observe-scene');
+  const judgment = page.getByLabel('MEDial의 판단');
+  if (await judgment.count()) await crop(judgment, '04-observe-judgment');
   await crop(
     page.getByLabel('반복 진행 상태', { exact: true }).locator('xpath=..'),
-    '08-progress-bar',
+    '05-progress-bar',
   );
 
-  // At the end of the log the middle column becomes the day's evaluations.
+  // Nothing being said: the village fills the stage, and a marker's card is
+  // the person's facts.
   await range.focus();
-  await range.press('End');
-  const dayReviews = page.getByRole('heading', { name: '하루를 마친 주민들의 리뷰' });
-  await expect(dayReviews).toBeVisible({ timeout: 20_000 });
-  await crop(dayReviews.locator('xpath=ancestor::section[1]'), '08b-observe-day-reviews');
+  await range.press('Home');
+  await expect(page.getByText('합성 마을', { exact: true }).first()).toBeVisible({ timeout: 20_000 });
+  await page.locator('g[data-marker]').first().click();
+  await shot(page, '06-observe-map-card');
 
   // What MEDial itself was told, as opposed to what the world did.
   await setView(page, 'medial');
   await expect(page.getByText('MEDial이 보고받은 위치만 표시 중')).toBeVisible();
-  await shot(page, '09-observe-medial-view');
+  await shot(page, '07-observe-medial-view');
   await setView(page, 'researcher');
-
-  // One resident's own day, opened from the board.
-  await panel(page, '마을 사람들').getByText('P1', { exact: true }).first().click();
-  await expect(page.getByText(/하루를 마친 뒤의 평가/)).toBeVisible();
-  await shot(page, '10-observe-person');
 });
 
 test('@shots B 주민 평가', async ({ page }) => {

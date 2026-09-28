@@ -315,6 +315,7 @@ export interface IterationSession {
   callBudget: number;
   tokenBudget: number;
   behaviourAdapter: string;
+  institutionAdapter: string;
   reviewAdapter: string;
   improvementAdapter: string;
   status: SessionStatus;

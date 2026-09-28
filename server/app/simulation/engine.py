@@ -277,7 +277,6 @@ class Engine:
     def _build_routines(self) -> dict[str, dict[str, dict[str, Any]]]:
         horizon = self.deck.horizonMs
         medial: dict[str, dict[str, Any]] = {}
-        head: dict[str, dict[str, Any]] = {}
         by_id = {r["id"]: r for r in self.village.residents}
         for resident in self.village.residents:
             medial[resident["id"]] = shared_routine(

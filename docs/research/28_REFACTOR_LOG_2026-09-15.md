@@ -211,7 +211,7 @@ npm run e2e                         # 6 passed (Chromium · 합성 마을 · .ru
 
 ## 후속 · 발표 캡처와 연구노트 2 (같은 날)
 
-`npm run shots`(`e2e/shots.spec.ts`, 기본 e2e와 분리)로 화면·기능별 캡처 31장을 `docs/research/screenshots/2026-09-15-ui/`에 남기고(합성 마을, 2880px), `RESEARCH_NOTE_2026-09-15_vol2.html`에 연구 목표와 이번 리팩터링을 정리했다. 캡처를 열어 보다 엔진 키 노출 두 곳(거절 사유 `driving_status_unknown`, 현장 장면 제목 `time_labour`)과 2단계에 남은 1단계 입력칸을 찾아 고쳤다.
+`npm run shots`(`e2e/shots.spec.ts`, 기본 e2e와 분리)로 화면·기능별 캡처 31장을 `docs/presentations/screenshots/2026-09-15-ui/`에 남기고(합성 마을, 2880px), `RESEARCH_NOTE_2026-09-15_vol2.html`에 연구 목표와 이번 리팩터링을 정리했다. 캡처를 열어 보다 엔진 키 노출 두 곳(거절 사유 `driving_status_unknown`, 현장 장면 제목 `time_labour`)과 2단계에 남은 1단계 입력칸을 찾아 고쳤다.
 
 **하지 못한 것 — 완료라고 쓰지 않는다.**
 
@@ -238,7 +238,7 @@ npm run e2e                         # 6 passed (Chromium · 합성 마을 · .ru
 
 캡처를 보다 고친 것: 조율 문장의 `FARM(으)로 출발`, 사람 목록의 `마을 순찰 PATROL` — 둘 다 `placeWord`를 거치게 했다.
 
-확인: pytest 418 · vitest 63 · Playwright e2e 6 (합성 마을) · 원자료 등록부에서 09:45와 22:00 화면을 직접 봄. 기존 저장 실행은 자기 지평(20:00)을 그대로 읽는다. `docs/research/screenshots/2026-09-15-ui/`의 캡처와 연구노트 2의 화면 그림은 이 변경 **이전** 것이라 다시 찍어야 한다.
+확인: pytest 418 · vitest 63 · Playwright e2e 6 (합성 마을) · 원자료 등록부에서 09:45와 22:00 화면을 직접 봄. 기존 저장 실행은 자기 지평(20:00)을 그대로 읽는다. `docs/presentations/screenshots/2026-09-15-ui/`의 캡처와 연구노트 2의 화면 그림은 이 변경 **이전** 것이라 다시 찍어야 한다.
 
 추가(같은 날): 지도 위 요청 경로(초록 선)를 아예 그리지 않는다. 지도 패널의 제목 줄과 '원자료 지형'·'기록된 시각이 조금 다른 하루' 태그를 없애고, 마을 이름은 지도 왼쪽 위 작은 배지로, 두 태그의 내용은 ⚙ 안의 한 줄로 옮겼다. 지도가 그만큼(약 60px) 커졌다. 합성 마을은 배지에 '합성 마을'이라고 쓴다.
 

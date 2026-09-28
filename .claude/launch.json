@@ -3,6 +3,12 @@
   "autoPort": true,
   "configurations": [
     {
+      "name": "medial-sim",
+      "runtimeExecutable": "py",
+      "runtimeArgs": ["-3.12", "server/sim_main.py"],
+      "port": 8010
+    },
+    {
       "name": "medial-studio",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],

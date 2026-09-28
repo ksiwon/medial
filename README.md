@@ -12,10 +12,11 @@ AI Care Orchestrator 수정에 어떻게 쓰일 수 있는지 탐색하는 것�
 평가로 안내하고, 바꿀 수 있는 것은 지원되는 운영 규칙의 **값**뿐이며, 화면의 문장과 실행되는
 값은 같은 규칙에서 만들어집니다.
 
-- 기본값은 **모델 호출 없음**이고 API 키가 필요 없습니다. 규칙 어댑터로 전체 흐름이 돕니다.
-- 리뷰·개선 역할만 실제 모델로 바꿀 수 있습니다(그때의 이름은 hybrid이며, 주민의 행동은
-  여전히 규칙입니다). 키는 서버 환경변수에서만 읽고, 키가 없으면 온라인 어댑터를 고를 수
-  없으며, 호출 실패를 규칙 결과로 대체하지 않습니다.
+- **두 버전이 있습니다.** `sim`은 real에서 미리 돌려 둔 기록을 재생하고 모델을 부르지 않습니다.
+  `real`은 실행할 때마다 새로 계산하고, 모델 어댑터로 마을·기관·리뷰·개선을 실시간으로 생성합니다.
+  화면 상단 배지가 지금 어느 버전인지 항상 말합니다.
+- 키는 real 서버 프로세스만 `server/.env` 에서 읽습니다. sim은 키를 읽지 않습니다. 키가 없으면
+  온라인 어댑터를 고를 수 없고, 호출 실패를 규칙 결과로 대체하지 않습니다.
 - 민감한 원자료는 저장소에도, 프론트 번들에도 들어가지 않습니다.
 - 합성 데이터로도 그대로 실행되며, 화면 상단 배지가 합성인지 원자료인지 항상 표시합니다.
 
@@ -33,31 +34,51 @@ python -m pip install -r server/requirements-sim.txt
 npm install
 ```
 
-그다음부터는 한 줄입니다. 서버(8010)와 개발 서버(5173)를 띄우고 브라우저를 엽니다:
+그다음부터는 둘 중 하나를 띄웁니다. 서버와 화면을 함께 띄우고 브라우저를 엽니다.
+Windows에서는 `.cmd` 를 더블클릭해도 됩니다(Git Bash로 같은 스크립트를 부릅니다).
+
+| | sim — 미리 돌려 둔 기록 | real — 실시간 생성 |
+|---|---|---|
+| 띄우기 | `./run-sim.sh` · `run-sim.cmd` | `./run-real.sh` · `run-real.cmd` |
+| 하는 일 | real에서 돌려 둔 실험을 그대로 재생 | 새 사례를 돌리고, 모델이 그 자리에서 생성 |
+| 모델·키 | 부르지 않음 · 읽지 않음 | `server/.env` 의 `OPENAI_API_KEY` 로 부름 (비용이 듭니다) |
+| 새 실행·수정안 확정·현장 기록 | 하지 않음 (서버가 403으로 거부) | 함 |
+| 기록 | `local-data/runs/sim.sqlite3` (real의 얼린 사본) | `local-data/runs/real.sqlite3` |
+| 주소 | 서버 8020 · <http://localhost:5180> | 서버 8010 · <http://localhost:5173> |
+
+포트와 기록이 달라서 둘을 동시에 띄워 둘 수 있습니다. 이미 떠 있는 쪽은 그대로 쓰고
+(다른 버전의 서버에는 붙지 않습니다), `--stop` 으로 내리고, `--no-open` 이면 브라우저를
+열지 않습니다. Ctrl+C 는 그 스크립트가 띄운 것만 정리합니다. 하는 일은 전부
+`scripts/launch.sh` 에 있습니다.
+
+**sim이 재생하는 것은 real에서 얼린 것입니다.** real에서 실험을 돌린 뒤:
 
 ```bash
-./run.sh
+python scripts/freeze_sim.py             # real.sqlite3 → sim.sqlite3
+python scripts/freeze_sim.py --replace   # 이미 있는 sim 기록을 덮어쓸 때
 ```
 
-이미 떠 있으면 그대로 쓰고, `./run.sh --stop` 으로 내립니다. 직접 띄우려면
-`python server/sim_main.py` 와 `npm run dev` 를 각각 실행하면 됩니다.
-프론트의 `/api/sim` 요청은 `127.0.0.1:8010` 으로 프록시됩니다.
-Windows의 `bash.exe`가 Linux Python을 먼저 찾더라도 의존성이 설치된 Windows Python을
-자동으로 사용합니다. 특정 Python을 고정하려면 `MEDIAL_PYTHON=/path/to/python ./run.sh`로
-지정합니다. Windows CRLF 형식의 `server/.env`도 원본 파일을 변경하지 않고 읽습니다.
+아직 돌고 있는 세션이 있으면 얼리지 않습니다. 얼린 뒤 real에서 더 돌린 것은 다시 얼리기
+전까지 sim에 나타나지 않습니다.
+
+직접 띄우려면 `python server/sim_main.py --mode sim|real` 과 `npm run dev` 를 각각 실행합니다.
+버전을 정하지 않으면 서버가 뜨지 않습니다. 프론트의 `/api/sim` 요청은 `MEDIAL_SIM_URL`
+(기본 `127.0.0.1:8010`)로 프록시됩니다. Windows의 `bash.exe`가 Linux Python을 먼저 찾더라도
+의존성이 설치된 Windows Python을 자동으로 사용합니다. 특정 Python을 고정하려면
+`MEDIAL_PYTHON=/path/to/python ./run-real.sh` 로 지정합니다.
 
 ### 모델 키
 
-기본 실행에는 필요 없습니다 — 규칙 어댑터는 모델을 한 번도 부르지 않습니다. 리뷰·개선을 실제
-모델로 돌릴 때만 필요하고, 키는 **`server/.env` 에 두며 서버 프로세스만 읽습니다**
-(`run.sh` 가 읽어서 넣어 줍니다). 양식은 `server/.env.example`.
+real 버전에만 필요합니다. 키는 **`server/.env` 에 두며 real 서버 프로세스만 읽습니다**
+(실행 스크립트는 키가 적혀 있는지만 보고 값은 읽지 않습니다). 양식은 `server/.env.example`.
 
-공급자는 Gemini 하나입니다 (`GOOGLE_API_KEY`). 리뷰·개선은 `gemini-3.8-flash`, 마을을 모델로
-돌릴 때는 MEDial 머리 `gemini-3.8-flash` · 주민 `gemini-3.1-flash-lite`. 고르는 기준은
-[DEVELOPMENT.md](DEVELOPMENT.md) 의 "모델 키는 `server/.env` 에 있습니다".
+공급자는 OpenAI 하나입니다 (`OPENAI_API_KEY`). 판단이 결과인 자리는 `gpt-6-sol`, 가벼운 모델로
+충분한 자리는 `gpt-6-luna` — 리뷰·개선과 MEDial 머리·기관은 `gpt-6-sol`, 주민은 `gpt-6-luna`.
+고르는 기준은 [DEVELOPMENT.md](DEVELOPMENT.md) 의 "모델 키는 `server/.env` 에 있습니다".
 
-키가 없으면 온라인 어댑터를 고를 수 없고(session 생성 400), 호출이 실패해도 규칙 결과로
-대체하지 않습니다.
+real의 준비 화면은 키가 있으면 네 층(마을·기관·리뷰·개선)을 모두 모델로 두고 호출 상한 300회로
+시작합니다. 층마다 규칙으로 되돌릴 수 있습니다. 키가 없으면 온라인 어댑터를 고를 수 없고
+(session 생성 400), 호출이 실패해도 규칙 결과로 대체하지 않습니다.
 
 ### 원자료 없이 실행
 
@@ -89,9 +110,10 @@ npm run build && npm test && python -m pytest server/tests/simulation -q
 npm run e2e
 ```
 
-현재 기준선 (2026-09-15에 이 저장소에서 실행): build 통과 · vitest 63 · pytest 418 ·
-Playwright 4건. 테스트 수보다 실패 여부와 연구 경계 검사를 우선하며, 전부 합성 픽스처와
-별도 DB(`.run/e2e/`)로 실행됩니다 — 연구 DB는 건드리지 않습니다.
+현재 기준선 (2026-09-28에 이 저장소에서 실행): build 통과 · vitest 57 · pytest 444 ·
+Playwright 6건 · 발표용 캡처 5건. 테스트 수보다 실패 여부와 연구 경계 검사를 우선하며, 전부 합성 픽스처와
+별도 DB(`.run/e2e/`)로 실행됩니다 — 연구 DB는 건드리지 않습니다. e2e 서버는 키를 비운
+real 버전이라 모델을 부르지 않습니다.
 
 ## 저장소 구조
 
@@ -99,8 +121,13 @@ Playwright 4건. 테스트 수보다 실패 여부와 연구 경계 검사를 �
 |---|---|
 | `server/app/simulation/` | 사건 엔진 · 관측 경계 · 정책 · 기관 · 동승 · 페르소나 컴파일러 · 사례 자료(CaseBundle) · SQLite |
 | `server/tests/simulation/` | 회귀 테스트 (전부 합성 픽스처 사용) |
-| `src/features/simulation/` | 세 화면 · 지도 · 재생 · 주민 평가 · 규칙 편집기 · 비교 · 현장 기록 |
+| `src/features/simulation/` | 세 화면 · 지도 · 장면 재생(`scene/`) · 주민 평가 · 규칙 편집기 · 비교 · 현장 기록 · sim의 기록 목록 |
+| `run-sim.*` · `run-real.*` · `scripts/launch.sh` | 두 버전의 실행 파일과 그 공통 스크립트 |
+| `scripts/freeze_sim.py` | real의 기록을 sim이 재생할 사본으로 얼린다 |
+| `scripts/art.mjs` | 관찰 화면의 장면 그림(배경·인물 레이어)을 그린다 → `local-data/art/` |
 | `scripts/import_village/` | 원자료 → 정규화 레지스트리 (출처 검증 포함) |
-| `docs/research/` | 연구 문서 · 데이터 계약 · 설계 결정 기록 |
-| `local-data/` | 원자료에서 파생된 레지스트리와 실행 기록. **커밋하지 않습니다** |
+| `docs/research/` | 지금 기준인 연구 문서 · 데이터 계약 · 설계 결정 기록 |
+| `docs/research/history/` | 지나온 기획·명세·프롬프트 (역사. 지금 구조를 정당화하지 않습니다) |
+| `docs/presentations/` | 발표자료 · 연구노트 (캡처와 PDF는 커밋하지 않습니다) |
+| `local-data/` | 원자료에서 파생된 레지스트리, 두 버전의 실행 기록(`runs/`), 장면 그림(`art/`). **커밋하지 않습니다** |
 | `local-archive/` | 실행 DB 백업. **커밋하지 않습니다** |

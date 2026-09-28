@@ -41,13 +41,15 @@ from .contracts import (
     PolicyParams,
     PolicyRevision,
 )
-from .decks.registry import DECK_DEFAULTS, DECKS, POLICIES, RESOURCE_SETS
+from .decks.registry import DECKS, POLICIES, RESOURCE_SETS
 from .metrics import compare as compare_runs
 from .persistence.store import Store
 from .runner import catalog, log_fingerprint, log_rows, run_attempt, stored_log_rows
+from .iteration.rule_application import rule_trace
 from .case_bundle import build_case
 from .relations import get_relations
 from .village import Village, load_village
+from .mode import MODES, REAL
 
 
 class UnsupportedPolicyField(ValueError):
@@ -72,7 +74,14 @@ class SimulationService:
                  environment_id: str | None = None,
                  model_policy: ModelPolicy | None = None,
                  provider: Any | None = None,
-                 relation_id: str | None = None) -> None:
+                 relation_id: str | None = None,
+                 mode: str = REAL) -> None:
+        if mode not in MODES:
+            raise ValueError("mode must be one of %s, not %r" % (MODES, mode))
+        #: ``sim`` plays a frozen copy of what ``real`` ran; see ``mode.py``.
+        #: The service itself behaves the same either way - what a sim server
+        #: refuses is refused at the HTTP edge, in one place.
+        self.mode = mode
         self.store = store or Store()
         self.village = village or load_village()
         self.persona_path = persona_path
@@ -137,6 +146,7 @@ class SimulationService:
         data["policies"] = [p.model_dump(mode="json") for p in self.policies.values()]
         data["attempts"] = [r["attempt"] for r in self.store.list_attempts()]
         data["findings"] = self.store.list_findings()
+        data["mode"] = self.mode
         return data
 
     def village_payload(self) -> dict[str, Any]:
@@ -361,7 +371,7 @@ class SimulationService:
             return ModelPolicy()
         if self.provider is None or not getattr(self.provider, "available", True):
             raise ValueError(
-                "llm 어댑터를 골랐지만 서버에 모델 키가 없다. server/.env 에 GOOGLE_API_KEY "
+                "llm 어댑터를 골랐지만 서버에 모델 키가 없다. server/.env 에 OPENAI_API_KEY "
                 "를 두거나 rule 어댑터로 실행한다. "
                 "실패를 규칙 결과로 대체하지 않는다.")
         policy = self.model_policy.model_copy(update={"mode": "record"})
@@ -416,6 +426,7 @@ class SimulationService:
         # restart looks exactly like one that was just run.
         payload = dict(row)
         payload["decisions"] = self.store.decisions(attempt_id)
+        payload["rules"] = rule_trace(row["policy"], self.store.events(attempt_id))
         payload["reviews"] = self.store.reviews(attempt_id)
         payload["deck"] = _deck_payload(row["attempt"]["scenarioDeckId"])
         payload["resources"] = RESOURCE_SETS[

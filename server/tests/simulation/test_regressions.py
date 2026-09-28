@@ -1,7 +1,7 @@
 """Regressions for the failures found in the 2026-09-10 implementation review.
 
 Every test here reproduces something that actually went wrong (R01-R08 in
-docs/research/IMPLEMENTATION_REVIEW_20260910.md), or locks in a boundary that
+docs/research/history/IMPLEMENTATION_REVIEW_20260910.md), or locks in a boundary that
 the review found being crossed. They run on the synthetic fixtures only.
 
     python server/tests/simulation/test_regressions.py
@@ -20,7 +20,6 @@ sys.path.insert(0, str(REPO_ROOT / "server"))
 from app.simulation.contracts import (  # noqa: E402
     HEALTH_STAFF,
     MEDIAL,
-    RESEARCHER,
     EventType,
     PolicyParams,
     ProposalAction,
@@ -682,8 +681,7 @@ def test_a_cancelled_reservation_gives_the_seat_back():
 
 def test_a_rider_who_is_not_there_cancels_rather_than_rides():
     """A held seat is not a person in a car."""
-    from app.simulation.contracts import (
-        Channel,
+    from app.simulation.contracts import (  # noqa: E402
         ContactStrategy,
         PolicyRevision,
         ScenarioDeck,

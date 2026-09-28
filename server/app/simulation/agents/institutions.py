@@ -3,8 +3,8 @@
 Until 2026-09-15 the health centre was a queue with a shift, and there was no
 119 at all - the capabilities listed "119 접수·출동·인계" under not
 implemented, and Q4 of the source day could not be run. The researcher asked
-for both to be agents, and for them to be models (Gemini) when the residents
-are.
+for both to be agents, and for them to be models when the residents are
+(the head tier).
 
 What each one is asked, and what it may answer:
 

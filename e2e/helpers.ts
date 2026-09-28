@@ -1,18 +1,11 @@
 import { expect, type Page } from '@playwright/test';
 
-// Steps both specs take on the case screen after the playback row was reduced
-// to play, clock, slider and a gear (2026-09-15).
-
-/** Run the clock to the end of the day: End on the time slider. The cursor
- *  follows to the last event and the row offers the residents' evaluations. */
-export async function seekToEnd(page: Page) {
-  const range = page.getByLabel('시각', { exact: true });
-  await range.focus();
-  await range.press('End');
-}
+// Steps both specs take on the case screen: a playback row of play, clock,
+// slider, reading pace and a gear; the stage between map shots and scenes
+// (2026-09-28).
 
 /** The gear at the end of the playback row holds the secondary controls -
- *  speed, one-event stepping, the MEDial-only view, a new case. */
+ *  the MEDial-only view, scene by scene, a new case. */
 export async function openSettings(page: Page) {
   const view = page.getByLabel('관찰 시점', { exact: true });
   if (!(await view.isVisible())) await page.getByLabel('재생 설정', { exact: true }).click();
@@ -22,6 +15,34 @@ export async function setView(page: Page, mode: 'researcher' | 'medial') {
   await openSettings(page);
   await page.getByLabel('관찰 시점', { exact: true }).selectOption(mode);
   await page.getByLabel('재생 설정', { exact: true }).click();
+}
+
+/**
+ * Watch the day scene by scene and return what the screen said in each: the
+ * stage's captions and bubbles and MEDial's panel, as text. Each scene plays
+ * for `playMs` and is read every half second, because its lines replace each
+ * other.
+ */
+export async function watchScenes(page: Page, playMs = 3500): Promise<string[]> {
+  await openSettings(page);
+  await page.getByRole('button', { name: '처음으로', exact: true }).click();
+  const count = Number((await page.getByText(/^장면 \d+개/).textContent())?.match(/\d+/)?.[0] ?? 0);
+  await page.getByLabel('재생 설정', { exact: true }).click();
+  const seen: string[] = [];
+  for (let i = 0; i < count; i += 1) {
+    await openSettings(page);
+    await page.getByRole('button', { name: '다음 장면 →', exact: true }).click();
+    await page.getByLabel('재생 설정', { exact: true }).click();
+    await page.getByRole('button', { name: '▶ 재생', exact: true }).click();
+    let text = '';
+    for (let t = 0; t < playMs; t += 500) {
+      await page.waitForTimeout(500);
+      text += ` ${await page.locator('body').innerText()}`;
+    }
+    await page.getByRole('button', { name: '⏸ 정지', exact: true }).click();
+    seen.push(text);
+  }
+  return seen;
 }
 
 /** Get to the case set-up. A database with runs opens on the last run, so a new

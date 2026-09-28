@@ -1,11 +1,10 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import styled from 'styled-components';
 import ChangeComposer from '../components/ChangeComposer';
 import {
   DIMENSION_LABELS,
   USAGE_LABELS,
   type GenerationComparison,
-  type GenerationDetail,
   type RuleApplicationRecord,
   type SessionDetail,
   type UsageStatus,
@@ -14,13 +13,11 @@ import { nameList, personName, withParticle } from '../selectors/story';
 import { conditionDiff, versionFacts, type Measure, type VersionFacts } from '../selectors/versionFacts';
 import { inputName, paramName, paramValue, refusalReason } from '../selectors/words';
 import {
-  Body,
   Button,
   Callout,
   Disclosure,
   HScroll,
   Hint,
-  Input,
   Mono,
   PageTitle,
   Row,
@@ -28,7 +25,6 @@ import {
   Sub,
   Table,
   Tag,
-  TextArea,
   TextLink,
   showDelta,
   versionName,
@@ -348,6 +344,16 @@ function reviewCell(facts: VersionFacts) {
   );
 }
 
+/** What the researcher can decide here. The sim version passes none: it
+ *  shows what the recording decided and cannot decide anything again. */
+export interface CompareDecisions {
+  onConfirmChangeSet: (changeSetId: string, reason: string) => void;
+  /** Resolves to the server's refusal text, so the composer can keep its input. */
+  onSaveResearcherChangeSet: (body: Record<string, unknown>) => Promise<string | null>;
+  onDeclineChanges: (reason: string) => void;
+  onOpenFieldSheet: () => void;
+}
+
 interface Props {
   detail: SessionDetail;
   comparison: GenerationComparison | null;
@@ -356,11 +362,7 @@ interface Props {
   busy: boolean;
   onSetSides: (left: string | null, right: string | null) => void;
   onOpenScene: (attemptId: string, eventId: string) => void;
-  onConfirmChangeSet: (changeSetId: string, reason: string) => void;
-  /** Resolves to the server's refusal text, so the composer can keep its input. */
-  onSaveResearcherChangeSet: (body: Record<string, unknown>) => Promise<string | null>;
-  onDeclineChanges: (reason: string) => void;
-  onOpenFieldSheet: () => void;
+  decisions: CompareDecisions | null;
   onOpenAllAttempts: () => void;
   onReadEvaluations: () => void;
 }
@@ -373,10 +375,7 @@ export default function CompareScreen({
   busy,
   onSetSides,
   onOpenScene,
-  onConfirmChangeSet,
-  onSaveResearcherChangeSet,
-  onDeclineChanges,
-  onOpenFieldSheet,
+  decisions,
   onOpenAllAttempts,
   onReadEvaluations,
 }: Props) {
@@ -503,7 +502,9 @@ export default function CompareScreen({
               <div style={{ marginTop: 4 }}>
                 {generations.length > 1
                   ? '비교하려면 한쪽을 다른 버전으로 바꾸세요.'
-                  : '아직 비교할 다음 버전이 없습니다. 개선안을 확정하면 다음 버전이 실행됩니다.'}
+                  : decisions
+                    ? '아직 비교할 다음 버전이 없습니다. 개선안을 확정하면 다음 버전이 실행됩니다.'
+                    : '이 기록에는 다음 버전이 없습니다. 개선안을 확정하기 전에 멈춘 기록입니다.'}
               </div>
             </div>
           </Callout>
@@ -941,20 +942,51 @@ export default function CompareScreen({
           </Chain>
         </div>
 
-        {composerGeneration && (detail.canAuthor || drafts.length > 0) && (
+        {!decisions && (
+          <Callout>
+            <div style={{ flex: 1 }}>
+              <strong>미리 돌려 둔 기록입니다.</strong>
+              <div style={{ marginTop: 4 }}>
+                이 기록에서 나온 수정안과 확정한 결과만 보여 줍니다. 수정안을 새로 쓰거나 확정하려면
+                real 버전에서 합니다.
+              </div>
+              {/* The drafts the recording stopped at are its result too: what
+                  the improvement step proposed from these evaluations. Read,
+                  never confirmed, here. */}
+              {drafts.length > 0 && (
+                <ul aria-label="확정을 기다리던 수정안" style={{ margin: '10px 0 0', paddingLeft: 18,
+                                                     lineHeight: 1.6 }}>
+                  {drafts.map((draft) => (
+                    <li key={draft.id}>
+                      <strong>{draft.label}</strong>
+                      {draft.changes.map((change, index) => (
+                        <div key={index} style={{ fontSize: font.small, color: colour.secondary }}>
+                          {change.beforeRule} →{' '}
+                          <strong style={{ color: colour.text }}>{change.afterRule}</strong>
+                        </div>
+                      ))}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </Callout>
+        )}
+
+        {decisions && composerGeneration && (detail.canAuthor || drafts.length > 0) && (
           <ChangeComposer
             generation={composerGeneration}
             drafts={drafts}
             busy={busy}
             canAuthor={detail.canAuthor}
-            onSave={onSaveResearcherChangeSet}
-            onConfirm={onConfirmChangeSet}
-            onDecline={onDeclineChanges}
+            onSave={decisions.onSaveResearcherChangeSet}
+            onConfirm={decisions.onConfirmChangeSet}
+            onDecline={decisions.onDeclineChanges}
             onOpenScene={onOpenScene}
           />
         )}
 
-        {!detail.canAuthor && drafts.length === 0 && !detail.running && (
+        {decisions && !detail.canAuthor && drafts.length === 0 && !detail.running && (
           <Callout>
             <div>
               <strong>지금은 새 수정안을 작성할 수 없습니다.</strong>
@@ -971,10 +1003,10 @@ export default function CompareScreen({
 
         <Row style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
           <div>
-            {loopFinished ? (
+            {!decisions ? null : loopFinished ? (
               <>
                 <Row style={{ gap: 2 }}>
-                  <Button $primary onClick={onOpenFieldSheet}>
+                  <Button $primary onClick={decisions.onOpenFieldSheet}>
                     현장에서 검토할 안 선택
                   </Button>
                   <Hint label="현장 검토 선택">
@@ -991,20 +1023,22 @@ export default function CompareScreen({
                     ? '먼저 위에서 Change Set을 검토하고 확정하세요.'
                     : '반복이 끝나면 현장 검토 선택이 열립니다.'}
                 {' '}
-                <TextLink onClick={onOpenFieldSheet}>지금까지의 결정 기록 보기</TextLink>
+                <TextLink onClick={decisions.onOpenFieldSheet}>지금까지의 결정 기록 보기</TextLink>
               </Sub>
             )}
           </div>
           <TextLink onClick={onOpenAllAttempts}>전체 시도 보기 ({generations.length}개 버전)</TextLink>
         </Row>
 
-        <Row style={{ gap: 2 }}>
-          <Sub as="span">더 바꾸고 싶다면</Sub>
-          <Hint label="더 바꾸고 싶다면">
-            고른 버전을 기준으로 사례와 서비스 경험에서 새 실험을 만듭니다. 기존 결과는 덮어쓰지
-            않습니다.
-          </Hint>
-        </Row>
+        {decisions && (
+          <Row style={{ gap: 2 }}>
+            <Sub as="span">더 바꾸고 싶다면</Sub>
+            <Hint label="더 바꾸고 싶다면">
+              고른 버전을 기준으로 사례와 서비스 경험에서 새 실험을 만듭니다. 기존 결과는 덮어쓰지
+              않습니다.
+            </Hint>
+          </Row>
+        )}
       </Inner>
     </Sheet>
   );

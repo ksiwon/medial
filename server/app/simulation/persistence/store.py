@@ -22,15 +22,12 @@ from typing import Any
 
 from .iteration_store import IterationTables
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
-
 #: Written to ``schema_meta`` on open. Bumped when the JSON shape of a stored
 #: record gains fields an older build cannot read (additive only; the DDL is
 #: never changed destructively). ``1`` is everything before 2026-09-15;
 #: ``2`` adds typed ``semantic`` rule changes, rule application records,
 #: staged human reviews and the run manifest.
 SCHEMA_VERSION = "2"
-DEFAULT_DB = REPO_ROOT / "local-data" / "runs" / "simulation.sqlite3"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS attempts (
@@ -152,8 +149,12 @@ class CommandConflict(RuntimeError):
 
 class Store(IterationTables):
     def __init__(self, path: str | os.PathLike[str] | None = None) -> None:
-        target = Path(path) if path is not None else Path(
-            os.environ.get("MEDIAL_SIM_DB", DEFAULT_DB))
+        # No path means "this server's database", and which one that is depends
+        # on whether it is the sim or the real version (see ``mode.py``).
+        if path is None:
+            from ..mode import database_path, server_mode
+            path = database_path(server_mode())
+        target = Path(path)
         if str(target) != ":memory:":
             target.parent.mkdir(parents=True, exist_ok=True)
         self.path = target

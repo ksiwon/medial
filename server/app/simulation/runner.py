@@ -36,7 +36,7 @@ from .contracts import (
     ResourceRevision,
     ScenarioDeck,
 )
-from .decks.registry import DECK_DEFAULTS, DECKS, POLICIES, RESOURCE_SETS
+from .decks.registry import DECKS, POLICIES, RESOURCE_SETS
 from .agents.model_calls import ModelCallLog
 from .case_bundle import CaseValidationError, build_case, empty_ledger_for, unsupported_reason
 from .engine import Engine, RunResult

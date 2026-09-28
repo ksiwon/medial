@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import styled from 'styled-components';
 import ComparePanel from './components/ComparePanel';
 import FieldSheet from './components/FieldSheet';
@@ -8,15 +8,15 @@ import CompareScreen from './screens/CompareScreen';
 import EvaluationsScreen from './screens/EvaluationsScreen';
 import ObserveScreen from './screens/ObserveScreen';
 import PrepareScreen from './screens/PrepareScreen';
+import RecordingsScreen from './screens/RecordingsScreen';
 import { useIterationStore, type Screen } from './iterationStore';
-import { medialKnowledge, posesAt } from './positions';
-import { eventsUpTo, useSimStore } from './store';
+import { usePlayback } from './scene/playback';
+import { useSimStore } from './store';
 import {
   Button,
   Callout,
   Disclosure,
   Mono,
-  Select,
   Sub,
   Tag,
   TextLink,
@@ -189,9 +189,10 @@ const NAV: { key: Screen; label: string }[] = [
 export default function SimulationApp() {
   const s = useSimStore();
   const it = useIterationStore();
+  const playing = usePlayback((state) => state.playing);
+  const playbackError = usePlayback((state) => state.error);
   const raf = useRef<number | null>(null);
   const last = useRef<number>(0);
-  const [decisionReason, setDecisionReason] = useState('');
 
   useEffect(() => {
     void s.bootstrap();
@@ -212,10 +213,10 @@ export default function SimulationApp() {
   // leaving a timer talking to a session nobody is watching.
   useEffect(() => () => useIterationStore.getState().stopPolling(), []);
 
-  // requestAnimationFrame only interpolates position between events; it never
+  // requestAnimationFrame moves the playhead of a stored recording; it never
   // advances the simulation itself.
   useEffect(() => {
-    if (!s.playing) {
+    if (!playing) {
       if (raf.current) cancelAnimationFrame(raf.current);
       raf.current = null;
       return;
@@ -224,32 +225,16 @@ export default function SimulationApp() {
     const loop = (now: number) => {
       const delta = now - last.current;
       last.current = now;
-      useSimStore.getState().tick(delta);
+      usePlayback.getState().tick(delta);
       raf.current = requestAnimationFrame(loop);
     };
     raf.current = requestAnimationFrame(loop);
     return () => {
       if (raf.current) cancelAnimationFrame(raf.current);
     };
-  }, [s.playing]);
+  }, [playing]);
 
   const loaded = s.activeId ? s.attempts[s.activeId] : null;
-  const poses = useMemo(
-    () => posesAt(loaded?.detail.timeline ?? null, s.atMs),
-    [loaded?.detail.timeline, s.atMs],
-  );
-  const medialKnown = useMemo(
-    () => (loaded ? medialKnowledge(loaded.events, s.cursorSeq) : new Map()),
-    [loaded, s.cursorSeq],
-  );
-  const visible = useMemo(
-    () => (loaded ? eventsUpTo(loaded.events, s.cursorSeq, s.viewMode) : []),
-    [loaded, s.cursorSeq, s.viewMode],
-  );
-  const reservations = useMemo(() => {
-    const rows = loaded?.detail.timeline?.reservations?.reservations ?? [];
-    return rows.filter((r) => r.departMs <= s.atMs && r.status !== 'cancelled');
-  }, [loaded, s.atMs]);
 
   const viewGeneration = useMemo(
     () => it.detail?.generations.find((g) => g.id === it.viewGenerationId) ?? null,
@@ -289,6 +274,9 @@ export default function SimulationApp() {
   }
 
   const screen = it.screen;
+  // sim plays what real ran and starts nothing; real generates as it goes.
+  // Everything below that differs between the two reads this one flag.
+  const sim = s.catalog.mode === 'sim';
   const hasRun = loaded != null;
   const hasEvaluations = (it.detail?.generations ?? []).some((g) => g.reviews.length > 0);
   // The case screen is either setting a run up or reading the one that ran.
@@ -340,6 +328,14 @@ export default function SimulationApp() {
             {it.detail.session.label}
           </Sub>
         )}
+        <Tag
+          $kind={sim ? 'warn' : 'positive'}
+          title={sim
+            ? '미리 돌려 둔 기록을 재생합니다. 모델을 부르지 않고 새 실행을 만들지 않습니다.'
+            : '실행할 때마다 새로 계산하고, 모델 어댑터를 고르면 모델이 실시간으로 생성합니다.'}
+        >
+          {sim ? 'sim · 미리 돌려 둔 기록' : 'real · 실시간 생성'}
+        </Tag>
         {/* Who the residents are. Source-derived personas are the real people of
             the village the study was done in; the synthetic fixture says so
             instead, and never borrows that name. */}
@@ -364,12 +360,18 @@ export default function SimulationApp() {
             // nothing else: the loop keeps running where it was.
             if (generation?.attemptIds[0]) void s.setActive(generation.attemptIds[0]);
           }}
-          onCommand={(name) => void it.send(name)}
+          onCommand={sim ? undefined : (name) => void it.send(name)}
         />
       )}
 
-      {(s.error || s.notice || it.error || it.notice) && (
+      {(s.error || playbackError || s.notice || it.error || it.notice) && (
         <Notices>
+          {playbackError && (
+            <Callout $tone="error">
+              <div style={{ flex: 1 }}>{playbackError}</div>
+              <Button onClick={usePlayback.getState().dismissError}>닫기</Button>
+            </Callout>
+          )}
           {s.error && (
             <Callout $tone="error">
               <div style={{ flex: 1 }}>{s.error}</div>
@@ -396,7 +398,18 @@ export default function SimulationApp() {
         </Notices>
       )}
 
-      {screen === 'case' && caseView === 'setup' &&
+      {screen === 'case' && caseView === 'setup' && sim && (
+        <Secondary>
+          <RecordingsScreen
+            sessions={it.sessions}
+            currentId={hasRun ? it.sessionId : null}
+            onOpen={(id) => void it.switchSession(id)}
+            onReturn={() => it.setCaseView('experience')}
+          />
+        </Secondary>
+      )}
+
+      {screen === 'case' && caseView === 'setup' && !sim &&
         (it.capabilities ? (
           <Secondary>
             <PrepareScreen
@@ -421,36 +434,10 @@ export default function SimulationApp() {
         <ObserveScreen
           village={s.village}
           detail={loaded.detail}
-          poses={poses}
-          visibleEvents={visible}
-          allEvents={loaded.events}
-          medialKnown={medialKnown}
-          reservations={reservations}
-          viewMode={s.viewMode}
-          cursorSeq={s.cursorSeq}
-          eventCount={loaded.detail.attempt.eventCount}
-          atMs={s.atMs}
-          playing={s.playing}
-          speed={s.speed}
-          selectedCluster={s.selectedCluster}
-          selectedActor={s.selectedActor}
-          detailActor={s.detailActor}
-          personas={s.personas}
-          generation={viewGeneration}
-          onSetViewMode={s.setViewMode}
-          onSelectCluster={s.selectCluster}
-          onOpenDetail={s.setDetailActor}
-          onPlay={() => void s.play()}
-          onPause={() => void s.pause()}
-          onSeek={(seq) => void s.seekToSeq(seq)}
-          onScrub={s.scrubTo}
-          onScrubEnd={() => void s.commitScrub()}
-          onSetSpeed={s.setSpeed}
-          onStep={() => void s.step()}
-          onStepBack={() => void s.stepBack()}
-          onRestart={() => void s.restart()}
-          onOpenScene={(attemptId, eventId) => void it.openScene(attemptId, eventId)}
-          onNewCase={() => it.setCaseView('setup')}
+          events={loaded.events}
+          art={s.art}
+          caseAction={{ label: sim ? '다른 기록 보기' : '새 사례 준비',
+                         onClick: () => it.setCaseView('setup') }}
           onReadEvaluations={() => it.setScreen('evaluations')}
         />
       )}
@@ -481,10 +468,12 @@ export default function SimulationApp() {
               busy={it.busy}
               onSetSides={it.setCompareSides}
               onOpenScene={(attemptId, eventId) => void it.openScene(attemptId, eventId)}
-              onConfirmChangeSet={(id, reason) => void it.confirmChangeSet(id, reason)}
-              onSaveResearcherChangeSet={(body) => it.saveResearcherChangeSet(body)}
-              onDeclineChanges={(reason) => void it.declineChanges(reason)}
-              onOpenFieldSheet={() => it.setFieldSheet(true)}
+              decisions={sim ? null : {
+                onConfirmChangeSet: (id, reason) => void it.confirmChangeSet(id, reason),
+                onSaveResearcherChangeSet: (body) => it.saveResearcherChangeSet(body),
+                onDeclineChanges: (reason) => void it.declineChanges(reason),
+                onOpenFieldSheet: () => it.setFieldSheet(true),
+              }}
               onOpenAllAttempts={() => it.setCompareView('all_generations')}
               onReadEvaluations={() => it.setScreen('evaluations')}
             />

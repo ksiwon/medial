@@ -310,6 +310,29 @@ class Village:
         candidate = self.path.parent / self.map_image["file"]
         return candidate if candidate.exists() else None
 
+    def art_index(self) -> dict[str, str]:
+        """Scene pictures for this village: ``{name: file}``, or empty.
+
+        One background per place and one layer per person and pose, drawn by
+        ``scripts/art.mjs`` into git-ignored ``local-data/art/`` (override with
+        ``MEDIAL_ART_DIR``). They are invented illustrations of *this* village's
+        pseudonymous residents, so a synthetic village gets none - the observe
+        screen draws its schematic figure instead of borrowing someone's face.
+        """
+        if self.is_synthetic:
+            return {}
+        folder = art_dir()
+        index = folder / "index.json"
+        if not index.exists():
+            return {}
+        rows = json.loads(index.read_text(encoding="utf-8"))
+        return {name: row["file"] for name, row in rows.items()
+                if (folder / row["file"]).exists()}
+
+
+def art_dir() -> Path:
+    return Path(os.environ.get("MEDIAL_ART_DIR") or REPO_ROOT / "local-data" / "art")
+
 
 def load_village(path: str | os.PathLike[str] | None = None) -> Village:
     if path is not None:

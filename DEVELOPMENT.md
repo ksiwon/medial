@@ -35,47 +35,60 @@ python -m pip install -r server/requirements-sim.txt
 npm install
 ```
 
-그다음부터:
+그다음부터는 **두 버전 중 하나**를 띄웁니다 (2026-09-28, D110).
 
 ```bash
-./run.sh
+./run-sim.sh     # 미리 돌려 둔 기록을 재생 · 서버 8020 · 화면 5180 · 모델·키 없음
+./run-real.sh    # 실시간으로 생성 · 서버 8010 · 화면 5173 · server/.env 의 키
 ```
 
-서버(8010)와 개발 서버(5173)를 띄우고 <http://localhost:5173> 을 엽니다. 이미 떠 있는 쪽은
-그대로 쓰므로 두 번 실행해도 세션이 두 벌 생기지 않고, `./run.sh --stop` 으로 내립니다.
-Ctrl+C 는 **이 스크립트가 띄운 것만** 정리합니다. 직접 띄우려면 `python server/sim_main.py` 와
-`npm run dev` 를 각각 실행하면 됩니다.
+Windows에서는 `run-sim.cmd` · `run-real.cmd` 를 더블클릭해도 됩니다(Git Bash로 같은
+`scripts/launch.sh` 를 부릅니다). 이미 떠 있는 쪽은 그대로 쓰되 **다른 버전의 서버에는 붙지
+않고**(health의 `mode`로 확인), `--stop` 으로 내립니다. Ctrl+C 는 그 스크립트가 띄운 것만
+정리합니다. 직접 띄우려면 `python server/sim_main.py --mode sim|real` 과 `npm run dev`.
+버전을 정하지 않은 서버는 뜨지 않습니다(`mode.py`의 `ModeNotSet`).
 
-`run.sh`는 Git Bash뿐 아니라 Windows의 Docker Desktop/WSL 호환 `bash.exe`에서도 동작합니다.
-그 환경의 Python에 서버 의존성이 없으면 의존성이 설치된 Windows Python을 PowerShell 경유로
-사용하고, 포트 감지·상태 확인·종료도 Windows 프로세스를 기준으로 수행합니다. 특정 Python을
-강제하려면 `MEDIAL_PYTHON`을 지정합니다. CRLF 형식의 `server/.env`는 파일을 고치지 않고 읽습니다.
+sim이 재생하는 것은 real의 기록을 얼린 사본입니다: `python scripts/freeze_sim.py`
+(`real.sqlite3` → `sim.sqlite3`, 덮어쓸 때 `--replace`, 돌고 있는 세션이 있으면 거부).
 
-기본 실행에 API 키·GPU·모델 호출이 없습니다. 원자료가 없으면 합성 마을·합성 페르소나로 돌고,
-화면 상단 배지가 어느 쪽인지 항상 표시합니다.
+`scripts/launch.sh`는 Git Bash뿐 아니라 Windows의 Docker Desktop/WSL 호환 `bash.exe`에서도
+동작합니다. 그 환경의 Python에 서버 의존성이 없으면 의존성이 설치된 Windows Python을 PowerShell
+경유로 사용하고, 포트 감지·상태 확인·종료도 Windows 프로세스를 기준으로 수행합니다. 특정
+Python을 강제하려면 `MEDIAL_PYTHON`을 지정합니다.
+
+원자료가 없으면 합성 마을·합성 페르소나로 돌고, 화면 상단 배지가 어느 쪽인지 항상 표시합니다.
+그 옆 배지가 `sim · 미리 돌려 둔 기록` / `real · 실시간 생성` 을 말합니다.
 
 ### 모델 키는 `server/.env` 에 있습니다
 
-키는 **서버 프로세스의 환경변수에서만** 읽습니다. 그 값을 담아 두는 곳이 `server/.env` 이고,
-git-ignored 이며 `run.sh` 가 서버를 띄우기 전에 읽어 넣습니다. 양식은 `server/.env.example`.
-직접 띄울 때는 `set -a; . server/.env; set +a; python server/sim_main.py`.
+키는 **real 서버 프로세스만** 읽습니다. 그 값을 담아 두는 곳이 `server/.env` 이고(git-ignored),
+`sim_main.py --mode real` 이 기동할 때 이미 환경에 없는 키만 읽어 넣습니다(CRLF·주석·따옴표 허용,
+파일은 바꾸지 않음). 실행 스크립트는 키가 적혀 있는지만 보고 값은 읽지 않습니다. sim 서버는
+이 파일을 읽지 않고, 환경에 키가 새어 들어와도 지우며, 모델 클라이언트를 키 없이 만듭니다.
+양식은 `server/.env.example`.
 
-**공급자는 Gemini 하나입니다 (2026-09-15).** 전에는 Anthropic·OpenAI 경로도 있었지만 헷갈리기만
-해서 걷어냈습니다. 다시 필요해지면 그때 새로 붙입니다 (`iteration/llm.py` 의 `_post` 하나가
-요청 형태입니다). Gemini는 OpenAI 호환 엔드포인트(`/v1beta/openai`)로 붙고 거기서
-`response_format: json_schema` 를 받습니다.
+**공급자는 OpenAI 하나입니다 (2026-09-28, D107).** 2026-09-15부터는 Gemini 하나였는데, 그 키의
+선불 크레딧이 떨어져 OpenAI로 옮기고 Gemini 경로는 남기지 않았습니다. 공급자를 하나만 두는
+이유는 그대로입니다 — 둘은 헷갈리기만 했습니다. 요청 형태는 `iteration/llm.py` 의 `_post`
+하나이고, chat completions 에 `response_format: json_schema` 로 구조화 출력을 받습니다.
 
-**어느 모델을 쓰는가.** 리뷰·개선은 한 세대가 주민 12명 + 기관 담당자 리뷰 13건에 종합과
-개선 후보까지 요청하므로 한 cycle이 수십 번의 호출이고, 하는 일은 열린 추론이 아니라 **근거가
-정해진 추출**입니다 — 이 사건들을 읽고, 여섯 차원을 등급 매기고, 인용한 사건 id를 대라. 그래서
-`gemini-3.8-flash` 를 기본으로 둡니다. 마을을 모델로 돌릴 때는 두 층입니다 (아래 3단계).
+**어느 모델을 쓰는가 — 두 층.** 판단 자체가 결과인 자리는 높은 층 `gpt-6-sol`, 가벼운 모델로
+충분한 자리는 낮은 층 `gpt-6-luna` 입니다.
+- 리뷰·종합·개선은 **높은 층**입니다. 주민 평가는 이 연구가 읽는 결과이고(등급과 인용한 사건 id),
+  개선 후보는 그 평가 전체를 놓고 추론합니다. 한 세대가 리뷰 13건 + 종합 + 개선이라 수십 번의
+  호출이지만 그 층에서 감당할 만합니다.
+- 마을을 모델로 돌릴 때는 MEDial 머리가 **높은 층**(상황 전체를 읽고 후보를 고른다), 주민이
+  **낮은 층**(한 사람의 한 답)입니다 (아래 3단계).
+- 전시 데모(`exhibition/`, 09-28에 앱으로 합쳐 지움)의 대화록과 하루 끝 한마디도 **높은 층**이었습니다. 규칙이 사건을 정하고
+  모델은 말만 쓰지만, 같은 장면을 두 층으로 뽑아 보니 낮은 층은 주어진 사실과 이유를 그대로
+  읽어 주고 높은 층은 대화 속에 녹였습니다. 전체 생성 비용 차이는 약 $2.5입니다.
 
 | 변수 | 기본값 | 쓰임 |
 |---|---|---|
-| `GOOGLE_API_KEY` | — | 유일한 키. 없으면 온라인 어댑터를 고를 수 없습니다 |
-| `MEDIAL_LLM_MODEL` | `gemini-3.8-flash` | 리뷰·종합·개선 |
-| `MEDIAL_LLM_HEAD_MODEL` · `MEDIAL_LLM_RESIDENT_MODEL` | `gemini-3.8-flash` · `gemini-3.1-flash-lite` | MEDial 머리 · 주민 |
-| `MEDIAL_LLM_BASE_URL` · `MEDIAL_LLM_TIMEOUT_S` · `MEDIAL_LLM_TEMPERATURE` · `MEDIAL_LLM_MAX_RETRIES` | Gemini 엔드포인트 · 60s · 0.2 · 6 | |
+| `OPENAI_API_KEY` | — | 유일한 키. 없으면 온라인 어댑터를 고를 수 없습니다 |
+| `MEDIAL_LLM_MODEL` | `gpt-6-sol` | 리뷰·종합·개선 |
+| `MEDIAL_LLM_HEAD_MODEL` · `MEDIAL_LLM_RESIDENT_MODEL` | `gpt-6-sol` · `gpt-6-luna` | MEDial 머리 · 주민 |
+| `MEDIAL_LLM_BASE_URL` · `MEDIAL_LLM_TIMEOUT_S` · `MEDIAL_LLM_TEMPERATURE` · `MEDIAL_LLM_MAX_RETRIES` | OpenAI 엔드포인트 · 60s · 0.2 · 6 | |
 
 **모델 id는 코드보다 자주 바뀌므로** 기본값은 기본값일 뿐이고, health 응답은 실제로 설정된 id를
 그대로 보고합니다. llm 실행 전에 공급자의 모델 목록으로 두 id를 확인하고 없으면 시작하지 않습니다.
@@ -85,9 +98,10 @@ git-ignored 이며 `run.sh` 가 서버를 띄우기 전에 읽어 넣습니다. 
 어댑터를 고를 수 없고(session 생성 400), 호출이 실패해도 규칙 결과로 대체하지 않습니다.
 응답·로그·문서·health 어디에도 키가 들어가지 않습니다.
 
-**온라인 호출은 아직 한 번도 하지 않았습니다.** 어댑터·스키마·호출 기록·실패 처리·예산 정지는
-오프라인 경계 테스트로만 확인했습니다. 위 모델 id는 각 provider의 모델 목록에서 확인한 것이지
-이 저장소에서 실행해 본 것이 아닙니다.
+**앱에서 네 층을 모두 모델로 돌린 하루가 있습니다 (2026-09-28, 아래 "실시간 실행" 절).** 응답은
+스트림으로 받습니다 — 이 환경에서는 60초 동안 조용한 연결이 끊기고, 종합 호출은 그보다 오래
+생각한 뒤 답하기 때문입니다. 연결이 끊기면(`httpx.TransportError`) 429·5xx와 같이 다시 시도하고,
+리뷰·개선 클라이언트도 `MEDIAL_LLM_MAX_RETRIES`(기본 6)를 따릅니다.
 
 원자료가 있을 때만:
 
@@ -385,7 +399,7 @@ npm run build                                     # tsc + vite, 통과
 - 현장 검토에서 **이유를 채우면** 기록 버튼이 풀리는지 (막히는 것만 확인).
 
 **사용자 사용성 평가는 한 번도 하지 않았습니다.** 지금까지 전부 개발자 내부 확인입니다.
-남은 절차는 `docs/research/18_BROWSER_VERIFY_PROMPT.md` 에 있습니다.
+남은 절차는 `docs/research/history/18_BROWSER_VERIFY_PROMPT.md` 에 있습니다.
 
 ### 12명 회관 집합은 원자료에 없다 (DI 확인)
 
@@ -422,7 +436,7 @@ npm run build                                     # tsc + vite, 통과
 
 # 2026-09-15 · Resident Agents as Evaluators 리팩터링 (현재 상태)
 
-26번 기획서(`docs/research/26_REFACTOR_AUDIT_AND_PLAN_2026-09-15.md`)와 27번 실행 프롬프트에
+26번 기획서(`docs/research/history/26_REFACTOR_AUDIT_AND_PLAN_2026-09-15.md`)와 27번 실행 프롬프트에
 따른 작업입니다. 단계별 기록과 실행한 검사는
 [28_REFACTOR_LOG_2026-09-15.md](docs/research/28_REFACTOR_LOG_2026-09-15.md)에 있습니다.
 **이 절 아래의 v0.2~v0.4 기록은 역사입니다.** 화면 이름·편집 경로·필드가 지금과 다릅니다.
@@ -530,6 +544,206 @@ npm run e2e                            # 6 passed (Chromium, 합성 마을, .run
 | 현장 2단계에서 1단계 빈 입력칸이 그대로 남았다 | 1단계 표시 조건이 '공개 전'만 봤다 | 이 응답자의 공개 전 응답이 저장되면 1단계는 한 줄 요약으로 접힌다 |
 | '보건소 담당자'가 'P..'로, '하루 실행'이 '하루'로, '주민 평가 읽기'가 세로 한 글자씩으로 잘렸다 | flex가 기본값으로 모든 것을 같이 줄였다. 가로 넘침이 없어 기존 검사가 잡지 못했다 | 이름은 폭을 지키고 부가 라벨만 줄임표, 좁은 진행 막대는 현재 단계만, 지도 헤더는 줄바꿈 (D101) |
 
+## 2026-09-28 · 관찰 화면을 장면으로 (D109) · sim / real 두 버전 (D110)
+
+앱의 `사례와 서비스 경험` 화면을 전시 데모에서 정한 연출(D108)대로 **처음부터 다시 짰고**, 그 위에
+실행 버전을 둘로 갈랐습니다. 연구 흐름으로는 *마을 속 서비스 경험* 단계를 읽기 쉽게 한 것이고
+(누가 무슨 말을 했고 MEDial이 무엇을 알고 그렇게 말했는지가 한 장면에 보인다), sim/real 분리는
+그 경험이 *방금 생성된 것인지 미리 돌려 둔 것인지*를 화면과 실행 파일에서 섞이지 않게 한 것입니다.
+
+### 구현됨 — 관찰 화면
+
+- **지도 샷 ↔ 장면 샷.** 사건 로그를 요청별 구간(beat)과 사건(episode)으로 나눕니다
+  (`scene/beats.ts`). 겹치는 요청은 먼저 시작한 것부터 하나씩 보여 주며, 그래서 시계가 조금
+  되돌아갈 수 있습니다. 한 요청 안에서 대화 없는 틈이 3분 이상이면 그동안은 지도 샷입니다.
+- **장면.** 장소마다 칸 하나, 배경 한 장 위에 그 자리 사람들의 인물 레이어(눈높이). 그림은
+  `local-data/art/`(git 제외, 전시와 같은 폴더)에서 `GET /api/sim/village/art` 로 받고, 없는
+  사람·자세는 지도와 같은 얼굴 도식으로 그립니다. **합성 마을은 그림을 받지 않습니다.**
+- **말은 로그에 있는 것만.** 말풍선은 사건 payload의 말(`utterance`·`message`·`report`)이고, 말
+  없이 한 행동은 로그 문장이 자막으로 나옵니다. 지어낸 대사가 없습니다.
+- **MEDial 판단 패널** (`scene/judgment.ts`): 지금 아는 것 → 걸린 규칙 → 후보 판정 → 그래서
+  이렇게 말한다. MEDial에게 보이는 사건만 읽습니다. "걸린 규칙"은 서버가 실행 기록마다 내려주는
+  `rules`(`rule_trace`: 규칙 9개가 이 실행의 어느 사건에서 걸렸는지)에서 옵니다. MEDial이 없는
+  장면(밭에서 마주한 두 사람, 차 안)은 패널이 흐려지고 무엇을 기다리는지만 적습니다.
+- **지도 카드.** 장면 동안 지도가 좌측 상단 카드로 줄어 장소를 핀으로 찍고, 지도 밖 장소는 칩입니다.
+- **재생.** 미리 편 조각(`scene/reel.ts`) 위에서 돌아 어느 시각으로 가도 그 자리가 그대로 그려지고,
+  속도 배율·앞/다음 장면이 있습니다. 재생 상태는 `scene/playback.ts`, 작업 공간(불러오기·비교)은
+  `store.ts` 로 나눴습니다.
+- **지운 것.** `지금 일어난 일` · `MEDial · 조율 현황` · `마을 사람들` · 사람 상세 패널과 그것들만
+  쓰던 `selectors/requests.ts` · `selectors/taskColour.ts`, 옛 격자 테스트, 관측 API 클라이언트.
+  사람 정보(나이·직업·관계군)는 지도 마커 카드로 옮겼습니다.
+
+### 구현됨 — sim / real
+
+- **버전은 서버가 뜰 때 하나로 정합니다** (`server/app/simulation/mode.py`). `MEDIAL_MODE` 가
+  `sim` 도 `real` 도 아니면 서버가 뜨지 않습니다. health와 catalog가 `mode` 를 내려줍니다.
+- **기록이 따로입니다.** real은 `local-data/runs/real.sqlite3`, sim은 `sim.sqlite3`
+  (`MEDIAL_SIM_DB` 가 있으면 그쪽). 원래의 `simulation.sqlite3` 는 **이름만** `real.sqlite3` 로
+  바꿨습니다(내용 그대로).
+- **sim은 아무것도 쓰지 않습니다.** HTTP 앞단의 미들웨어 하나가 읽기와 재생 커서 명령
+  (`/attempts/{id}/commands`)만 통과시키고 나머지 쓰기는 403으로 돌려보냅니다 — 새 실행·재실행·분기·
+  정책·세션·수정안 확정·현장 기록 전부. 새 엔드포인트가 이 검사를 잊을 수 없습니다.
+- **sim은 모델에 닿지 않습니다.** 모델 공급자를 만들지 않고, 리뷰·개선 클라이언트도 키 없이
+  만듭니다. 환경에 키가 들어 있어도 쓰이지 않습니다(`test_the_sim_version_reaches_no_model_even_with_a_key`).
+- **얼리기** (`scripts/freeze_sim.py`). real의 DB를 sqlite backup으로 통째 복사합니다. 돌고 있는
+  세션이 있으면 거부하고, 이미 있는 sim 기록은 `--replace` 일 때만 덮어씁니다.
+- **실행 파일.** `run-sim.sh`·`run-real.sh`와 Windows용 `run-sim.cmd`·`run-real.cmd`. 하는 일은
+  `scripts/launch.sh` 하나에 있고 옛 `run.sh` 는 지웠습니다. real은 `server/.env` 에 키가 없으면
+  띄우지 않고, sim은 얼린 기록이 없으면 띄우지 않으며 어떻게 만드는지 말해 줍니다. 이미 떠 있는
+  서버가 다른 버전이면 붙지 않습니다. 키는 real 서버가 스스로 읽습니다.
+- **화면.** 상단 배지 `sim · 미리 돌려 둔 기록` / `real · 실시간 생성`. sim에서는 `새 사례 준비`
+  대신 **미리 돌려 둔 기록** 목록(각 기록이 모델로 생성됐는지 규칙으로 계산됐는지 표시)이 뜨고,
+  진행 막대에 실행 버튼이 없으며, `개선과 확인`에서 수정안 작성·확정·현장 기록이 빠지고 그 이유가
+  한 줄로 나옵니다. 그 기록이 확정을 기다리며 멈춘 수정안 초안은 확정 버튼 없이 목록으로 읽힙니다. real의 준비 화면은 키가 있으면 네 층(마을·기관·리뷰·개선)을 모두 모델로 두고
+  호출 상한 300회로 시작합니다(마을 자체의 호출도 이 상한에 셉니다).
+
+### 부분 구현
+
+- **sim은 얼린 기록만 재생합니다.** 기록에 없는 갈래(다른 수정안을 확정한 다음 날)는 보여 줄 수
+  없습니다. 호출 단위 재생도 검토했습니다 — 마을 호출(`attempt_model_calls`)은 내용 주소라 세션을
+  넘어 재생할 수 있지만, 리뷰·종합·개선 호출의 입력에 세션·시도 uuid와 정책 id가 섞여 있어 같은
+  입력이 같은 키가 되지 않습니다. 그래서 지금은 기록 사본을 재생합니다.
+- **sim에 있는 기록은 5개**입니다: 네 층 모두 모델로 생성한 하루 1개(연구자 확정 대기에서 멈춘 것 —
+  수정안 초안 2개는 읽을 수 있고 확정되지 않았습니다), 같은 날 중간에 멈춘 모델 실행 2개(목록에
+  "중간에 멈춘 기록"), 09-15의 규칙 마을 + 모델 기관 2개. 다음 버전(확정한 수정안으로 다시 돈 하루)은
+  연구자가 real에서 확정해야 생깁니다.
+- 판단 패널 "지금 아는 것"의 일부 문장에 장소 키(`TOWN까지`)가 그대로 보입니다. 서버
+  `DecisionRecord` 의 문장이라 이번에 고치지 않았습니다.
+- 세로로 긴 지도는 넓은 무대의 지도 샷에서 좌우 여백이 큽니다.
+
+### 미구현
+
+- sim 버전의 Playwright 검사. sim은 vitest(화면)와 pytest(서버 경계)로 검사하고, 브라우저에서는
+  사람이 `run-sim` 으로 확인했습니다. `npm run e2e` 는 키를 비운 real 버전으로 돕니다.
+- real에서 수정안을 확정해 두 번째 버전을 돌려 본 것. 확정은 연구자의 판단이라 하지 않았습니다.
+
+### 이번에 실행한 검사 (2026-09-28)
+
+```bash
+python -m pytest server/tests -q      # 444 passed (sim/real 경계 6건, 스트림·재시도 2건 신규)
+npm test                               # 57 passed (장면 15건, sim 화면 5건 신규)
+npm run build                          # tsc + vite 통과
+npm run e2e                            # 6 passed
+npm run shots                          # 5 passed
+```
+
+실행 파일: `run-sim.sh`·`run-real.sh` 기동, `run-sim.cmd --stop`, 다른 버전 서버에 붙기 거부,
+키 없는 real 거부를 직접 돌려 확인했습니다.
+
+### 브라우저에서 확인한 것
+
+- **관찰 화면** (실서버 · 원자료 레지스트리 · 저장된 규칙 어댑터 실행): 장면 15개를 전부 넘겨 오류
+  없음. P9 동승, P1 안부 확인(빈 집 → 밭), P6 말풍선, 차 안 장면, 보건소 보고, P8 위급(P7 통화 +
+  P8 누움), MEDial 관점 보기를 열어 봤습니다. 고친 것: 세로 지도 카드가 너무 길었다 → 높이 상한 ·
+  차 안 운전자가 반대편에 섰다 → 탄 사람 먼저 · 도식 인물이 컸다 · 태워 달라는 부탁이 "확인을
+  부탁"으로 나왔다 · 자막에 `TOWN` 키 · 차 안에 선 사람.
+- **sim** (`run-sim`, 1440×900): 배지, 기록 목록 2개, 기록 전환 후 지도·재생, 진행 막대에 실행 버튼
+  없음, `개선과 확인` 에 작성·확정·현장 기록 없음, 브라우저에서 보낸 POST가 403.
+- **real** (`run-real`): 배지, 준비 화면 요약 "LLM 마을 · LLM 기관 · LLM 리뷰 · LLM 개선 · 모델 호출
+  300회 상한". **실험 시작은 누르지 않았습니다** — 세션 수가 그대로 2개인 것을 확인했습니다.
+
+### 실시간 실행 — 네 층 모두 모델 (2026-09-28)
+
+real 화면의 기본값 그대로(원자료 하루 시나리오 · 초기안과 수정안 한 쌍 · LLM 마을·기관·리뷰·개선 ·
+상한 300회) `실험 시작` 을 눌렀습니다. 세 번 돌렸고 세 번째가 끝까지 갔습니다.
+
+| 세션 | 결과 | 마을 호출 | 리뷰·종합·개선 호출 (입력/출력 토큰) |
+|---|---|---|---|
+| `iter-68c8…` | 첫 리뷰에서 실패 — 연결이 응답 없이 끊겼는데 재시도 대상으로 보지 않았다 | 13 | 3 (6,718 / 3,164) |
+| `iter-ecd4…` | 종합에서 실패 — 7회 모두 60초에 끊겼다 | 13 | 13 (31,882 / 14,930) |
+| `iter-1b88…` | **연구자 확정 대기** — 리뷰 13건(모두 llm), 검증된 수정안 초안 2개 | 9 | 15 (56,766 / 19,623) |
+
+- 고친 것 둘: 끊긴 연결(`RemoteProtocolError` 등 `httpx.TransportError`)을 재시도 대상에 넣었고,
+  응답을 스트림으로 받습니다. 종합 호출을 같은 리뷰로 따로 재현하니 스트림 없이는 제한 시간을
+  300초로 늘려도 60.7초에 끊겼고, 스트림으로는 첫 조각 18초 · 완료 74초였습니다.
+- 마을의 하루는 사건 56개, 그중 말이 기록된 사건 8개입니다. 관찰 화면은 그 말만 말풍선으로 씁니다.
+- 실패한 두 세션도 real 기록에 그대로 남았습니다(기록은 다시 쓰지 않는다). 얼린 sim 목록에서
+  "중간에 멈춘 기록"으로 보입니다.
+- 브라우저(sim, 1440×900): 장면 재생 중 MEDial 말풍선("이장님, P1님께 09:30에 연락했으나…")과 판단
+  패널, 주민 평가의 `llm 어댑터` 표시, 개선과 확인의 읽기 전용 수정안 초안 2개(무응답 시 재연락 후
+  인계 · 동승 부탁 순서를 동선 기준으로), 기록 목록 5개. sim이 보낸 POST는 재생 커서 명령뿐이었고
+  페이지 오류는 없었습니다.
+- 함께 고친 화면 버그 둘: 불러오기가 끝나며 그동안 누른 `새 사례 준비` 를 되돌리던 것, 실행 종료 후
+  "평가 화면으로 안내"가 이미 평가를 읽고 장면을 연 사람을 다시 끌고 가던 것(캡처 검사가 잡았다).
+
+## 2026-09-28 · 전시를 앱으로 합침 · 저장소 정리 (D111)
+
+**전시 벽 화면은 이제 앱의 sim 버전입니다.** 따로 돌던 전시 데모(`exhibition/`: 사흘·27경로를
+자바스크립트로 다시 구현한 규칙, gpt-6-sol 대화록 생성, HTML 벽 화면, 보고용 대화록 뷰어, 점검
+스크립트)는 저장소에서 지웠습니다. 시뮬레이터가 두 벌이면 같은 마을이 두 화면에서 다르게 움직일 수
+있고, 앱의 장면 연출(D109)이 벽 화면의 연출(D108)을 이미 그대로 옮겼기 때문입니다. 전시에서
+보여 줄 하루는 real에서 돌리고 얼려(`freeze_sim.py`) sim으로 재생합니다.
+
+### 구현됨
+
+- **그림 생성은 `scripts/art.mjs` 한 파일로.** 전시 계획(`bundle.json`)에 기대던 "무엇을 그릴지"를
+  이름 목록으로 바꿨습니다 — 이미 그린 것은 `local-data/art/index.json`, 새 것은 `--add`. 요청 해시
+  규칙이 그대로라 옮기면서 다시 그린 그림은 0장입니다(`--plan`: 33장 · 그릴 것 0). 앱이 쓰지 않는
+  흉부압박 합본 2장은 그 코드와 함께 빼고, 그림은 `local-archive/art-unused/` 로 옮겼습니다.
+- **지운 것의 사본.** 전시 폴더 전체(코드 + 만들어 둔 대화록·HTML·묶음 `out/`, 약 17MB)는
+  `local-archive/exhibition-2026-09-28/` 에 그대로 있습니다(git 제외). 코드는 git 이력에도 있습니다.
+- **문서 자리.** `docs/research/` 에는 지금 기준 문서(13, 19~23, 25, 28, `DECISIONS`, `SOURCES`,
+  `contracts/`, `source-manifest.json`)만 두고, 역사 문서(01~12, 14~18, 24, 26, 27, 옛 프롬프트·리뷰)는
+  `docs/research/history/`, 발표자료·연구노트와 그 캡처는 `docs/presentations/` 로 옮겼습니다. 문서 안
+  상대 링크는 옮긴 자리에서 다시 계산해 고쳤고, 저장소 안 상대 링크 중 깨진 것은 0개입니다.
+  `npm run shots` 는 `docs/presentations/screenshots/2026-09-15-ui/` 에 씁니다.
+- **지운 산출물.** `dist/`, `.pytest_cache/`, 모든 `__pycache__/`, `tsconfig.node.tsbuildinfo`(이제
+  gitignore), `.run/` 의 옛 로그·확인용 캡처. 09-15의 LLM 실험 기록(`llm-iteration`·`llm-repeat`·
+  `llm-shadow`·`audit`)은 지우지 않고 `local-archive/run-2026-09-15/` 로 옮겼습니다.
+
+### 부분 구현
+
+- 전시장 구성(벽 프로젝터 + 태블릿)은 여전히 한 화면입니다. 전시의 "날마다 규칙 하나를 골라 다음
+  날을 본다"는 sim에서 얼린 기록의 버전 사이를 오가는 것으로만 됩니다 — 관람객이 새 갈래를 고를 수는
+  없습니다(D110의 한계 그대로).
+
+## 전시 데모 (`exhibition/`, 2026-09-28 — 지움, 아래는 역사)
+
+앱과 따로 돌던 졸업전시용 데모였습니다. 규칙이 사흘을 정하고(LLM 없음), 모델은 그 위에 대사와 하루 끝
+한마디만 썼습니다. 설명서는 `local-archive/exhibition-2026-09-28/README.md`, 결정은 D107·D108·D111.
+
+### 구현됨
+
+- **계획 (`plan.mjs`).** 사건은 한 번에 하나(`assertSequential`). Task는 구간(beat)으로 나뉘고,
+  구간마다 칸(장소 하나와 거기 보이는 사람)·말하는 사람·꼭 말해야 할 이유가 있습니다. 사실마다
+  **아는 사람**이 붙고(`know`), 연기 지시는 누구의 태도인지가 붙습니다(`act`). 칸마다 사람의
+  자세(`poses`)가 있습니다 — 누움·흉부압박·운전은 계획이 정하고, 나머지는 구간에서 나옵니다.
+- **대화록 (`generate.mjs`, gpt-6-sol).** 서로 다른 하루 32개, 호출 117건, 대사 2,009줄, 하루 끝
+  한마디 148줄. 호출은 모델+프롬프트 해시로 캐시해 바뀐 호출만 다시 부릅니다. `_audit.mjs` 문제 0건.
+- **그림 (`art.mjs`, gpt-image-2.5-flare).** 배경 11장, 인물 레이어 24장. 필요한 그림은 묶음의
+  칸에서 나오고, 설명 한 줄을 고치면 그 그림만 다시 그립니다. 성별만 참여자 인적사항에서 옮겼습니다.
+- **벽 화면 (`build-html.mjs`).** 지도 샷 ↔ 장면 샷, 좌측 상단 지도 카드와 장소 핀, 장소마다 칸,
+  말풍선(지금 것 + 흐린 앞 것), 화자 초점, MEDial 판단 패널(네 단계 · 후보 판정이 통화 끝에 풀림 ·
+  MEDial이 없는 구간의 대기 문구), 타임라인 이동, 속도 배율. 하루 끝 → 주민 평가 → 수정안 셋은 그대로입니다.
+- **보고용 뷰어 (`build-reader.mjs`).** 27경로의 대화록을 구간과 "누가 아는가"로 나눠 읽습니다.
+
+### 부분 구현
+
+- **전시장 구성.** 벽 프로젝터 + 태블릿 두 대가 목표인데, 지금은 노트북 한 화면의 미리보기입니다.
+- **얼굴 단순화.** 프롬프트로 부드럽게 했지만 확대하면 여전히 실사에 가깝습니다(연구자가 이 수준으로 확정).
+- **대사의 잔버릇.** MEDial이 가끔 "15시 09분쯤"처럼 시각을 딱딱하게 읽고, 연속 전화에서 같은
+  문장을 되풀이합니다. 점검 규칙으로는 잡지 않습니다.
+- **사람이 본 범위.** 39일 전부를 자동으로 끝까지 돌려 오류가 없음을 확인했고 캡처 10장과 전환 순간을
+  열어 봤지만, 사람이 하루를 처음부터 끝까지 실시간으로 본 것은 아닙니다.
+
+### 미구현
+
+- 태블릿 화면(평가·수정안 고르기)의 분리. 실제 주민 검토. 합성 대사는 실제 주민의 말이 아닙니다.
+
+### 이번에 실행한 검사 (2026-09-28)
+
+```bash
+node exhibition/generate.mjs --plan    # 서로 다른 하루 32 · 호출 117 · 캐시 117
+node exhibition/_audit.mjs             # 문제 0건 · 대사 속 시각 98건 중 사실에 없는 것 0건
+node exhibition/art.mjs --plan         # 필요한 그림 35 · 그릴 것 0
+node exhibition/_shots.mjs             # 캡처 10장, 페이지 오류 0
+python -m pytest server/tests -q       # 433 passed
+npm test                               # 63 passed
+```
+
+39일 자동 순회(0.2초 간격으로 하루 전체를 그림): 오류 0, 시계 역행 0.
+
+
 ---
 
 # 폐기된 리뷰 기반 반복 (v0.3 역사 기록)
@@ -636,9 +850,9 @@ npm run e2e                            # 6 passed (Chromium, 합성 마을, .run
 - `scripted` — 고정 리뷰로 흐름만 확인. 모델 결과가 아닙니다.
 
 ### 실제 LLM 어댑터
-- Gemini(OpenAI 호환 chat completions) HTTP 클라이언트 하나. 구조화 출력은 json_schema로
-  강제합니다. (2026-09-15에 Anthropic·OpenAI 경로를 걷어냈습니다.)
-- 키는 **서버 환경변수에서만** 읽습니다(`GOOGLE_API_KEY`, `MEDIAL_LLM_MODEL`,
+- OpenAI chat completions HTTP 클라이언트 하나. 구조화 출력은 json_schema로 강제합니다.
+  (2026-09-15에 공급자를 Gemini 하나로 줄였고, 2026-09-28에 OpenAI 하나로 바꿨습니다 — D107.)
+- 키는 **서버 환경변수에서만** 읽습니다(`OPENAI_API_KEY`, `MEDIAL_LLM_MODEL`,
   `MEDIAL_LLM_BASE_URL`). 응답·로그·문서·health 어디에도 키가 없습니다.
 - 호출마다 provider·model·prompt 버전·요청/응답 content hash·토큰·지연·검증 결과를
   기록합니다. 본문은 저장하지 않습니다.
@@ -864,7 +1078,7 @@ P10·P11이 표식 두 개로 남는 것, OSM 크레딧, 사람 패널의 정직
 
 ### 스크린샷은 저장소에 넣지 않습니다
 
-`docs/research/screenshots/` 를 gitignore에 넣었습니다. 실서버 스크린샷에는 주민의 일과·장소·
+`docs/presentations/screenshots/` 를 gitignore에 넣었습니다. 실서버 스크린샷에는 주민의 일과·장소·
 현재 상태가 그대로 담기고, 그것이 `local-data/` 를 제외하는 이유와 같습니다. 파일은 로컬에
 ## 2026-09-14 · Quest/Task Change Set 전환 상태
 
@@ -1574,8 +1788,8 @@ P1 사례, 같은 하루, 고친 뒤:
 
 - **기관 역할** — 담당자 1명의 일정·근무시간·대기열은 실제로 동작합니다. **보건소장, 여러 건을
   동시에 안고 있는 실무자의 자원 배분, 다건 우선순위**는 없습니다.
-- **LLM 어댑터** — 리뷰·종합·개선 역할과, 3단계부터 MEDial 머리·주민의 행동이 Gemini를
-  부릅니다. 이동(동승) 요청·보건소 담당자·재연락 소진 뒤 인계는 여전히 규칙입니다. 실제 모델로
+- **LLM 어댑터** — 리뷰·종합·개선 역할과, 3단계부터 MEDial 머리·주민의 행동이 모델을
+  부릅니다 (2026-09-28부터 OpenAI — 아래 실행 기록은 전부 그 전의 Gemini로 돌린 것입니다). 이동(동승) 요청·보건소 담당자·재연락 소진 뒤 인계는 여전히 규칙입니다. 실제 모델로
   하루를 끝까지 돌린 기록은 합성 마을 1회(2026-09-15)이고, **리뷰·개선 루프를 LLM 마을 위에서
   실제 모델로 돌린 적은 아직 없습니다.**
 - **읽기 전용 주민 대화** — 규칙 기반 발화만 있습니다. 자유 대화 UI는 없습니다.
@@ -1598,7 +1812,7 @@ P1 사례, 같은 하루, 고친 뒤:
 
 - 설계 결정은 [DECISIONS.md](docs/research/DECISIONS.md)에 ID를 붙여 남깁니다. 대안과 아직
   확인하지 못한 가정을 함께 적습니다.
-- 남은 작업은 [07_BACKLOG.md](docs/research/07_BACKLOG.md).
+- 남은 작업은 [07_BACKLOG.md](docs/research/history/07_BACKLOG.md).
 - 원자료는 저장소에 들어오지 않습니다. `local-data/` 와 `local-archive/` 는 git-ignored입니다.
 - **기존 companion 데모는 저장소에서 제거했습니다** (2026-09-11, 사용자 요청). 음성·triage·
   RAG·아바타 서버(`server/app/{api,modules,prompts,session,ws}`, `main.py`, `config.py`),
@@ -1610,25 +1824,25 @@ P1 사례, 같은 하루, 고친 뒤:
 
 ## 읽는 순서
 
-1. [01_RESEARCH_POSITION.md](docs/research/01_RESEARCH_POSITION.md) — 왜 이 도구인가
-2. [02_WORLD_AND_AGENTS.md](docs/research/02_WORLD_AND_AGENTS.md) — 세계·계획 계층
-3. [03_ORCHESTRATION_AND_ROLES.md](docs/research/03_ORCHESTRATION_AND_ROLES.md) — 역할과 권한
-4. [04_SCENARIOS_AND_ISSUES.md](docs/research/04_SCENARIOS_AND_ISSUES.md) — 시나리오
-5. [05_WORKFLOW_AND_EVALUATION.md](docs/research/05_WORKFLOW_AND_EVALUATION.md) — 평가의 분리
-6. [06_IMPLEMENTATION.md](docs/research/06_IMPLEMENTATION.md) — 구현 방침
-7. [07_BACKLOG.md](docs/research/07_BACKLOG.md) — 남은 일
+1. [01_RESEARCH_POSITION.md](docs/research/history/01_RESEARCH_POSITION.md) — 왜 이 도구인가
+2. [02_WORLD_AND_AGENTS.md](docs/research/history/02_WORLD_AND_AGENTS.md) — 세계·계획 계층
+3. [03_ORCHESTRATION_AND_ROLES.md](docs/research/history/03_ORCHESTRATION_AND_ROLES.md) — 역할과 권한
+4. [04_SCENARIOS_AND_ISSUES.md](docs/research/history/04_SCENARIOS_AND_ISSUES.md) — 시나리오
+5. [05_WORKFLOW_AND_EVALUATION.md](docs/research/history/05_WORKFLOW_AND_EVALUATION.md) — 평가의 분리
+6. [06_IMPLEMENTATION.md](docs/research/history/06_IMPLEMENTATION.md) — 구현 방침
+7. [07_BACKLOG.md](docs/research/history/07_BACKLOG.md) — 남은 일
 
 ## 추가 연구·제품 제안 (2026-09-10, 아직 미구현)
-- [추가 HCI·정책 시뮬레이션 레퍼런스 14건](docs/research/09_DESIGN_POLICY_REFERENCES.md)
-- [디자이너·정책 담당자용 서비스 운영 설계 작업대](docs/research/10_DESIGN_POLICY_STUDIO.md)
-- [후속 모델·구현 순서·사용자 연구 계획](docs/research/11_STUDIO_IMPLEMENTATION_AND_STUDY.md)
+- [추가 HCI·정책 시뮬레이션 레퍼런스 14건](docs/research/history/09_DESIGN_POLICY_REFERENCES.md)
+- [디자이너·정책 담당자용 서비스 운영 설계 작업대](docs/research/history/10_DESIGN_POLICY_STUDIO.md)
+- [후속 모델·구현 순서·사용자 연구 계획](docs/research/history/11_STUDIO_IMPLEMENTATION_AND_STUDY.md)
 
 현재 구현 보고와 별개인 후속 제안입니다. 서비스 기제 편집, 가정별 실행 행렬, 실제 이해관계자의 정정이 핵심입니다.
 ## 사용자 확정 연구 방향: 리뷰 기반 반복
 기획 문서는 다음 셋입니다. 아래 v0.3 절이 그 중 **무엇이 실제로 구현되었는지**를 말합니다.
-- [최종 연구·제품 기획](docs/research/12_FINAL_RESEARCH_PLAN.md)
+- [최종 연구·제품 기획](docs/research/history/12_FINAL_RESEARCH_PLAN.md)
 - [주민 리뷰→MEDial 개선→다음 Cycle 구현 지시서](docs/research/13_ITERATION_IMPLEMENTATION_SPEC.md)
-- [수정용 LLM 전달 프롬프트와 내부 역할 템플릿](docs/research/14_CODING_LLM_PROMPT.md)
+- [수정용 LLM 전달 프롬프트와 내부 역할 템플릿](docs/research/history/14_CODING_LLM_PROMPT.md)
 
 핵심: 초기 인터뷰→개인 에이전트→마을 MAS→Cycle→개인 리뷰→운영안 개선→여러 세대 반복→디자이너 선택→현장 재방문·정정.
 이 목표가 이전 09~11의 기능 확장 순서보다 우선합니다. 현재 엔진·지도·정책·비교·발견 기능을 재사용했습니다.
@@ -1637,7 +1851,7 @@ P1 사례, 같은 하루, 고친 뒤:
 
 사용자 요청에 따라 IterationSetup의 질문/설정 계층과 글자·여백을 정리하고, 관찰 화면에서 수동 실험 도구 묶음을 분리했습니다. 관찰 시점 선택은 유지했습니다. `npm run build` 통과. 브라우저 연결 실패로 이 변경의 시각 검증은 미완료입니다.
 
-전체 화면 재설계는 아직 구현 전입니다. 다음 작업의 화면 기준은 [15_DESIGN_RESET_SPEC.md](docs/research/15_DESIGN_RESET_SPEC.md), 실행 프롬프트는 [16_DESIGN_LLM_PROMPT.md](docs/research/16_DESIGN_LLM_PROMPT.md)입니다. 기존 연구/데이터 계약을 유지하면서 최상위 화면을 실험 준비·마을 관찰·결과 비교로 통합합니다.
+전체 화면 재설계는 아직 구현 전입니다. 다음 작업의 화면 기준은 [15_DESIGN_RESET_SPEC.md](docs/research/history/15_DESIGN_RESET_SPEC.md), 실행 프롬프트는 [16_DESIGN_LLM_PROMPT.md](docs/research/history/16_DESIGN_LLM_PROMPT.md)입니다. 기존 연구/데이터 계약을 유지하면서 최상위 화면을 실험 준비·마을 관찰·결과 비교로 통합합니다.
 
 ## 2026-09-11 지도·인물 원본 표현 복원
 

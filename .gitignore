@@ -18,14 +18,15 @@ venv/
 local-data/
 # 실행 DB 백업 등 로컬 보관본
 local-archive/
-# 전시 데모의 산출물 — 익명 페르소나에서 나온 대화록과 지도 래스터가 들어 있다
-exhibition/out/
 # 실서버 스크린샷에는 주민의 일과·장소가 담긴다. local-data/ 와 같은 이유로 제외한다.
-docs/research/screenshots/
+docs/presentations/screenshots/
 # 발표자료 PDF에도 그 캡처가 통째로 들어 있다.
-docs/research/*.pdf
+docs/presentations/*.pdf
 
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
+
+# 빌드 캐시
+*.tsbuildinfo

@@ -210,29 +210,26 @@ export default function PrepareScreen({
   // 연구자가 명시적으로 시작한다.
   const [maxGenerations, setMaxGenerations] = useState(2);
   const [maxCandidates, setMaxCandidates] = useState(2);
-  const [behaviourAdapter, setBehaviourAdapter] = useState('rule');
-  // The institutions default to the model when a key is present (the
-  // researcher's ask, 2026-09-15): two calls a day, the head tier. Without a
-  // key the procedure runs and nothing pretends otherwise.
-  const [institutionAdapter, setInstitutionAdapter] = useState(
-    capabilities.villageModel?.configured ? 'llm' : 'rule',
-  );
-  const [reviewAdapter, setReviewAdapter] = useState('rule');
-  const [improvementAdapter, setImprovementAdapter] = useState('rule');
+  // This screen exists only in the real version, whose point is to generate:
+  // with a key, every layer starts as the model (the village's head and
+  // residents, the institutions, the reviews, the improvement). Each can still
+  // be set back to the rules. Without a key the rules run and nothing pretends
+  // otherwise.
+  const villageOnline = Boolean(capabilities.villageModel?.configured);
+  const online = capabilities.model.configured;
+  const [behaviourAdapter, setBehaviourAdapter] = useState(villageOnline ? 'llm' : 'rule');
+  const [institutionAdapter, setInstitutionAdapter] = useState(villageOnline ? 'llm' : 'rule');
+  const [reviewAdapter, setReviewAdapter] = useState(online ? 'llm' : 'rule');
+  const [improvementAdapter, setImprovementAdapter] = useState(online ? 'llm' : 'rule');
   // The server contract is callBudget=0 == no ceiling, and that contract is not
   // being changed here. For a rule-only run there are no calls to bound, so 0
-  // is honest; the moment a model adapter is picked the screen asks for a real
-  // number rather than recording an invented one as the researcher's choice.
-  // A ceiling is required whenever a model is in the loop. With a key present
-  // the institutions start as models, so a working default is set here rather
-  // than blocking the start button on an empty field: two calls a day for the
-  // institutions, and room for the reviews if those are switched on too.
-  const [callBudget, setCallBudget] = useState(
-    capabilities.villageModel?.configured ? 30 : 0,
-  );
+  // is honest. A ceiling is required whenever a model is in the loop, and the
+  // village's own calls count against it: a day is some tens of head, resident
+  // and institution calls, a generation adds a review per resident plus the
+  // synthesis and the proposal. Two generations fit well inside 300; the loop
+  // stops with budget_exhausted rather than going past it.
+  const [callBudget, setCallBudget] = useState(villageOnline || online ? 300 : 0);
 
-  const online = capabilities.model.configured;
-  const villageOnline = Boolean(capabilities.villageModel?.configured);
   const usesModel =
     behaviourAdapter === 'llm' ||
     institutionAdapter === 'llm' ||

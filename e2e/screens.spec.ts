@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { seekToEnd, setView, toSetup } from './helpers';
+import { setView, toSetup, watchScenes } from './helpers';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -32,7 +32,8 @@ const DAY_LABEL: Record<string, string> = {
 
 test.describe.configure({ mode: 'serial' });
 
-test('관찰: 이웃 우선 정책에서 누가 거절했고 왜인지가 읽힌다', async ({ page }) => {
+test('관찰: 이웃 우선 정책에서 누가 거절했고 왜인지가 장면과 판단 패널에서 읽힌다', async ({ page }) => {
+  test.setTimeout(180_000);
   // The run the screen will open: the shipped deck under 가까운 이웃 우선,
   // where the refusal table fires on the restaurant couple.
   const created = await page.request.post('/api/sim/attempts', {
@@ -50,8 +51,7 @@ test('관찰: 이웃 우선 정책에서 누가 거절했고 왜인지가 읽힌
   await page.goto('/');
   await page.evaluate(() => document.fonts.ready);
   await page.getByRole('button', { name: '사례와 서비스 경험', exact: true }).click();
-  await expect(page.getByText('MEDial · 조율 현황')).toBeVisible();
-  await seekToEnd(page);
+  await expect(page.getByLabel('시각', { exact: true })).toBeVisible();
 
   // The day the run happened on, in one line - behind the gear, off the map.
   const day = detail.metrics.dayRealization;
@@ -59,32 +59,25 @@ test('관찰: 이웃 우선 정책에서 누가 거절했고 왜인지가 읽힌
   await expect(page.getByText(DAY_LABEL[day.classification], { exact: true })).toBeVisible();
   await page.getByLabel('재생 설정', { exact: true }).click();
 
-  // Every refusal: the person and the sentence they gave. Never the rule key.
-  await expect(page.getByText('누구에게 부탁했고, 뭐라고 했나')).toBeVisible();
-  for (const row of refusals) {
-    await expect(page.getByText(row.reason).first()).toBeVisible();
-  }
-  await expect(page.getByText('persona_condition')).toHaveCount(0);
-  // The house was empty and P9 had no lead: MEDial phoned the head for where
-  // to look, and his answer closes his row. No place key on screen.
-  await expect(page.getByText('어디 있을지 답함').first()).toBeVisible();
-  await expect(page.getByText('FARM')).toHaveCount(0);
-  await shot(page, 'observe-researcher');
-  // The panels scroll inside themselves, so the list is photographed on its
-  // own after being brought into view.
-  const asked = page.getByText('누구에게 부탁했고, 뭐라고 했나');
-  await asked.scrollIntoViewIfNeeded();
-  await asked.locator('xpath=..').screenshot({ path: resolve(SHOTS, 'observe-asked.png') });
+  // Every refusal: the person's sentence, somewhere in the scenes MEDial was
+  // part of. Never the rule key, never a place key.
+  const said = (await watchScenes(page)).join(' ');
+  for (const row of refusals) expect(said).toContain(row.reason);
+  expect(said).not.toContain('persona_condition');
+  expect(said).not.toMatch(/\bFARM\b|\bPATROL\b/);
+  await expect(page.getByLabel('MEDial의 판단')).toBeVisible();
+  await shot(page, 'observe-scene');
+  await page.getByLabel('MEDial의 판단').screenshot({ path: resolve(SHOTS, 'observe-judgment.png') });
 
-  // MEDial's own view. These refusals were addressed to MEDial, so they stay;
-  // nothing is marked as hidden from it.
+  // MEDial's own view. These refusals were addressed to MEDial, so they stay.
   await setView(page, 'medial');
-  await expect(page.getByText(refusals[0].reason).first()).toBeVisible();
-  await expect(page.getByText('MEDial은 모름')).toHaveCount(0);
+  const heard = (await watchScenes(page)).join(' ');
+  expect(heard).toContain(refusals[0].reason);
   await shot(page, 'observe-medial');
 });
 
 test('관찰: 정책 D는 재연락을 먼저 하고, 이장에게 가는 이유를 관계 기록으로 말한다', async ({ page }) => {
+  test.setTimeout(180_000);
   const created = await page.request.post('/api/sim/attempts', {
     data: {
       policyId: 'policy-D-v1',
@@ -97,19 +90,17 @@ test('관찰: 정책 D는 재연락을 먼저 하고, 이장에게 가는 이유
   await page.goto('/');
   await page.evaluate(() => document.fonts.ready);
   await page.getByRole('button', { name: '사례와 서비스 경험', exact: true }).click();
-  await expect(page.getByText('MEDial · 조율 현황')).toBeVisible();
-  await seekToEnd(page);
+  await expect(page.getByLabel('시각', { exact: true })).toBeVisible();
   await setView(page, 'medial');
-  // The retry is a phone call, before anyone else is asked.
-  await expect(page.getByText(/전화로 연락했습니다 \(2번째\)/).first()).toBeVisible();
+  const said = (await watchScenes(page)).join(' ');
+  // The retry is a phone call, before anyone else is asked - a caption, since
+  // a rule head writes no words for it.
+  expect(said).toMatch(/전화로 연락했습니다 \(2번째\)/);
   // The head is last in this order; he is first here because the record has no one else.
-  await expect(page.getByText(/기록된 가까운 관계는 이장 한 사람뿐/).first()).toBeVisible();
+  expect(said).toMatch(/기록된 가까운 관계는 이장 한 사람뿐/);
   // No engine key reaches a sentence.
-  await expect(page.getByText(/neighbour_visit|PATROL|FARM/)).toHaveCount(0);
+  expect(said).not.toMatch(/neighbour_visit|\bPATROL\b|\bFARM\b/);
   await shot(page, 'observe-policy-d');
-  const reasons = page.getByText('이렇게 정한 이유');
-  await reasons.scrollIntoViewIfNeeded();
-  await reasons.locator('xpath=..').screenshot({ path: resolve(SHOTS, 'observe-policy-d-reasons.png') });
 });
 
 test('사례 → 실행 → 주민 평가 → 개선과 확인: 한 바퀴가 실제로 돈다', async ({ page }) => {

@@ -3,10 +3,12 @@ import { api, ApiError } from './api/client';
 import type {
   Capabilities,
   GenerationComparison,
+  IterationSession,
   SessionDetail,
   SessionStatus,
 } from './api/iteration';
 import { RUNNING_STATUSES } from './api/iteration';
+import { usePlayback } from './scene/playback';
 import { useSimStore } from './store';
 
 // A separate store from the attempt/replay one. They share the map and the
@@ -101,6 +103,9 @@ export type StartPhase =
 
 interface IterationState {
   capabilities: Capabilities | null;
+  /** Every session the server holds, newest last. The sim version offers them
+   *  as the recordings to pick from; the real version opens the newest. */
+  sessions: IterationSession[];
   sessionId: string | null;
   detail: SessionDetail | null;
   comparison: GenerationComparison | null;
@@ -137,6 +142,8 @@ interface IterationState {
    *  second session. */
   retryStart: () => Promise<void>;
   openSession: (id: string) => Promise<void>;
+  /** Read another session from the start: its first version on the map. */
+  switchSession: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
   send: (name: string, payload?: Record<string, unknown>) => Promise<void>;
   confirmChangeSet: (changeSetId: string, reason: string) => Promise<void>;
@@ -179,6 +186,7 @@ interface IterationState {
 
 export const useIterationStore = create<IterationState>((set, get) => ({
   capabilities: null,
+  sessions: [],
   sessionId: null,
   detail: null,
   comparison: null,
@@ -201,19 +209,18 @@ export const useIterationStore = create<IterationState>((set, get) => ({
     if (get().capabilities) return;
     try {
       const { sessions, capabilities } = await api.iteration.sessions();
-      set({ capabilities });
-      const rows = sessions as { id: string; updatedAt: string }[];
+      const rows = [...sessions].sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));
+      set({ capabilities, sessions: rows });
       if (rows.length > 0) {
         // Restoring the session the researcher last worked in is a read. It
         // starts nothing: `openSession` never sends a command, so a refresh
         // cannot re-run a loop that already finished.
-        const latest = [...rows].sort((a, b) => a.updatedAt.localeCompare(b.updatedAt)).pop()!;
-        await get().openSession(latest.id);
-        // Only the case view, never the screen: restoring is asynchronous, and
-        // setting the screen here overrode a navigation the reader had already
-        // made while it was loading (seen in a browser, 2026-09-15). The
-        // default screen is 사례와 서비스 경험 anyway.
-        set({ caseView: 'auto' });
+        // Neither the screen nor the case view is set here: restoring is
+        // asynchronous, and setting either overrode a navigation the reader had
+        // already made while it was loading - the screen (seen 2026-09-15), and
+        // 새 사례 준비 pressed during the restore (seen 2026-09-28). Both start
+        // at their defaults, which already open the restored run.
+        await get().openSession(rows[rows.length - 1].id);
       }
     } catch (error) {
       set({ error: describe(error) });
@@ -312,6 +319,17 @@ export const useIterationStore = create<IterationState>((set, get) => ({
     } finally {
       set({ busy: false });
     }
+  },
+
+  switchSession: async (id) => {
+    get().stopPolling();
+    // What was being read belonged to the other session.
+    set({ viewGenerationId: null, compareLeftId: null, compareRightId: null,
+          compareSidesPinned: false, landedOnEvaluations: false });
+    await get().openSession(id);
+    const first = get().detail?.generations.find((g) => g.index === 0)?.attemptIds[0];
+    if (first) await useSimStore.getState().setActive(first);
+    set({ screen: 'case', caseView: 'experience' });
   },
 
   refresh: async () => {
@@ -438,7 +456,11 @@ export const useIterationStore = create<IterationState>((set, get) => ({
     }
   },
 
-  setScreen: (screen) => set({ screen }),
+  // A reader who has gone to the evaluations (or beyond) themselves has
+  // arrived; the one-time landing must not move them again. It once pulled a
+  // reader back from a scene they had opened from an evaluation (e2e, 2026-09-28).
+  setScreen: (screen) =>
+    set({ screen, landedOnEvaluations: get().landedOnEvaluations || screen !== 'case' }),
   setCaseView: (caseView) => set({ caseView }),
   setCompareView: (compareView) => set({ compareView }),
   setCompareSides: (compareLeftId, compareRightId) =>
@@ -456,7 +478,7 @@ export const useIterationStore = create<IterationState>((set, get) => ({
         set({ error: `이 시도의 로그에서 사건 ${eventId} 을(를) 찾지 못했습니다.` });
         return;
       }
-      await useSimStore.getState().seekToSeq(event.seq);
+      await usePlayback.getState().seekSeq(event.seq);
       // Opening a cited scene is a read of a stored log. It moves the observe
       // screen's cursor and touches nothing else - no adapter runs, and the
       // loop keeps doing whatever it was doing.

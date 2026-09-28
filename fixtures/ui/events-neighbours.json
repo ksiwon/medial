@@ -2,9 +2,9 @@
  "events": [
   {
    "id": "ev-1",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 1,
-   "simTimeMs": 0,
+   "simTimeMs": 18000000,
    "type": "world.day_started",
    "actorId": "ENGINE",
    "causationId": null,
@@ -14,13 +14,13 @@
    ],
    "committed": true,
    "payload": {
-    "dayStartMs": 0,
+    "dayStartMs": 18000000,
     "dataSource": "synthetic"
    }
   },
   {
    "id": "ev-2",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 2,
    "simTimeMs": 34200000,
    "type": "contact.attempted",
@@ -47,7 +47,7 @@
   },
   {
    "id": "ev-3",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 3,
    "simTimeMs": 34200000,
    "type": "world.reachability_resolved",
@@ -70,7 +70,7 @@
   },
   {
    "id": "ev-4",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 4,
    "simTimeMs": 34200000,
    "type": "contact.no_response",
@@ -91,7 +91,7 @@
   },
   {
    "id": "ev-5",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 5,
    "simTimeMs": 34200000,
    "type": "medial.classified",
@@ -114,7 +114,7 @@
   },
   {
    "id": "ev-6",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 6,
    "simTimeMs": 34200000,
    "type": "request.raised",
@@ -134,7 +134,7 @@
   },
   {
    "id": "ev-7",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 7,
    "simTimeMs": 34200000,
    "type": "medial.decided",
@@ -198,7 +198,7 @@
   },
   {
    "id": "ev-8",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 8,
    "simTimeMs": 34200000,
    "type": "request.offered",
@@ -229,7 +229,7 @@
   },
   {
    "id": "ev-9",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 9,
    "simTimeMs": 34200000,
    "type": "request.declined",
@@ -254,7 +254,7 @@
   },
   {
    "id": "ev-10",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 10,
    "simTimeMs": 34200000,
    "type": "request.offered",
@@ -285,7 +285,7 @@
   },
   {
    "id": "ev-11",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 11,
    "simTimeMs": 34200000,
    "type": "request.declined",
@@ -310,7 +310,7 @@
   },
   {
    "id": "ev-12",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 12,
    "simTimeMs": 34200000,
    "type": "request.offered",
@@ -341,7 +341,7 @@
   },
   {
    "id": "ev-13",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 13,
    "simTimeMs": 34200000,
    "type": "request.accepted",
@@ -367,7 +367,7 @@
   },
   {
    "id": "ev-14",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 14,
    "simTimeMs": 34200000,
    "type": "plan.modified",
@@ -433,7 +433,7 @@
      },
      {
       "startMs": 35307222,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -451,7 +451,7 @@
   },
   {
    "id": "ev-15",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 15,
    "simTimeMs": 34200000,
    "type": "task.started",
@@ -469,7 +469,7 @@
   },
   {
    "id": "ev-16",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 16,
    "simTimeMs": 34200000,
    "type": "task.travel_started",
@@ -493,7 +493,7 @@
   },
   {
    "id": "ev-17",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 17,
    "simTimeMs": 34603611,
    "type": "task.travel_arrived",
@@ -512,7 +512,7 @@
   },
   {
    "id": "ev-18",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 18,
    "simTimeMs": 34603611,
    "type": "task.check_performed",
@@ -534,7 +534,7 @@
   },
   {
    "id": "ev-19",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 19,
    "simTimeMs": 34603611,
    "type": "medial.decided",
@@ -557,7 +557,7 @@
   },
   {
    "id": "ev-20",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 20,
    "simTimeMs": 34603611,
    "type": "request.offered",
@@ -589,7 +589,7 @@
   },
   {
    "id": "ev-21",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 21,
    "simTimeMs": 34603611,
    "type": "medial.observed",
@@ -612,7 +612,7 @@
   },
   {
    "id": "ev-22",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 22,
    "simTimeMs": 34603611,
    "type": "medial.decided",
@@ -635,7 +635,7 @@
   },
   {
    "id": "ev-23",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 23,
    "simTimeMs": 34603611,
    "type": "plan.modified",
@@ -806,7 +806,7 @@
      },
      {
       "startMs": 58087697,
-      "endMs": 72000000,
+      "endMs": 79200000,
       "kind": "stay",
       "origin": "baseline",
       "label": "자택",
@@ -824,7 +824,7 @@
   },
   {
    "id": "ev-24",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 24,
    "simTimeMs": 34603611,
    "type": "task.started",
@@ -842,7 +842,7 @@
   },
   {
    "id": "ev-25",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 25,
    "simTimeMs": 34603611,
    "type": "task.travel_started",
@@ -866,7 +866,7 @@
   },
   {
    "id": "ev-26",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 26,
    "simTimeMs": 34931545,
    "type": "task.travel_arrived",
@@ -885,7 +885,7 @@
   },
   {
    "id": "ev-27",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 27,
    "simTimeMs": 34931545,
    "type": "task.check_performed",
@@ -908,7 +908,7 @@
   },
   {
    "id": "ev-28",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 28,
    "simTimeMs": 34931545,
    "type": "task.completed",
@@ -926,7 +926,7 @@
   },
   {
    "id": "ev-29",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 29,
    "simTimeMs": 34931545,
    "type": "need.resolved",
@@ -951,9 +951,235 @@
   },
   {
    "id": "ev-30",
-   "attemptId": "att-C-v1-3aaec9fd9463",
+   "attemptId": "att-C-v1-b833f6cc281c",
    "seq": 30,
-   "simTimeMs": 72000000,
+   "simTimeMs": 61200000,
+   "type": "institution.report_sent",
+   "actorId": "MEDial",
+   "causationId": null,
+   "correlationId": "report",
+   "visibility": [
+    "HC_NURSE",
+    "MEDial"
+   ],
+   "committed": true,
+   "payload": {
+    "toActorId": "HC_NURSE",
+    "subjects": [
+     {
+      "subjectId": "P1",
+      "requests": 1,
+      "resolved": 1,
+      "unresolved": 0,
+      "noResponse": 1,
+      "rides": 0,
+      "emergencies": 0,
+      "outcomes": [
+       "no_issue_found"
+      ]
+     },
+     {
+      "subjectId": "P2",
+      "requests": 0,
+      "resolved": 0,
+      "unresolved": 0,
+      "noResponse": 0,
+      "rides": 0,
+      "emergencies": 0,
+      "outcomes": []
+     },
+     {
+      "subjectId": "P3",
+      "requests": 0,
+      "resolved": 0,
+      "unresolved": 0,
+      "noResponse": 0,
+      "rides": 0,
+      "emergencies": 0,
+      "outcomes": []
+     },
+     {
+      "subjectId": "P4",
+      "requests": 0,
+      "resolved": 0,
+      "unresolved": 0,
+      "noResponse": 0,
+      "rides": 0,
+      "emergencies": 0,
+      "outcomes": []
+     },
+     {
+      "subjectId": "P5",
+      "requests": 0,
+      "resolved": 0,
+      "unresolved": 0,
+      "noResponse": 0,
+      "rides": 0,
+      "emergencies": 0,
+      "outcomes": []
+     },
+     {
+      "subjectId": "P6",
+      "requests": 0,
+      "resolved": 0,
+      "unresolved": 0,
+      "noResponse": 0,
+      "rides": 0,
+      "emergencies": 0,
+      "outcomes": []
+     },
+     {
+      "subjectId": "P7",
+      "requests": 0,
+      "resolved": 0,
+      "unresolved": 0,
+      "noResponse": 0,
+      "rides": 0,
+      "emergencies": 0,
+      "outcomes": []
+     },
+     {
+      "subjectId": "P8",
+      "requests": 0,
+      "resolved": 0,
+      "unresolved": 0,
+      "noResponse": 0,
+      "rides": 0,
+      "emergencies": 0,
+      "outcomes": []
+     },
+     {
+      "subjectId": "P9",
+      "requests": 0,
+      "resolved": 0,
+      "unresolved": 0,
+      "noResponse": 0,
+      "rides": 0,
+      "emergencies": 0,
+      "outcomes": []
+     },
+     {
+      "subjectId": "P10",
+      "requests": 0,
+      "resolved": 0,
+      "unresolved": 0,
+      "noResponse": 0,
+      "rides": 0,
+      "emergencies": 0,
+      "outcomes": []
+     },
+     {
+      "subjectId": "P11",
+      "requests": 0,
+      "resolved": 0,
+      "unresolved": 0,
+      "noResponse": 0,
+      "rides": 0,
+      "emergencies": 0,
+      "outcomes": []
+     },
+     {
+      "subjectId": "P12",
+      "requests": 0,
+      "resolved": 0,
+      "unresolved": 0,
+      "noResponse": 0,
+      "rides": 0,
+      "emergencies": 0,
+      "outcomes": []
+     }
+    ],
+    "note": "MEDial이 오늘 직접 관측한 것만 담는다. 실제 위치·상태는 들어 있지 않다."
+   }
+  },
+  {
+   "id": "ev-31",
+   "attemptId": "att-C-v1-b833f6cc281c",
+   "seq": 31,
+   "simTimeMs": 61200000,
+   "type": "institution.report_reviewed",
+   "actorId": "HC_NURSE",
+   "causationId": null,
+   "correlationId": "report",
+   "visibility": [
+    "HC_NURSE",
+    "MEDial",
+    "RESEARCHER"
+   ],
+   "committed": true,
+   "payload": {
+    "actions": [
+     {
+      "subjectId": "P1",
+      "action": "note",
+      "reason": "무응답이 있었으나 확인이 끝났다. 기록만 남긴다."
+     },
+     {
+      "subjectId": "P2",
+      "action": "none",
+      "reason": "특이 사항 없음."
+     },
+     {
+      "subjectId": "P3",
+      "action": "none",
+      "reason": "특이 사항 없음."
+     },
+     {
+      "subjectId": "P4",
+      "action": "none",
+      "reason": "특이 사항 없음."
+     },
+     {
+      "subjectId": "P5",
+      "action": "none",
+      "reason": "특이 사항 없음."
+     },
+     {
+      "subjectId": "P6",
+      "action": "none",
+      "reason": "특이 사항 없음."
+     },
+     {
+      "subjectId": "P7",
+      "action": "none",
+      "reason": "특이 사항 없음."
+     },
+     {
+      "subjectId": "P8",
+      "action": "none",
+      "reason": "특이 사항 없음."
+     },
+     {
+      "subjectId": "P9",
+      "action": "none",
+      "reason": "특이 사항 없음."
+     },
+     {
+      "subjectId": "P10",
+      "action": "none",
+      "reason": "특이 사항 없음."
+     },
+     {
+      "subjectId": "P11",
+      "action": "none",
+      "reason": "특이 사항 없음."
+     },
+     {
+      "subjectId": "P12",
+      "action": "none",
+      "reason": "특이 사항 없음."
+     }
+    ],
+    "outcome": "planned",
+    "provenance": "procedure",
+    "uncertainty": null
+   }
+  },
+  {
+   "id": "ev-32",
+   "attemptId": "att-C-v1-b833f6cc281c",
+   "seq": 32,
+   "simTimeMs": 79200000,
    "type": "attempt.completed",
    "actorId": "ENGINE",
    "causationId": null,
@@ -963,7 +1189,7 @@
    ],
    "committed": true,
    "payload": {
-    "horizonMs": 72000000
+    "horizonMs": 79200000
    }
   }
  ]
