@@ -35,7 +35,12 @@ npm install
 ```
 
 그다음부터는 둘 중 하나를 띄웁니다. 서버와 화면을 함께 띄우고 브라우저를 엽니다.
-Windows에서는 `.cmd` 를 더블클릭해도 됩니다(Git Bash로 같은 스크립트를 부릅니다).
+
+**Windows:** 탐색기에서 `run-sim.cmd` 또는 `run-real.cmd` 를 더블클릭합니다. 창이 하나 열려 로그를
+보여 주고 브라우저가 열립니다. 끝낼 때는 그 창에서 **Ctrl+C**. 창을 그냥 닫았다면 서버가 남아 있을
+수 있는데, 다음 실행이 그것을 그대로 쓰고 `run-sim.cmd --stop` 으로 내릴 수 있습니다.
+Git for Windows(Git Bash)가 있어야 합니다 — `.cmd` 가 그 bash로 `scripts/launch.sh` 를 부릅니다.
+macOS·Linux·Git Bash에서는 `./run-sim.sh` · `./run-real.sh` 입니다.
 
 | | sim — 미리 돌려 둔 기록 | real — 실시간 생성 |
 |---|---|---|
