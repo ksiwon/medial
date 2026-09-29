@@ -11,134 +11,125 @@ import {
   type SessionDetail,
   type UsageStatus,
 } from '../api/iteration';
-import type { DomainEvent, PersonasPayload } from '../api/types';
+import type { DomainEvent } from '../api/types';
 import { formatClock } from '../positions';
 import { personName, sentenceFor } from '../selectors/story';
-import {
-  Body,
-  Button,
-  Callout,
-  Clip,
-  Disclosure,
-  Hint,
-  Mono,
-  PageTitle,
-  Row,
-  Sub,
-  Tag,
-  TextLink,
-  versionName,
-} from '../ui/primitives';
-import { colour, font, radius } from '../ui/theme';
+import { Body, Callout, Disclosure, Hint, Mono, Row, Sub, Tag, TextLink } from '../ui/primitives';
+import { colour, font } from '../ui/theme';
 
 // Screen B: the resident evaluations, as the screen the loop arrives at.
 //
-// Doc 19 section 9 puts Resident Evaluations at the centre; until now reading
-// them meant finding a person on the observation screen and opening a 회고
-// toggle, which is good for understanding one person's day and bad for reading
-// what the run did to twelve people (26번 F02).
-//
-// The order inside one resident is doc 20's: what they experienced, then the
-// six dimensions with their reasons, then the evidence, then what they asked
-// for, then what they could not judge. Two boundaries are load-bearing:
+// Doc 19 section 9 puts Resident Evaluations at the centre. Two boundaries are
+// load-bearing:
 //
 //  - 미경험 / 제안받고 거절 / 응답 못 함 / 미해결 are four different states and
 //    none of them is a complaint. They are never sorted as negative;
-//  - every card says 모의 주민 평가, and whether the persona came from source
-//    material is a *separate* axis from whether the evaluation is simulated.
-//    Source-grounded or not, the evaluation is simulated.
+//  - every evaluation is simulated, whether or not the persona came from source
+//    material, and the page says so under the list.
 //
-// There is no total, no average, no ranking and no winner here, and the counts
-// at the top are counts of items, said as such.
+// There is no total, no average, no ranking and no winner here.
 //
-// What a reader looks for first is who carried what (2026-09-29). So each row of
-// the person list says, under the name, which dimensions that person judged
-// 부정 · 혼합 · 긍정; and inside a card the dimensions judged 판단 불가 are one
-// folded line rather than five paragraphs of "cannot tell" before the one that
-// says something. They are folded, not dropped: an abstention is a result.
+// The layout is the exhibition wall's (2026-09-30): one row a person - who, how
+// many things they went through, what they said in their own words, and when
+// those things happened. People who met the service come first; everyone else
+// is a quiet row saying they did not, which is not a complaint. A row whose
+// review carries dimension items (the engine's reviews do; the exhibition's are
+// one sentence each) opens to them - reasons, evidence, what they asked for and
+// what they could not judge - with the 판단 불가 ones folded.
 
 const Sheet = styled.div`
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 24px 20px 40px;
+  padding: 40px 20px 48px;
 `;
 
 const Inner = styled.div`
-  max-width: 1080px;
+  max-width: 1132px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 `;
 
-const Split = styled.div`
-  display: grid;
-  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
-  gap: 20px;
-  align-items: start;
-  @media (max-width: 899px) {
-    grid-template-columns: minmax(0, 1fr);
-  }
+const Eyebrow = styled.div`
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #e2542c;
 `;
 
-const PersonList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+const Headline = styled.h1`
+  margin: 4px 0 0;
+  font-size: 32px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 `;
 
-/* A name, a usage status and - when the session ran more than one scenario -
-   which day it was, in one row that neither wraps nor spills. The scenario name
-   was running past the right edge of the button and 보건소 담당자 was being
-   broken across two lines (seen in a browser, 2026-09-15). */
-const PersonRow = styled.button<{ $active: boolean }>`
-  font-family: inherit;
-  font-size: ${font.body};
-  text-align: left;
-  border: 1px solid ${(p) => (p.$active ? colour.primary : colour.border)};
-  background: ${(p) => (p.$active ? colour.selected : colour.surface)};
-  border-radius: ${radius.control};
-  padding: 8px 10px;
-  cursor: pointer;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 8px;
-  min-width: 0;
-  overflow: hidden;
-  color: ${colour.text};
-  &:focus-visible {
-    outline: 2px solid ${colour.primary};
-  }
-`;
-
-/* The name keeps its width; the scenario label is what gives way. Letting both
-   shrink turned 보건소 담당자 into "P.." while the row still had room. */
-const PersonName = styled.strong`
-  flex: 0 0 auto;
-  max-width: 60%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-`;
-
-/* The row's second line: what this person judged, by assessment. */
-const Gist = styled.span`
-  flex: 1 0 100%;
-  font-size: ${font.small};
+const Lead = styled.p`
+  margin: 0;
+  max-width: 660px;
+  font-size: 14.5px;
+  line-height: 1.7;
   color: ${colour.secondary};
-  line-height: 1.45;
 `;
 
-const Card = styled.div`
+const Table = styled.div`
   border: 1px solid ${colour.border};
-  border-radius: 8px;
+  border-radius: 12px;
+  overflow: hidden;
   background: ${colour.surface};
-  padding: 16px;
+`;
+
+const PersonRow = styled.div<{ $quiet: boolean }>`
+  display: grid;
+  grid-template-columns: 130px 64px minmax(0, 1fr);
+  gap: 4px 12px;
+  align-items: baseline;
+  padding: ${(p) => (p.$quiet ? '12px 18px' : '16px 18px')};
+  border-top: 1px solid ${colour.border};
+  background: ${(p) => (p.$quiet ? '#f4f3f0' : colour.surface)};
+  &:first-child { border-top: none; }
+  > strong { font-size: 14px; font-weight: 800; }
+  @media (max-width: 640px) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    > div, > span:last-child { grid-column: 1 / -1; }
+  }
+`;
+
+const Count = styled.span<{ $used: boolean }>`
+  justify-self: start;
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  background: ${(p) => (p.$used ? '#e6eefc' : 'transparent')};
+  color: ${(p) => (p.$used ? '#1d4ed8' : colour.secondary)};
+`;
+
+const Said = styled.div`
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  align-items: flex-start;
+  gap: 4px;
+  > p { margin: 0; font-size: 14.5px; line-height: 1.6; color: ${colour.text}; }
+  > small { font-size: 12px; color: ${colour.secondary}; }
+`;
+
+const Quiet = styled.span`
+  font-size: 13px;
+  color: ${colour.secondary};
+`;
+
+const Items = styled.div`
+  align-self: stretch;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 `;
 
 const Dimension = styled.div`
@@ -147,6 +138,20 @@ const Dimension = styled.div`
   display: flex;
   flex-direction: column;
   gap: 4px;
+`;
+
+const Next = styled.button`
+  align-self: flex-start;
+  font: inherit;
+  font-weight: 800;
+  font-size: 15px;
+  cursor: pointer;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 22px;
+  background: #15150f;
+  color: #ffffff;
+  &:focus-visible { outline: 2px solid #e2542c; outline-offset: 2px; }
 `;
 
 const ASSESSMENT_TAG: Record<Assessment, 'positive' | 'mixed' | 'negative' | 'unknown'> = {
@@ -175,94 +180,57 @@ function sortReviews(reviews: AgentReview[]): AgentReview[] {
   });
 }
 
-type Judged = Exclude<Assessment, 'unknown'>;
-
-/** Which dimensions a person judged, worst first within the person - not a
- *  ranking of people. Null when every item was 판단 불가. */
-function gistOf(review: AgentReview): { assessment: Judged; dimensions: string[] }[] | null {
-  const parts = (['negative', 'mixed', 'positive'] as const)
-    .map((assessment) => ({
-      assessment,
-      dimensions: review.items
-        .filter((item) => item.assessment === assessment)
-        .map((item) => DIMENSION_LABELS[item.dimension]),
-    }))
-    .filter((part) => part.dimensions.length > 0);
-  return parts.length > 0 ? parts : null;
-}
-
-const GIST_COLOUR: Record<Judged, string> = {
-  negative: colour.error,
-  mixed: colour.warn,
-  positive: colour.primary,
-};
-
-function itemCounts(reviews: AgentReview[]): Record<Assessment, number> {
-  const out: Record<Assessment, number> = { positive: 0, mixed: 0, negative: 0, unknown: 0 };
-  for (const review of reviews) for (const item of review.items) out[item.assessment] += 1;
-  return out;
+/** What someone went through, as the log says it: "09:30 본인에게 연락". A Task
+ *  event says its title; any other event its own sentence. At most five. */
+function experiencedLine(review: AgentReview, eventsById: Map<string, DomainEvent> | null): string | null {
+  if (!eventsById) return null;
+  const said: string[] = [];
+  for (const id of review.experiencedEventIds) {
+    const event = eventsById.get(id);
+    if (!event) continue;
+    const title = typeof event.payload.title === 'string' ? event.payload.title : sentenceFor(event)?.text;
+    if (title) said.push(`${formatClock(event.simTimeMs)} ${title}`);
+  }
+  if (said.length === 0) return null;
+  return said.length > 5 ? `${said.slice(0, 5).join(' · ')} 외 ${said.length - 5}건` : said.join(' · ');
 }
 
 interface Props {
   detail: SessionDetail;
   generation: GenerationDetail | null;
-  personas: PersonasPayload | null;
+  /** Everyone in the village, so a person without a review is still listed -
+   *  as not having met the service, never as a blank or a complaint. */
+  residents: string[];
   /** Opens the cited scene on the experience screen and moves its cursor. A
    *  read of a stored log; no adapter runs. */
   onOpenScene: (attemptId: string, eventId: string) => void;
   onGoToImprove: () => void;
-  /** The log of the attempt being read, so cited events can be said as what
-   *  happened rather than as ids. Absent or another attempt: ids only. */
+  /** The small line above the title: which version, or which day ended. */
+  eyebrow: string;
+  /** The log of the attempt being read, so what people went through can be
+   *  said as what happened rather than as ids. Absent or another attempt: ids only. */
   events?: { attemptId: string; list: DomainEvent[] } | null;
 }
 
 export default function EvaluationsScreen({
   detail,
   generation,
-  personas,
+  residents,
   onOpenScene,
   onGoToImprove,
+  eyebrow,
   events = null,
 }: Props) {
   const reviews = useMemo(() => sortReviews(generation?.reviews ?? []), [generation]);
-  const [reviewId, setReviewId] = useState<string | null>(null);
-  const selected = reviews.find((r) => r.id === reviewId) ?? reviews[0] ?? null;
-
-  /**
-   * Which scenario an evaluation is about.
-   *
-   * A session that runs two scenarios produces two evaluations per person - one
-   * for the check-in day, one for the transport day - and the list showed both
-   * as bare "P1", twice, with no way to tell which was which (seen in a browser,
-   * 2026-09-15). The deck comes from the generation's own objective row, so the
-   * name shown is the run's, not a guess.
-   */
-  const scenarioOf = useMemo(() => {
-    const byAttempt = new Map<string, string>();
-    const objective = generation?.metrics.objective ?? {};
-    const labels = new Map(detail.capabilities.decks.map((d) => [d.id, d.label]));
-    for (const [attemptId, row] of Object.entries(objective)) {
-      const deckId = String((row as { deckId?: string }).deckId ?? '');
-      if (deckId) byAttempt.set(attemptId, labels.get(deckId) ?? deckId);
-    }
-    return (attemptId: string) => byAttempt.get(attemptId) ?? null;
-  }, [generation, detail.capabilities.decks]);
-  const manyScenarios = useMemo(
-    () => new Set(reviews.map((r) => scenarioOf(r.attemptId))).size > 1,
-    [reviews, scenarioOf],
-  );
-  const eventsById = useMemo(
-    () => new Map((events?.list ?? []).map((e) => [e.id, e])),
-    [events],
-  );
-  const counts = itemCounts(reviews);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const eventsById = useMemo(() => new Map((events?.list ?? []).map((e) => [e.id, e])), [events]);
   const synthesis = generation?.synthesis ?? null;
 
   if (!generation || reviews.length === 0) {
     return (
       <Sheet>
         <Inner>
-          <PageTitle>주민 평가</PageTitle>
+          <Headline>주민 평가</Headline>
           <Callout>
             <div>
               {detail.running
@@ -275,292 +243,136 @@ export default function EvaluationsScreen({
     );
   }
 
-  const persona = selected
-    ? personas?.profiles.find((p) => p.subjectId === selected.actorId) ?? null
-    : null;
-  // Whether the persona came from source material is one axis; whether the
-  // evaluation is simulated is another, and it is always simulated.
-  const synthetic = personas?.provenance?.dataSource === 'synthetic';
-  const judged = selected?.items.filter((item) => item.assessment !== 'unknown') ?? [];
-  const abstained = selected?.items.filter((item) => item.assessment === 'unknown') ?? [];
-  const cited = selected && events?.attemptId === selected.attemptId ? eventsById : null;
+  // Met the service: anything but 미경험. Everyone else, reviewed or not, is one
+  // quiet row - the review of someone who went through nothing says nothing.
+  const met = reviews.filter((r) => r.usageStatus !== 'no_experience');
+  const reviewed = new Set(reviews.map((r) => r.actorId));
+  const quiet = [
+    ...reviews.filter((r) => r.usageStatus === 'no_experience').map((r) => r.actorId),
+    ...residents.filter((id) => !reviewed.has(id)),
+  ].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
   return (
     <Sheet>
       <Inner>
-        {/* Which version these are is said, not chosen, here: the one version
-            select is the strip's, which also loads that version's day. A second
-            select on this screen could point somewhere else (2026-09-29). */}
         <div>
-          <PageTitle>주민 평가</PageTitle>
-          <Sub>
-            <strong style={{ color: colour.text }}>{versionName(generation.index, generation.label)}</strong>
-            {' '}· 누구에게 어떤 도움과 부담이 생겼나.
-          </Sub>
+          <Eyebrow>{eyebrow}</Eyebrow>
+          <Headline>주민 평가</Headline>
         </div>
+        <Lead>
+          각자 <strong style={{ color: colour.text }}>자기가 겪은 일만</strong> 근거로 말합니다. 겪지 않은
+          사람은 아래에 따로 두고, 불만족으로 세지 않습니다. 점수도 순위도 매기지 않습니다.
+        </Lead>
 
-        <Callout>
-          <div>
-            <Row style={{ gap: 4 }}>
-              <strong>평가 항목의 개수</strong>
-              <Hint label="이 숫자">
-                모의 주민 평가입니다. 실제 주민의 만족도가 아니고 점수도 아닙니다. 항목을 세었을
-                뿐이므로 합계·순위·우열로 읽지 마세요.
-              </Hint>
-            </Row>
-            <Row style={{ gap: 4, marginTop: 6 }}>
-              <Tag $kind="positive">긍정 {counts.positive}</Tag>
-              <Tag $kind="mixed">혼합 {counts.mixed}</Tag>
-              <Tag $kind="negative">부정 {counts.negative}</Tag>
-              <Tag $kind="unknown">판단 불가 {counts.unknown}</Tag>
-            </Row>
-          </div>
-        </Callout>
-
-        <Split>
-          <PersonList>
-            {reviews.map((review) => (
-              <PersonRow
-                key={review.id}
-                $active={selected?.id === review.id}
-                aria-pressed={selected?.id === review.id}
-                onClick={() => setReviewId(review.id)}
-              >
-                <PersonName title={personName(review.actorId)}>
-                  {personName(review.actorId)}
-                </PersonName>
-                <Tag $kind={review.usageStatus === 'used' ? 'neutral' : 'unknown'}>
-                  {USAGE_LABELS[review.usageStatus]}
-                </Tag>
-                {manyScenarios && (
-                  <Sub
-                    as="span"
-                    title={scenarioOf(review.attemptId) ?? ''}
-                    style={{ marginLeft: 'auto', minWidth: 0, flex: '0 1 auto' }}
-                  >
-                    <Clip>{scenarioOf(review.attemptId)}</Clip>
-                  </Sub>
-                )}
-                {review.usageStatus !== 'no_experience' && (
-                  <Gist>
-                    {gistOf(review)?.map((part, index) => (
-                      <span key={part.assessment}>
-                        {index > 0 && ' / '}
-                        <span style={{ color: GIST_COLOUR[part.assessment], fontWeight: 600 }}>
-                          {ASSESSMENT_LABELS[part.assessment]}
-                        </span>{' '}
-                        {part.dimensions.join(', ')}
-                      </span>
-                    )) ?? '판단할 근거가 있는 항목 없음'}
-                  </Gist>
-                )}
+        <Table>
+          {met.map((review) => {
+            const cited = events?.attemptId === review.attemptId ? eventsById : null;
+            const line = experiencedLine(review, cited);
+            const judged = review.items.filter((item) => item.assessment !== 'unknown');
+            const abstained = review.items.filter((item) => item.assessment === 'unknown');
+            const open = openId === review.id;
+            return (
+              <PersonRow key={review.id} $quiet={false}>
+                <strong>{personName(review.actorId)}</strong>
+                <Count $used>겪음 {review.experiencedEventIds.length}건</Count>
+                <Said>
+                  <p>{review.overallNarrative}</p>
+                  {line && <small>{line}</small>}
+                  {review.items.length > 0 && (
+                    <TextLink onClick={() => setOpenId(open ? null : review.id)}>
+                      {open ? '평가 항목 닫기' : `평가 항목 ${review.items.length}개 보기`}
+                    </TextLink>
+                  )}
+                  {open && (
+                    <Items>
+                      {judged.map((item) => (
+                        <DimensionRow key={item.dimension} item={item} attemptId={review.attemptId}
+                          eventsById={cited} onOpenScene={onOpenScene} />
+                      ))}
+                      {abstained.length > 0 && (
+                        <Disclosure>
+                          <summary>
+                            판단 불가 {abstained.length}개 —{' '}
+                            {abstained.map((item) => DIMENSION_LABELS[item.dimension]).join(', ')}
+                          </summary>
+                          <div>
+                            {abstained.map((item) => (
+                              <DimensionRow key={item.dimension} item={item} attemptId={review.attemptId}
+                                eventsById={cited} onOpenScene={onOpenScene} />
+                            ))}
+                          </div>
+                        </Disclosure>
+                      )}
+                      {review.items.some((i) => i.requestedChange) && (
+                        <div>
+                          <Sub>요청한 변경</Sub>
+                          <ul style={{ margin: '4px 0 0', paddingLeft: 18, lineHeight: 1.7 }}>
+                            {review.items.filter((i) => i.requestedChange).map((item, index) => (
+                              <li key={index}>{item.requestedChange}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {review.unknowns.length > 0 && (
+                        <div>
+                          <Sub>판단할 수 없는 것</Sub>
+                          <ul style={{ margin: '4px 0 0', paddingLeft: 18, lineHeight: 1.7 }}>
+                            {review.unknowns.map((unknown) => <li key={unknown}>{unknown}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                      <Sub>
+                        {USAGE_LABELS[review.usageStatus]} · {review.adapter} 어댑터 · 리뷰{' '}
+                        <Mono>{review.id}</Mono>
+                      </Sub>
+                    </Items>
+                  )}
+                </Said>
               </PersonRow>
-            ))}
-            <Row style={{ marginTop: 6, gap: 2 }}>
-              <Sub as="span">읽는 순서</Sub>
-              <Hint label="읽는 순서">
-                서비스를 만난 사람부터 나옵니다. 미경험과 제안 없음은 불만이 아니므로 부정 평가로
-                정렬하지 않습니다.
-              </Hint>
-            </Row>
-          </PersonList>
+            );
+          })}
+          {quiet.map((id) => (
+            <PersonRow key={id} $quiet>
+              <strong>{personName(id)}</strong>
+              <Count $used={false}>미경험</Count>
+              <Quiet>오늘 이 서비스와 아무 일도 겪지 않았습니다.</Quiet>
+            </PersonRow>
+          ))}
+        </Table>
 
-          {selected && (
-            <Card>
-              <Row style={{ gap: 8, flexWrap: 'wrap' }}>
-                <strong style={{ fontSize: font.section }}>{personName(selected.actorId)}</strong>
-                {scenarioOf(selected.attemptId) && (
-                  <Tag $kind="neutral">{scenarioOf(selected.attemptId)}</Tag>
-                )}
-                <Tag $kind="unknown">모의 주민 평가</Tag>
-                <Hint label="모의 주민 평가">
-                  원자료에 근거한 페르소나여도 이 평가 자체는 simulated입니다. 실제 사람의 응답은
-                  개선과 확인 화면의 현장 기록에만 있습니다.
-                </Hint>
-                <Tag $kind={synthetic ? 'warn' : 'neutral'}>
-                  페르소나 {synthetic ? '합성' : '원자료 기반'}
-                  {persona ? '' : ' (기록 없음)'}
-                </Tag>
-                <Tag $kind="unknown">{selected.adapter} 어댑터</Tag>
-              </Row>
+        <Sub>
+          합성 평가입니다. 실제 주민의 만족도나 동의가 아니며, 나중에 실제 주민이 확인·반박할 대상입니다.
+        </Sub>
 
-              <div>
-                <Sub>1 · 이번에 무엇을 경험했나</Sub>
-                <Body>{selected.overallNarrative}</Body>
-                <Row style={{ gap: 6, marginTop: 4 }}>
-                  <Tag $kind="neutral">{USAGE_LABELS[selected.usageStatus]}</Tag>
-                  <Sub as="span">경험한 사건 {selected.experiencedEventIds.length}건</Sub>
-                </Row>
-              </div>
-
-              <div>
-                <Sub>2 · 차원별 평가와 이유</Sub>
-                {judged.map((item) => (
-                  <DimensionRow
-                    key={item.dimension}
-                    item={item}
-                    attemptId={selected.attemptId}
-                    eventsById={cited}
-                    onOpenScene={onOpenScene}
-                  />
-                ))}
-                {abstained.length > 0 && (
-                  <Disclosure style={{ marginTop: 10 }}>
-                    <summary>
-                      판단 불가 {abstained.length}개 —{' '}
-                      {abstained.map((item) => DIMENSION_LABELS[item.dimension]).join(', ')}
-                    </summary>
-                    <div>
-                      {abstained.map((item) => (
-                        <DimensionRow
-                          key={item.dimension}
-                          item={item}
-                          attemptId={selected.attemptId}
-                          eventsById={cited}
-                          onOpenScene={onOpenScene}
-                        />
-                      ))}
-                    </div>
-                  </Disclosure>
-                )}
-              </div>
-
-              {selected.items.some((i) => i.requestedChange) && (
-                <div>
-                  <Sub>3 · 요청한 변경</Sub>
-                  <ul style={{ margin: '4px 0 0', paddingLeft: 18, lineHeight: 1.7 }}>
-                    {selected.items
-                      .filter((i) => i.requestedChange)
-                      .map((item, index) => (
-                        <li key={index} style={{ fontSize: font.body }}>
-                          {item.requestedChange}
-                        </li>
-                      ))}
-                  </ul>
-                </div>
-              )}
-
-              <div>
-                <Sub>4 · 판단할 수 없는 것</Sub>
-                {selected.unknowns.length > 0 ? (
-                  <ul style={{ margin: '4px 0 0', paddingLeft: 18, lineHeight: 1.7 }}>
-                    {selected.unknowns.map((line) => (
-                      <li key={line} style={{ fontSize: font.body }}>
-                        {line}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <Sub>이 사람이 적어 둔 '모르는 것'은 없습니다.</Sub>
-                )}
-              </div>
-
-              <Disclosure>
-                <summary>기술 정보 · 감사</summary>
-                <div>
-                  <Sub>
-                    리뷰 <Mono>{selected.id}</Mono> · 시도 <Mono>{selected.attemptId}</Mono>
-                  </Sub>
-                  <Sub>
-                    계약 버전 <Mono>{selected.promptVersion}</Mono> · 출처{' '}
-                    <Mono>{selected.source}</Mono>
-                  </Sub>
-                  <Sub>{selected.disclaimer}</Sub>
-                </div>
-              </Disclosure>
-            </Card>
-          )}
-        </Split>
-
-        {synthesis && (
-          <div>
-            <Row style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <Row style={{ gap: 2 }}>
-                <strong style={{ fontSize: font.section }}>쟁점 묶음</strong>
-                <Hint label="쟁점 묶음">
-                  원본 평가의 읽기용 요약입니다. 몇 명이 말했는지로 우선순위를 정하지 않습니다.
-                </Hint>
-              </Row>
-            </Row>
-            {synthesis.issueGroups.length === 0 ? (
-              <Sub>이 실행의 평가에서 묶인 쟁점이 없습니다.</Sub>
-            ) : (
-              synthesis.issueGroups.map((issue) => (
+        {synthesis && synthesis.issueGroups.length > 0 && (
+          <Disclosure>
+            <summary>쟁점 묶음 {synthesis.issueGroups.length}개 · 원본 평가의 읽기용 요약</summary>
+            <div>
+              {synthesis.issueGroups.map((issue) => (
                 <div key={issue.id} style={{ marginTop: 8 }}>
                   <Row style={{ gap: 6, flexWrap: 'wrap' }}>
-                    <Tag $kind={issue.minority ? 'warn' : 'neutral'}>
-                      {DIMENSION_LABELS[issue.dimension]}
-                    </Tag>
+                    <Tag $kind={issue.minority ? 'warn' : 'neutral'}>{DIMENSION_LABELS[issue.dimension]}</Tag>
                     {issue.minority && <Tag $kind="warn">소수 의견</Tag>}
                     <strong>{issue.title}</strong>
                   </Row>
-                  {issue.dissentingActors.length > 0 && (
-                    <Sub>
-                      같은 항목을 반대로 평가한 사람:{' '}
-                      {issue.dissentingActors.map(personName).join(', ')}
-                    </Sub>
-                  )}
-                  {/* Which original items this issue is made of - a claim the
-                      synthesis cannot make without them (26번 F08). */}
-                  <Disclosure>
-                    <summary>원본 평가 {issue.reviewItemRefs.length}건 보기</summary>
-                    <div>
-                      {issue.reviewItemRefs.map((ref) => {
-                        const [reviewId, indexText] = ref.split('#');
-                        const review = reviews.find((r) => r.id === reviewId);
-                        const item = review?.items[Number(indexText)];
-                        if (!review || !item) {
-                          return (
-                            <Sub key={ref} style={{ color: colour.warn }}>
-                              <Mono>{ref}</Mono> — 이 실행의 평가에서 찾지 못했습니다.
-                            </Sub>
-                          );
-                        }
-                        return (
-                          <Sub key={ref}>
-                            <strong>{personName(review.actorId)}</strong> ·{' '}
-                            {DIMENSION_LABELS[item.dimension]} ·{' '}
-                            {ASSESSMENT_LABELS[item.assessment]} — {item.reason}
-                          </Sub>
-                        );
-                      })}
-                    </div>
-                  </Disclosure>
+                  {issue.reviewItemRefs.map((ref) => {
+                    const [reviewId, indexText] = ref.split('#');
+                    const review = reviews.find((r) => r.id === reviewId);
+                    const item = review?.items[Number(indexText)];
+                    return review && item ? (
+                      <Sub key={ref}>
+                        <strong>{personName(review.actorId)}</strong> · {ASSESSMENT_LABELS[item.assessment]} —{' '}
+                        {item.reason}
+                      </Sub>
+                    ) : null;
+                  })}
                 </div>
-              ))
-            )}
-            {synthesis.ungroundedClaims.length > 0 && (
-              <Callout $tone="warn" style={{ marginTop: 10 }}>
-                <div>
-                  <strong>근거가 확인되지 않은 주장 {synthesis.ungroundedClaims.length}건</strong>
-                  <Hint label="근거 확인">
-                    사건 참조가 있는지는 기계가 봅니다. 그 사건이 이 주장을 뒷받침하는지는 사람이
-                    판단해야 합니다.
-                  </Hint>
-                  <div style={{ marginTop: 4 }}>{synthesis.ungroundedClaims.join(' · ')}</div>
-                </div>
-              </Callout>
-            )}
-            {synthesis.noExperienceActors.length > 0 && (
-              <Sub style={{ marginTop: 6 }}>
-                이 하루에 서비스를 만나지 않은 사람:{' '}
-                {synthesis.noExperienceActors.map(personName).join(', ')}
-                <Hint label="서비스를 만나지 않은 사람">
-                  관찰 결과이며 불만이 아닙니다. 평가 항목이 없다는 뜻입니다.
-                </Hint>
-              </Sub>
-            )}
-          </div>
+              ))}
+            </div>
+          </Disclosure>
         )}
 
-        <Row>
-          <Button $primary onClick={onGoToImprove}>
-            이 평가에서 개선안 만들기
-          </Button>
-          <Hint label="개선안 만들기">
-            다음 화면에서 바꿀 규칙을 고르고, 이유를 적어 실행합니다.
-          </Hint>
-        </Row>
+        <Next onClick={onGoToImprove}>이 평가를 보고 무엇을 고칠지 고른다</Next>
       </Inner>
     </Sheet>
   );

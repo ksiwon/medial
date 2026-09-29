@@ -4,14 +4,14 @@ import attemptFixture from '../../../../fixtures/ui/attempt.json';
 import neighboursFixture from '../../../../fixtures/ui/attempt-neighbours.json';
 import eventsFixture from '../../../../fixtures/ui/events.json';
 import neighbourEventsFixture from '../../../../fixtures/ui/events-neighbours.json';
-import personasFixture from '../../../../fixtures/ui/personas.json';
 import sessionFixture from '../../../../fixtures/ui/session.json';
 import villageFixture from '../../../../fixtures/ui/village.json';
-import { ASSESSMENT_LABELS, DIMENSION_LABELS, type SessionDetail } from '../api/iteration';
-import type { AttemptDetail, DomainEvent, PersonasPayload, VillagePayload } from '../api/types';
+import type { GenerationDetail, SessionDetail } from '../api/iteration';
+import type { AttemptDetail, DomainEvent, StoredScenes, VillagePayload } from '../api/types';
 import { usePlayback } from '../scene/playback';
-import { personName, sentenceFor } from '../selectors/story';
+import { learnPeople, personName, sentenceFor } from '../selectors/story';
 import { dayChangeLines } from '../selectors/words';
+import ChoiceScreen from './ChoiceScreen';
 import CompareScreen, { type CompareDecisions } from './CompareScreen';
 import EvaluationsScreen from './EvaluationsScreen';
 import { versionName } from '../ui/primitives';
@@ -38,7 +38,6 @@ const events = (eventsFixture as { events: DomainEvent[] }).events;
 /** The same day under 가까운 이웃 우선, where the refusal table actually fires. */
 const neighbours = neighboursFixture as unknown as AttemptDetail;
 const neighbourEvents = (neighbourEventsFixture as { events: DomainEvent[] }).events;
-const personas = personasFixture as unknown as PersonasPayload;
 const session = sessionFixture as unknown as SessionDetail;
 
 const noop = () => {};
@@ -81,6 +80,7 @@ function observe({ run = detail, log = events, at }: {
   return render(
     <ObserveScreen village={village} detail={run} events={log} art={new Set()}
       caseAction={{ label: '새 사례 준비', onClick: noop }}
+      dayEnd={{ text: '하루가 끝났습니다', action: '주민 평가 읽기 →' }}
       onReadEvaluations={noop} />,
   );
 }
@@ -266,119 +266,98 @@ describe('CompareScreen', () => {
 });
 
 describe('EvaluationsScreen', () => {
+  const ordered = () => [...session.generations].sort((a, b) => a.index - b.index);
   function evaluations(overrides: Partial<Parameters<typeof EvaluationsScreen>[0]> = {}) {
-    const ordered = [...session.generations].sort((a, b) => a.index - b.index);
     return render(
       <EvaluationsScreen
         detail={session}
-        generation={ordered[0]}
-        personas={personas}
+        generation={ordered()[0]}
+        residents={village.residents.map((r) => r.id)}
+        eyebrow={versionName(ordered()[0].index, ordered()[0].label)}
         onOpenScene={noop}
         onGoToImprove={noop}
         {...overrides}
       />,
     );
   }
+  /** Opens a person's items: the row's own link, not a list elsewhere. */
+  const openItems = (actorId: string) => {
+    const row = screen.getAllByText(personName(actorId))[0].parentElement!;
+    fireEvent.click(row.querySelector('button')!);
+  };
 
-  it('reads one resident in doc 20 order and calls the evaluation simulated', () => {
+  it('says one row a person - their words, how much they went through - and that it is simulated', () => {
+    const review = ordered()[0].reviews.find((r) => r.usageStatus !== 'no_experience')!;
     const { container } = evaluations();
     const text = container.textContent ?? '';
-    expect(text).toContain('모의 주민 평가');
-    expect(text).toContain('1 · 이번에 무엇을 경험했나');
-    expect(text).toContain('2 · 차원별 평가와 이유');
-    expect(text).toContain('4 · 판단할 수 없는 것');
-    // The four dimension assessments are said in Korean, never as their keys.
+    expect(text).toContain(review.overallNarrative);
+    expect(text).toContain(`겪음 ${review.experiencedEventIds.length}건`);
+    expect(text).toContain('합성 평가입니다');
+    expect(text).toContain(versionName(ordered()[0].index, ordered()[0].label));
+    expect(container.querySelector('select')).toBeNull();
+  });
+
+  it('lists everyone, and someone who met nothing as 미경험 rather than as a complaint', () => {
+    const { container } = evaluations({ residents: [...village.residents.map((r) => r.id), 'P99'] });
+    const row = screen.getByText(personName('P99')).parentElement!;
+    expect(row.textContent).toContain('미경험');
+    expect(row.textContent).toContain('오늘 이 서비스와 아무 일도 겪지 않았습니다');
+    expect(container.textContent).toContain('불만족으로 세지 않습니다');
+  });
+
+  it('shows no score, average or ranking', () => {
+    const { container } = evaluations();
+    const text = container.textContent ?? '';
+    expect(text).not.toMatch(/만족도\s*[0-9]/);
+    expect(text).not.toContain('평균');
+    expect(text).not.toContain('승자');
+    // Dimensions and assessments are said in Korean, never as their keys.
     expect(text).not.toContain('help_resolution');
     expect(text).not.toMatch(/\bmixed\b/);
   });
 
-  it('says which version it is reading, and offers no second version select', () => {
-    const ordered = [...session.generations].sort((a, b) => a.index - b.index);
-    const { container } = evaluations();
-    expect(container.textContent).toContain(versionName(ordered[0].index, ordered[0].label));
-    expect(container.querySelector('select')).toBeNull();
+  it('says when they went through it when that attempt is loaded', () => {
+    const review = ordered()[0].reviews.find((r) => r.experiencedEventIds.length > 0);
+    const sayable = events.find((e) => sentenceFor(e));
+    if (!review || !sayable) return;
+    const cited = { ...sayable, id: review.experiencedEventIds[0] };
+    evaluations({ events: { attemptId: review.attemptId, list: [cited] } });
+    expect(screen.getByText(sentenceFor(cited)!.text, { exact: false })).toBeDefined();
   });
 
-  it('counts items and says so, rather than showing a score', () => {
-    const { container } = evaluations();
-    const text = container.textContent ?? '';
-    expect(text).toContain('평가 항목의 개수');
-    expect(text).not.toMatch(/만족도\s*[0-9]/);
-    expect(text).not.toContain('평균');
-    expect(text).not.toContain('승자');
-  });
-
-  it('keeps 미경험 out of the complaints and says it is an observation', () => {
-    evaluations();
-    expect(hint('읽는 순서')).toContain('미경험과 제안 없음은 불만이 아니므로');
-  });
-
-  it('opens an evaluation item\'s evidence in place and closes back to it', () => {
-    const ordered = [...session.generations].sort((a, b) => a.index - b.index);
-    const review = ordered[0].reviews.find((r) =>
-      r.items.some((i) => i.eventRefs.length > 0),
-    );
-    if (!review) return;
-    evaluations();
-    // The person list is the left column; the same name also appears in the
-    // opened card, so the click target is the list row.
-    fireEvent.click(screen.getAllByText(new RegExp(`^${review.actorId}$`))[0]);
-    const open = screen.getAllByText(/사건 근거 [0-9]+건 보기/)[0];
-    fireEvent.click(open);
-    expect(screen.getAllByText('그 장면 열기').length).toBeGreaterThan(0);
-    fireEvent.click(screen.getAllByText(/사건 근거 [0-9]+건 닫기/)[0]);
-    expect(screen.queryByText('그 장면 열기')).toBeNull();
-  });
-
-  it('says under each name what that person judged, and never an unjudged item', () => {
-    const ordered = [...session.generations].sort((a, b) => a.index - b.index);
-    const review = ordered[0].reviews.find((r) => r.items.some((i) => i.assessment !== 'unknown'));
-    if (!review) return;
-    evaluations();
-    const row = screen.getAllByRole('button').find(
-      (b) => b.getAttribute('aria-pressed') !== null && b.textContent?.startsWith(personName(review.actorId)),
-    )!;
-    const judged = review.items.find((i) => i.assessment !== 'unknown')!;
-    expect(row.textContent).toContain(ASSESSMENT_LABELS[judged.assessment]);
-    expect(row.textContent).toContain(DIMENSION_LABELS[judged.dimension]);
-    expect(row.textContent).not.toContain('판단 불가');
-  });
-
-  it('folds the dimensions judged 판단 불가 into one line, and keeps them', () => {
-    const ordered = [...session.generations].sort((a, b) => a.index - b.index);
-    const review = ordered[0].reviews.find((r) => r.items.some((i) => i.assessment === 'unknown'));
+  it('opens a row to its items and folds the ones judged 판단 불가, keeping them', () => {
+    const review = ordered()[0].reviews.find((r) =>
+      r.usageStatus !== 'no_experience' && r.items.some((i) => i.assessment === 'unknown'));
     if (!review) return;
     const { container } = evaluations();
-    fireEvent.click(screen.getAllByText(new RegExp(`^${personName(review.actorId)}$`))[0]);
+    openItems(review.actorId);
+    const judged = review.items.find((i) => i.assessment !== 'unknown');
+    if (judged) expect(container.textContent).toContain(judged.reason);
     const unknown = review.items.filter((i) => i.assessment === 'unknown');
     const summary = [...container.querySelectorAll('summary')].find((el) =>
       el.textContent?.startsWith('판단 불가'),
     );
     expect(summary?.textContent).toContain(`판단 불가 ${unknown.length}개`);
-    // Folded, not dropped: the reasons are still in the card.
     expect(summary?.parentElement?.textContent).toContain(unknown[0].reason);
   });
 
-  it('says a cited event as what happened when that attempt is loaded', () => {
-    const ordered = [...session.generations].sort((a, b) => a.index - b.index);
-    const review = ordered[0].reviews.find((r) =>
-      r.items.some((i) => i.assessment !== 'unknown' && i.eventRefs.length > 0),
-    );
-    const sayable = events.find((e) => sentenceFor(e));
-    if (!review || !sayable) return;
-    const item = review.items.find((i) => i.assessment !== 'unknown' && i.eventRefs.length > 0)!;
-    const cited = { ...sayable, id: item.eventRefs[0] };
-    evaluations({ events: { attemptId: review.attemptId, list: [cited] } });
-    fireEvent.click(screen.getAllByText(new RegExp(`^${personName(review.actorId)}$`))[0]);
+  it('opens an item\'s evidence in place and closes back to it', () => {
+    const review = ordered()[0].reviews.find((r) =>
+      r.usageStatus !== 'no_experience'
+      && r.items.some((i) => i.assessment !== 'unknown' && i.eventRefs.length > 0));
+    if (!review) return;
+    evaluations();
+    openItems(review.actorId);
     fireEvent.click(screen.getAllByText(/사건 근거 [0-9]+건 보기/)[0]);
-    expect(screen.getByText(sentenceFor(cited)!.text, { exact: false })).toBeDefined();
+    expect(screen.getAllByText('그 장면 열기').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getAllByText(/사건 근거 [0-9]+건 닫기/)[0]);
+    expect(screen.queryByText('그 장면 열기')).toBeNull();
   });
 
-  it('shows the original evaluation items an issue was made of', () => {
-    const ordered = [...session.generations].sort((a, b) => a.index - b.index);
-    if ((ordered[0].synthesis?.issueGroups.length ?? 0) === 0) return;
+  it('keeps the issue groups, with the original items they were made of', () => {
+    if ((ordered()[0].synthesis?.issueGroups.length ?? 0) === 0) return;
     const { container } = evaluations();
-    expect(container.textContent).toContain('원본 평가');
+    expect(container.textContent).toContain('쟁점 묶음');
   });
 });
 
@@ -497,5 +476,88 @@ describe('RecordingsScreen', () => {
     render(<RecordingsScreen sessions={[]} currentId={null} onOpen={noop} onReturn={noop} />);
     expect(screen.getByText('아직 얼려 둔 기록이 없습니다.')).toBeDefined();
     expect(screen.getByText('python scripts/freeze_sim.py')).toBeDefined();
+  });
+});
+
+describe('a record that carries its scenes (the exhibition record)', () => {
+  const at = events[0];
+  const scenes: StoredScenes = {
+    source: 'exhibition-record', model: 'gpt-6-sol', day: 1, title: '응답 없는 안부 확인', summary: '',
+    people: { P1: '가명일' },
+    episodes: [{
+      requestId: 'w1', subjectId: 'P1', title: '본인에게 연락', firstOfRequest: true,
+      startMs: 9.5 * 3_600_000, endMs: 9.6 * 3_600_000,
+      beats: [{
+        requestId: 'w1', firstSeq: at.seq, lastSeq: at.seq, startMs: 9.5 * 3_600_000, endMs: 9.6 * 3_600_000,
+        frames: [
+          { key: 'HOME:P1', place: 'HOME:P1', label: '자택', device: '안내 시계', who: [], poses: {} },
+          { key: 'FARM', place: 'FARM', label: '밭', device: null, who: ['P1'], poses: { P1: 'work' } },
+        ],
+        cast: ['MEDial'], medial: true, waiting: null,
+        lines: [{ seq: at.seq, kind: 'say', speaker: 'MEDial', text: '어르신, 다시 부릅니다.' }],
+      }],
+    }],
+    panels: { w1: { subtitle: '응답 없는 안부 확인 · P1 가명일', judgment: {
+      question: null, knows: ['09:30 안부 문진에 응답이 없다'], rules: [], ruledOut: [],
+      asked: [{ actorId: 'P1', verdict: 'no_answer', heard: null }],
+      told: ['부른 시각'], withheld: ['그 밖의 시각'], rationale: null, result: null,
+    } } },
+  };
+
+  it('plays its own lines and panel instead of reading them off the log', () => {
+    learnPeople(scenes.people);
+    observe({ run: { ...detail, scenes }, at: { seq: at.seq } });
+    expect(screen.getByText('어르신, 다시 부릅니다.', { exact: false })).toBeDefined();
+    expect(screen.getByText('응답 없는 안부 확인 · P1 가명일')).toBeDefined();
+    expect(screen.getByText('09:30 안부 문진에 응답이 없다')).toBeDefined();
+    // What MEDial keeps back is said as such.
+    expect(screen.getByText(/말하지 않는다 — 그 밖의 시각/)).toBeDefined();
+    // Both places are frames, and the person carries their name.
+    expect(screen.getAllByText('P1 가명일').length).toBeGreaterThan(0);
+    learnPeople(null);
+    expect(personName('P1')).toBe('P1');
+  });
+});
+
+describe('ChoiceScreen', () => {
+  const base = session.generations[0];
+  const gen = (id: string, over: Partial<GenerationDetail>): GenerationDetail =>
+    ({ ...base, id, index: 0, parentGenerationId: null, changeSets: [], reviews: [], ...over });
+  const change = (id: string, label: string) => ({
+    ...(session.generations.flatMap((g) => g.changeSets)[0] ?? {}), id, label, mechanism: `${label} 이유`,
+    changes: [{ scope: 'task', target: 'timing_burden', questId: 'q', taskIds: [], field: 'retry',
+                beforeRule: '전 규칙', afterRule: '후 규칙', executionBindings: [], semantic: null }],
+  }) as unknown as GenerationDetail['changeSets'][number];
+  const tree = {
+    ...session,
+    generations: [
+      gen('a', { label: '빠르게 확인한다', confirmationReason: '짧게 끊는다',
+                 changeSets: [change('c1', '고친 안'), change('c2', '돌리지 않은 안')] }),
+      gen('b', { label: '주민을 덜 부른다' }),
+      gen('a1', { index: 1, parentGenerationId: 'a', appliedChangeSetId: 'c1', label: '고친 안' }),
+    ],
+  } as SessionDetail;
+
+  it('starts with the first settings, one card each', () => {
+    render(<ChoiceScreen detail={tree} current={null} onChoose={noop} onRestart={noop} />);
+    expect(screen.getByText('MEDial을 어떤 규칙으로 처음 켤 것인가')).toBeDefined();
+    expect(screen.getByText('빠르게 확인한다')).toBeDefined();
+    expect(screen.getByText('주민을 덜 부른다')).toBeDefined();
+  });
+
+  it('offers the day\'s revisions, and one that was never run cannot be chosen', () => {
+    let chosen = '';
+    render(<ChoiceScreen detail={tree} current={tree.generations[0]} onChoose={(id) => { chosen = id; }}
+      onRestart={noop} />);
+    fireEvent.click(screen.getByText('고친 안').closest('button')!);
+    expect(chosen).toBe('a1');
+    expect((screen.getByText('돌리지 않은 안').closest('button') as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getAllByText('후 규칙').length).toBe(2);
+  });
+
+  it('ends the walk with the days taken and a way back', () => {
+    render(<ChoiceScreen detail={tree} current={tree.generations[2]} onChoose={noop} onRestart={noop} />);
+    expect(screen.getByText('사흘이 끝났습니다')).toBeDefined();
+    expect(screen.getByText('처음부터 다른 길로')).toBeDefined();
   });
 });

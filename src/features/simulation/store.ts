@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { api, ApiError } from './api/client';
 import { usePlayback } from './scene/playback';
-import { learnPlaces } from './selectors/story';
+import { learnPeople, learnPlaces } from './selectors/story';
 import type {
   AttemptDetail,
   Catalog,
@@ -100,6 +100,8 @@ export const useSimStore = create<SimState>((set, get) => ({
   setActive: async (id) => {
     const loaded = get().attempts[id] ?? (await load(set, id));
     const village = get().village;
+    // Whose names the lines use: only a record that carries them sets any.
+    learnPeople(loaded.detail.scenes?.people);
     set({ activeId: id });
     if (village) usePlayback.getState().load({ attemptId: id, ...loaded, village });
   },

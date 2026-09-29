@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import type { VillagePayload } from '../api/types';
-import { backdropOf, figureOf, FIT, type Fit } from './art';
+import { artIdOf, backdropOf, figureOf, FIT, type Fit } from './art';
 import { MEDIAL } from './beats';
 import { Figure } from './Figure';
 import JudgmentPanel from './JudgmentPanel';
@@ -210,7 +210,7 @@ interface Props {
   typing: boolean;
   /** Real seconds the beat plays for, for the slow push-in. */
   seconds: number;
-  panel: { title: string; tint: string; judgment: Judgment; lit: number };
+  panel: { title: string; subtitle?: string | null; tint: string; judgment: Judgment; lit: number };
 }
 
 export default function SceneStage({ beat, beatKey, village, art, line, typing, seconds, panel }: Props) {
@@ -237,14 +237,19 @@ export default function SceneStage({ beat, beatKey, village, art, line, typing, 
   }
 
   const layout = beat.frames.map((frame) => {
-    const fits = frame.who.map((id) => FIT[frame.poses[id] ?? 'stand']);
+    const pair = cprPair(frame, art);
+    const who = pair ? frame.who.filter((id) => id !== pair.lying) : frame.who;
+    const fits = who.map((id) => (pair && id === pair.doer ? 'wide' : FIT[frame.poses[id] ?? 'stand']));
     const at = xs(fits);
-    const many = frame.who.length > 1;
-    return frame.who.map((id, i) => ({ id, fit: fits[i], x: at[i], many }));
+    const many = who.length > 1;
+    return who.map((id, i) => ({
+      id, fit: fits[i], x: at[i], many,
+      ...(pair && id === pair.doer ? { picture: pair.picture, names: [pair.doer, pair.lying] } : {}),
+    }));
   });
   const anchor = (id: string) => {
     for (let fi = 0; fi < layout.length; fi += 1) {
-      const hit = layout[fi].find((p) => p.id === id);
+      const hit = layout[fi].find((p) => p.id === id || p.names?.includes(id));
       if (hit) return { fi, x: hit.x };
     }
     return null;
@@ -281,11 +286,24 @@ export default function SceneStage({ beat, beatKey, village, art, line, typing, 
   );
 }
 
+/**
+ * Someone giving chest compressions to a person lying down is one picture: their
+ * bodies touch, and two separate layers never lined up (the exhibition's rule,
+ * art.mjs). Only when that picture was drawn; otherwise each is drawn alone.
+ */
+function cprPair(frame: Frame, art: ReadonlySet<string>) {
+  const doer = frame.who.find((id) => frame.poses[id] === 'cpr');
+  const lying = frame.who.find((id) => frame.poses[id] === 'lying');
+  if (!doer || !lying) return null;
+  const picture = `${artIdOf(doer)}.cpr+${artIdOf(lying)}.lying`;
+  return art.has(picture) ? { doer, lying, picture } : null;
+}
+
 function FrameView({ frame, village, art, people, sharp, pushed, seconds, children }: {
   frame: Frame;
   village: VillagePayload;
   art: ReadonlySet<string>;
-  people: { id: string; fit: Fit; x: number; many: boolean }[];
+  people: { id: string; fit: Fit; x: number; many: boolean; picture?: string; names?: string[] }[];
   sharp: Set<string> | null;
   pushed: boolean;
   seconds: number;
@@ -304,15 +322,17 @@ function FrameView({ frame, village, art, people, sharp, pushed, seconds, childr
           const size = p.fit === 'tall' && p.many ? 'height:106%' : p.fit === 'wide' && p.many ? 'width:64%' : place.size;
           const [prop, value] = size.split(':');
           return (
-            <Person key={p.id} $soft={!!sharp && !sharp.has(p.id)} data-who={p.id}
+            <Person key={p.id} $soft={!!sharp && !(p.names ?? [p.id]).some((id) => sharp.has(id))} data-who={p.id}
               style={{ left: `${p.x}%`, bottom: `${place.bottom}%`, [prop]: value, aspectRatio: place.ratio }}>
-              <Figure picture={figureOf(p.id, frame.poses[p.id] ?? 'stand', frame, art)} actorId={p.id} fit={p.fit}
+              <Figure picture={p.picture ?? figureOf(p.id, frame.poses[p.id] ?? 'stand', frame, art)} actorId={p.id} fit={p.fit}
                 isVillageHead={head(p.id)} />
             </Person>
           );
         })}
       </Cam>
-      {people.map((p) => <Tag key={p.id} style={{ left: `${p.x}%` }}>{nameOf(p.id)}</Tag>)}
+      {people.flatMap((p) => (p.names ?? [p.id]).map((id, i, all) => (
+        <Tag key={id} style={{ left: `${p.x + (all.length > 1 ? (i - 0.5) * 22 : 0)}%` }}>{nameOf(id)}</Tag>
+      )))}
       <Label>{frame.label}{frame.device && <i>{frame.device}</i>}</Label>
       {children}
     </FrameBox>

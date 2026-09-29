@@ -4,6 +4,7 @@ import ComparePanel from './components/ComparePanel';
 import FieldSheet from './components/FieldSheet';
 import GenerationPanel from './components/GenerationPanel';
 import ProgressBar from './components/ProgressBar';
+import ChoiceScreen from './screens/ChoiceScreen';
 import CompareScreen from './screens/CompareScreen';
 import EvaluationsScreen from './screens/EvaluationsScreen';
 import ObserveScreen from './screens/ObserveScreen';
@@ -11,6 +12,7 @@ import PrepareScreen from './screens/PrepareScreen';
 import RecordingsScreen from './screens/RecordingsScreen';
 import { useIterationStore, type Screen } from './iterationStore';
 import { usePlayback } from './scene/playback';
+import { dayFacts, dayLine, dayName, isTree, pathTo } from './selectors/tree';
 import { useSimStore } from './store';
 import {
   Button,
@@ -20,6 +22,7 @@ import {
   Sub,
   Tag,
   TextLink,
+  versionName,
 } from './ui/primitives';
 import { colour, font, radius } from './ui/theme';
 
@@ -180,6 +183,55 @@ const SecondaryInner = styled.div`
   gap: 16px;
 `;
 
+/** The day, in the header of a branching record - the exhibition wall's chip. */
+const Day = styled.span`
+  font-size: 12px;
+  font-weight: 800;
+  color: #ffffff;
+  background: #15150f;
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+`;
+
+/** The path walked so far: one crumb a day, each opening that day again. */
+const Crumbs = styled.nav`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  font-size: ${font.small};
+  color: ${colour.secondary};
+  > span > button, > button {
+    font: inherit;
+    border: none;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: ${radius.control};
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 240px;
+  }
+  button:hover { color: ${colour.text}; background: ${colour.selected}; }
+  button[aria-current] { color: ${colour.text}; font-weight: 700; }
+`;
+
+const Disclaimer = styled.span`
+  font-size: 12px;
+  color: ${colour.secondary};
+  border: 1px solid ${colour.border};
+  border-radius: 999px;
+  padding: 4px 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+`;
+
 const NAV: { key: Screen; label: string }[] = [
   { key: 'case', label: '사례와 서비스 경험' },
   { key: 'evaluations', label: '주민 평가' },
@@ -286,6 +338,11 @@ export default function SimulationApp() {
   }
 
   const screen = it.screen;
+  // A record whose versions branch - the exhibition record - is walked one day
+  // at a time by choosing (selectors/tree, ChoiceScreen): first setting, day,
+  // reviews, revision, next day. Its shell is the wall's: the day, the path,
+  // and what is simulated; the three screens are reached by that walk.
+  const tree = isTree(it.detail);
   // sim plays what real ran and starts nothing; real generates as it goes.
   // Everything below that differs between the two reads this one flag.
   const sim = s.catalog.mode === 'sim';
@@ -297,6 +354,78 @@ export default function SimulationApp() {
     it.caseView === 'auto' ? (hasRun ? 'experience' : 'setup')
       : it.caseView === 'experience' && hasRun ? 'experience'
         : 'setup';
+
+  if (tree && it.detail) {
+    const detail = it.detail;
+    const current = it.pathStarted ? viewGeneration : null;
+    const walked = current ? pathTo(detail, current.id) : [];
+    return (
+      <Root>
+        <Header>
+          <Brand>MEDial</Brand>
+          {current && <Day>{dayName(current)}</Day>}
+          <Crumbs aria-label="고른 길">
+            {walked.map((g, i) => (
+              <span key={g.id} style={{ display: 'contents' }}>
+                {i > 0 && <span aria-hidden>→</span>}
+                <button type="button" aria-current={g.id === current?.id ? 'step' : undefined}
+                  title={`${dayName(g)} · ${g.label}`} onClick={() => void it.choose(g.id)}>
+                  {dayName(g)} · {g.label}
+                </button>
+              </span>
+            ))}
+            {current && <button type="button" onClick={it.restartPath}>↺ 처음부터</button>}
+          </Crumbs>
+          <span style={{ flex: 1 }} />
+          <Disclaimer title={detail.session.stopDetail ?? undefined}>
+            화면 속 사람과 대화는 전부 시뮬레이션입니다 · 이름은 가명, 모습은 지어낸 그림입니다
+          </Disclaimer>
+        </Header>
+
+        {(playbackError || s.error || it.error) && (
+          <Notices>
+            <Callout $tone="error">
+              <div style={{ flex: 1 }}>{playbackError ?? s.error ?? it.error}</div>
+            </Callout>
+          </Notices>
+        )}
+
+        {!current && (
+          <ChoiceScreen detail={detail} current={null} onChoose={(id) => void it.choose(id)}
+            onRestart={it.restartPath} />
+        )}
+
+        {current && screen === 'case' && loaded && (
+          <ObserveScreen
+            village={s.village}
+            detail={loaded.detail}
+            events={loaded.events}
+            art={s.art}
+            dayEnd={{ text: `${dayName(current)}가 끝났습니다`, action: '주민 리뷰를 보시겠습니까',
+                      note: dayFacts(current) ? dayLine(dayFacts(current)!) : null }}
+            onReadEvaluations={() => it.setScreen('evaluations')}
+          />
+        )}
+
+        {current && screen === 'evaluations' && (
+          <EvaluationsScreen
+            detail={detail}
+            generation={current}
+            residents={s.village.residents.map((r) => r.id)}
+            eyebrow={`${dayName(current)}가 끝났습니다`}
+            onOpenScene={(attemptId, eventId) => void it.openScene(attemptId, eventId)}
+            onGoToImprove={() => it.setScreen('improve')}
+            events={loaded ? { attemptId: loaded.detail.attempt.id, list: loaded.events } : null}
+          />
+        )}
+
+        {current && screen === 'improve' && (
+          <ChoiceScreen detail={detail} current={current} onChoose={(id) => void it.choose(id)}
+            onRestart={it.restartPath} />
+        )}
+      </Root>
+    );
+  }
 
   return (
     <Root>
@@ -450,6 +579,7 @@ export default function SimulationApp() {
           art={s.art}
           caseAction={{ label: sim ? '다른 기록 보기' : '새 사례 준비',
                          onClick: () => it.setCaseView('setup') }}
+          dayEnd={{ text: '하루가 끝났습니다', action: '주민 평가 읽기 →' }}
           onReadEvaluations={() => it.setScreen('evaluations')}
         />
       )}
@@ -458,7 +588,8 @@ export default function SimulationApp() {
         <EvaluationsScreen
           detail={it.detail}
           generation={viewGeneration ?? it.detail.generations[0] ?? null}
-          personas={s.personas}
+          residents={s.village.residents.map((r) => r.id)}
+          eyebrow={viewGeneration ? versionName(viewGeneration.index, viewGeneration.label) : ''}
           onOpenScene={(attemptId, eventId) => void it.openScene(attemptId, eventId)}
           onGoToImprove={() => it.setScreen('improve')}
           events={loaded ? { attemptId: loaded.detail.attempt.id, list: loaded.events } : null}

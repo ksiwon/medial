@@ -12,7 +12,8 @@ AI Care Orchestrator 수정에 어떻게 쓰일 수 있는지 탐색하는 것�
 평가로 안내하고, 바꿀 수 있는 것은 지원되는 운영 규칙의 **값**뿐이며, 화면의 문장과 실행되는
 값은 같은 규칙에서 만들어집니다.
 
-- **두 버전이 있습니다.** `sim`은 real에서 미리 돌려 둔 기록을 재생하고 모델을 부르지 않습니다.
+- **두 버전이 있습니다.** `sim`은 미리 돌려 둔 기록을 재생하고 모델을 부르지 않습니다 — 지금은
+  전시 기록(은점마을 사흘 · 27경로)이고, real에서 얼린 기록으로 바꿀 수 있습니다.
   `real`은 실행할 때마다 새로 계산하고, 모델 어댑터로 마을·기관·리뷰·개선을 실시간으로 생성합니다.
   화면 상단 배지가 지금 어느 버전인지 항상 말합니다.
 - 키는 real 서버 프로세스만 `server/.env` 에서 읽습니다. sim은 키를 읽지 않습니다. 키가 없으면
@@ -45,10 +46,10 @@ macOS·Linux·Git Bash에서는 `./run-sim.sh` · `./run-real.sh` 입니다.
 | | sim — 미리 돌려 둔 기록 | real — 실시간 생성 |
 |---|---|---|
 | 띄우기 | `./run-sim.sh` · `run-sim.cmd` | `./run-real.sh` · `run-real.cmd` |
-| 하는 일 | real에서 돌려 둔 실험을 그대로 재생 | 새 사례를 돌리고, 모델이 그 자리에서 생성 |
+| 하는 일 | 미리 돌려 둔 기록을 그대로 재생 (지금은 전시 기록: 첫 설정 → 하루 → 주민 평가 → 수정안 → 다음 날, 사흘) | 새 사례를 돌리고, 모델이 그 자리에서 생성 |
 | 모델·키 | 부르지 않음 · 읽지 않음 | `server/.env` 의 `OPENAI_API_KEY` 로 부름 (비용이 듭니다) |
 | 새 실행·수정안 확정·현장 기록 | 하지 않음 (서버가 403으로 거부) | 함 |
-| 기록 | `local-data/runs/sim.sqlite3` (real의 얼린 사본) | `local-data/runs/real.sqlite3` |
+| 기록 | `local-data/runs/sim.sqlite3` (전시 기록, 또는 real의 얼린 사본) | `local-data/runs/real.sqlite3` |
 | 주소 | 서버 8020 · <http://localhost:5180> | 서버 8010 · <http://localhost:5173> |
 
 포트와 기록이 달라서 둘을 동시에 띄워 둘 수 있습니다. 표의 포트는 첫 후보입니다 — 거기에 같은
@@ -58,7 +59,15 @@ macOS·Linux·Git Bash에서는 `./run-sim.sh` · `./run-real.sh` 입니다.
 열지 않습니다. Ctrl+C 는 그 스크립트가 띄운 것만 정리합니다. 하는 일은 전부
 `scripts/launch.sh` 에 있습니다.
 
-**sim이 재생하는 것은 real에서 얼린 것입니다.** real에서 실험을 돌린 뒤:
+**sim이 재생하는 기록은 둘 중 하나입니다.** 지금은 전시 기록입니다 — 전시 생성기가 사흘 동안
+날마다 셋 중 하나를 고르는 27경로를 전부 미리 돌려 둔 것(대화·주민 평가·수정안 포함)이고, 앱의 엔진이
+만든 것이 아니라는 것을 기록과 화면이 함께 말합니다:
+
+```bash
+python scripts/import_exhibition.py --replace   # 보관된 전시 묶음 → sim.sqlite3
+```
+
+real에서 돌린 실험을 대신 재생하려면 얼립니다 (전시 기록을 덮어씁니다):
 
 ```bash
 python scripts/freeze_sim.py             # real.sqlite3 → sim.sqlite3
@@ -117,7 +126,7 @@ npm run build && npm test && python -m pytest server/tests/simulation -q
 npm run e2e
 ```
 
-현재 기준선 (2026-09-29에 이 저장소에서 실행): build 통과 · vitest 64 · pytest 444 ·
+현재 기준선 (2026-09-30에 이 저장소에서 실행): build 통과 · vitest 70 · pytest 446 ·
 Playwright 6건 · 발표용 캡처 5건. 테스트 수보다 실패 여부와 연구 경계 검사를 우선하며, 전부 합성 픽스처와
 별도 DB(`.run/e2e/`)로 실행됩니다 — 연구 DB는 건드리지 않습니다. e2e 서버는 키를 비운
 real 버전이라 모델을 부르지 않습니다.
@@ -131,6 +140,7 @@ real 버전이라 모델을 부르지 않습니다.
 | `src/features/simulation/` | 세 화면 · 지도 · 장면 재생(`scene/`) · 주민 평가 · 규칙 편집기 · 비교 · 현장 기록 · sim의 기록 목록 |
 | `run-sim.*` · `run-real.*` · `scripts/launch.sh` | 두 버전의 실행 파일과 그 공통 스크립트 |
 | `scripts/freeze_sim.py` | real의 기록을 sim이 재생할 사본으로 얼린다 |
+| `scripts/import_exhibition.py` | 보관된 전시 기록(사흘 · 27경로)을 sim이 재생할 기록으로 옮긴다 |
 | `scripts/art.mjs` | 관찰 화면의 장면 그림(배경·인물 레이어)을 그린다 → `local-data/art/` |
 | `scripts/import_village/` | 원자료 → 정규화 레지스트리 (출처 검증 포함) |
 | `docs/research/` | 지금 기준인 연구 문서 · 데이터 계약 · 설계 결정 기록 |

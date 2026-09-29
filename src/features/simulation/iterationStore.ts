@@ -9,6 +9,7 @@ import type {
 } from './api/iteration';
 import { RUNNING_STATUSES } from './api/iteration';
 import { usePlayback } from './scene/playback';
+import { isTree } from './selectors/tree';
 import { useSimStore } from './store';
 
 // A separate store from the attempt/replay one. They share the map and the
@@ -118,6 +119,9 @@ interface IterationState {
   /** Set once when a run finishes, so the loop lands on the evaluations rather
    *  than leaving the reader on the map. Cleared when a new run starts. */
   landedOnEvaluations: boolean;
+  /** In a record whose versions branch (selectors/tree): whether a first
+   *  setting has been chosen. Until then the first screen is that choice. */
+  pathStarted: boolean;
   /** Which version the *comparison* is reading. Independent of the version the
    *  loop is processing; reading an old one changes neither. */
   compareLeftId: string | null;
@@ -177,6 +181,11 @@ interface IterationState {
   setCompareSides: (left: string | null, right: string | null) => void;
   setFieldSheet: (open: boolean) => void;
   setViewGeneration: (id: string) => void;
+  /** Walk to this version of a branching record: its day opens from 05:00 and
+   *  plays. A read of what was run; nothing starts. */
+  choose: (generationId: string) => Promise<void>;
+  /** Back to the first choice. */
+  restartPath: () => void;
   /** Open the scene a review item cites: switch to that attempt and seek to the
    *  event. This is a read of a stored log; it invokes no adapter. */
   openScene: (attemptId: string, eventId: string) => Promise<void>;
@@ -195,6 +204,7 @@ export const useIterationStore = create<IterationState>((set, get) => ({
   caseView: 'auto',
   compareView: 'summary',
   landedOnEvaluations: false,
+  pathStarted: false,
   compareLeftId: null,
   compareRightId: null,
   compareSidesPinned: false,
@@ -325,7 +335,7 @@ export const useIterationStore = create<IterationState>((set, get) => ({
     get().stopPolling();
     // What was being read belonged to the other session.
     set({ viewGenerationId: null, compareLeftId: null, compareRightId: null,
-          compareSidesPinned: false, landedOnEvaluations: false });
+          compareSidesPinned: false, landedOnEvaluations: false, pathStarted: false });
     await get().openSession(id);
     const first = get().detail?.generations.find((g) => g.index === 0)?.attemptIds[0];
     if (first) await useSimStore.getState().setActive(first);
@@ -468,6 +478,21 @@ export const useIterationStore = create<IterationState>((set, get) => ({
   setFieldSheet: (fieldSheetOpen) => set({ fieldSheetOpen }),
   setViewGeneration: (viewGenerationId) => set({ viewGenerationId }),
 
+  choose: async (generationId) => {
+    const attemptId = get().detail?.generations.find((g) => g.id === generationId)?.attemptIds[0];
+    if (!attemptId) return;
+    set({ viewGenerationId: generationId, pathStarted: true, screen: 'case', caseView: 'experience' });
+    await useSimStore.getState().setActive(attemptId);
+    const playback = usePlayback.getState();
+    await playback.restart();
+    await playback.play();
+  },
+
+  restartPath: () => {
+    void usePlayback.getState().pause();
+    set({ pathStarted: false, screen: 'case' });
+  },
+
   openScene: async (attemptId, eventId) => {
     const sim = useSimStore.getState();
     try {
@@ -562,6 +587,8 @@ function landOnEvaluations(
 ) {
   const state = get();
   if (state.landedOnEvaluations || detail.running) return;
+  // A branching record is walked by choice; nobody is moved along it.
+  if (isTree(detail)) return;
   if (RUNNING_STATUSES.includes(detail.session.status)) return;
   // Only from the screen the run was watched on. A poll that arrives while the
   // researcher is already reading the improvement screen must not pull them

@@ -123,6 +123,9 @@ export interface Segment {
   requestId: string | null;
   interruptible: boolean;
   polyline?: [number, number][];
+  /** Off the map although not in town - out fishing, taken to hospital. The
+   *  label says why; the map lists the person under it instead. */
+  offMap?: boolean;
   xy?: [number, number];
   riders?: string[];
 }
@@ -396,6 +399,24 @@ export interface AttemptDetail {
   deck: DeckPayload;
   resources: ResourceRevision;
   lineageNote?: string;
+  /** The day as scenes, when the record carries them (the exhibition record,
+   *  scripts/import_exhibition.py); null when the screen derives them from the
+   *  log. */
+  scenes?: StoredScenes | null;
+}
+
+/** A day recorded as scenes: what was said is stored with it, not in the log. */
+export interface StoredScenes {
+  source: string;
+  model: string;
+  day: number;
+  title: string;
+  summary: string;
+  /** Pseudonyms of the anonymised persona pack the record was made from. */
+  people: Record<string, string>;
+  episodes: import('../scene/types').Episode[];
+  /** MEDial's panel for each Task, by the Task's id (an episode's requestId). */
+  panels: Record<string, { subtitle: string; judgment: import('../scene/judgment').Judgment }>;
 }
 
 export interface Snapshot {

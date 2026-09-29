@@ -4,7 +4,7 @@
 // laid out in real seconds for playback.
 
 /** What a person's body is doing in a frame. Chooses the picture, nothing else. */
-export type Pose = 'stand' | 'phone' | 'work' | 'desk' | 'drive' | 'seated' | 'lying';
+export type Pose = 'stand' | 'phone' | 'work' | 'desk' | 'drive' | 'seated' | 'lying' | 'cpr';
 
 /** One place on screen and who is visible there. */
 export interface Frame {

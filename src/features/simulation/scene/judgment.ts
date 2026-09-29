@@ -23,6 +23,8 @@ export interface Judgment {
   asked: { actorId: string; verdict: Verdict; heard: string | null }[];
   ruledOut: { actorId: string; reason: string }[];
   told: string[] | null;
+  /** What it was told to keep back, when the record says (the exhibition's panel). */
+  withheld?: string[];
   rationale: string | null;
   result: string | null;
 }

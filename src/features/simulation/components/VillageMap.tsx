@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { api } from '../api/client';
-import type { Reservation, VillagePayload } from '../api/types';
+import type { VillagePayload } from '../api/types';
 import {
   clusterPoses,
   medialPoses,
@@ -260,58 +260,49 @@ const Facts = styled.dl`
   }
 `;
 
-/** Everyone who has no coordinate on this map, as one folded list under it. */
-const Outside = styled.details`
+/** Everyone who has no coordinate on this map, as one row of names under it. */
+const Outside = styled.div`
   flex: none;
-  border-bottom: 1px solid ${colour.border};
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 9px 14px;
+  border-top: 1px solid ${colour.border};
   font-size: ${font.small};
   color: ${colour.secondary};
-  > summary {
-    cursor: pointer;
-    list-style: none;
-    padding: 10px 16px;
-    display: flex;
-    gap: 8px;
-    align-items: baseline;
-  }
-  > summary::-webkit-details-marker {
-    display: none;
-  }
-  > summary::before {
-    content: '▸';
-    color: ${colour.primary};
-  }
-  &[open] > summary::before {
-    content: '▾';
-  }
-  > :not(summary) {
-    padding: 0 16px 12px;
-  }
+  > strong { font-weight: 700; color: ${colour.text}; margin-right: 4px; }
 `;
 
-const OutRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border-top: 1px solid ${colour.border};
-  padding: 8px 0;
-  font-size: ${font.small};
+const OutChip = styled.span`
+  display: inline-flex;
+  gap: 6px;
+  align-items: baseline;
+  border: 1px solid ${colour.border};
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-weight: 700;
   color: ${colour.text};
+  background: ${colour.surface};
+  > span { font-weight: 400; color: ${colour.secondary}; }
 `;
 
-/** Place names worth a label at all. Houses are never labelled: which named
- *  resident lives in which building is not put on screen. */
+const Note = styled.span`
+  margin-left: auto;
+  font-size: 11px;
+  color: ${colour.unknown};
+`;
+
+/** Place names worth a label, at every zoom now that the map lies along the
+ *  screen and has the room (as on the exhibition wall). Houses are never
+ *  labelled: which named resident lives in which building is not put on screen. */
 const LABELLED_PLACES = new Set(['HALL', 'PORT', 'EXP', 'FOOD', 'MIGA', 'FARM', 'TOWNEXIT', 'SEA']);
-/** …and at low zoom, only these few. The sea is one of them: unlabelled, the
- *  people working there read as markers dropped in the water by mistake. */
-const ALWAYS_LABELLED = new Set(['HALL', 'PORT', 'TOWNEXIT', 'SEA']);
 
 interface Props {
   village: VillagePayload;
   poses: ActorPose[];
   viewMode: 'researcher' | 'medial';
   medialKnown: Map<string, MedialKnown>;
-  reservations: Reservation[];
   seatsPerVehicle: number;
   selectedCluster: string | null;
   /** Colour per still-running request: the ring on whoever is doing it. */
@@ -327,7 +318,6 @@ export default function VillageMap({
   poses,
   viewMode,
   medialKnown,
-  reservations,
   seatsPerVehicle,
   selectedCluster,
   taskColours,
@@ -532,7 +522,6 @@ export default function VillageMap({
   const hasRaster = Boolean(mapImage) && !mapBroken;
   /** SVG units per screen pixel. */
   const k = 1 / (project.scale || 1);
-  const zoomedIn = view.w < home.w * 0.55;
 
   const selectedMember =
     active?.members.find((m) => m.id === selectedActor) ?? active?.members[0] ?? null;
@@ -614,9 +603,7 @@ export default function VillageMap({
           {Object.values(village.places)
             .filter((place) => !place.offMap)
             .map((place) => {
-              const label =
-                LABELLED_PLACES.has(place.id) &&
-                (zoomedIn || ALWAYS_LABELLED.has(place.id));
+              const label = LABELLED_PLACES.has(place.id);
               const [px, py] = frame.at(place.x, place.y);
               return (
                 <g key={place.id} style={{ pointerEvents: 'none' }}>
@@ -767,64 +754,24 @@ export default function VillageMap({
         )}
       </Frame>
 
-      <Outside>
-        <summary>
-          <span>마을 밖 · {outside.length}명</span>
-          <span>
-            {outside.length === 0
-              ? '이 시각에 마을을 벗어난 사람 없음'
-              : outside
-                  .map(
-                    (p) =>
-                      `${personName(p.id)} · ${placeLabel(village, p.place, p.id) ?? '마을 밖'}`,
-                  )
-                  .join(' / ')}
-          </span>
-        </summary>
-        <div>
-          {outside.map((pose) => (
-            <OutRow key={pose.id}>
-              <FaceChip id={pose.id} size={22} isVillageHead={pose.isVillageHead} />
-              <span style={{ flex: 1 }}>
-                <strong>{personName(pose.id)}</strong> ·{' '}
-                {placeLabel(village, pose.place, pose.id) ?? '마을 밖'}
-              </span>
-              <span style={{ color: colour.secondary }}>{pose.activity}</span>
-            </OutRow>
-          ))}
-
-          {projected && (
-            <>
-              <OutRow>
-                <span style={{ flex: 1 }}>
-                  MEDial이 위치를 모르는 사람 {projected.unlocated.length}명 —{' '}
-                  {projected.unlocated.map(({ pose }) => pose.displayName).join(', ') || '없음'}
-                </span>
-              </OutRow>
-              <div style={{ paddingTop: 6 }}>
-                이 목록이 대부분인 것이 정상입니다. MEDial은 보고받은 것 외에는 위치를 알지
-                못합니다.
-              </div>
-            </>
-          )}
-
-          {reservations.length > 0 && (
-            <OutRow style={{ display: 'block' }}>
-              <strong>진행 중인 동승 {reservations.length}건</strong>
-              {reservations.map((r) => (
-                <div key={r.id} style={{ marginTop: 2 }}>
-                  {r.driverId}의 차 · {r.riderId} 좌석 {r.seatIndex + 1} · {r.pickupPlace} →{' '}
-                  {r.destination} ({r.status})
-                </div>
-              ))}
-            </OutRow>
-          )}
-
-          <div style={{ paddingTop: 8, color: colour.secondary }}>
-            마을 밖 위치는 이 지도에 좌표가 없어 목록으로만 표시합니다. 지도 여백에 임의로 놓지
-            않습니다.
-          </div>
-        </div>
+      {/* Who is not on the map, always in view (the exhibition wall's strip):
+          a place without a coordinate is a name here, never a guessed point. */}
+      <Outside aria-live="polite">
+        <strong>{outside.length ? '지금 마을 밖에 있는 사람' : '마을 밖에 나가 있는 사람 없음'}</strong>
+        {outside.map((pose) => (
+          <OutChip key={pose.id}>
+            {personName(pose.id)}
+            <span>{pose.activity === '알 수 없음' ? (placeLabel(village, pose.place, pose.id) ?? '마을 밖') : pose.activity}</span>
+          </OutChip>
+        ))}
+        {projected && (
+          <OutChip>
+            MEDial이 위치를 모르는 사람<span>{projected.unlocated.length}명</span>
+          </OutChip>
+        )}
+        {outside.length > 0 && (
+          <Note>마을 밖은 이 지도에 좌표가 없어 목록으로만 적습니다. 지도 여백에 임의로 놓지 않습니다.</Note>
+        )}
       </Outside>
     </>
   );

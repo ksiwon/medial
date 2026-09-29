@@ -202,12 +202,14 @@ interface Props {
   art: ReadonlySet<string>;
   /** Leave this run for another: set a new case up (real), or pick another
    *  recording (sim). The run stays stored either way. */
-  caseAction: { label: string; onClick: () => void };
+  caseAction?: { label: string; onClick: () => void };
+  /** What the strip says at 22:00, and its button; `note` is a line of facts. */
+  dayEnd: { text: string; action: string; note?: string | null };
   /** The day is over: the evaluations are the next thing to read. */
   onReadEvaluations: () => void;
 }
 
-export default function ObserveScreen({ village, detail, events, art, caseAction, onReadEvaluations }: Props) {
+export default function ObserveScreen({ village, detail, events, art, caseAction, dayEnd: ending, onReadEvaluations }: Props) {
   const p = usePlayback();
   const reel = p.reel;
   const position = p.position;
@@ -222,10 +224,6 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
     const open = openRequests(events, cursorSeq);
     return new Map([...all].filter(([id]) => open.has(id)));
   }, [reel, events, cursorSeq]);
-  const reservations = useMemo(
-    () => (detail.timeline?.reservations?.reservations ?? []).filter((r) => r.departMs <= atMs && r.status !== 'cancelled'),
-    [detail.timeline, atMs],
-  );
 
   const segment = position?.segment ?? null;
   const inScene = segment !== null && segment.kind !== 'map';
@@ -237,10 +235,28 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
   }
   const scene = last.current;
 
-  const judgment = useMemo(
-    () => (scene ? judgmentOf(scene.episode.requestId, cursorSeq, events, detail.decisions, detail.rules ?? []) : null),
-    [scene?.episode.requestId, cursorSeq, events, detail.decisions, detail.rules],
-  );
+  const line = segment?.kind === 'line' ? segment.line : null;
+  const typing = segment?.kind === 'line' && position!.offset < segment.typing;
+  // A record that carries its scenes carries MEDial's panel for each Task too.
+  // Its verdicts stay "묻는 중" until the Task's last line has been said: the
+  // answer is known when the call ends, not when it starts.
+  const stored = scene ? detail.scenes?.panels[scene.episode.requestId] ?? null : null;
+  const lastOfTask = scene && reel
+    ? !reel.episodes.slice(scene.e + 1).some((ep) => ep.requestId === scene.episode.requestId)
+      && scene.b === scene.episode.beats.length - 1
+    : false;
+  const resolved = lastOfTask && scene !== null
+    && (segment?.kind === 'hold' || (line !== null && line >= scene.beat.lines.length - 1 && !typing));
+  const judgment = useMemo(() => {
+    if (!scene) return null;
+    if (stored) {
+      return resolved ? stored.judgment : {
+        ...stored.judgment,
+        asked: stored.judgment.asked.map((a) => ({ ...a, verdict: 'asking' as const, heard: null })),
+      };
+    }
+    return judgmentOf(scene.episode.requestId, cursorSeq, events, detail.decisions, detail.rules ?? []);
+  }, [scene?.episode.requestId, stored, resolved, cursorSeq, events, detail.decisions, detail.rules]);
   const beatSeconds = useMemo(() => {
     if (!reel || !scene) return 1;
     return reel.segments.filter((s) => s.kind !== 'map' && s.episode === scene.e && s.beat === scene.b)
@@ -250,8 +266,6 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
   const lit = segment?.kind === 'lead' && segment.reveal
     ? Math.max(0, Math.min(REVEAL_STEPS, Math.floor((position!.offset - segment.enter) / (REVEAL_STEP_S * p.pace)) + 1))
     : REVEAL_STEPS;
-  const line = segment?.kind === 'line' ? segment.line : null;
-  const typing = segment?.kind === 'line' && position!.offset < segment.typing;
   const speaker = scene && line !== null ? scene.beat.lines[line]?.speaker : null;
   const hot = scene && speaker
     ? scene.beat.frames.findIndex((f) => (speaker === MEDIAL ? !!f.device : f.who.includes(speaker)))
@@ -307,7 +321,7 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
               line={line}
               typing={typing}
               seconds={beatSeconds}
-              panel={{ title: scene.episode.title, tint, judgment, lit }}
+              panel={{ title: scene.episode.title, subtitle: stored?.subtitle ?? null, tint, judgment, lit }}
             />
           )}
         </SceneLayer>
@@ -320,7 +334,6 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
               poses={poses}
               viewMode={p.viewMode}
               medialKnown={medialKnown}
-              reservations={reservations}
               seatsPerVehicle={detail.timeline?.reservations?.seatsPerVehicle ?? detail.resources.assumedVehicleSeats ?? 0}
               taskColours={colours}
               selectedCluster={p.selectedCluster}
@@ -352,8 +365,11 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
 
       {dayOver && (
         <DayEnd>
-          <span>{formatClock(dayEnd)} · 하루가 끝났습니다</span>
-          <IconButton onClick={onReadEvaluations}>주민 평가 읽기 →</IconButton>
+          <span>
+            <strong>{formatClock(dayEnd)} · {ending.text}</strong>
+            {ending.note && <span style={{ marginLeft: 12, color: colour.secondary }}>{ending.note}</span>}
+          </span>
+          <IconButton onClick={onReadEvaluations}>{ending.action}</IconButton>
         </DayEnd>
       )}
 
@@ -426,7 +442,7 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
                 {dayLabel(detail.metrics.dayRealization)}
               </Sub>
             )}
-            <IconButton onClick={caseAction.onClick}>{caseAction.label}</IconButton>
+            {caseAction && <IconButton onClick={caseAction.onClick}>{caseAction.label}</IconButton>}
           </div>
         </Settings>
       </Transport>

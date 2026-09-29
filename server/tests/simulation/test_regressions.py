@@ -852,3 +852,28 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+def test_a_recorded_days_scenes_come_back_with_it_and_stay_out_of_the_list():
+    """The exhibition record stores its scenes with the attempt; an engine run
+    has none, and the list of attempts never carries them (they are most of a
+    recorded day's size)."""
+    from types import SimpleNamespace
+
+    from app.simulation.contracts import Attempt, DomainEvent
+
+    store = Store(":memory:")
+    svc = service(store)
+    made = svc.create_attempt("policy-A-v1", DECK_ID, RES_ID)
+    assert store.get_attempt(made["attempt"]["id"])["scenes"] is None
+
+    attempt = Attempt.model_validate({**made["attempt"], "id": "att-recorded", "dataSource": "exhibition-record"})
+    event = DomainEvent(id="ev-1", attemptId="att-recorded", seq=1, simTimeMs=0, type="task.started",
+                        actorId="MEDial", correlationId="w1", visibility=["researcher"],
+                        payload={"requestId": "w1", "title": "본인에게 연락"})
+    scenes = {"source": "exhibition-record", "episodes": [], "panels": {}, "people": {"P1": "가명"}}
+    store.save_run(SimpleNamespace(attempt=attempt, events=[event], decisions=[], observations=[],
+                                   reviews=[], timeline={}, trace=[], metrics={}, scenes=scenes),
+                   svc.policies["policy-A-v1"], "fp")
+    assert store.get_attempt("att-recorded")["scenes"] == scenes
+    assert all("scenes" not in row for row in store.list_attempts())

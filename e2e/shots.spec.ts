@@ -31,11 +31,6 @@ async function crop(target: Locator, name: string) {
   await target.first().screenshot({ path: resolve(OUT, `${name}.png`) });
 }
 
-async function openHint(page: Page, label: string) {
-  await page.getByLabel(`${label} 설명`, { exact: true }).click();
-  await expect(page.getByRole('tooltip')).toBeVisible();
-}
-
 test('@shots A 사례와 서비스 경험', async ({ page }) => {
   test.setTimeout(240_000);
   await page.goto('/');
@@ -64,7 +59,8 @@ test('@shots A 사례와 서비스 경험', async ({ page }) => {
   // back into the recording is the round trip the loop is built on: an
   // evaluation cites an event, and the scene opens at that event.
   await page.getByRole('button', { name: '주민 평가', exact: true }).click();
-  await expect(page.getByText('평가 항목의 개수')).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText('합성 평가입니다', { exact: false })).toBeVisible({ timeout: 60_000 });
+  await page.getByText(/평가 항목 [0-9]+개 보기/).first().click();
   await page.getByText(/사건 근거 [0-9]+건 보기/).filter({ visible: true }).first().click();
   await page.getByText('그 장면 열기').first().click();
 
@@ -103,10 +99,13 @@ test('@shots B 주민 평가', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => document.fonts.ready);
   await page.getByRole('button', { name: '주민 평가', exact: true }).click();
-  await expect(page.getByText('평가 항목의 개수')).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText('합성 평가입니다', { exact: false })).toBeVisible({ timeout: 60_000 });
   await shot(page, '11-evaluations');
 
-  const card = page.getByText('1 · 이번에 무엇을 경험했나').locator('xpath=ancestor::div[2]');
+  // One person's row, opened onto their items.
+  const opener = page.getByText(/평가 항목 [0-9]+개 보기/).first();
+  const card = opener.locator('xpath=ancestor::div[2]');
+  await opener.click();
   await crop(card, '12-evaluations-card');
 
   // An evaluation item, opened onto the events it cites.
@@ -117,12 +116,7 @@ test('@shots B 주민 평가', async ({ page }) => {
     await crop(card, '13-evaluations-evidence');
   }
 
-  // The caveat that used to be printed under every row.
-  await openHint(page, '이 숫자');
-  await shot(page, '14-hint');
-  await page.keyboard.press('Escape');
-
-  const issues = page.getByText('쟁점 묶음');
+  const issues = page.getByText(/쟁점 묶음/);
   await issues.scrollIntoViewIfNeeded();
   await shot(page, '15-evaluations-issues');
 });

@@ -142,3 +142,14 @@ def test_an_old_database_gets_a_schema_version_without_losing_rows(tmp_path):
     again = Store(target)
     assert again.previous_schema_version == SCHEMA_VERSION
     again.close()
+
+
+def test_an_older_attempt_reads_as_one_without_stored_scenes(legacy):
+    """``scenes_json`` (the exhibition record, 2026-09-30) is added to old files
+    and an attempt that never had scenes says so rather than failing."""
+    store = Store(legacy)
+    try:
+        assert store.get_attempt("att-legacy-1")["scenes"] is None
+        assert "scenes" not in store.list_attempts()[0]
+    finally:
+        store.close()

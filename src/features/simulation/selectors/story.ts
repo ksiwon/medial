@@ -20,6 +20,20 @@ export function learnPlaces(labels: Record<string, string>): void {
   for (const [key, label] of Object.entries(labels)) learnedPlaces.set(key, label);
 }
 
+/**
+ * The people's names, when the record being read carries them: the exhibition
+ * record's lines call each other by the pseudonyms of the anonymised persona
+ * pack, and a bare P-number beside "◯◯◯ 어르신" would not say who that is.
+ * The names come from the loaded record at runtime - never from the bundle - and
+ * a record without them keeps the P-numbers.
+ */
+const learnedPeople = new Map<string, string>();
+
+export function learnPeople(names: Record<string, string> | null | undefined): void {
+  learnedPeople.clear();
+  for (const [id, name] of Object.entries(names ?? {})) learnedPeople.set(id, name);
+}
+
 /** How a request was closed, in words. The keys are the engine's
  *  `resolutionPath`; an unknown key is printed as it is. */
 const PATH_WORD: Record<string, string> = {
@@ -66,6 +80,8 @@ export const personName = (id: string | null | undefined): string =>
     ? '누군가'
     : id === 'MEDial'
       ? 'MEDial'
+      : learnedPeople.has(id)
+        ? `${id} ${learnedPeople.get(id)}`
       : id === 'P6'
         ? '이장'
         : id === 'HC_NURSE'

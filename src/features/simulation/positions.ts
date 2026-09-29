@@ -102,7 +102,7 @@ function poseFor(actor: TimelineActor, atMs: number): ActorPose {
   const place = realized ? (realized.place ?? realized.toPlace) : null;
   const offMap =
     realized != null &&
-    (realized.place === 'TOWN' ||
+    (realized.place === 'TOWN' || realized.offMap === true ||
       (realized.kind === 'travel' && realized.mode === 'offmap' && pastMapEdge(realized, atMs)));
 
   return {

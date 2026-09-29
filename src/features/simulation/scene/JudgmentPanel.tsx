@@ -44,6 +44,13 @@ const Title = styled.div`
   > i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
 `;
 
+/** Which case the Task belongs to and whom it is about. */
+const Subtitle = styled.div`
+  margin: 2px 0 0 17px;
+  font-size: 12px;
+  color: #a9a59d;
+`;
+
 const Steps = styled.ol`
   list-style: none;
   margin: 12px 0 0;
@@ -109,8 +116,9 @@ const Away = styled.div`
   > strong { display: block; font-size: 15px; color: #ffffff; margin-top: 3px; }
 `;
 
-export default function JudgmentPanel({ title, tint, judgment, lit, absent, waiting }: {
+export default function JudgmentPanel({ title, subtitle, tint, judgment, lit, absent, waiting }: {
   title: string;
+  subtitle?: string | null;
   tint: string;
   judgment: Judgment;
   /** How many of the four steps are lit (0-4). */
@@ -123,6 +131,7 @@ export default function JudgmentPanel({ title, tint, judgment, lit, absent, wait
     <Box $absent={absent} aria-label="MEDial의 판단">
       <Kicker>MEDial의 판단</Kicker>
       <Title><i style={{ background: tint }} />{title}</Title>
+      {subtitle && <Subtitle>{subtitle}</Subtitle>}
       <Steps>
         <Step $on={lit > 0}>
           <h4>지금 아는 것</h4>
@@ -153,7 +162,13 @@ export default function JudgmentPanel({ title, tint, judgment, lit, absent, wait
         <Step $on={lit > 3}>
           <h4>그래서 이렇게 말한다</h4>
           <ul>
-            {j.told && <li>{j.told.length ? `전한 것: ${j.told.join(' · ')}` : '다른 사람에게 전한 정보 없음'}</li>}
+            {/* A record that says what was held back lists what is said and
+                what is not, one line each; otherwise the one summary line. */}
+            {j.withheld && j.told?.map((t) => <li key={t}>{t}</li>)}
+            {j.withheld && j.withheld.length > 0 && (
+              <li style={{ opacity: 0.5 }}>말하지 않는다 — {j.withheld.join(' · ')}</li>
+            )}
+            {!j.withheld && j.told && <li>{j.told.length ? `전한 것: ${j.told.join(' · ')}` : '다른 사람에게 전한 정보 없음'}</li>}
             {j.rationale && <li>{j.rationale}</li>}
             {j.result && <li><b>{j.result}</b></li>}
           </ul>

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { AgentReview, GenerationDetail } from '../api/iteration';
+import type { AgentReview, GenerationDetail, SessionDetail } from '../api/iteration';
 import type { DayRealization, DomainEvent } from '../api/types';
 import { personName, sentenceFor, withParticle } from './story';
+import { childFor, isTree, pathTo, rootsOf } from './tree';
 import { reviewChanges } from './versionFacts';
 import { versionName } from '../ui/primitives';
 import {
@@ -183,5 +184,24 @@ describe('versionName', () => {
     expect(versionName(0, 'v0 · v0 · 초기 운영안')).toBe('v0 · 초기 운영안');
     expect(versionName(0, 'v0 · 초기 운영안')).toBe('v0 · 초기 운영안');
     expect(versionName(1, '동선 기준으로 시험')).toBe('v1 · 동선 기준으로 시험');
+  });
+});
+
+describe('a session whose versions branch', () => {
+  const g = (id: string, parent: string | null, applied: string | null = null) =>
+    ({ id, parentGenerationId: parent, appliedChangeSetId: applied, index: parent ? 1 : 0 }) as GenerationDetail;
+  const line = { generations: [g('v0', null), g('v1', 'v0', 'c')] } as unknown as SessionDetail;
+  const tree = { generations: [g('a', null), g('b', null), g('a-0', 'a', 'x'), g('a-1', 'a', 'y')] } as unknown as SessionDetail;
+
+  it('is a tree only when a version has a sibling', () => {
+    expect(isTree(line)).toBe(false);
+    expect(isTree(tree)).toBe(true);
+  });
+
+  it('walks from a first setting down, and finds the day a revision led to', () => {
+    expect(rootsOf(tree).map((r) => r.id)).toEqual(['a', 'b']);
+    expect(pathTo(tree, 'a-1').map((r) => r.id)).toEqual(['a', 'a-1']);
+    expect(childFor(tree, 'y')?.id).toBe('a-1');
+    expect(childFor(tree, 'z')).toBeNull();
   });
 });

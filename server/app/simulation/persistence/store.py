@@ -54,7 +54,11 @@ CREATE TABLE IF NOT EXISTS attempts (
     -- The map timeline and the decision trace are part of the run, not a cache of
     -- it: without them a reopened attempt would show an empty map.
     timeline_json TEXT NOT NULL DEFAULT '{}',
-    trace_json TEXT NOT NULL DEFAULT '[]'
+    trace_json TEXT NOT NULL DEFAULT '[]',
+    -- The day as scenes (episodes of beats, lines and MEDial's panel), when the
+    -- record carries them rather than the screen deriving them from the log:
+    -- the exhibition record (scripts/import_exhibition.py). Empty otherwise.
+    scenes_json TEXT NOT NULL DEFAULT '{}'
 );
 CREATE TABLE IF NOT EXISTS events (
     attempt_id TEXT NOT NULL,
@@ -190,6 +194,7 @@ class Store(IterationTables):
         for table, column, default in (
             ("attempts", "timeline_json", "'{}'"),
             ("attempts", "trace_json", "'[]'"),
+            ("attempts", "scenes_json", "'{}'"),
             ("commands", "request_json", "'{}'"),
         ):
             if column not in columns(table):
@@ -228,8 +233,8 @@ class Store(IterationTables):
                         " policy_id, deck_id, resource_id, seed, adapter, mode, status,"
                         " engine_version, data_source, created_at, cursor_seq, event_count,"
                         " log_fingerprint, attempt_json, metrics_json, policy_json,"
-                        " timeline_json, trace_json)"
-                        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                        " timeline_json, trace_json, scenes_json)"
+                        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                         (attempt.id, attempt.parentId, attempt.parentSeq, attempt.label,
                          attempt.policyId, attempt.scenarioDeckId,
                          attempt.resourceRevisionId,
@@ -241,7 +246,9 @@ class Store(IterationTables):
                          json.dumps(result.metrics, ensure_ascii=False),
                          json.dumps(policy.model_dump(mode="json"), ensure_ascii=False),
                          json.dumps(result.timeline, ensure_ascii=False),
-                         json.dumps(result.trace, ensure_ascii=False)))
+                         json.dumps(result.trace, ensure_ascii=False),
+                         json.dumps(getattr(result, "scenes", None) or {},
+                                    ensure_ascii=False)))
                     self._conn.executemany(
                         "INSERT INTO events (attempt_id, seq, sim_time_ms, type,"
                         " actor_id, correlation_id, causation_id, visibility, payload,"
@@ -383,7 +390,10 @@ class Store(IterationTables):
         with self._lock:
             row = self._conn.execute("SELECT * FROM attempts WHERE id = ?",
                                      (attempt_id,)).fetchone()
-        return self._attempt_row(row) if row else None
+        if not row:
+            return None
+        # Only here, not in the list: a recorded day's scenes are most of its size.
+        return {**self._attempt_row(row), "scenes": json.loads(row["scenes_json"] or "{}") or None}
 
     @staticmethod
     def _attempt_row(row: sqlite3.Row) -> dict[str, Any]:

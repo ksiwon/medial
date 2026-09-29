@@ -33,6 +33,7 @@ export function backdropOf(place: string | null, village: VillagePayload): strin
 export type Fit = 'tall' | 'work' | 'seat' | 'wide';
 export const FIT: Record<Pose, Fit> = {
   stand: 'tall', phone: 'tall', desk: 'tall', work: 'work', drive: 'seat', seated: 'seat', lying: 'wide',
+  cpr: 'wide',
 };
 
 /**

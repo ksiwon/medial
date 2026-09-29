@@ -122,18 +122,17 @@ test('사례 → 실행 → 주민 평가 → 개선과 확인: 한 바퀴가 �
   await expect(evaluations).toBeEnabled({ timeout: 180_000 });
   await evaluations.click();
 
-  // Screen B: one resident, read in doc 20's order, with no score anywhere.
-  await expect(page.getByText('평가 항목의 개수')).toBeVisible();
-  await expect(page.getByText('1 · 이번에 무엇을 경험했나')).toBeVisible();
+  // Screen B: one row a person, in their own words, with no score anywhere,
+  // and 미경험 said as an observation rather than counted as a complaint.
+  await expect(page.getByText('합성 평가입니다', { exact: false })).toBeVisible();
+  await expect(page.getByText('불만족으로 세지 않습니다', { exact: false })).toBeVisible();
   await expect(page.getByText(/만족도\s*[0-9]/)).toHaveCount(0);
   await expect(page.getByText('help_resolution')).toHaveCount(0);
   await shot(page, 'evaluations');
-  // The ordering caveat is one click from the ordering it is about.
-  await expect(await hint(page, '읽는 순서')).toContainText('미경험과 제안 없음은 불만이 아니므로');
-  await shot(page, 'evaluations-hint');
-  await page.keyboard.press('Escape');
 
-  // Evidence opens in place, and closing returns to the same item.
+  // A row opens to its items; evidence opens in place, and closing returns to
+  // the same item.
+  await page.getByText(/평가 항목 [0-9]+개 보기/).first().click();
   const evidence = page.getByText(/사건 근거 [0-9]+건 보기/).filter({ visible: true }).first();
   if (await evidence.count()) {
     await evidence.click();

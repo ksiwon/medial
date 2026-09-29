@@ -64,7 +64,10 @@ const describe = (error: unknown) =>
 function reelFor(run: Run, viewMode: ViewMode, pace: number): Reel {
   const timeline = run.detail.timeline ?? null;
   return buildReel({
-    episodes: buildEpisodes({ events: run.events, timeline, village: run.village, viewMode }),
+    // A record that carries its scenes plays them as recorded; otherwise they
+    // are read off the log.
+    episodes: run.detail.scenes?.episodes
+      ?? buildEpisodes({ events: run.events, timeline, village: run.village, viewMode }),
     events: run.events,
     timeline,
     dayStartMs: DAY_START_MS,
