@@ -11,8 +11,9 @@
 #         --stop      이 버전으로 띄워 둔 것을 내린다
 #
 # 두 버전은 포트와 기록이 달라서 동시에 띄워 둘 수 있다. Ctrl+C 는 이 스크립트가
-# 띄운 것만 정리한다. 이미 떠 있던 서버는 그대로 쓴다 - 두 번 실행해도 세션이 두 벌
-# 생기거나 포트가 충돌하지 않는다.
+# 띄운 것만 정리한다. 포트에 이미 같은 버전의 MEDial 이 떠 있으면 그대로 쓰고, 다른
+# 프로그램(또는 다른 버전)이 쓰고 있으면 다음 빈 포트로 옮겨 띄운다. 위 포트는 첫
+# 후보이고, 실제로 쓴 포트는 .run/<버전>/ports 에 적어 --stop 이 읽는다.
 set -u
 
 cd "$(dirname "$0")/.."
@@ -39,6 +40,11 @@ esac
 LOG_DIR=".run/$MODE"
 API_LOG="$LOG_DIR/server.log"
 WEB_LOG="$LOG_DIR/web.log"
+PORTS_FILE="$LOG_DIR/ports"
+# 첫 후보부터 몇 개까지 볼지. 그 안에 빈 포트가 없으면 멈추고 말한다.
+PORT_TRIES=20
+# 화면이 MEDial 의 것인지 알아보는 표시. index.html 의 <title> 과 같아야 한다.
+WEB_MARK="MEDial 연구 시뮬레이터"
 
 case "$API_PORT:$WEB_PORT" in
   *[!0-9:]*) echo "포트는 숫자여야 합니다: API=$API_PORT WEB=$WEB_PORT"; exit 2 ;;
@@ -50,7 +56,7 @@ for arg in "$@"; do
   case "$arg" in
     --no-open) open_browser=0 ;;
     --stop) mode_action=stop ;;
-    -h|--help) sed -n '3,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '3,16p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "모르는 옵션: $arg (사용법은 --help)"; exit 2 ;;
   esac
 done
@@ -118,16 +124,52 @@ die_with_log() {
   echo "---------------------------------"
 }
 
+# --- 이 포트에 떠 있는 것이 이 버전의 MEDial 인가 -------------------------------
+# 포트가 쓰이고 있다는 것만으로는 모른다. 다른 프로젝트의 vite 가 5180 에 떠 있을 때
+# 그것을 MEDial 로 여기고 붙은 적이 있다(2026-09-29).
+mode_of() {
+  http_body "$1" | sed -n 's/.*"mode" *: *"\([a-z]*\)".*/\1/p' | head -1
+}
+api_is_ours() {
+  [ "$(mode_of "http://127.0.0.1:$1/api/sim/health")" = "$MODE" ]
+}
+web_is_medial() {
+  http_body "http://localhost:$1/" | grep -qF "$WEB_MARK"
+}
+# 붙여 쓰려면 화면이 MEDial 이고, 그 프록시 너머가 이 버전의 서버여야 한다.
+web_is_ours() {
+  web_is_medial "$1" && [ "$(mode_of "http://localhost:$1/api/sim/health")" = "$MODE" ]
+}
+
+# 첫 후보부터 보며 "포트 상태"를 찍는다. 상태는 free(비어 있음) 또는 ours(이 버전이
+# 이미 떠 있음). 남의 것이 쓰는 포트는 건너뛴다.
+pick_port() {
+  local port="$1" check="$2" i
+  for i in $(seq 1 "$PORT_TRIES"); do
+    if ! listening "$port"; then echo "$port free"; return 0; fi
+    if "$check" "$port"; then echo "$port ours"; return 0; fi
+    port=$((port + 1))
+  done
+  return 1
+}
+
 if [ "$mode_action" = stop ]; then
-  for port in "$API_PORT" "$WEB_PORT"; do
+  # 지난 실행이 실제로 쓴 포트. 없으면 첫 후보.
+  if [ -f "$PORTS_FILE" ]; then read -r API_PORT WEB_PORT <"$PORTS_FILE"; fi
+  # MEDial 인 것만 내린다. 같은 포트를 남의 프로그램이 쓰고 있으면 건드리지 않는다.
+  for pair in "$API_PORT:api_is_ours:서버" "$WEB_PORT:web_is_medial:화면"; do
+    port="${pair%%:*}"; rest="${pair#*:}"; check="${rest%%:*}"; name="${rest#*:}"
     pid="$(pid_on "$port")"
-    if [ -n "$pid" ]; then
-      echo "포트 $port (PID $pid) 정리"
+    if [ -z "$pid" ]; then
+      echo "$name 포트 $port 는 비어 있음"
+    elif "$check" "$port"; then
+      echo "$name 포트 $port (PID $pid) 정리"
       stop_pid "$pid"
     else
-      echo "포트 $port 는 비어 있음"
+      echo "$name 포트 $port 는 MEDial $MODE 이 아닌 프로그램(PID $pid)이 쓰고 있어 두었습니다"
     fi
   done
+  rm -f "$PORTS_FILE"
   exit 0
 fi
 
@@ -207,8 +249,16 @@ trap cleanup INT TERM
 # --- 시뮬레이터 서버 -----------------------------------------------------------
 # 버전·포트는 인자와 환경변수로 넘긴다. 키는 넘기지 않는다 - real 서버가
 # server/.env 를 스스로 읽고, sim 서버는 읽지 않는다.
-if listening "$API_PORT"; then
-  echo "서버: 이미 $API_PORT 에서 돌고 있습니다. 그대로 씁니다."
+wanted="$API_PORT"
+if ! picked="$(pick_port "$API_PORT" api_is_ours)"; then
+  echo "서버 포트 $wanted 부터 $PORT_TRIES 개가 모두 다른 프로그램에 쓰이고 있습니다."
+  echo "MEDIAL_SIM_PORT 로 다른 첫 후보를 고르세요."
+  exit 1
+fi
+API_PORT="${picked% *}"
+[ "$API_PORT" != "$wanted" ] && echo "서버: 포트 $wanted 는 다른 프로그램이 쓰고 있어 $API_PORT 을 씁니다."
+if [ "${picked#* }" = ours ]; then
+  echo "서버: 이미 $API_PORT 에서 $MODE 버전이 돌고 있습니다. 그대로 씁니다."
 else
   echo "서버 시작 ... (로그: $API_LOG)"
   if [ "$PYTHON_MODE" = "powershell" ]; then
@@ -253,20 +303,21 @@ case "$api_status" in
     ;;
 esac
 
-# 이미 떠 있던 서버를 붙여 쓸 때, 그것이 다른 버전이면 쓰지 않는다. sim 화면이
+# 다른 버전의 서버에는 붙지 않는다 - pick_port 가 health 의 mode 로 걸렀다. sim 화면이
 # real 서버에 붙으면 "미리 돌려 둔 것"이라는 말이 거짓이 된다.
-health="$(http_body "$api_health")"
-served_mode="$(printf '%s' "$health" | sed -n 's/.*"mode":"\([a-z]*\)".*/\1/p')"
-source_kind="$(printf '%s' "$health" | sed -n 's/.*"dataSource":"\([^"]*\)".*/\1/p')"
-if [ "$served_mode" != "$MODE" ]; then
-  echo "포트 $API_PORT 의 서버는 ${served_mode:-알 수 없는} 버전입니다. $MODE 버전이 아니라 쓰지 않습니다."
-  echo "그 서버를 내리거나 MEDIAL_SIM_PORT 로 다른 포트를 고르세요."
-  cleanup 1
-fi
+source_kind="$(http_body "$api_health" | sed -n 's/.*"dataSource" *: *"\([^"]*\)".*/\1/p')"
 echo "서버 준비됨 · http://127.0.0.1:$API_PORT · $MODE · 데이터: ${source_kind:-확인 못 함}"
 
 # --- 프런트 --------------------------------------------------------------------
-if listening "$WEB_PORT"; then
+wanted="$WEB_PORT"
+if ! picked="$(pick_port "$WEB_PORT" web_is_ours)"; then
+  echo "화면 포트 $wanted 부터 $PORT_TRIES 개가 모두 다른 프로그램에 쓰이고 있습니다."
+  echo "MEDIAL_WEB_PORT 로 다른 첫 후보를 고르세요."
+  cleanup 1
+fi
+WEB_PORT="${picked% *}"
+[ "$WEB_PORT" != "$wanted" ] && echo "화면: 포트 $wanted 는 다른 프로그램이 쓰고 있어 $WEB_PORT 을 씁니다."
+if [ "${picked#* }" = ours ]; then
   echo "화면: 이미 $WEB_PORT 에서 돌고 있습니다. 그대로 씁니다."
 else
   echo "화면 시작 ... (로그: $WEB_LOG)"
@@ -297,6 +348,7 @@ done
 
 url="http://localhost:$WEB_PORT/"
 echo "화면 준비됨 · $url"
+echo "$API_PORT $WEB_PORT" >"$PORTS_FILE"
 
 if [ "$open_browser" = 1 ]; then
   # Git Bash 는 start, 그 밖에는 xdg-open/open.

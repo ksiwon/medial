@@ -51,8 +51,10 @@ macOS·Linux·Git Bash에서는 `./run-sim.sh` · `./run-real.sh` 입니다.
 | 기록 | `local-data/runs/sim.sqlite3` (real의 얼린 사본) | `local-data/runs/real.sqlite3` |
 | 주소 | 서버 8020 · <http://localhost:5180> | 서버 8010 · <http://localhost:5173> |
 
-포트와 기록이 달라서 둘을 동시에 띄워 둘 수 있습니다. 이미 떠 있는 쪽은 그대로 쓰고
-(다른 버전의 서버에는 붙지 않습니다), `--stop` 으로 내리고, `--no-open` 이면 브라우저를
+포트와 기록이 달라서 둘을 동시에 띄워 둘 수 있습니다. 표의 포트는 첫 후보입니다 — 거기에 같은
+버전의 MEDial 이 떠 있으면 그대로 쓰고, 다른 프로그램이나 다른 버전이 쓰고 있으면 다음 빈 포트
+(5181, 5182 …)로 옮겨 띄우고 창에 그 주소를 알립니다. `--stop` 은 지난 실행이 쓴 포트에서 MEDial 만
+내리고, `--no-open` 이면 브라우저를
 열지 않습니다. Ctrl+C 는 그 스크립트가 띄운 것만 정리합니다. 하는 일은 전부
 `scripts/launch.sh` 에 있습니다.
 

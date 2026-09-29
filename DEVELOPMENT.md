@@ -43,8 +43,11 @@ npm install
 ```
 
 Windows에서는 `run-sim.cmd` · `run-real.cmd` 를 더블클릭해도 됩니다(Git Bash로 같은
-`scripts/launch.sh` 를 부릅니다). 이미 떠 있는 쪽은 그대로 쓰되 **다른 버전의 서버에는 붙지
-않고**(health의 `mode`로 확인), `--stop` 으로 내립니다. Ctrl+C 는 그 스크립트가 띄운 것만
+`scripts/launch.sh` 를 부릅니다). 포트는 첫 후보이고, 이미 떠 있는 쪽은 **같은 버전의 MEDial 일 때만**
+그대로 씁니다 — 서버는 health의 `mode`, 화면은 `<title>` 과 프록시 너머 health의 `mode`로 확인합니다.
+아니면 다음 빈 포트로 옮겨 띄웁니다(첫 후보부터 20개). 실제로 쓴 포트는 `.run/<버전>/ports` 에 적고
+`--stop` 은 그 포트에서 MEDial 인 것만 내립니다 (2026-09-29 — 다른 프로젝트의 vite가 5180에 떠 있을 때
+그것을 MEDial 화면으로 여기고 붙었고, `--stop` 이었다면 그것을 죽였을 것입니다). Ctrl+C 는 그 스크립트가 띄운 것만
 정리합니다. 직접 띄우려면 `python server/sim_main.py --mode sim|real` 과 `npm run dev`.
 버전을 정하지 않은 서버는 뜨지 않습니다(`mode.py`의 `ModeNotSet`).
 
