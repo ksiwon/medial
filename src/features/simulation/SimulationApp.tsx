@@ -459,11 +459,6 @@ export default function SimulationApp() {
           detail={it.detail}
           generation={viewGeneration ?? it.detail.generations[0] ?? null}
           personas={s.personas}
-          onSelectGeneration={(id) => {
-            it.setViewGeneration(id);
-            const generation = it.detail?.generations.find((g) => g.id === id);
-            if (generation?.attemptIds[0]) void s.setActive(generation.attemptIds[0]);
-          }}
           onOpenScene={(attemptId, eventId) => void it.openScene(attemptId, eventId)}
           onGoToImprove={() => it.setScreen('improve')}
           events={loaded ? { attemptId: loaded.detail.attempt.id, list: loaded.events } : null}

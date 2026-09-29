@@ -14,6 +14,7 @@ import { personName, sentenceFor } from '../selectors/story';
 import { dayChangeLines } from '../selectors/words';
 import CompareScreen, { type CompareDecisions } from './CompareScreen';
 import EvaluationsScreen from './EvaluationsScreen';
+import { versionName } from '../ui/primitives';
 import ObserveScreen from './ObserveScreen';
 import RecordingsScreen, { madeBy, stoppedEarly } from './RecordingsScreen';
 
@@ -272,7 +273,6 @@ describe('EvaluationsScreen', () => {
         detail={session}
         generation={ordered[0]}
         personas={personas}
-        onSelectGeneration={noop}
         onOpenScene={noop}
         onGoToImprove={noop}
         {...overrides}
@@ -290,6 +290,13 @@ describe('EvaluationsScreen', () => {
     // The four dimension assessments are said in Korean, never as their keys.
     expect(text).not.toContain('help_resolution');
     expect(text).not.toMatch(/\bmixed\b/);
+  });
+
+  it('says which version it is reading, and offers no second version select', () => {
+    const ordered = [...session.generations].sort((a, b) => a.index - b.index);
+    const { container } = evaluations();
+    expect(container.textContent).toContain(versionName(ordered[0].index, ordered[0].label));
+    expect(container.querySelector('select')).toBeNull();
   });
 
   it('counts items and says so, rather than showing a score', () => {

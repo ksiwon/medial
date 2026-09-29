@@ -69,7 +69,8 @@ export default function ProgressBar({
   return (
     <Bar>
       <Select
-        aria-label="관찰 중인 버전"
+        aria-label="읽는 버전"
+        title="읽는 버전 — 사례와 서비스 경험과 주민 평가가 이 버전을 보여 줍니다"
         style={{ minHeight: 30, fontSize: font.small, padding: '3px 8px', maxWidth: 220 }}
         value={viewGenerationId ?? ''}
         onChange={(e) => onSelectGeneration(e.target.value)}

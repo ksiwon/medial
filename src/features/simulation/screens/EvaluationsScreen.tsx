@@ -24,7 +24,6 @@ import {
   Mono,
   PageTitle,
   Row,
-  Select,
   Sub,
   Tag,
   TextLink,
@@ -208,7 +207,6 @@ interface Props {
   detail: SessionDetail;
   generation: GenerationDetail | null;
   personas: PersonasPayload | null;
-  onSelectGeneration: (id: string) => void;
   /** Opens the cited scene on the experience screen and moves its cursor. A
    *  read of a stored log; no adapter runs. */
   onOpenScene: (attemptId: string, eventId: string) => void;
@@ -222,15 +220,10 @@ export default function EvaluationsScreen({
   detail,
   generation,
   personas,
-  onSelectGeneration,
   onOpenScene,
   onGoToImprove,
   events = null,
 }: Props) {
-  const generations = useMemo(
-    () => [...detail.generations].sort((a, b) => a.index - b.index),
-    [detail.generations],
-  );
   const reviews = useMemo(() => sortReviews(generation?.reviews ?? []), [generation]);
   const [reviewId, setReviewId] = useState<string | null>(null);
   const selected = reviews.find((r) => r.id === reviewId) ?? reviews[0] ?? null;
@@ -295,26 +288,16 @@ export default function EvaluationsScreen({
   return (
     <Sheet>
       <Inner>
-        <Row style={{ justifyContent: 'space-between', alignItems: 'flex-end', gap: 12 }}>
-          <div>
-            <PageTitle>주민 평가</PageTitle>
-            <Sub>누구에게 어떤 도움과 부담이 생겼나.</Sub>
-          </div>
-          <div style={{ minWidth: 220 }}>
-            <Sub>어느 버전의 평가</Sub>
-            <Select
-              aria-label="평가를 읽을 버전"
-              value={generation.id}
-              onChange={(e) => onSelectGeneration(e.target.value)}
-            >
-              {generations.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {versionName(g.index, g.label)}
-                </option>
-              ))}
-            </Select>
-          </div>
-        </Row>
+        {/* Which version these are is said, not chosen, here: the one version
+            select is the strip's, which also loads that version's day. A second
+            select on this screen could point somewhere else (2026-09-29). */}
+        <div>
+          <PageTitle>주민 평가</PageTitle>
+          <Sub>
+            <strong style={{ color: colour.text }}>{versionName(generation.index, generation.label)}</strong>
+            {' '}· 누구에게 어떤 도움과 부담이 생겼나.
+          </Sub>
+        </div>
 
         <Callout>
           <div>
