@@ -104,7 +104,10 @@ export function judgmentOf(
 
   return {
     question: decided ? questionWords(str(decided.payload.question) ?? record?.question ?? '') || null : null,
-    knows: record?.knownFacts ?? [],
+    // Records stored before 2026-09-29 carry the destination as its key
+    // ("TOWN까지"); they are read in the village's words, never rewritten.
+    knows: (record?.knownFacts ?? []).map((fact) =>
+      fact.replace(/\b([A-Z][A-Z0-9_]*)까지/g, (_, key: string) => `${placeWord(key)}까지`)),
     rules: rules
       .filter((r) => r.executionStatus === 'applied' && r.eventRefs.some((id) => ids.has(id)))
       .map((r) => ({ label: r.label, sentence: r.sentence })),

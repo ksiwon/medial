@@ -77,6 +77,8 @@ const PEOPLE = {
   P7: man('a Korean man in his late 50s who has fished his whole life: sturdy build, sun-weathered skin, short greying hair under a faded grey-blue cap, a worn navy work jacket over a grey t-shirt, dark work trousers, black rubber boots'),
   P8: man('a Korean man in his late 50s, a fisherman with a heavier, tired-looking build: short black-and-grey hair, no cap, an olive-green fleece vest over a faded red-checked flannel shirt, grey work trousers, dark rubber boots'),
   P9: man('a fit, neatly groomed Korean man in his late 50s who runs a guesthouse: short salt-and-pepper hair, a light grey zip-up hoodie over a dark t-shirt, jeans, clean white sneakers'),
+  // 익명 페르소나: 70대, P11과 부부로 마을 식당을 함께 한다. 그 밖의 모습은 지어낸 것이다.
+  P10: man('a Korean man in his mid 70s who runs the village restaurant with his wife, still steady and quietly capable: short thinning grey hair, a dark brown padded vest over a blue-and-white checked flannel shirt, grey trousers, black slip-on shoes'),
   P11: woman('a small Korean woman close to 80 who runs the village restaurant with her husband, slightly stooped and aching in several places: short permed grey hair, a floral blouse under a dark knit cardigan, a patterned kitchen apron, loose trousers, rubber slip-on shoes'),
   P12: man('a quiet, reserved Korean man in his early 60s who runs a small business of his own: short grey hair, a charcoal fleece jacket over a plain beige shirt, grey trousers, brown leather work shoes'),
   CLINIC: woman('a Korean woman in her mid 40s, the community health practitioner of the sub-centre: black hair tied back, a white clinic gown over a navy knit top, an ID lanyard with no readable writing'),

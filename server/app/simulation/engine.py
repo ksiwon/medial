@@ -2118,7 +2118,7 @@ class Engine:
             raised_ms=int(request.get("raisedMs", at_ms)),
             last_contact_ms=int(request.get("lastContactMs", at_ms)),
             observation_ids=[o.id for o in medial_obs],
-            known_facts=_known_facts(subject, request, attempt_number),
+            known_facts=_known_facts(subject, request, attempt_number, self.village.places),
             relations=[{"actorId": self.relations.other(e, subject), "kind": e.kind,
                         "reason": e.reason}
                        for e in self.relations.neighbours(subject)],
@@ -2278,7 +2278,8 @@ def _clock(ms: int) -> str:
     return "%02d:%02d" % (total // 60, total % 60)
 
 
-def _known_facts(subject: str, request: dict[str, Any], attempt_number: int) -> list[str]:
+def _known_facts(subject: str, request: dict[str, Any], attempt_number: int,
+                 places: dict[str, Any]) -> list[str]:
     """What MEDial can state at a decision, in the words of the need it is for.
 
     A transport request read "P9에게 0회 연락했고 응답이 없다", which is not what
@@ -2287,9 +2288,12 @@ def _known_facts(subject: str, request: dict[str, Any], attempt_number: int) -> 
     """
     unknown_position = "MEDial은 %s의 현재 위치를 알지 못한다" % subject
     if request.get("need") == "transport":
+        # The destination in the village's words; the key ("TOWN까지") was
+        # printed on screen as it was (2026-09-28).
+        destination = request.get("destination")
+        where = (places.get(destination, {}).get("label") if destination else None) or "목적지"
         return [
-            "%s에게 오늘 %s까지 이동할 일이 있다고 접수되었다"
-            % (subject, request.get("destination", "목적지")),
+            "%s에게 오늘 %s까지 이동할 일이 있다고 접수되었다" % (subject, where),
             "MEDial은 누가 운전할 수 있는지, 차에 자리가 있는지 알지 못한다",
             unknown_position,
         ]

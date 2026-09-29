@@ -11,6 +11,7 @@ import { PACES, REVEAL_STEP_S, REVEAL_STEPS } from '../scene/reel';
 import SceneMapCard from '../scene/SceneMapCard';
 import SceneStage from '../scene/SceneStage';
 import type { Beat, Episode } from '../scene/types';
+import { sentenceFor } from '../selectors/story';
 import { dayChangeLines, dayLabel } from '../selectors/words';
 import { IconButton, Select, Sub } from '../ui/primitives';
 import { colour, font, radius } from '../ui/theme';
@@ -66,6 +67,24 @@ const MapLayer = styled.div<{ $card: boolean }>`
   box-shadow: ${(p) => (p.$card ? '0 10px 30px rgba(0,0,0,0.35)' : 'none')};
   transition: left 0.8s cubic-bezier(0.65, 0, 0.35, 1), top 0.8s cubic-bezier(0.65, 0, 0.35, 1),
     width 0.8s cubic-bezier(0.65, 0, 0.35, 1), height 0.8s cubic-bezier(0.65, 0, 0.35, 1), box-shadow 0.8s;
+`;
+
+/* Beside the map, in the margin the tall village leaves: what just happened
+   and which scene is next. The map alone said neither, and the reader had to
+   wait for the next scene to learn why the day was running. */
+const Caption = styled.div`
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  pointer-events: none;
+  color: ${colour.text};
+  > div > span { display: block; font-size: ${font.small}; color: ${colour.secondary}; margin-bottom: 4px; }
+  > div > p { margin: 0; font-size: 19px; line-height: 1.45; font-weight: 600; }
+  > div > p > b { font-variant-numeric: tabular-nums; color: ${colour.primary}; margin-right: 8px; }
 `;
 
 const Transport = styled.div`
@@ -245,6 +264,28 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
   // quarter of the frames' width and two fifths of the stage's height - the
   // source village is a tall strip, so its height is what has to be capped.
   const [, , vw, vh] = village.geometry.viewBox;
+
+  // What the caption says. The last record is the log's own sentence for the
+  // latest event up to the cursor that has one - walking and working have none,
+  // so it can be hours old and carries its time rather than "just now". Only in
+  // the researcher's view: in MEDial's it would hand over world-only facts. The
+  // next scene is the reel's.
+  const caption = useMemo(() => {
+    if (inScene || !reel) return null;
+    const next = reel.episodes.find((episode) => episode.startMs > atMs) ?? null;
+    let recent: { atMs: number; text: string } | null = null;
+    if (p.viewMode === 'researcher') {
+      for (let i = events.length - 1; i >= 0 && !recent; i--) {
+        if (events[i].seq > cursorSeq) continue;
+        const said = sentenceFor(events[i]);
+        if (said) recent = { atMs: events[i].simTimeMs, text: said.text };
+      }
+    }
+    return next || recent ? { next, recent } : null;
+  }, [inScene, reel, atMs, cursorSeq, events, p.viewMode]);
+  // The margin the village leaves on each side at full height; the caption
+  // only appears when it fits there without covering the map.
+  const margin = (stage.width - (stage.height - 40) * (vw / vh)) / 2;
   const maxW = Math.max(200, Math.min(360, (stage.width - Math.max(300, stage.width * 0.26)) * 0.24));
   const maxH = Math.max(160, Math.min(300, stage.height * 0.42));
   const cardScale = Math.min(maxW / vw, maxH / vh);
@@ -288,6 +329,22 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
             />
           )}
         </MapLayer>
+        {caption && margin >= 280 && (
+          <Caption style={{ right: 28, width: Math.min(400, margin - 56) }} aria-live="polite">
+            {caption.recent && (
+              <div>
+                <span>마지막 기록</span>
+                <p><b>{formatClock(caption.recent.atMs)}</b>{caption.recent.text}</p>
+              </div>
+            )}
+            {caption.next && (
+              <div>
+                <span>다음 장면</span>
+                <p><b>{formatClock(caption.next.startMs)}</b>{caption.next.title}</p>
+              </div>
+            )}
+          </Caption>
+        )}
       </Stage>
 
       {dayOver && (

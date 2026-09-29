@@ -213,7 +213,7 @@ describe('CompareScreen', () => {
     // No aggregate satisfaction, no invented percentage, no trophy. (Plain
     // "점" is not searched for: 은점마을 contains it.)
     expect(text).not.toMatch(/만족도\s*[0-9]/);
-    expect(text).not.toMatch(/[0-9]\s*점/);
+    expect(text).not.toMatch(/[0-9]\s*점/);
     expect(text).not.toMatch(/종합\s*점수/);
     expect(text).not.toContain('최고안');
     expect(text).not.toContain('승자');

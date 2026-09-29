@@ -13,13 +13,17 @@ const Box = styled.aside<{ $absent: boolean }>`
   right: 0;
   bottom: 0;
   width: var(--panel-w);
+  /* The frames stop at --panel-w; without this the padding made the panel
+     32 px wider than that and it lay over the pictures' right edge. */
+  box-sizing: border-box;
   padding: 16px 18px 16px 14px;
   display: flex;
   flex-direction: column;
   gap: 4px;
   color: #eceae6;
   overflow: hidden;
-  > ol { opacity: ${(p) => (p.$absent ? 0.35 : 1)}; transition: opacity 0.45s ease; }
+  /* Dim, not gone: on a projector 0.35 read as an empty panel (2026-09-29). */
+  > ol { opacity: ${(p) => (p.$absent ? 0.6 : 1)}; transition: opacity 0.45s ease; }
 `;
 
 const Kicker = styled.div`
@@ -55,7 +59,7 @@ const Steps = styled.ol`
 const Step = styled.li<{ $on: boolean }>`
   border-left: 3px solid ${(p) => (p.$on ? '#e2542c' : '#3b3c38')};
   padding: 2px 0 2px 11px;
-  opacity: ${(p) => (p.$on ? 1 : 0.16)};
+  opacity: ${(p) => (p.$on ? 1 : 0.35)};
   transition: opacity 0.45s ease, border-color 0.45s ease;
   > h4 { margin: 0 0 3px; font-size: 11px; font-weight: 800; letter-spacing: 0.05em; color: #a9a59d; }
   li { font-size: 13px; line-height: 1.45; margin: 2px 0 2px 14px; }

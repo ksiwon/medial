@@ -57,10 +57,16 @@ const Frames = styled.div`
 const open = keyframes`from { flex-grow: 0.0001; } to { flex-grow: 1; }`;
 const pop = keyframes`from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: none; }`;
 
+/* Clips the camera: Cam creeps to scale 1.03, and unclipped it spilled ~15 px of
+   the photo under the judgment panel, which has no background of its own - the
+   panel's first letters then sat on the bright picture and read as cut off
+   ("금 아는 것", seen 2026-09-29). */
 const FrameBox = styled.div`
   position: relative;
   flex: 1 1 0;
   min-width: 0;
+  overflow: hidden;
+  border-radius: 8px;
   animation: ${open} 0.5s cubic-bezier(0.65, 0, 0.35, 1);
 `;
 

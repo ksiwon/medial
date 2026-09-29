@@ -562,6 +562,9 @@ def test_a_decision_states_the_evidence_of_its_own_need():
     assert "응답이 없다" not in facts, "a ride request is not an unanswered call"
     assert "이동할 일이 있다" in facts
     assert "누가 운전할 수 있는지" in facts, "the unknowns must travel with the decision"
+    # The destination in the village's words, not its key (seen on screen as
+    # "TOWN까지", 2026-09-28).
+    assert "TOWN까지" not in facts, facts
 
     checkin = svc.create_attempt("policy-A-v1", DECK_ID, RES_ID)
     checkin_facts = " ".join(f for d in checkin["decisions"] for f in d["knownFacts"])

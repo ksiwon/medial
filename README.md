@@ -115,7 +115,7 @@ npm run build && npm test && python -m pytest server/tests/simulation -q
 npm run e2e
 ```
 
-현재 기준선 (2026-09-28에 이 저장소에서 실행): build 통과 · vitest 57 · pytest 444 ·
+현재 기준선 (2026-09-29에 이 저장소에서 실행): build 통과 · vitest 63 · pytest 444 ·
 Playwright 6건 · 발표용 캡처 5건. 테스트 수보다 실패 여부와 연구 경계 검사를 우선하며, 전부 합성 픽스처와
 별도 DB(`.run/e2e/`)로 실행됩니다 — 연구 DB는 건드리지 않습니다. e2e 서버는 키를 비운
 real 버전이라 모델을 부르지 않습니다.

@@ -301,8 +301,9 @@ const OutRow = styled.div`
 /** Place names worth a label at all. Houses are never labelled: which named
  *  resident lives in which building is not put on screen. */
 const LABELLED_PLACES = new Set(['HALL', 'PORT', 'EXP', 'FOOD', 'MIGA', 'FARM', 'TOWNEXIT', 'SEA']);
-/** …and at low zoom, only these few. */
-const ALWAYS_LABELLED = new Set(['HALL', 'PORT', 'TOWNEXIT']);
+/** …and at low zoom, only these few. The sea is one of them: unlabelled, the
+ *  people working there read as markers dropped in the water by mistake. */
+const ALWAYS_LABELLED = new Set(['HALL', 'PORT', 'TOWNEXIT', 'SEA']);
 
 interface Props {
   village: VillagePayload;
@@ -619,9 +620,12 @@ export default function VillageMap({
                     strokeWidth={1.4 * k}
                   />
                   {label && (
+                    // The sea's people stand on its point, so its name goes under
+                    // them rather than beside, where their markers covered it.
                     <text
-                      x={place.x + 7 * k}
-                      y={place.y + 3.6 * k}
+                      x={place.id === 'SEA' ? place.x : place.x + 7 * k}
+                      y={place.id === 'SEA' ? place.y + 30 * k : place.y + 3.6 * k}
+                      textAnchor={place.id === 'SEA' ? 'middle' : undefined}
                       fontSize={10 * k}
                       fill={colour.text}
                       stroke="#ffffff"
