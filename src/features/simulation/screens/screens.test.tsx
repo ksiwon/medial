@@ -7,10 +7,10 @@ import neighbourEventsFixture from '../../../../fixtures/ui/events-neighbours.js
 import personasFixture from '../../../../fixtures/ui/personas.json';
 import sessionFixture from '../../../../fixtures/ui/session.json';
 import villageFixture from '../../../../fixtures/ui/village.json';
-import type { SessionDetail } from '../api/iteration';
+import { ASSESSMENT_LABELS, DIMENSION_LABELS, type SessionDetail } from '../api/iteration';
 import type { AttemptDetail, DomainEvent, PersonasPayload, VillagePayload } from '../api/types';
 import { usePlayback } from '../scene/playback';
-import { sentenceFor } from '../selectors/story';
+import { personName, sentenceFor } from '../selectors/story';
 import { dayChangeLines } from '../selectors/words';
 import CompareScreen, { type CompareDecisions } from './CompareScreen';
 import EvaluationsScreen from './EvaluationsScreen';
@@ -321,6 +321,50 @@ describe('EvaluationsScreen', () => {
     expect(screen.getAllByText('그 장면 열기').length).toBeGreaterThan(0);
     fireEvent.click(screen.getAllByText(/사건 근거 [0-9]+건 닫기/)[0]);
     expect(screen.queryByText('그 장면 열기')).toBeNull();
+  });
+
+  it('says under each name what that person judged, and never an unjudged item', () => {
+    const ordered = [...session.generations].sort((a, b) => a.index - b.index);
+    const review = ordered[0].reviews.find((r) => r.items.some((i) => i.assessment !== 'unknown'));
+    if (!review) return;
+    evaluations();
+    const row = screen.getAllByRole('button').find(
+      (b) => b.getAttribute('aria-pressed') !== null && b.textContent?.startsWith(personName(review.actorId)),
+    )!;
+    const judged = review.items.find((i) => i.assessment !== 'unknown')!;
+    expect(row.textContent).toContain(ASSESSMENT_LABELS[judged.assessment]);
+    expect(row.textContent).toContain(DIMENSION_LABELS[judged.dimension]);
+    expect(row.textContent).not.toContain('판단 불가');
+  });
+
+  it('folds the dimensions judged 판단 불가 into one line, and keeps them', () => {
+    const ordered = [...session.generations].sort((a, b) => a.index - b.index);
+    const review = ordered[0].reviews.find((r) => r.items.some((i) => i.assessment === 'unknown'));
+    if (!review) return;
+    const { container } = evaluations();
+    fireEvent.click(screen.getAllByText(new RegExp(`^${personName(review.actorId)}$`))[0]);
+    const unknown = review.items.filter((i) => i.assessment === 'unknown');
+    const summary = [...container.querySelectorAll('summary')].find((el) =>
+      el.textContent?.startsWith('판단 불가'),
+    );
+    expect(summary?.textContent).toContain(`판단 불가 ${unknown.length}개`);
+    // Folded, not dropped: the reasons are still in the card.
+    expect(summary?.parentElement?.textContent).toContain(unknown[0].reason);
+  });
+
+  it('says a cited event as what happened when that attempt is loaded', () => {
+    const ordered = [...session.generations].sort((a, b) => a.index - b.index);
+    const review = ordered[0].reviews.find((r) =>
+      r.items.some((i) => i.assessment !== 'unknown' && i.eventRefs.length > 0),
+    );
+    const sayable = events.find((e) => sentenceFor(e));
+    if (!review || !sayable) return;
+    const item = review.items.find((i) => i.assessment !== 'unknown' && i.eventRefs.length > 0)!;
+    const cited = { ...sayable, id: item.eventRefs[0] };
+    evaluations({ events: { attemptId: review.attemptId, list: [cited] } });
+    fireEvent.click(screen.getAllByText(new RegExp(`^${personName(review.actorId)}$`))[0]);
+    fireEvent.click(screen.getAllByText(/사건 근거 [0-9]+건 보기/)[0]);
+    expect(screen.getByText(sentenceFor(cited)!.text, { exact: false })).toBeDefined();
   });
 
   it('shows the original evaluation items an issue was made of', () => {

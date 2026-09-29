@@ -134,7 +134,7 @@ test('사례 → 실행 → 주민 평가 → 개선과 확인: 한 바퀴가 �
   await page.keyboard.press('Escape');
 
   // Evidence opens in place, and closing returns to the same item.
-  const evidence = page.getByText(/사건 근거 [0-9]+건 보기/).first();
+  const evidence = page.getByText(/사건 근거 [0-9]+건 보기/).filter({ visible: true }).first();
   if (await evidence.count()) {
     await evidence.click();
     await expect(page.getByText('그 장면 열기').first()).toBeVisible();
@@ -321,7 +321,7 @@ test('키보드만으로 세 화면과 평가 근거에 닿는다', async ({ pag
   await page.getByRole('button', { name: '주민 평가', exact: true }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: '주민 평가' })).toBeVisible();
-  const evidence = page.getByText(/사건 근거 [0-9]+건 보기/).first();
+  const evidence = page.getByText(/사건 근거 [0-9]+건 보기/).filter({ visible: true }).first();
   if (await evidence.count()) {
     await evidence.focus();
     await page.keyboard.press('Enter');

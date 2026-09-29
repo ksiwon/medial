@@ -11,8 +11,9 @@ import {
   type SessionDetail,
   type UsageStatus,
 } from '../api/iteration';
-import type { PersonasPayload } from '../api/types';
-import { personName } from '../selectors/story';
+import type { DomainEvent, PersonasPayload } from '../api/types';
+import { formatClock } from '../positions';
+import { personName, sentenceFor } from '../selectors/story';
 import {
   Body,
   Button,
@@ -50,6 +51,12 @@ import { colour, font, radius } from '../ui/theme';
 //
 // There is no total, no average, no ranking and no winner here, and the counts
 // at the top are counts of items, said as such.
+//
+// What a reader looks for first is who carried what (2026-09-29). So each row of
+// the person list says, under the name, which dimensions that person judged
+// 부정 · 혼합 · 긍정; and inside a card the dimensions judged 판단 불가 are one
+// folded line rather than five paragraphs of "cannot tell" before the one that
+// says something. They are folded, not dropped: an abstention is a result.
 
 const Sheet = styled.div`
   flex: 1;
@@ -96,8 +103,9 @@ const PersonRow = styled.button<{ $active: boolean }>`
   padding: 8px 10px;
   cursor: pointer;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 4px 8px;
   min-width: 0;
   overflow: hidden;
   color: ${colour.text};
@@ -114,6 +122,14 @@ const PersonName = styled.strong`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+`;
+
+/* The row's second line: what this person judged, by assessment. */
+const Gist = styled.span`
+  flex: 1 0 100%;
+  font-size: ${font.small};
+  color: ${colour.secondary};
+  line-height: 1.45;
 `;
 
 const Card = styled.div`
@@ -160,6 +176,28 @@ function sortReviews(reviews: AgentReview[]): AgentReview[] {
   });
 }
 
+type Judged = Exclude<Assessment, 'unknown'>;
+
+/** Which dimensions a person judged, worst first within the person - not a
+ *  ranking of people. Null when every item was 판단 불가. */
+function gistOf(review: AgentReview): { assessment: Judged; dimensions: string[] }[] | null {
+  const parts = (['negative', 'mixed', 'positive'] as const)
+    .map((assessment) => ({
+      assessment,
+      dimensions: review.items
+        .filter((item) => item.assessment === assessment)
+        .map((item) => DIMENSION_LABELS[item.dimension]),
+    }))
+    .filter((part) => part.dimensions.length > 0);
+  return parts.length > 0 ? parts : null;
+}
+
+const GIST_COLOUR: Record<Judged, string> = {
+  negative: colour.error,
+  mixed: colour.warn,
+  positive: colour.primary,
+};
+
 function itemCounts(reviews: AgentReview[]): Record<Assessment, number> {
   const out: Record<Assessment, number> = { positive: 0, mixed: 0, negative: 0, unknown: 0 };
   for (const review of reviews) for (const item of review.items) out[item.assessment] += 1;
@@ -175,6 +213,9 @@ interface Props {
    *  read of a stored log; no adapter runs. */
   onOpenScene: (attemptId: string, eventId: string) => void;
   onGoToImprove: () => void;
+  /** The log of the attempt being read, so cited events can be said as what
+   *  happened rather than as ids. Absent or another attempt: ids only. */
+  events?: { attemptId: string; list: DomainEvent[] } | null;
 }
 
 export default function EvaluationsScreen({
@@ -184,6 +225,7 @@ export default function EvaluationsScreen({
   onSelectGeneration,
   onOpenScene,
   onGoToImprove,
+  events = null,
 }: Props) {
   const generations = useMemo(
     () => [...detail.generations].sort((a, b) => a.index - b.index),
@@ -216,6 +258,10 @@ export default function EvaluationsScreen({
     () => new Set(reviews.map((r) => scenarioOf(r.attemptId))).size > 1,
     [reviews, scenarioOf],
   );
+  const eventsById = useMemo(
+    () => new Map((events?.list ?? []).map((e) => [e.id, e])),
+    [events],
+  );
   const counts = itemCounts(reviews);
   const synthesis = generation?.synthesis ?? null;
 
@@ -242,6 +288,9 @@ export default function EvaluationsScreen({
   // Whether the persona came from source material is one axis; whether the
   // evaluation is simulated is another, and it is always simulated.
   const synthetic = personas?.provenance?.dataSource === 'synthetic';
+  const judged = selected?.items.filter((item) => item.assessment !== 'unknown') ?? [];
+  const abstained = selected?.items.filter((item) => item.assessment === 'unknown') ?? [];
+  const cited = selected && events?.attemptId === selected.attemptId ? eventsById : null;
 
   return (
     <Sheet>
@@ -309,6 +358,19 @@ export default function EvaluationsScreen({
                     <Clip>{scenarioOf(review.attemptId)}</Clip>
                   </Sub>
                 )}
+                {review.usageStatus !== 'no_experience' && (
+                  <Gist>
+                    {gistOf(review)?.map((part, index) => (
+                      <span key={part.assessment}>
+                        {index > 0 && ' / '}
+                        <span style={{ color: GIST_COLOUR[part.assessment], fontWeight: 600 }}>
+                          {ASSESSMENT_LABELS[part.assessment]}
+                        </span>{' '}
+                        {part.dimensions.join(', ')}
+                      </span>
+                    )) ?? '판단할 근거가 있는 항목 없음'}
+                  </Gist>
+                )}
               </PersonRow>
             ))}
             <Row style={{ marginTop: 6, gap: 2 }}>
@@ -350,14 +412,34 @@ export default function EvaluationsScreen({
 
               <div>
                 <Sub>2 · 차원별 평가와 이유</Sub>
-                {selected.items.map((item, index) => (
+                {judged.map((item) => (
                   <DimensionRow
-                    key={`${item.dimension}-${index}`}
+                    key={item.dimension}
                     item={item}
                     attemptId={selected.attemptId}
+                    eventsById={cited}
                     onOpenScene={onOpenScene}
                   />
                 ))}
+                {abstained.length > 0 && (
+                  <Disclosure style={{ marginTop: 10 }}>
+                    <summary>
+                      판단 불가 {abstained.length}개 —{' '}
+                      {abstained.map((item) => DIMENSION_LABELS[item.dimension]).join(', ')}
+                    </summary>
+                    <div>
+                      {abstained.map((item) => (
+                        <DimensionRow
+                          key={item.dimension}
+                          item={item}
+                          attemptId={selected.attemptId}
+                          eventsById={cited}
+                          onOpenScene={onOpenScene}
+                        />
+                      ))}
+                    </div>
+                  </Disclosure>
+                )}
               </div>
 
               {selected.items.some((i) => i.requestedChange) && (
@@ -504,10 +586,12 @@ export default function EvaluationsScreen({
 function DimensionRow({
   item,
   attemptId,
+  eventsById,
   onOpenScene,
 }: {
   item: ReviewItem;
   attemptId: string;
+  eventsById: Map<string, DomainEvent> | null;
   onOpenScene: (attemptId: string, eventId: string) => void;
 }) {
   // Evidence opens in place and closes back to the same item, so the round trip
@@ -537,12 +621,24 @@ function DimensionRow({
       </Row>
       {open === 'events' && (
         <div style={{ paddingLeft: 12 }}>
-          {item.eventRefs.map((eventId) => (
-            <div key={eventId} style={{ fontSize: font.small }}>
-              <Mono>{eventId}</Mono>{' '}
-              <TextLink onClick={() => onOpenScene(attemptId, eventId)}>그 장면 열기</TextLink>
-            </div>
-          ))}
+          {item.eventRefs.map((eventId) => {
+            // What happened, in the log's own sentence, when this attempt's log
+            // is loaded; the id otherwise. No sentence is made up here.
+            const event = eventsById?.get(eventId) ?? null;
+            const said = event ? sentenceFor(event)?.text ?? null : null;
+            return (
+              <div key={eventId} style={{ fontSize: font.small }}>
+                {event && said ? (
+                  <>
+                    <Mono>{formatClock(event.simTimeMs)}</Mono> {said}
+                  </>
+                ) : (
+                  <Mono>{eventId}</Mono>
+                )}{' '}
+                <TextLink onClick={() => onOpenScene(attemptId, eventId)}>그 장면 열기</TextLink>
+              </div>
+            );
+          })}
         </div>
       )}
       {open === 'evidence' && (

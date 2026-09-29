@@ -65,7 +65,7 @@ test('@shots A 사례와 서비스 경험', async ({ page }) => {
   // evaluation cites an event, and the scene opens at that event.
   await page.getByRole('button', { name: '주민 평가', exact: true }).click();
   await expect(page.getByText('평가 항목의 개수')).toBeVisible({ timeout: 60_000 });
-  await page.getByText(/사건 근거 [0-9]+건 보기/).first().click();
+  await page.getByText(/사건 근거 [0-9]+건 보기/).filter({ visible: true }).first().click();
   await page.getByText('그 장면 열기').first().click();
 
   // The cited event opens as its scene: frames at eye level, the words said,
@@ -110,7 +110,7 @@ test('@shots B 주민 평가', async ({ page }) => {
   await crop(card, '12-evaluations-card');
 
   // An evaluation item, opened onto the events it cites.
-  const evidence = page.getByText(/사건 근거 [0-9]+건 보기/).first();
+  const evidence = page.getByText(/사건 근거 [0-9]+건 보기/).filter({ visible: true }).first();
   if (await evidence.count()) {
     await evidence.click();
     await expect(page.getByText('그 장면 열기').first()).toBeVisible();

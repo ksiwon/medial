@@ -236,6 +236,18 @@ export default function SimulationApp() {
 
   const loaded = s.activeId ? s.attempts[s.activeId] : null;
 
+  // The version being read is the version of the day that is loaded. They were
+  // two states: the workspace reopens the *last* stored attempt (v1's, in a
+  // finished loop) while the version select started at v0, so the map played
+  // v1's day under a v0 label and the evaluations cited a log that was not
+  // loaded (seen 2026-09-29). Every control that picks a version also loads its
+  // day, so following the loaded day in this one direction keeps them one.
+  const setViewGeneration = it.setViewGeneration;
+  useEffect(() => {
+    const owner = it.detail?.generations.find((g) => s.activeId && g.attemptIds.includes(s.activeId));
+    if (owner && owner.id !== it.viewGenerationId) setViewGeneration(owner.id);
+  }, [s.activeId, it.detail, it.viewGenerationId, setViewGeneration]);
+
   const viewGeneration = useMemo(
     () => it.detail?.generations.find((g) => g.id === it.viewGenerationId) ?? null,
     [it.detail, it.viewGenerationId],
@@ -454,6 +466,7 @@ export default function SimulationApp() {
           }}
           onOpenScene={(attemptId, eventId) => void it.openScene(attemptId, eventId)}
           onGoToImprove={() => it.setScreen('improve')}
+          events={loaded ? { attemptId: loaded.detail.attempt.id, list: loaded.events } : null}
         />
       )}
 
