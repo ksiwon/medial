@@ -1,6 +1,7 @@
 import styled from 'styled-components';
 import { api } from '../api/client';
 import type { VillagePayload } from '../api/types';
+import { mapFrame } from '../mapFrame';
 import { placeXY, type ActorPose } from '../positions';
 import type { Frame } from './types';
 
@@ -47,20 +48,26 @@ export default function SceneMapCard({ village, frames, hot, poses }: {
   hot: number;
   poses: ActorPose[];
 }) {
-  const [vx, vy, vw, vh] = village.geometry.viewBox;
-  const unit = vw / 90;
+  const turn = mapFrame(village);
+  const [vx, vy, vw, vh] = turn.viewBox;
+  // The card is about 250 px wide: this makes a pin ~10 px and its name ~11 px.
+  // It was a ninetieth of the short side, which drew both at about 2 px.
+  const unit = vw / 36;
   const raster = village.mapImage;
-  const pins = frames.map((frame, i) => ({ frame, i, at: pointOf(frame, village, poses) }));
+  const pins = frames.map((frame, i) => {
+    const at = pointOf(frame, village, poses);
+    return { frame, i, at: at ? turn.at(at[0], at[1]) : null };
+  });
   return (
     <Card>
       <svg viewBox={`${vx} ${vy} ${vw} ${vh}`} preserveAspectRatio="xMidYMid slice" aria-hidden>
         {raster && (
           <image href={api.mapImageUrl()} x={0} y={0} width={raster.sourceWidthPx} height={raster.sourceHeightPx}
-            transform={`matrix(${raster.northUpMatrix.join(' ')})`} preserveAspectRatio="none"
+            preserveAspectRatio="none"
             style={{ filter: 'saturate(0.9)' }} />
         )}
-        {Object.values(village.places).filter((p) => !p.offMap).map((p) => (
-          <circle key={p.id} cx={p.x} cy={p.y} r={unit * 0.35} fill="#fff" stroke="#596775" strokeWidth={unit * 0.12} />
+        {Object.values(village.places).filter((p) => !p.offMap).map((p) => [p.id, ...turn.at(p.x, p.y)] as const).map(([id, x, y]) => (
+          <circle key={id} cx={x} cy={y} r={unit * 0.35} fill="#fff" stroke="#596775" strokeWidth={unit * 0.12} />
         ))}
         {pins.filter((p) => p.at).map(({ frame, i, at }) => {
           const [x, y] = at!;

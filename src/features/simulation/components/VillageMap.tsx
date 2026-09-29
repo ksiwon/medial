@@ -11,14 +11,15 @@ import {
   type Cluster,
   type MedialKnown,
 } from '../positions';
+import { mapFrame } from '../mapFrame';
 import { personName } from '../selectors/story';
 import { colour, font, radius } from '../ui/theme';
 import { ActivityIcon, FaceChip, FaceMark, VehicleMark } from './Marks';
 
-// The real map of 은점마을: the source raster, north up, flat, at the source's
-// own proportions. Nothing here invents terrain, and nothing stretches the
-// 1.15 km north-south strip sideways. Default cover crops to fill the column;
-// All explicitly fits the whole village, preserving geographic proportions.
+// The real map of 은점마을: the source raster as it was drawn - north to the
+// right, the 1.15 km north-south run lying along the screen (mapFrame.ts) - flat,
+// at the source's own proportions. Nothing here invents terrain or stretches it.
+// All fits the whole village; 채움 crops the edges to fill the panel.
 //
 // Three rules from doc 15 section 5 shape the drawing:
 //
@@ -334,7 +335,8 @@ export default function VillageMap({
   title,
   onSelectCluster,
 }: Props) {
-  const [vx, vy, vw, vh] = village.geometry.viewBox;
+  const frame = useMemo(() => mapFrame(village), [village]);
+  const [vx, vy, vw, vh] = frame.viewBox;
   const home: View = useMemo(() => ({ x: vx, y: vy, w: vw, h: vh }), [vx, vy, vw, vh]);
   const [view, setView] = useState<View>(home);
   // The whole village first; 채움 (fill the panel, cropping the edges) is the
@@ -369,13 +371,10 @@ export default function VillageMap({
   // Cover the map column without deforming geography; All is an explicit fit.
   const fillView = useMemo(() => {
     const raster = village.mapImage;
-    const m = raster?.northUpMatrix;
-    const corners = raster && m ? [[0,0],[raster.sourceWidthPx,0],[0,raster.sourceHeightPx],[raster.sourceWidthPx,raster.sourceHeightPx]]
-      .map(([x,y]) => [m[0]*x+m[2]*y+m[4], m[1]*x+m[3]*y+m[5]]) : null;
-    const x = corners ? Math.min(...corners.map(p => p[0])) : home.x;
-    const y = corners ? Math.min(...corners.map(p => p[1])) : home.y;
-    const w = corners ? Math.max(...corners.map(p => p[0])) - x : home.w;
-    const h = corners ? Math.max(...corners.map(p => p[1])) - y : home.h;
+    const x = raster ? 0 : home.x;
+    const y = raster ? 0 : home.y;
+    const w = raster ? raster.sourceWidthPx : home.w;
+    const h = raster ? raster.sourceHeightPx : home.h;
     const scale = Math.max(box.width / w, box.height / h);
     const width = box.width / scale, height = box.height / scale;
     return { x: x + (w-width)/2, y: y + (h-height)/2, w: width, h: height };
@@ -448,7 +447,14 @@ export default function VillageMap({
     [medial, medialKnown, village, poses],
   );
   const shown = projected ? projected.located : poses;
-  const clusters = useMemo(() => clusterPoses(shown), [shown]);
+  // Grouped north-up, then placed where the turned map draws them.
+  const clusters = useMemo(
+    () => clusterPoses(shown).map((cluster) => {
+      const [x, y] = frame.at(cluster.x, cluster.y);
+      return { ...cluster, x, y };
+    }),
+    [shown, frame],
+  );
   const outside = shown.filter((p) => p.offMap);
 
   // Where each group's mark is actually drawn, after nudging overlapping ones
@@ -562,7 +568,6 @@ export default function VillageMap({
               y={0}
               width={mapImage!.sourceWidthPx}
               height={mapImage!.sourceHeightPx}
-              transform={`matrix(${mapImage!.northUpMatrix.join(' ')})`}
               opacity={medial ? 0.72 : 1}
               style={{ filter: 'saturate(0.92)' }}
               onError={() => setMapBroken(true)}
@@ -577,7 +582,7 @@ export default function VillageMap({
             Object.entries(village.roads).map(([name, points]) => (
               <polyline
                 key={name}
-                points={points.map((p) => `${p[0]},${p[1]}`).join(' ')}
+                points={points.map((p) => frame.at(p[0], p[1]).join(',')).join(' ')}
                 fill="none"
                 stroke="#d9dee3"
                 strokeWidth={Math.max(3.2, 1.4 * k)}
@@ -588,11 +593,13 @@ export default function VillageMap({
 
           {/* Confirmed residences, at the source coordinates, kept quiet: a
               small outline, no label, no cartoon roof. */}
-          {Object.entries(village.homes).map(([id, h]) => (
+          {Object.entries(village.homes).map(([id, home]) => {
+            const [hx, hy] = frame.at(home.x, home.y);
+            return (
             <rect
               key={id}
-              x={h.x - 3 * k}
-              y={h.y - 3 * k}
+              x={hx - 3 * k}
+              y={hy - 3 * k}
               width={6 * k}
               height={6 * k}
               rx={1.2 * k}
@@ -601,7 +608,8 @@ export default function VillageMap({
               strokeWidth={1.1 * k}
               style={{ pointerEvents: 'none' }}
             />
-          ))}
+            );
+          })}
 
           {Object.values(village.places)
             .filter((place) => !place.offMap)
@@ -609,11 +617,12 @@ export default function VillageMap({
               const label =
                 LABELLED_PLACES.has(place.id) &&
                 (zoomedIn || ALWAYS_LABELLED.has(place.id));
+              const [px, py] = frame.at(place.x, place.y);
               return (
                 <g key={place.id} style={{ pointerEvents: 'none' }}>
                   <circle
-                    cx={place.x}
-                    cy={place.y}
+                    cx={px}
+                    cy={py}
                     r={3.6 * k}
                     fill={colour.surface}
                     stroke={colour.secondary}
@@ -621,11 +630,13 @@ export default function VillageMap({
                   />
                   {label && (
                     // The sea's people stand on its point, so its name goes under
-                    // them rather than beside, where their markers covered it.
+                    // them rather than beside, where their markers covered it. A
+                    // place near the right edge (the road out, north) is named on
+                    // its left, or the edge cuts the name.
                     <text
-                      x={place.id === 'SEA' ? place.x : place.x + 7 * k}
-                      y={place.id === 'SEA' ? place.y + 30 * k : place.y + 3.6 * k}
-                      textAnchor={place.id === 'SEA' ? 'middle' : undefined}
+                      x={place.id === 'SEA' ? px : px + (px > vx + vw * 0.85 ? -7 : 7) * k}
+                      y={place.id === 'SEA' ? py + 30 * k : py + 3.6 * k}
+                      textAnchor={place.id === 'SEA' ? 'middle' : px > vx + vw * 0.85 ? 'end' : undefined}
                       fontSize={10 * k}
                       fill={colour.text}
                       stroke="#ffffff"
@@ -675,7 +686,7 @@ export default function VillageMap({
         {medial && <ModeBadge>MEDial이 보고받은 위치만 표시 중</ModeBadge>}
 
         <Compass>
-          <div style={{ fontSize: 14, lineHeight: 1 }}>▲</div>
+          <div style={{ fontSize: 14, lineHeight: 1, transform: `rotate(${frame.northDeg}deg)` }}>▲</div>
           <div>북</div>
         </Compass>
 

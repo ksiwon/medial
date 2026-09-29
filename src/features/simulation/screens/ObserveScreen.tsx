@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import styled from 'styled-components';
 import type { AttemptDetail, DomainEvent, VillagePayload } from '../api/types';
 import VillageMap from '../components/VillageMap';
+import { mapFrame } from '../mapFrame';
 import { formatClock, medialKnowledge, posesAt } from '../positions';
 import { MEDIAL } from '../scene/beats';
 import { openRequests, requestColour } from '../scene/colours';
@@ -260,10 +261,9 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
   const dayOver = reel !== null && p.rt >= reel.total;
   const tint = scene ? (requestColour(reel?.episodes ?? []).get(scene.episode.requestId) ?? colour.primary) : colour.primary;
 
-  // The card: top left, at the map's own proportions, inside a box of about a
-  // quarter of the frames' width and two fifths of the stage's height - the
-  // source village is a tall strip, so its height is what has to be capped.
-  const [, , vw, vh] = village.geometry.viewBox;
+  // The card: top left, at the map's proportions as drawn (mapFrame.ts), inside
+  // a box of about a quarter of the frames' width and two fifths of the stage.
+  const [, , vw, vh] = useMemo(() => mapFrame(village).viewBox, [village]);
 
   // What the caption says. The last record is the log's own sentence for the
   // latest event up to the cursor that has one - walking and working have none,
@@ -283,9 +283,10 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
     }
     return next || recent ? { next, recent } : null;
   }, [inScene, reel, atMs, cursorSeq, events, p.viewMode]);
-  // The margin the village leaves on each side at full height; the caption
-  // only appears when it fits there without covering the map.
+  // The margin the village leaves beside it (a tall map) or under it (a wide
+  // one); the caption only appears where it fits without covering the map.
   const margin = (stage.width - (stage.height - 40) * (vw / vh)) / 2;
+  const below = (stage.height - stage.width * (vh / vw)) / 2;
   const maxW = Math.max(200, Math.min(360, (stage.width - Math.max(300, stage.width * 0.26)) * 0.24));
   const maxH = Math.max(160, Math.min(300, stage.height * 0.42));
   const cardScale = Math.min(maxW / vw, maxH / vh);
@@ -329,8 +330,10 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
             />
           )}
         </MapLayer>
-        {caption && margin >= 280 && (
-          <Caption style={{ right: 28, width: Math.min(400, margin - 56) }} aria-live="polite">
+        {caption && (margin >= 280 || below >= 64) && (
+          <Caption aria-live="polite" style={margin >= 280
+            ? { right: 28, width: Math.min(400, margin - 56) }
+            : { left: 28, right: 28, top: 'auto', bottom: Math.max(8, below / 2 - 30), transform: 'none', flexDirection: 'row', gap: 48 }}>
             {caption.recent && (
               <div>
                 <span>마지막 기록</span>
