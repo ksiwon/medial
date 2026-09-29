@@ -79,7 +79,7 @@ test('@shots A 사례와 서비스 경험', async ({ page }) => {
   const judgment = page.getByLabel('MEDial의 판단');
   if (await judgment.count()) await crop(judgment, '04-observe-judgment');
   await crop(
-    page.getByLabel('반복 진행 상태', { exact: true }).locator('xpath=..'),
+    page.getByLabel('관찰 중인 버전', { exact: true }).locator('xpath=..'),
     '05-progress-bar',
   );
 

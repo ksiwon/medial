@@ -336,8 +336,13 @@ export function showDelta(value: number): string {
 /** Generation labels already start with their own "v1 · " prefix in the stored
  *  record, so prefixing the index again prints "v1 · v1 · ...". */
 export function versionName(index: number, label: string): string {
-  const prefix = `v${index}`;
-  return label.startsWith(prefix) ? label : `${prefix} · ${label}`;
+  // Stored v0 labels carry the prefix twice ("v0 · v0 · 초기 운영안"): the
+  // engine prefixed a policy label that already had it. Records are not
+  // rewritten, so the name is read with the prefix said once.
+  const prefix = `v${index} · `;
+  let rest = label;
+  while (rest.startsWith(prefix)) rest = rest.slice(prefix.length);
+  return `${prefix}${rest}`;
 }
 
 /** One line that must not break or spill out of its box. The full text stays

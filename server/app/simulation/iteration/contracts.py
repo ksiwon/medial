@@ -408,11 +408,11 @@ TERMINAL_STATES = frozenset({
 #: Human-readable, and deliberately not interchangeable. A budget stop is not a
 #: success, and a model outage is not a resident declining.
 STOP_REASON_TEXT: dict[str, str] = {
-    "reached_max_generations": "설정한 세대 수를 모두 실행했다. 최종 선택은 디자이너가 한다.",
-    "awaiting_confirmation": "검증된 Change Set 초안이 있다. 연구자가 확정하기 전에는 실행하지 않는다.",
+    "reached_max_generations": "설정한 버전 수를 모두 실행했다. 현장에서 검토할 안은 연구자가 고른다.",
+    "awaiting_confirmation": "검증된 수정안 초안이 있다. 연구자가 확정하기 전에는 실행하지 않는다.",
     "budget_exhausted": "모델 호출 예산이 끝났다. 완료가 아니라 중단이다.",
     "no_valid_change": "허용 범위 안에서 실행 가능한 개선안이 없다.",
-    "stalled": "같은 Change Set이 반복되거나 새 발견이 없다. 반복을 멈춘다.",
+    "stalled": "같은 수정안이 반복되거나 새 발견이 없다. 반복을 멈춘다.",
     "model_failure": "모델 호출이 실패했다. 주민의 거절이나 unknown 평가와 다르다.",
     "cancelled": "사용자가 중단했다.",
     "no_change_this_time": "연구자가 이번에는 운영 규칙을 수정하지 않기로 했다. 현장 질문만 남긴다.",

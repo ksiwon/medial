@@ -253,7 +253,7 @@ export default function PrepareScreen({
     `시나리오 ${decks.length}개`,
     behaviourAdapter === 'rule' ? '규칙 기반 마을' : 'LLM 마을',
     institutionAdapter === 'rule' ? '절차 기반 기관' : 'LLM 기관',
-    reviewAdapter === 'rule' ? '규칙 기반 리뷰' : 'LLM 리뷰',
+    reviewAdapter === 'rule' ? '규칙 기반 주민 평가' : 'LLM 주민 평가',
     improvementAdapter === 'rule' ? '규칙 기반 개선' : 'LLM 개선',
     usesModel ? (callBudget > 0 ? `모델 호출 ${callBudget}회 상한` : '모델 호출 무제한') : '모델 호출 없음',
   ].join(' · ');
@@ -362,7 +362,7 @@ export default function PrepareScreen({
               />
             </Field>
             <Field>
-              버전당 Change Set 초안 수
+              버전당 수정안 초안 수
               <Input
                 type="number"
                 min={1}
@@ -438,7 +438,7 @@ export default function PrepareScreen({
               </Select>
             </Field>
             <Field>
-              주민 리뷰
+              주민 평가
               <Select value={reviewAdapter} onChange={(e) => setReviewAdapter(e.target.value)}>
                 <option value="rule">규칙 기반 (모델 호출 없음)</option>
                 <option value="llm" disabled={!online}>
@@ -477,7 +477,7 @@ export default function PrepareScreen({
           )}
 
           <SubHead>
-            Change Set이 다룰 수 있는 범위
+            수정안이 다룰 수 있는 범위
             <Hint label="바꾸지 않는 것">
               페르소나, 인터뷰 근거, 초기 기억, 시나리오, 외생 사건, 평가 기준, 세계 사실,
               인력·차량 증원은 바꾸지 않습니다.

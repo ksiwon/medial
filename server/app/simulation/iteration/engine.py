@@ -205,7 +205,7 @@ class IterationEngine:
                 id="gen-%s-0" % self.session.id[-8:],
                 sessionId=self.session.id, index=0, parentGenerationId=None,
                 policyRevisionId=self.session.basePolicyRevisionId,
-                label="v0 · %s" % self._policy(self.session.basePolicyRevisionId)["label"],
+                label=self._v0_label(),
                 outcome=GenerationOutcome.running, createdAt=now_iso())
             self.store.save_generation(generation)
         self.session.status = SessionStatus.running_cycle
@@ -466,6 +466,13 @@ class IterationEngine:
         chosen = live[-1]
         self._current_id = chosen["id"]
         return Generation.model_validate(chosen)
+
+    def _v0_label(self) -> str:
+        """The first version's name. Policy labels may already carry "v0" (the
+        shipped starting policy does), and prefixing again stored
+        "v0 · v0 · 초기 운영안"."""
+        label = self._policy(self.session.basePolicyRevisionId)["label"]
+        return label if label.startswith("v0") else "v0 · %s" % label
 
     def _policy(self, policy_id: str) -> dict[str, Any]:
         policy = self.service.policies.get(policy_id)

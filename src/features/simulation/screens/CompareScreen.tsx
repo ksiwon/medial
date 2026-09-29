@@ -581,7 +581,10 @@ export default function CompareScreen({
           <Callout $tone={diff.controlled ? 'info' : 'warn'}>
             <div>
               <strong>{diff.controlled ? '같은 하루, 운영 조건만 다름' : '통제 비교가 아닙니다'}</strong>
-              <div style={{ marginTop: 4 }}>{diff.claim}</div>
+              {/* Controlled, the title is the claim; the server's sentence
+                  repeated it with "deck" in it. Uncontrolled, it names the
+                  inputs that differ, which the title cannot. */}
+              {!diff.controlled && <div style={{ marginTop: 4 }}>{diff.claim}</div>}
               {diff.differingInputs.length > 0 && (
                 <Sub style={{ marginTop: 4 }}>
                   달라진 입력: {diff.differingInputs.map(inputName).join(', ')}
@@ -744,7 +747,7 @@ export default function CompareScreen({
               <Label>1 · 주민이 겪은 일</Label>
               {drivingReviews.quotes.length === 0 ? (
                 <span style={{ color: colour.unknown }}>
-                  이 변경과 연결된, 사건 근거가 있는 리뷰 항목이 없습니다.
+                  이 변경과 연결된, 사건 근거가 있는 평가 항목이 없습니다.
                 </span>
               ) : (
                 drivingReviews.quotes.slice(0, 3).map((quote) => (
@@ -758,7 +761,7 @@ export default function CompareScreen({
               )}
             </Link_>
             <Link_>
-              <Label>2 · 리뷰에서 묶인 문제</Label>
+              <Label>2 · 평가에서 묶인 문제</Label>
               {(left.synthesis?.issueGroups ?? []).length === 0 ? (
                 <span style={{ color: colour.unknown }}>종합 기록이 없습니다.</span>
               ) : (
@@ -868,7 +871,7 @@ export default function CompareScreen({
                 </>
               ) : (
                 <span style={{ color: colour.unknown }}>
-                  오른쪽 버전을 만든 Change Set을 찾지 못했습니다 (두 버전이 파생 관계가 아닐 수
+                  오른쪽 버전을 만든 수정안을 찾지 못했습니다 (두 버전이 파생 관계가 아닐 수
                   있습니다).
                 </span>
               )}
@@ -1020,7 +1023,7 @@ export default function CompareScreen({
               <tr>
                 <td>
                   <RowLabel hint="평가 항목의 개수입니다. 점수가 아니고 실제 주민 만족도가 아닙니다.">
-                    주민 에이전트 리뷰
+                    주민 평가 항목 수
                   </RowLabel>
                 </td>
                 <td>{reviewCell(leftFacts)}</td>
@@ -1130,7 +1133,7 @@ export default function CompareScreen({
                 {detail.running
                   ? '아직 실행 중입니다. 끝나면 현장 검토할 안을 고를 수 있습니다.'
                   : needsConfirmation
-                    ? '먼저 위에서 Change Set을 검토하고 확정하세요.'
+                    ? '먼저 위에서 수정안을 검토하고 확정하세요.'
                     : '반복이 끝나면 현장 검토 선택이 열립니다.'}
                 {' '}
                 <TextLink onClick={decisions.onOpenFieldSheet}>지금까지의 결정 기록 보기</TextLink>

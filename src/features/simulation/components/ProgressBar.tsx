@@ -3,45 +3,15 @@ import { RUNNING_STATUSES, STATUS_LABELS, type SessionDetail } from '../api/iter
 import { Button, Hint, Select, Sub, Tag, versionName } from '../ui/primitives';
 import { colour, font } from '../ui/theme';
 
-// The 44 px strip under the header: where the loop is, which version is being
-// read, and the one control that applies to the current state.
+// The 44 px strip under the header: which version is being read, where the
+// loop is, and the one control that applies to the current state.
 //
-// It used to be a row of buttons - start, pause, resume, cancel, plus one chip
-// per generation. Two changes, both from doc 15 section 3. The four loop stages
-// are now *read-only progress*: they say where the server is, and pressing them
-// does nothing because they were never actions. And the versions are one
-// select, so adding a fifth generation does not add a fifth button.
-
-const Arrow = styled.span`
-  color: ${colour.border};
-`;
-
-const StepItem = styled.span`
-  display: flex;
-  gap: 6px;
-  align-items: center;
-`;
-
-const Steps = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  flex: 0 1 auto;
-  overflow: hidden;
-
-  /* Narrow, the four stages do not fit and the last visible one was being cut
-     through the middle of a word. Only the stage the loop is actually in is
-     shown; the others are not information the reader can act on. */
-  @media (max-width: 1040px) {
-    > ${StepItem}:not([data-current='true']) {
-      display: none;
-    }
-    ${Arrow} {
-      display: none;
-    }
-  }
-`;
+// The loop's own stages used to be printed here a second time, as 하루 실행 →
+// 주민 리뷰 → 개선안 → 다음 실행, directly under the three screens that are the
+// same loop - two progress lines with different names for the same steps
+// (2026-09-29). The screens are the steps; this strip says only the state,
+// in one tag. How the record was made (adapter, calls) is audit detail and sits
+// behind the tag's "?" unless a run is live and spending calls right now.
 
 const Bar = styled.div`
   height: 44px;
@@ -56,31 +26,14 @@ const Bar = styled.div`
   color: ${colour.secondary};
   overflow: hidden;
 
-  /* Only the four stage names give way when the bar is narrow; a status or a
-     control that shrinks is one that gets cut in half. */
-  > *:not(${Steps}) {
+  > * {
     flex: none;
   }
-`;
-
-const Step = styled.span<{ $state: 'done' | 'current' | 'future' }>`
-  white-space: nowrap;
-  color: ${(p) =>
-    p.$state === 'current' ? colour.text : p.$state === 'done' ? colour.primary : colour.unknown};
-  font-weight: ${(p) => (p.$state === 'current' ? 600 : 400)};
 `;
 
 const Spacer = styled.span`
   flex: 1;
 `;
-
-/** The loop's four stages, in the order the engine runs them. Read-only. */
-const STEPS: { label: string; statuses: string[] }[] = [
-  { label: '하루 실행', statuses: ['running_cycle', 'executing_revision'] },
-  { label: '주민 리뷰', statuses: ['collecting_reviews'] },
-  { label: '개선안', statuses: ['synthesizing', 'proposing_changes', 'validating_changes'] },
-  { label: '다음 실행', statuses: ['selecting_next'] },
-];
 
 interface Props {
   detail: SessionDetail;
@@ -107,7 +60,11 @@ export default function ProgressBar({
   const processing = generations.find((g) => g.index === session.currentGenerationIndex) ?? null;
   const behind = viewing && processing && viewing.id !== processing.id;
 
-  const activeStep = STEPS.findIndex((step) => step.statuses.includes(session.status));
+  const calls = adapterMode === 'rule'
+    ? '규칙으로 계산 · 모델 호출 없음'
+    : `${adapterMode} · 모델 호출 ${budget.callsUsed}${
+        budget.callBudget ? `/${budget.callBudget}` : ' (상한 없음)'
+      }회`;
 
   return (
     <Bar>
@@ -125,42 +82,17 @@ export default function ProgressBar({
         ))}
       </Select>
 
-      {behind && (
+      {/* Only while the loop is moving is "processing" a fact worth saying;
+          a finished record that is being read at v0 is just the select. */}
+      {behind && running && (
         <Sub as="span" style={{ whiteSpace: 'nowrap' }}>
           읽는 중 v{viewing!.index} · 처리 중 v{processing!.index}
         </Sub>
       )}
 
-      <Steps aria-label="반복 진행 상태">
-        {STEPS.map((step, index) => (
-          <StepItem key={step.label} data-current={index === activeStep ? 'true' : 'false'}>
-            {index > 0 && <Arrow>→</Arrow>}
-            <Step
-              $state={
-                activeStep < 0
-                  ? 'future'
-                  : index < activeStep
-                    ? 'done'
-                    : index === activeStep
-                      ? 'current'
-                      : 'future'
-              }
-            >
-              {step.label}
-            </Step>
-          </StepItem>
-        ))}
-      </Steps>
-
       <Spacer />
 
-      <Tag $kind={adapterMode === 'rule' ? 'unknown' : 'neutral'}>
-        {adapterMode === 'rule'
-          ? '규칙 어댑터 · 모델 호출 없음'
-          : `${adapterMode} · 모델 호출 ${budget.callsUsed}${
-              budget.callBudget ? `/${budget.callBudget}` : ' (상한 없음)'
-            }`}
-      </Tag>
+      {running && <Tag $kind="neutral">{calls}</Tag>}
 
       <Tag
         $kind={
@@ -170,10 +102,11 @@ export default function ProgressBar({
         {running ? '실행 중' : STATUS_LABELS[session.status]}
       </Tag>
 
-      {/* The stop reason used to sit here as a full sentence with nowrap, which
-          the 44px bar then clipped at narrow widths. It is the same sentence,
-          one click away, and it no longer competes with the status itself. */}
-      {stopReasonText && !running && <Hint label="멈춘 이유">{stopReasonText}</Hint>}
+      {!running && (
+        <Hint label="이 기록">
+          {calls}.{stopReasonText ? ` ${stopReasonText}` : ''}
+        </Hint>
+      )}
 
       {/* One control, chosen by the state. Playback of the recording is a
           different thing with a different control, down on the map. */}

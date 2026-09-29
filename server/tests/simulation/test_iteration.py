@@ -145,6 +145,10 @@ def test_three_generations_run_review_propose_and_rerun():
     assert any(item["confirmationStatus"] == "declined" for item in root["changeSets"]), (
         "실행하지 않은 초안은 Change Set 기록으로만 남아야 한다")
 
+    # The starting policy's label already says v0; the version name says it once.
+    assert root["label"].startswith("v0 · ") and not root["label"].startswith("v0 · v0"), (
+        root["label"])
+
 
 def test_drafts_do_not_execute_before_researcher_confirmation():
     service = iteration()

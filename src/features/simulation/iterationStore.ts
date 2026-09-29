@@ -370,7 +370,7 @@ export const useIterationStore = create<IterationState>((set, get) => ({
   confirmChangeSet: async (changeSetId, reason) => {
     await get().send('confirm_change_set', { changeSetId, reason });
     set({
-      notice: '연구자가 확정한 Change Set 하나로 새 MEDial revision을 실행합니다.',
+      notice: '연구자가 확정한 수정안으로 다음 버전의 하루를 실행합니다.',
     });
   },
 

@@ -3,6 +3,7 @@ import type { AgentReview, GenerationDetail } from '../api/iteration';
 import type { DayRealization, DomainEvent } from '../api/types';
 import { personName, sentenceFor, withParticle } from './story';
 import { reviewChanges } from './versionFacts';
+import { versionName } from '../ui/primitives';
 import {
   dayChangeLines,
   dayLabel,
@@ -174,5 +175,13 @@ describe('reviewChanges', () => {
     const right = version([review('P2', 'a1', [['choice_refusal', 'mixed', []]]),
                            review('P9', 'a1', [['choice_refusal', 'mixed', []]])]);
     expect(reviewChanges(left, right)).toEqual([]);
+  });
+});
+
+describe('versionName', () => {
+  it('says the version prefix once, even on a stored label that has it twice', () => {
+    expect(versionName(0, 'v0 · v0 · 초기 운영안')).toBe('v0 · 초기 운영안');
+    expect(versionName(0, 'v0 · 초기 운영안')).toBe('v0 · 초기 운영안');
+    expect(versionName(1, '동선 기준으로 시험')).toBe('v1 · 동선 기준으로 시험');
   });
 });
