@@ -5,7 +5,13 @@
     {
       "name": "medial-sim",
       "runtimeExecutable": "py",
-      "runtimeArgs": ["-3.12", "server/sim_main.py"],
+      "runtimeArgs": ["-3.12", "server/sim_main.py", "--mode", "sim"],
+      "port": 8010
+    },
+    {
+      "name": "medial-real",
+      "runtimeExecutable": "py",
+      "runtimeArgs": ["-3.12", "server/sim_main.py", "--mode", "real"],
       "port": 8010
     },
     {
