@@ -1,4 +1,4 @@
-import type { AgentReview, GenerationDetail, UsageStatus } from '../api/iteration';
+import type { AgentReview, Assessment, GenerationDetail, ReviewItem, UsageStatus } from '../api/iteration';
 import type { DayRealization, Elicitation, ElicitationGap, Handover, Refusal } from '../api/types';
 import { dayChangeLines, dayLabel } from './words';
 
@@ -279,4 +279,55 @@ export function conditionDiff(
       '이 두 버전은 서로 직접 파생 관계가 아니라서, 차이가 운영 조건 하나 때문이라고 말할 수 없습니다.',
     rows: [],
   };
+}
+
+/** One resident's assessment of one dimension, where it moved between two
+ *  versions. The reason and the event are the right-hand side's: what the
+ *  resident experienced under the changed rule. */
+export interface ReviewChange {
+  actorId: string;
+  dimension: ReviewItem['dimension'];
+  before: Assessment;
+  after: Assessment;
+  reason: string;
+  attemptId: string;
+  eventId: string | null;
+}
+
+/** Where resident evaluations differ between two versions, person by person.
+ *
+ *  This is the result the loop exists for (doc 19: "v0/v1에서 달라진 주민별
+ *  평가"), so it is read from the reviews themselves rather than from the
+ *  counts. A resident is compared only when each side holds exactly one review
+ *  for them - with several scenarios per version there is no single pair to
+ *  set side by side, and guessing one would invent a change. */
+export function reviewChanges(left: GenerationDetail, right: GenerationDetail): ReviewChange[] {
+  const single = (reviews: AgentReview[]) => {
+    const byActor = new Map<string, AgentReview[]>();
+    for (const review of reviews) {
+      byActor.set(review.actorId, [...(byActor.get(review.actorId) ?? []), review]);
+    }
+    return new Map([...byActor].filter(([, rows]) => rows.length === 1).map(([id, [row]]) => [id, row]));
+  };
+  const before = single(left.reviews);
+  const after = single(right.reviews);
+  const out: ReviewChange[] = [];
+  for (const [actorId, next] of after) {
+    const prev = before.get(actorId);
+    if (!prev) continue;
+    for (const item of next.items) {
+      const was = prev.items.find((row) => row.dimension === item.dimension);
+      if (!was || was.assessment === item.assessment) continue;
+      out.push({
+        actorId,
+        dimension: item.dimension,
+        before: was.assessment,
+        after: item.assessment,
+        reason: item.reason,
+        attemptId: next.attemptId,
+        eventId: item.eventRefs[0] ?? null,
+      });
+    }
+  }
+  return out;
 }

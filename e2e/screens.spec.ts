@@ -186,6 +186,9 @@ test('사례 → 실행 → 주민 평가 → 개선과 확인: 한 바퀴가 �
     page.getByText(/적용됨|적용 상황 없었음|판정 불가/).first(),
   ).toBeVisible({ timeout: 180_000 });
   await expect(page.getByText(/본인에게 40분 간격으로 2회/).first()).toBeVisible();
+  // The headline comes first; every measured row is one click below it.
+  await expect(page.getByRole('heading', { name: '주민 평가는 어떻게 달라졌나' })).toBeVisible();
+  await page.getByText(/^전체 비교 표/).click();
   await expect(page.getByText('어느 하루였나')).toBeVisible();
   await expect(page.getByText('누가 거절했나')).toBeVisible();
   await expect(page.getByText('기록에 없던 것')).toBeVisible();

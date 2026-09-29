@@ -2,6 +2,7 @@ import { useMemo, type ReactNode } from 'react';
 import styled from 'styled-components';
 import ChangeComposer from '../components/ChangeComposer';
 import {
+  ASSESSMENT_LABELS,
   DIMENSION_LABELS,
   USAGE_LABELS,
   type GenerationComparison,
@@ -10,7 +11,14 @@ import {
   type UsageStatus,
 } from '../api/iteration';
 import { nameList, personName, withParticle } from '../selectors/story';
-import { conditionDiff, versionFacts, type Measure, type VersionFacts } from '../selectors/versionFacts';
+import {
+  conditionDiff,
+  reviewChanges,
+  versionFacts,
+  type Measure,
+  type ReviewChange,
+  type VersionFacts,
+} from '../selectors/versionFacts';
 import { inputName, paramName, paramValue, refusalReason } from '../selectors/words';
 import {
   Button,
@@ -31,16 +39,20 @@ import {
 } from '../ui/primitives';
 import { colour, font } from '../ui/theme';
 
-// Screen C, 개선과 확인: the change, its confirmation, what actually changed,
-// and the questions to take to the field.
+// Screen C, 개선과 확인: the change, what it did, why it was made, and the
+// questions to take to the field.
 //
-// Three acts, in the order the research loop runs them:
+// Read top to bottom in the order a reader asks:
 //
-//   1 the issue and the change    - ChangeComposer, which owns authoring,
-//                                   saving, declining and confirming;
-//   2 what changed                - the before/after table, plus whether the
-//                                   changed rule *ran* at all (26번 F06);
-//   3 what to ask the residents   - the field sheet.
+//   1 무엇을 바꿨나 · 주민 평가는 어떻게 달라졌나 · 하루에 일어난 일은
+//                                 - the rule sentences before and after, whether
+//                                   the rule ran (26번 F06), and per resident
+//                                   the evaluations that moved;
+//   2 다음 시도에서 바꾼 이유       - evaluation → grouped issue → confirmed change;
+//   3 전체 비교 표                  - every measured row, folded: it is the audit
+//                                   of 1, not the answer;
+//   then ChangeComposer (authoring, saving, declining, confirming) and the
+//   field sheet.
 //
 // What this screen refuses to do is as much of its design as what it shows. No
 // combined satisfaction score - the criteria have no shared unit. No percentage
@@ -90,6 +102,46 @@ const SectionTitle = styled.h2`
   font-size: ${font.section};
   font-weight: 600;
   color: ${colour.text};
+`;
+
+const Headline = styled.section`
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 20px 24px;
+  border: 1px solid ${colour.border};
+  border-radius: 8px;
+  background: ${colour.surface};
+`;
+
+const Before = styled.div`
+  margin-top: 10px;
+  padding: 10px 14px;
+  border-left: 3px solid ${colour.primary};
+  font-size: ${font.body};
+  line-height: 1.55;
+`;
+
+const Moves = styled.ul`
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: ${font.body};
+  line-height: 1.55;
+`;
+
+const Facts = styled.div`
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  font-size: ${font.body};
+  @media (max-width: 800px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 `;
 
 const Chain = styled.ol`
@@ -454,6 +506,23 @@ export default function CompareScreen({
   );
   // Did the rule that was confirmed actually run in the right-hand version?
   const application: RuleApplicationRecord[] = right.metrics.ruleApplication ?? [];
+  // The rule as a sentence, from the Change Set that made the right-hand
+  // version. A pair with no such record falls back to the recorded condition
+  // names; the raw keys stay behind the chain's technical disclosure.
+  const ruleSentences = drivingReviews.changeSet
+    ? drivingReviews.changeSet.changes.map((change) => ({
+        key: `${change.questId}-${change.field}`,
+        before: change.beforeRule,
+        after: change.afterRule,
+      }))
+    : (diff?.rows ?? []).map((row) => ({
+        key: row.field,
+        before: `${paramName(row.field)}: ${paramValue(row.before)}`,
+        after: `${paramName(row.field)}: ${paramValue(row.after)}`,
+      }));
+  const evaluationChanges = useMemo(() => reviewChanges(left, right), [left, right]);
+  const turned = evaluationChanges.filter((m) => m.before !== 'unknown' && m.after !== 'unknown');
+  const evidenced = evaluationChanges.filter((m) => m.before === 'unknown' || m.after === 'unknown');
 
   return (
     <Sheet>
@@ -526,6 +595,296 @@ export default function CompareScreen({
           </Callout>
         )}
 
+        {left.id !== right.id && (
+          <Headline aria-label="바꾼 것과 달라진 것">
+            <div>
+              <SectionTitle>무엇을 바꿨나</SectionTitle>
+              {ruleSentences.length > 0 ? (
+                ruleSentences.map((rule) => (
+                  <Before key={rule.key}>
+                    <Label>바뀌기 전</Label>
+                    <div>{rule.before}</div>
+                    <Label style={{ marginTop: 8 }}>바뀐 뒤</Label>
+                    <strong>{rule.after}</strong>
+                  </Before>
+                ))
+              ) : (
+                <Sub style={{ marginTop: 8, color: colour.unknown }}>
+                  이 두 버전 사이에 기록된 운영 조건 차이가 없습니다.
+                </Sub>
+              )}
+              {drivingReviews.changeSet?.confirmationReason && (
+                <Sub style={{ marginTop: 8 }}>
+                  확정 이유: {drivingReviews.changeSet.confirmationReason}
+                </Sub>
+              )}
+              <div style={{ marginTop: 12 }}>
+                <Label>
+                  <RowLabel
+                    hint="지원됨 · 적용 상황이 생김 · 실제로 그 분기를 지남은 서로 다른 질문입니다. 차이가 0인 것과 그 규칙이 발동할 상황이 없었던 것은 다른 결과입니다.">
+                    바뀐 규칙이 실행됐나
+                  </RowLabel>
+                </Label>
+                {/* "차이 0"과 "그 규칙이 발동할 상황이 없었다"는 다른 결과다.
+                    이 줄이 없으면 디자이너는 전자를 후자로 읽는다 (26번 F06). */}
+                {application.length === 0 ? (
+                  <span style={{ color: colour.unknown }}>
+                    이 버전에는 규칙 적용 기록이 없습니다 (예전 실행이거나 확정된 변경이 없습니다).
+                  </span>
+                ) : (
+                  application.map((row, index) => (
+                    <div key={`${row.ruleType}-${row.attemptId}-${index}`}>
+                      <Tag
+                        $kind={
+                          row.executionStatus === 'applied'
+                            ? 'positive'
+                            : row.executionStatus === 'not_reached'
+                              ? 'warn'
+                              : 'unknown'
+                        }
+                      >
+                        {row.executionStatus === 'applied'
+                          ? '적용됨'
+                          : row.executionStatus === 'not_reached'
+                            ? '적용 상황 없었음'
+                            : '판정 불가'}
+                      </Tag>{' '}
+                      {row.label ?? row.ruleType} — {row.reason}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div>
+              <SectionTitle>주민 평가는 어떻게 달라졌나</SectionTitle>
+              {evaluationChanges.length === 0 ? (
+                <Sub style={{ marginTop: 8 }}>
+                  같은 주민의 같은 항목에서 평가가 달라진 곳이 없습니다.
+                </Sub>
+              ) : (
+                <>
+                  {/* A move between 긍정·혼합·부정 is a judgment that changed; a
+                      move to or from 판단 불가 is evidence that appeared or went
+                      away. Both are results, but only the first is what a reader
+                      means by "the evaluation changed", so it comes first. */}
+                  {turned.length > 0 ? (
+                    <MoveList moves={turned} onOpenScene={onOpenScene} />
+                  ) : (
+                    <Sub style={{ marginTop: 8 }}>
+                      긍정 · 혼합 · 부정 사이에서 바뀐 평가는 없습니다.
+                    </Sub>
+                  )}
+                  {evidenced.length > 0 && (
+                    <Disclosure>
+                      <summary>
+                        판단할 근거가 새로 생기거나 없어진 항목 {evidenced.length}건
+                      </summary>
+                      <MoveList moves={evidenced} onOpenScene={onOpenScene} />
+                    </Disclosure>
+                  )}
+                </>
+              )}
+              <Sub style={{ marginTop: 8 }}>
+                평가 항목 수 (점수 아님) · 긍정 {leftFacts.reviewCounts.positive} →{' '}
+                {rightFacts.reviewCounts.positive} · 혼합 {leftFacts.reviewCounts.mixed} →{' '}
+                {rightFacts.reviewCounts.mixed} · 부정 {leftFacts.reviewCounts.negative} →{' '}
+                {rightFacts.reviewCounts.negative} · 판단 불가 {leftFacts.reviewCounts.unknown} →{' '}
+                {rightFacts.reviewCounts.unknown}
+              </Sub>
+            </div>
+
+            <div>
+              <SectionTitle>하루에 일어난 일은</SectionTitle>
+              <Facts>
+                <div>
+                  <Label>요청 해결 / 미해결</Label>
+                  {show(leftFacts.requestsResolved)} / {show(leftFacts.requestsUnresolved)} →{' '}
+                  <strong>
+                    {show(rightFacts.requestsResolved)} / {show(rightFacts.requestsUnresolved)}
+                  </strong>
+                </div>
+                <div>
+                  <Label>해결까지 걸린 시간</Label>
+                  {show(leftFacts.meanWaitMinutes)} → <strong>{show(rightFacts.meanWaitMinutes)}</strong>분
+                </div>
+                <div>
+                  <Label>
+                    <RowLabel hint="원래 일과에서 벗어난 시간의 합입니다. 도와준 이웃과 도움을 받은 본인이 같은 값에 들어갑니다 — 이 지표는 둘을 구분하지 않습니다.">
+                      주민 일과가 바뀐 시간
+                    </RowLabel>
+                  </Label>
+                  {show(leftFacts.neighbourMinutes)} → <strong>{show(rightFacts.neighbourMinutes)}</strong>분
+                </div>
+                <div>
+                  <Label>거절 · 미룸</Label>
+                  {leftFacts.refusals.length} → <strong>{rightFacts.refusals.length}</strong>건
+                </div>
+              </Facts>
+            </div>
+
+            {left.synthesis?.nextQuestions.length ? (
+              <Disclosure>
+                <summary>아직 답하지 못한 것 {left.synthesis.nextQuestions.length}건</summary>
+                <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
+                  {left.synthesis.nextQuestions.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              </Disclosure>
+            ) : null}
+          </Headline>
+        )}
+
+
+        <div>
+          <SectionTitle>다음 시도에서 바꾼 이유</SectionTitle>
+          <Chain style={{ marginTop: 12 }}>
+            <Link_>
+              <Label>1 · 주민이 겪은 일</Label>
+              {drivingReviews.quotes.length === 0 ? (
+                <span style={{ color: colour.unknown }}>
+                  이 변경과 연결된, 사건 근거가 있는 리뷰 항목이 없습니다.
+                </span>
+              ) : (
+                drivingReviews.quotes.slice(0, 3).map((quote) => (
+                  <div key={`${quote.actorId}-${quote.eventId}`} style={{ marginBottom: 6 }}>
+                    <strong>{personName(quote.actorId)}</strong>: {quote.text}{' '}
+                    <TextLink onClick={() => onOpenScene(quote.attemptId, quote.eventId)}>
+                      그 장면 보기
+                    </TextLink>
+                  </div>
+                ))
+              )}
+            </Link_>
+            <Link_>
+              <Label>2 · 리뷰에서 묶인 문제</Label>
+              {(left.synthesis?.issueGroups ?? []).length === 0 ? (
+                <span style={{ color: colour.unknown }}>종합 기록이 없습니다.</span>
+              ) : (
+                (left.synthesis?.issueGroups ?? []).slice(0, 3).map((issue) => (
+                  <div key={issue.id} style={{ marginBottom: 4 }}>
+                    <Tag $kind={issue.minority ? 'warn' : 'neutral'}>
+                      {DIMENSION_LABELS[issue.dimension]}
+                    </Tag>{' '}
+                    {issue.title}
+                    {issue.dissentingActors.length > 0 && (
+                      <Sub>같은 항목을 반대로 평가한 사람: {nameList(issue.dissentingActors)}</Sub>
+                    )}
+                  </div>
+                ))
+              )}
+              {(left.synthesis?.minorityConcernIds.length ?? 0) > 0 && (
+                <Sub>
+                  소수 의견 {left.synthesis!.minorityConcernIds.length}건을 함께 남겨 두었습니다.
+                </Sub>
+              )}
+              {/* The synthesis records what else could explain the same
+                  complaint, and which of its own claims nothing in the log
+                  supports. Both are the difference between a finding and a
+                  guess, so neither is folded away silently. */}
+              <Disclosure>
+                <summary>대안 설명 · 약한 근거 · 충돌</summary>
+                <div>
+                  {(left.synthesis?.issueGroups ?? [])
+                    .filter((issue) => issue.alternativeExplanations.length > 0)
+                    .map((issue) => (
+                      <Sub key={`alt-${issue.id}`} style={{ marginBottom: 4 }}>
+                        <strong>{issue.title}</strong> — 대안 설명:{' '}
+                        {issue.alternativeExplanations.join(' / ')}
+                        {issue.objectiveMetricRefs.length > 0 && (
+                          <> · 대조한 지표: {issue.objectiveMetricRefs.join(', ')}</>
+                        )}
+                      </Sub>
+                    ))}
+                  {(left.synthesis?.conflicts ?? []).map((conflict) => (
+                    <Sub key={conflict.id} style={{ marginBottom: 4 }}>
+                      <strong>충돌:</strong> {conflict.description} (
+                      {nameList(conflict.sideA)} ↔ {nameList(conflict.sideB)})
+                      {conflict.note && <> — {conflict.note}</>}
+                    </Sub>
+                  ))}
+                  {(left.synthesis?.ungroundedClaims.length ?? 0) > 0 && (
+                    <Sub style={{ color: colour.warn }}>
+                      <strong>로그가 뒷받침하지 않는 주장:</strong>{' '}
+                      {left.synthesis!.ungroundedClaims.join(' · ')}
+                    </Sub>
+                  )}
+                  {(left.synthesis?.noExperienceActors.length ?? 0) > 0 && (
+                    <Sub>
+                      이 하루에 서비스를 만나지 않은 사람:{' '}
+                      {nameList(left.synthesis!.noExperienceActors)} — 관찰 결과이며 불만이
+                      아닙니다.
+                    </Sub>
+                  )}
+                  {(left.synthesis?.issueGroups ?? []).every(
+                    (i) => i.alternativeExplanations.length === 0,
+                  ) &&
+                    (left.synthesis?.conflicts.length ?? 0) === 0 &&
+                    (left.synthesis?.ungroundedClaims.length ?? 0) === 0 && (
+                      <Sub>이 세대의 종합에는 기록된 대안 설명·충돌·근거 부족 항목이 없습니다.</Sub>
+                    )}
+                </div>
+              </Disclosure>
+            </Link_>
+            <Link_>
+              <Label>3 · 연구자가 확정한 변경</Label>
+              {drivingReviews.changeSet ? (
+                <>
+                  <strong>{drivingReviews.changeSet.label}</strong>
+                  <div>{drivingReviews.changeSet.mechanism}</div>
+                  {drivingReviews.changeSet.expectedEffects.length > 0 && (
+                    <Sub>기대: {drivingReviews.changeSet.expectedEffects.join(' · ')}</Sub>
+                  )}
+                  {drivingReviews.changeSet.possibleRegressions.length > 0 && (
+                    <Sub style={{ color: colour.warn }}>
+                      예상한 부작용: {drivingReviews.changeSet.possibleRegressions.join(' · ')}
+                    </Sub>
+                  )}
+                  {drivingReviews.changeSet.watchNext.length > 0 && (
+                    <Sub>다음에 확인할 것: {drivingReviews.changeSet.watchNext.join(' · ')}</Sub>
+                  )}
+                  {drivingReviews.changeSet.validationStatus !== 'valid' && (
+                    <Sub style={{ color: colour.warn }}>
+                      검증 상태: {drivingReviews.changeSet.validationStatus === 'requires_implementation'
+                        ? '구현 필요 — 자동 실행하지 않았습니다'
+                        : drivingReviews.changeSet.validationStatus}
+                      {drivingReviews.changeSet.requiredCapabilities.length > 0 && (
+                        <> · 필요한 기능: {drivingReviews.changeSet.requiredCapabilities.join(', ')}</>
+                      )}
+                    </Sub>
+                  )}
+                  <Disclosure>
+                    <summary>기술 세부사항 · 내부 실행 바인딩</summary>
+                    {drivingReviews.changeSet.changes.flatMap((change) =>
+                      change.executionBindings.map((binding) => (
+                        <div key={`${change.field}-${binding.key}`}>
+                          <Mono>{binding.key}</Mono>: {paramValue(binding.before)} →{' '}
+                          {paramValue(binding.after)}
+                        </div>
+                      )),
+                    )}
+                  </Disclosure>
+                </>
+              ) : (
+                <span style={{ color: colour.unknown }}>
+                  오른쪽 버전을 만든 Change Set을 찾지 못했습니다 (두 버전이 파생 관계가 아닐 수
+                  있습니다).
+                </span>
+              )}
+              <Row style={{ gap: 2 }}>
+                <Sub as="span">확정 권한</Sub>
+                <Hint label="확정 권한">
+                  초안은 세계 밖 개선 에이전트가 만들 수 있지만, 연구자가 이유와 함께 확정한
+                  뒤에만 MEDial의 다음 운영 조건으로 실행됩니다.
+                </Hint>
+              </Row>
+            </Link_>
+          </Chain>
+        </div>
+
+        <Disclosure>
+          <summary>전체 비교 표 — 하루 · 일과 · 거절 · 기록 공백 · 서비스 이용 · 평가 개수</summary>
         <HScroll>
           <CompareTable>
             <thead>
@@ -536,82 +895,6 @@ export default function CompareScreen({
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>바꾼 운영 조건</td>
-                <td colSpan={2}>
-                  {diff && diff.rows.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {diff.rows.map((row) => (
-                        <div key={row.field}>
-                          <strong>{paramName(row.field)}</strong>: {paramValue(row.before)} →{' '}
-                          <strong>{paramValue(row.after)}</strong>
-                        </div>
-                      ))}
-                      {drivingReviews.changeSet && (
-                        <Sub>바꾼 이유: {drivingReviews.changeSet.mechanism}</Sub>
-                      )}
-                      <Disclosure>
-                        <summary>기술 diff (필드 경로)</summary>
-                        <div>
-                          {diff.rows.map((row) => (
-                            <div key={row.field}>
-                              <Mono>{row.field}</Mono>: <Mono>{JSON.stringify(row.before)}</Mono> →{' '}
-                              <Mono>{JSON.stringify(row.after)}</Mono>
-                            </div>
-                          ))}
-                        </div>
-                      </Disclosure>
-                    </div>
-                  ) : (
-                    <span style={{ color: colour.unknown }}>
-                      이 두 버전 사이에 기록된 운영 조건 차이가 없습니다.
-                    </span>
-                  )}
-                </td>
-              </tr>
-
-              <tr>
-                <td>
-                  <RowLabel
-                    hint="지원됨 · 적용 상황이 생김 · 실제로 그 분기를 지남은 서로 다른 질문입니다. 차이가 0인 것과 그 규칙이 발동할 상황이 없었던 것은 다른 결과입니다.">
-                    바뀐 규칙이 실행됐나
-                  </RowLabel>
-                </td>
-                <td colSpan={2}>
-                  {/* "차이 0"과 "그 규칙이 발동할 상황이 없었다"는 다른 결과다.
-                      이 행이 없으면 디자이너는 전자를 후자로 읽는다 (26번 F06). */}
-                  {application.length === 0 ? (
-                    <span style={{ color: colour.unknown }}>
-                      이 버전에는 규칙 적용 기록이 없습니다 (예전 실행이거나 확정된 변경이
-                      없습니다).
-                    </span>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {application.map((row, index) => (
-                        <div key={`${row.ruleType}-${row.attemptId}-${index}`}>
-                          <Tag
-                            $kind={
-                              row.executionStatus === 'applied'
-                                ? 'positive'
-                                : row.executionStatus === 'not_reached'
-                                  ? 'warn'
-                                  : 'unknown'
-                            }
-                          >
-                            {row.executionStatus === 'applied'
-                              ? '적용됨'
-                              : row.executionStatus === 'not_reached'
-                                ? '적용 상황 없었음'
-                                : '판정 불가'}
-                          </Tag>{' '}
-                          {row.label ?? row.ruleType} — {row.reason}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </td>
-              </tr>
-
               <tr>
                 <td>요청 해결 / 미해결</td>
                 <td>
@@ -767,180 +1050,7 @@ export default function CompareScreen({
             </tbody>
           </CompareTable>
         </HScroll>
-
-        <div>
-          <SectionTitle>다음 시도에서 바꾼 이유</SectionTitle>
-          <Chain style={{ marginTop: 12 }}>
-            <Link_>
-              <Label>1 · 주민이 겪은 일</Label>
-              {drivingReviews.quotes.length === 0 ? (
-                <span style={{ color: colour.unknown }}>
-                  이 변경과 연결된, 사건 근거가 있는 리뷰 항목이 없습니다.
-                </span>
-              ) : (
-                drivingReviews.quotes.slice(0, 3).map((quote) => (
-                  <div key={`${quote.actorId}-${quote.eventId}`} style={{ marginBottom: 6 }}>
-                    <strong>{personName(quote.actorId)}</strong>: {quote.text}{' '}
-                    <TextLink onClick={() => onOpenScene(quote.attemptId, quote.eventId)}>
-                      그 장면 보기
-                    </TextLink>
-                  </div>
-                ))
-              )}
-            </Link_>
-            <Link_>
-              <Label>2 · 리뷰에서 묶인 문제</Label>
-              {(left.synthesis?.issueGroups ?? []).length === 0 ? (
-                <span style={{ color: colour.unknown }}>종합 기록이 없습니다.</span>
-              ) : (
-                (left.synthesis?.issueGroups ?? []).slice(0, 3).map((issue) => (
-                  <div key={issue.id} style={{ marginBottom: 4 }}>
-                    <Tag $kind={issue.minority ? 'warn' : 'neutral'}>
-                      {DIMENSION_LABELS[issue.dimension]}
-                    </Tag>{' '}
-                    {issue.title}
-                    {issue.dissentingActors.length > 0 && (
-                      <Sub>같은 항목을 반대로 평가한 사람: {nameList(issue.dissentingActors)}</Sub>
-                    )}
-                  </div>
-                ))
-              )}
-              {(left.synthesis?.minorityConcernIds.length ?? 0) > 0 && (
-                <Sub>
-                  소수 의견 {left.synthesis!.minorityConcernIds.length}건을 함께 남겨 두었습니다.
-                </Sub>
-              )}
-              {/* The synthesis records what else could explain the same
-                  complaint, and which of its own claims nothing in the log
-                  supports. Both are the difference between a finding and a
-                  guess, so neither is folded away silently. */}
-              <Disclosure>
-                <summary>대안 설명 · 약한 근거 · 충돌</summary>
-                <div>
-                  {(left.synthesis?.issueGroups ?? [])
-                    .filter((issue) => issue.alternativeExplanations.length > 0)
-                    .map((issue) => (
-                      <Sub key={`alt-${issue.id}`} style={{ marginBottom: 4 }}>
-                        <strong>{issue.title}</strong> — 대안 설명:{' '}
-                        {issue.alternativeExplanations.join(' / ')}
-                        {issue.objectiveMetricRefs.length > 0 && (
-                          <> · 대조한 지표: {issue.objectiveMetricRefs.join(', ')}</>
-                        )}
-                      </Sub>
-                    ))}
-                  {(left.synthesis?.conflicts ?? []).map((conflict) => (
-                    <Sub key={conflict.id} style={{ marginBottom: 4 }}>
-                      <strong>충돌:</strong> {conflict.description} (
-                      {nameList(conflict.sideA)} ↔ {nameList(conflict.sideB)})
-                      {conflict.note && <> — {conflict.note}</>}
-                    </Sub>
-                  ))}
-                  {(left.synthesis?.ungroundedClaims.length ?? 0) > 0 && (
-                    <Sub style={{ color: colour.warn }}>
-                      <strong>로그가 뒷받침하지 않는 주장:</strong>{' '}
-                      {left.synthesis!.ungroundedClaims.join(' · ')}
-                    </Sub>
-                  )}
-                  {(left.synthesis?.noExperienceActors.length ?? 0) > 0 && (
-                    <Sub>
-                      이 하루에 서비스를 만나지 않은 사람:{' '}
-                      {nameList(left.synthesis!.noExperienceActors)} — 관찰 결과이며 불만이
-                      아닙니다.
-                    </Sub>
-                  )}
-                  {(left.synthesis?.issueGroups ?? []).every(
-                    (i) => i.alternativeExplanations.length === 0,
-                  ) &&
-                    (left.synthesis?.conflicts.length ?? 0) === 0 &&
-                    (left.synthesis?.ungroundedClaims.length ?? 0) === 0 && (
-                      <Sub>이 세대의 종합에는 기록된 대안 설명·충돌·근거 부족 항목이 없습니다.</Sub>
-                    )}
-                </div>
-              </Disclosure>
-            </Link_>
-            <Link_>
-              <Label>3 · 연구자가 확정한 MEDial Change Set</Label>
-              {drivingReviews.changeSet ? (
-                <>
-                  <strong>{drivingReviews.changeSet.label}</strong>
-                  <div>{drivingReviews.changeSet.mechanism}</div>
-                  {drivingReviews.changeSet.changes.map((change) => (
-                    <div key={`${change.questId}-${change.field}`} style={{ marginTop: 8 }}>
-                      <Tag $kind="neutral">{change.scope === 'quest' ? 'Quest' : 'Task'}</Tag>{' '}
-                      <strong>{change.beforeRule}</strong> → {change.afterRule}
-                    </div>
-                  ))}
-                  {drivingReviews.changeSet.expectedEffects.length > 0 && (
-                    <Sub>기대: {drivingReviews.changeSet.expectedEffects.join(' · ')}</Sub>
-                  )}
-                  {drivingReviews.changeSet.possibleRegressions.length > 0 && (
-                    <Sub style={{ color: colour.warn }}>
-                      예상한 부작용: {drivingReviews.changeSet.possibleRegressions.join(' · ')}
-                    </Sub>
-                  )}
-                  {drivingReviews.changeSet.watchNext.length > 0 && (
-                    <Sub>다음에 확인할 것: {drivingReviews.changeSet.watchNext.join(' · ')}</Sub>
-                  )}
-                  {drivingReviews.changeSet.validationStatus !== 'valid' && (
-                    <Sub style={{ color: colour.warn }}>
-                      검증 상태: {drivingReviews.changeSet.validationStatus === 'requires_implementation'
-                        ? '구현 필요 — 자동 실행하지 않았습니다'
-                        : drivingReviews.changeSet.validationStatus}
-                      {drivingReviews.changeSet.requiredCapabilities.length > 0 && (
-                        <> · 필요한 기능: {drivingReviews.changeSet.requiredCapabilities.join(', ')}</>
-                      )}
-                    </Sub>
-                  )}
-                  <Disclosure>
-                    <summary>기술 세부사항 · 내부 실행 바인딩</summary>
-                    {drivingReviews.changeSet.changes.flatMap((change) =>
-                      change.executionBindings.map((binding) => (
-                        <div key={`${change.field}-${binding.key}`}>
-                          <Mono>{binding.key}</Mono>: {paramValue(binding.before)} →{' '}
-                          {paramValue(binding.after)}
-                        </div>
-                      )),
-                    )}
-                  </Disclosure>
-                </>
-              ) : (
-                <span style={{ color: colour.unknown }}>
-                  오른쪽 버전을 만든 Change Set을 찾지 못했습니다 (두 버전이 파생 관계가 아닐 수
-                  있습니다).
-                </span>
-              )}
-              <Row style={{ gap: 2 }}>
-                <Sub as="span">확정 권한</Sub>
-                <Hint label="확정 권한">
-                  초안은 세계 밖 개선 에이전트가 만들 수 있지만, 연구자가 이유와 함께 확정한
-                  뒤에만 MEDial의 다음 운영 조건으로 실행됩니다.
-                </Hint>
-              </Row>
-            </Link_>
-            <Link_>
-              <Label>4 · 실제로 바뀐 것과 결과 차이</Label>
-              {diff && diff.rows.length > 0 ? (
-                diff.rows.map((row) => (
-                  <div key={row.field}>
-                    {paramName(row.field)}: {paramValue(row.before)} → {paramValue(row.after)}
-                  </div>
-                ))
-              ) : (
-                <span style={{ color: colour.unknown }}>기록된 조건 차이 없음</span>
-              )}
-              {left.synthesis?.nextQuestions.length ? (
-                <Disclosure>
-                  <summary>아직 답하지 못한 것 {left.synthesis.nextQuestions.length}건</summary>
-                  <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
-                    {left.synthesis.nextQuestions.map((line) => (
-                      <li key={line}>{line}</li>
-                    ))}
-                  </ul>
-                </Disclosure>
-              ) : null}
-            </Link_>
-          </Chain>
-        </div>
+        </Disclosure>
 
         {!decisions && (
           <Callout>
@@ -1041,6 +1151,39 @@ export default function CompareScreen({
         )}
       </Inner>
     </Sheet>
+  );
+}
+
+/** Residents' moved assessments, one line each: who, which dimension, from
+ *  what to what, and the resident's own reason under the changed rule. */
+function MoveList({
+  moves,
+  onOpenScene,
+}: {
+  moves: ReviewChange[];
+  onOpenScene: (attemptId: string, eventId: string) => void;
+}) {
+  return (
+    <Moves>
+      {moves.map((move) => (
+        <li key={`${move.actorId}-${move.dimension}`}>
+          <Row style={{ gap: 6 }}>
+            <strong>{personName(move.actorId)}</strong>
+            <Sub as="span">{DIMENSION_LABELS[move.dimension]}</Sub>
+            <Tag $kind={move.before}>{ASSESSMENT_LABELS[move.before]}</Tag>→
+            <Tag $kind={move.after}>{ASSESSMENT_LABELS[move.after]}</Tag>
+          </Row>
+          <div style={{ marginTop: 2 }}>
+            {move.reason}{' '}
+            {move.eventId && (
+              <TextLink onClick={() => onOpenScene(move.attemptId, move.eventId!)}>
+                그 장면 보기
+              </TextLink>
+            )}
+          </div>
+        </li>
+      ))}
+    </Moves>
   );
 }
 

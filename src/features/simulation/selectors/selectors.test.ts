@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import type { AgentReview, GenerationDetail } from '../api/iteration';
 import type { DayRealization, DomainEvent } from '../api/types';
 import { personName, sentenceFor, withParticle } from './story';
+import { reviewChanges } from './versionFacts';
 import {
   dayChangeLines,
   dayLabel,
@@ -137,5 +139,40 @@ describe('words', () => {
     expect(dayLabel(day)).toBe('기록된 시각이 조금 다른 하루');
     expect(dayChangeLines(day)).toEqual(['P1 · FARM 09:00 → 09:12 (12분 늦게)']);
     expect(dayLabel(undefined)).toBe('하루 기록 없음');
+  });
+});
+
+describe('reviewChanges', () => {
+  const review = (actorId: string, attemptId: string,
+                  items: [AgentReview['items'][number]['dimension'], AgentReview['items'][number]['assessment'], string[]][]) =>
+    ({
+      actorId,
+      attemptId,
+      items: items.map(([dimension, assessment, eventRefs]) => ({
+        dimension, assessment, reason: `${actorId} ${dimension} ${assessment}`, eventRefs,
+        evidenceRefs: [], requestedChange: null,
+      })),
+    }) as unknown as AgentReview;
+  const version = (reviews: AgentReview[]) => ({ reviews }) as unknown as GenerationDetail;
+
+  it('names each resident dimension that moved, with the later reason and event', () => {
+    const moved = reviewChanges(
+      version([review('P4', 'a0', [['time_labour', 'mixed', ['ev-1']], ['help_resolution', 'positive', []]])]),
+      version([review('P4', 'a1', [['time_labour', 'negative', ['ev-9']], ['help_resolution', 'positive', []]])]),
+    );
+    expect(moved).toEqual([{
+      actorId: 'P4', dimension: 'time_labour', before: 'mixed', after: 'negative',
+      reason: 'P4 time_labour negative', attemptId: 'a1', eventId: 'ev-9',
+    }]);
+  });
+
+  it('does not pair a resident who has no single review on each side', () => {
+    // Two scenarios, two reviews: there is no one pair to compare, and
+    // choosing one would invent a change.
+    const left = version([review('P2', 'a0', [['choice_refusal', 'positive', []]]),
+                          review('P2', 'b0', [['choice_refusal', 'negative', []]])]);
+    const right = version([review('P2', 'a1', [['choice_refusal', 'mixed', []]]),
+                           review('P9', 'a1', [['choice_refusal', 'mixed', []]])]);
+    expect(reviewChanges(left, right)).toEqual([]);
   });
 });

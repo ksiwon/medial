@@ -184,6 +184,7 @@ test('@shots C 개선과 확인', async ({ page }) => {
   // The table is taller than the window and lives inside its own scroller, so
   // an element capture at 900px comes back half blank. Give it a tall window.
   await page.setViewportSize({ width: 1440, height: 1800 });
+  await page.getByText(/^전체 비교 표/).click();
   await crop(page.locator('table').first(), '21-improve-table');
   await page.setViewportSize({ width: 1440, height: 900 });
   const applied = page.getByText('바뀐 규칙이 실행됐나');

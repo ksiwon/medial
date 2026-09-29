@@ -359,10 +359,13 @@ describe('ChangeComposer, through the improve screen', () => {
   it('offers authoring from the rule catalogue with no draft in hand', () => {
     improve();
     expect(screen.getByText('지원 규칙에서 직접 작성')).toBeDefined();
+    // The comparison above says 바뀌기 전 for the rule already run; the
+    // composer's own preview is one more.
+    const before = screen.queryAllByText('바뀌기 전').length;
     fireEvent.click(screen.getByText('지원 규칙에서 직접 작성'));
     // Typed controls, generated from the server's catalogue.
     expect(screen.getByText('어떤 규칙을 바꾸나요')).toBeDefined();
-    expect(screen.getByText('바뀌기 전')).toBeDefined();
+    expect(screen.queryAllByText('바뀌기 전')).toHaveLength(before + 1);
   });
 
   it('has no free-text field for the rule sentence and no binding input', () => {
