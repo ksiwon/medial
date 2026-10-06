@@ -1,91 +1,125 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef } from 'react';
 import styled from 'styled-components';
 import type { AttemptDetail, DomainEvent, VillagePayload } from '../api/types';
+import DayLedger from '../components/DayLedger';
+import MedialDashboard from '../components/MedialDashboard';
 import VillageMap from '../components/VillageMap';
-import { mapFrame } from '../mapFrame';
-import { formatClock, medialKnowledge, posesAt } from '../positions';
-import { MEDIAL } from '../scene/beats';
+import { formatClock, medialKnowledge, placeLabel, posesAt } from '../positions';
 import { openRequests, requestColour } from '../scene/colours';
 import { judgmentOf } from '../scene/judgment';
 import { DAY_START_MS, usePlayback } from '../scene/playback';
 import { PACES, REVEAL_STEP_S, REVEAL_STEPS } from '../scene/reel';
-import SceneMapCard from '../scene/SceneMapCard';
 import SceneStage from '../scene/SceneStage';
 import type { Beat, Episode } from '../scene/types';
-import { sentenceFor } from '../selectors/story';
+import { ledgerAt, routineAt } from '../selectors/dayLedger';
 import { dayChangeLines, dayLabel } from '../selectors/words';
 import { IconButton, Select, Sub } from '../ui/primitives';
 import { colour, font, radius } from '../ui/theme';
 
 // 사례와 서비스 경험 - watching one run.
 //
-// Two shots. When nothing is being said the village map fills the stage and
-// the day runs fast. When a request has a scene, the map shrinks into a card at
-// the top left with a pin on each place involved, and the stage films the
-// scene at eye level: a frame per place, the people there, their words as
-// bubbles, and MEDial - which has no body - as its judgement panel. One scene
-// at a time, in the order they began.
+// Two columns (2026-10-06). The village map stands upright on the left and never
+// moves or shrinks: it is the one thing that is always there. On the right, from
+// top to bottom: the stage, the day's ledger, and the playback bar.
 //
-// This replaced the three-column arrangement (map · events + orchestrator ·
-// people/person) on 2026-09-28. Its panels are gone rather than hidden: the
-// scene carries what happened, the panel what MEDial made of it, and the map
-// card a person's facts.
+// The stage is a request's scene when it has one - a frame per place, the people
+// there, their words as bubbles, and MEDial, which has no body, as its judgement
+// panel - and MEDial's dashboard when it does not, so it is never empty. The
+// ledger is one line per request up to the playhead.
+//
+// This replaced the one-stage arrangement (a map that filled the stage and shrank
+// into a card for each scene) and, before it, three columns. Their panels are
+// gone rather than hidden.
 
 const Screen = styled.div`
   flex: 1;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 12px 16px 12px;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: minmax(300px, 26%) minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+
+  /* A narrow window cannot hold the village beside a filmed scene. The map goes
+     above, shorter, and the right column keeps the whole width. */
+  @media (max-width: 1000px) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 36%) minmax(0, 1fr);
+    overflow-y: auto;
+  }
 `;
 
-const Stage = styled.div`
+const MapColumn = styled.div`
   position: relative;
-  flex: 1 1 auto;
-  min-height: 360px;
-`;
-
-const SceneLayer = styled.div<{ $on: boolean }>`
-  position: absolute;
-  inset: 0;
-  opacity: ${(p) => (p.$on ? 1 : 0)};
-  transform: ${(p) => (p.$on ? 'none' : 'scale(1.035)')};
-  transition: opacity 0.7s ease, transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
-  pointer-events: ${(p) => (p.$on ? 'auto' : 'none')};
-`;
-
-/** The map. Its box is measured, so going to and from the card is one move. */
-const MapLayer = styled.div<{ $card: boolean }>`
-  position: absolute;
-  z-index: 5;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   background: ${colour.surface};
-  border: 1px solid ${(p) => (p.$card ? 'rgba(255,255,255,0.5)' : colour.border)};
+  border: 1px solid ${colour.border};
   border-radius: ${radius.panel};
-  box-shadow: ${(p) => (p.$card ? '0 10px 30px rgba(0,0,0,0.35)' : 'none')};
-  transition: left 0.8s cubic-bezier(0.65, 0, 0.35, 1), top 0.8s cubic-bezier(0.65, 0, 0.35, 1),
-    width 0.8s cubic-bezier(0.65, 0, 0.35, 1), height 0.8s cubic-bezier(0.65, 0, 0.35, 1), box-shadow 0.8s;
 `;
 
-/* Beside the map, in the margin the tall village leaves: what just happened
-   and which scene is next. The map alone said neither, and the reader had to
-   wait for the next scene to learn why the day was running. */
-const Caption = styled.div`
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 6;
+/** What the header used to say, now a strip on top of the map column: which day
+ *  this is, the way back to the start, and that every person here is invented. */
+const MapStrip = styled.div`
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-bottom: 1px solid ${colour.border};
+  font-size: ${font.small};
+  color: ${colour.secondary};
+  > b { font-size: ${font.body}; font-weight: 800; color: ${colour.text}; letter-spacing: -0.02em; }
+  > em { font-style: normal; font-weight: 800; color: ${colour.surface}; background: ${colour.text};
+         border-radius: 999px; padding: 2px 9px; }
+  > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  > button { font: inherit; cursor: pointer; border: none; background: transparent; color: ${colour.secondary};
+             padding: 2px 4px; border-radius: ${radius.control}; }
+  > button:hover { color: ${colour.primary}; }
+`;
+
+const MapBody = styled.div`
+  position: relative;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  pointer-events: none;
-  color: ${colour.text};
-  > div > span { display: block; font-size: ${font.small}; color: ${colour.secondary}; margin-bottom: 4px; }
-  > div > p { margin: 0; font-size: 19px; line-height: 1.45; font-weight: 600; }
-  > div > p > b { font-variant-numeric: tabular-nums; color: ${colour.primary}; margin-right: 8px; }
+`;
+
+const Right = styled.div`
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const Stage = styled.div`
+  position: relative;
+  flex: 1 1 0;
+  min-height: 300px;
+`;
+
+/* The two layers take turns, never share the stage: whichever is leaving goes
+   at once and the one arriving waits for it. Cross-faded, a scene's captions and
+   the dashboard's numbers sat on top of each other and neither could be read. */
+const SceneLayer = styled.div<{ $on: boolean }>`
+  position: absolute;
+  inset: 0;
+  opacity: ${(p) => (p.$on ? 1 : 0)};
+  transform: ${(p) => (p.$on ? 'none' : 'scale(1.02)')};
+  transition: opacity ${(p) => (p.$on ? '0.5s ease 0.25s' : '0.2s ease')},
+    transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+  pointer-events: ${(p) => (p.$on ? 'auto' : 'none')};
+`;
+
+const DashLayer = styled.div<{ $on: boolean }>`
+  position: absolute;
+  inset: 0;
+  opacity: ${(p) => (p.$on ? 1 : 0)};
+  transition: opacity ${(p) => (p.$on ? '0.5s ease 0.25s' : '0.2s ease')};
+  pointer-events: ${(p) => (p.$on ? 'auto' : 'none')};
 `;
 
 const Transport = styled.div`
@@ -207,13 +241,14 @@ interface Props {
   dayEnd: { text: string; action: string; note?: string | null };
   /** The day is over: the evaluations are the next thing to read. */
   onReadEvaluations: () => void;
+  /** Which day this is and the way back, for a record that is walked day by day. */
+  strip?: { day: string; note: string; onRestart: () => void };
 }
 
-export default function ObserveScreen({ village, detail, events, art, caseAction, dayEnd: ending, onReadEvaluations }: Props) {
+export default function ObserveScreen({ village, detail, events, art, caseAction, dayEnd: ending, onReadEvaluations, strip }: Props) {
   const p = usePlayback();
   const reel = p.reel;
   const position = p.position;
-  const stage = useStageBox();
 
   const atMs = position?.atMs ?? DAY_START_MS;
   const cursorSeq = position?.cursorSeq ?? 0;
@@ -266,102 +301,88 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
   const lit = segment?.kind === 'lead' && segment.reveal
     ? Math.max(0, Math.min(REVEAL_STEPS, Math.floor((position!.offset - segment.enter) / (REVEAL_STEP_S * p.pace)) + 1))
     : REVEAL_STEPS;
-  const speaker = scene && line !== null ? scene.beat.lines[line]?.speaker : null;
-  const hot = scene && speaker
-    ? scene.beat.frames.findIndex((f) => (speaker === MEDIAL ? !!f.device : f.who.includes(speaker)))
-    : -1;
-
   const dayEnd = reel?.dayEndMs ?? DAY_START_MS;
   const dayOver = reel !== null && p.rt >= reel.total;
   const tint = scene ? (requestColour(reel?.episodes ?? []).get(scene.episode.requestId) ?? colour.primary) : colour.primary;
 
-  // The card: top left, at the map's proportions as drawn (mapFrame.ts), inside
-  // a box of about a quarter of the frames' width and two fifths of the stage.
-  const [, , vw, vh] = useMemo(() => mapFrame(village).viewBox, [village]);
-
-  // What the caption says. The last record is the log's own sentence for the
-  // latest event up to the cursor that has one - walking and working have none,
-  // so it can be hours old and carries its time rather than "just now". Only in
-  // the researcher's view: in MEDial's it would hand over world-only facts. The
-  // next scene is the reel's.
-  const caption = useMemo(() => {
-    if (inScene || !reel) return null;
-    const next = reel.episodes.find((episode) => episode.startMs > atMs) ?? null;
-    let recent: { atMs: number; text: string } | null = null;
-    if (p.viewMode === 'researcher') {
-      for (let i = events.length - 1; i >= 0 && !recent; i--) {
-        if (events[i].seq > cursorSeq) continue;
-        const said = sentenceFor(events[i]);
-        if (said) recent = { atMs: events[i].simTimeMs, text: said.text };
-      }
-    }
-    return next || recent ? { next, recent } : null;
-  }, [inScene, reel, atMs, cursorSeq, events, p.viewMode]);
-  // The margin the village leaves beside it (a tall map) or under it (a wide
-  // one); the caption only appears where it fits without covering the map.
-  const margin = (stage.width - (stage.height - 40) * (vw / vh)) / 2;
-  const below = (stage.height - stage.width * (vh / vw)) / 2;
-  const maxW = Math.max(200, Math.min(360, (stage.width - Math.max(300, stage.width * 0.26)) * 0.24));
-  const maxH = Math.max(160, Math.min(300, stage.height * 0.42));
-  const cardScale = Math.min(maxW / vw, maxH / vh);
-  const mapBox = inScene
-    ? { left: 14, top: 14, width: vw * cardScale, height: vh * cardScale }
-    : { left: 0, top: 0, width: stage.width, height: stage.height };
+  // What the stage says between scenes: the day so far, read off the playhead.
+  const subtitleOf = (requestId: string) => detail.scenes?.panels[requestId]?.subtitle ?? null;
+  const ledger = useMemo(
+    () => ledgerAt(reel?.episodes ?? [], atMs, subtitleOf),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [reel, atMs, detail.scenes],
+  );
+  // What MEDial held about a request: its stored panel's facts, and what the
+  // record says it did not and could not know (unknown stays unknown).
+  const holdsOf = (requestId: string) => {
+    const j = detail.scenes?.panels[requestId]?.judgment;
+    if (!j) return null;
+    const unknown = (j.knows ?? []).filter((k) => /모른다|알 수 없|불명/.test(k));
+    return { knows: (j.knows ?? []).filter((k) => !unknown.includes(k)), unknown };
+  };
+  const routine = useMemo(
+    () => routineAt(poses, (place, id) => placeLabel(village, place, id)),
+    [poses, village],
+  );
+  const next = useMemo(() => {
+    const episode = reel?.episodes.find((e) => e.startMs > atMs) ?? null;
+    return episode ? { startMs: episode.startMs, title: episode.title } : null;
+  }, [reel, atMs]);
 
   return (
     <Screen>
-      <Stage ref={stage.ref}>
-        <SceneLayer $on={inScene} aria-hidden={!inScene}>
-          {scene && judgment && (
-            <SceneStage
-              beat={scene.beat}
-              beatKey={`${scene.e}:${scene.b}`}
-              village={village}
-              art={art}
-              line={line}
-              typing={typing}
-              seconds={beatSeconds}
-              panel={{ title: scene.episode.title, subtitle: stored?.subtitle ?? null, tint, judgment, lit }}
-            />
-          )}
-        </SceneLayer>
-        <MapLayer $card={inScene} style={mapBox}>
-          {inScene && scene ? (
-            <SceneMapCard village={village} frames={scene.beat.frames} hot={hot} poses={poses} />
-          ) : (
-            <VillageMap
-              village={village}
-              poses={poses}
-              viewMode={p.viewMode}
-              medialKnown={medialKnown}
-              seatsPerVehicle={detail.timeline?.reservations?.seatsPerVehicle ?? detail.resources.assumedVehicleSeats ?? 0}
-              taskColours={colours}
-              selectedCluster={p.selectedCluster}
-              selectedActor={p.selectedActor}
-              title={village.isSynthetic ? '합성 마을' : '은점마을'}
-              onSelectCluster={p.selectCluster}
-            />
-          )}
-        </MapLayer>
-        {caption && (margin >= 280 || below >= 64) && (
-          <Caption aria-live="polite" style={margin >= 280
-            ? { right: 28, width: Math.min(400, margin - 56) }
-            : { left: 28, right: 28, top: 'auto', bottom: Math.max(8, below / 2 - 30), transform: 'none', flexDirection: 'row', gap: 48 }}>
-            {caption.recent && (
-              <div>
-                <span>마지막 기록</span>
-                <p><b>{formatClock(caption.recent.atMs)}</b>{caption.recent.text}</p>
-              </div>
-            )}
-            {caption.next && (
-              <div>
-                <span>다음 장면</span>
-                <p><b>{formatClock(caption.next.startMs)}</b>{caption.next.title}</p>
-              </div>
-            )}
-          </Caption>
+      <MapColumn>
+        {strip && (
+          <MapStrip>
+            <b>MEDial</b>
+            <em>{strip.day}</em>
+            <span title={strip.note}>{strip.note}</span>
+            <button type="button" onClick={strip.onRestart}>↺ 처음부터</button>
+          </MapStrip>
         )}
-      </Stage>
+        <MapBody>
+        <VillageMap
+          village={village}
+          poses={poses}
+          viewMode={p.viewMode}
+          medialKnown={medialKnown}
+          seatsPerVehicle={detail.timeline?.reservations?.seatsPerVehicle ?? detail.resources.assumedVehicleSeats ?? 0}
+          taskColours={colours}
+          selectedCluster={p.selectedCluster}
+          selectedActor={p.selectedActor}
+          title={village.isSynthetic ? '합성 마을' : '은점마을'}
+          onSelectCluster={p.selectCluster}
+        />
+        </MapBody>
+      </MapColumn>
+
+      <Right>
+        <Stage>
+          {/* Not mounted behind a scene: an invisible layer would still be read out,
+              and would say twice what the judgement panel says once. */}
+          <DashLayer $on={!inScene}>
+            {!inScene && (
+              <MedialDashboard ledger={ledger} atMs={atMs} next={next} holdsOf={holdsOf} routine={routine} />
+            )}
+          </DashLayer>
+          <SceneLayer $on={inScene} aria-hidden={!inScene}>
+            {scene && judgment && (
+              <SceneStage
+                beat={scene.beat}
+                beatKey={`${scene.e}:${scene.b}`}
+                village={village}
+                art={art}
+                line={line}
+                typing={typing}
+                seconds={beatSeconds}
+                panel={{ title: scene.episode.title, subtitle: stored?.subtitle ?? null, tint, judgment, lit }}
+              />
+            )}
+          </SceneLayer>
+        </Stage>
+
+        <DayLedger rows={ledger.rows} episodes={reel?.episodes ?? []}
+          onSeek={(ms) => { p.seekTime(ms); void p.commit(); }} />
 
       {dayOver && (
         <DayEnd>
@@ -446,20 +467,7 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
           </div>
         </Settings>
       </Transport>
+      </Right>
     </Screen>
   );
-}
-
-/** The stage's size, so the map can move between filling it and the card. */
-function useStageBox() {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [box, setBox] = useState({ width: 1200, height: 640 });
-  useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-    const observer = new ResizeObserver(([entry]) => setBox({ width: entry.contentRect.width, height: entry.contentRect.height }));
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-  return { ref, ...box };
 }

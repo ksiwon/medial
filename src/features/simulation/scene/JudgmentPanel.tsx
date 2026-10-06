@@ -116,6 +116,25 @@ const Away = styled.div`
   > strong { display: block; font-size: 15px; color: #ffffff; margin-top: 3px; }
 `;
 
+/**
+ * While a call is still being asked its answers are held back, so each of the
+ * same person's calls reads "묻는 중" and two of them looked like one line
+ * printed twice. Said once with how many times, the repeat is the fact it is.
+ * Answered calls are kept as they are: each has its own words.
+ */
+export function foldAsking(asked: Judgment['asked']): (Judgment['asked'][number] & { times: number })[] {
+  const out: (Judgment['asked'][number] & { times: number })[] = [];
+  for (const a of asked) {
+    const last = out[out.length - 1];
+    if (last && a.verdict === 'asking' && last.verdict === 'asking' && last.actorId === a.actorId) {
+      last.times += 1;
+    } else {
+      out.push({ ...a, times: 1 });
+    }
+  }
+  return out;
+}
+
 export default function JudgmentPanel({ title, subtitle, tint, judgment, lit, absent, waiting }: {
   title: string;
   subtitle?: string | null;
@@ -146,10 +165,11 @@ export default function JudgmentPanel({ title, subtitle, tint, judgment, lit, ab
         </Step>
         <Step $on={lit > 2}>
           <h4>후보 판정{j.question ? ` — ${j.question}` : ''}</h4>
-          {j.asked.map((a, i) => (
+          {foldAsking(j.asked).map((a, i) => (
             <Row key={`${a.actorId}-${i}`}>
               <b>{nameOf(a.actorId)}</b>
               <Pill $v={a.verdict}>{VERDICT_WORD[a.verdict]}</Pill>
+              {a.times > 1 && <span>{a.times}번 물었다</span>}
               {a.heard && <span>{a.heard}</span>}
             </Row>
           ))}

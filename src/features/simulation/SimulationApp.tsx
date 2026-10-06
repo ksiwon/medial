@@ -5,6 +5,7 @@ import FieldSheet from './components/FieldSheet';
 import GenerationPanel from './components/GenerationPanel';
 import ProgressBar from './components/ProgressBar';
 import ChoiceScreen from './screens/ChoiceScreen';
+import IntroScreen from './screens/IntroScreen';
 import CompareScreen from './screens/CompareScreen';
 import EvaluationsScreen from './screens/EvaluationsScreen';
 import ObserveScreen from './screens/ObserveScreen';
@@ -12,7 +13,7 @@ import PrepareScreen from './screens/PrepareScreen';
 import RecordingsScreen from './screens/RecordingsScreen';
 import { useIterationStore, type Screen } from './iterationStore';
 import { usePlayback } from './scene/playback';
-import { dayFacts, dayLine, dayName, isTree, pathTo } from './selectors/tree';
+import { dayFacts, dayLine, dayName, isTree, openingOf, pathTo } from './selectors/tree';
 import { useSimStore } from './store';
 import {
   Button,
@@ -77,6 +78,21 @@ const Header = styled.header`
     flex-wrap: wrap;
     row-gap: 8px;
   }
+`;
+
+/** Every screen of a walked record says what its people are. It used to ride in
+ *  the header; the header went with the two-column observe screen (2026-10-06),
+ *  and this boundary - a simulated resident's words are not a real resident's
+ *  opinion - must not go with it. One strip at the foot, on every screen but the
+ *  opening film, which says the same thing in its own corner. */
+const Foot = styled.footer`
+  flex: none;
+  padding: 5px 16px;
+  font-size: ${font.small};
+  color: ${colour.secondary};
+  text-align: center;
+  border-top: 1px solid ${colour.border};
+  background: ${colour.surface};
 `;
 
 const Brand = styled.div`
@@ -181,55 +197,6 @@ const SecondaryInner = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
-`;
-
-/** The day, in the header of a branching record - the exhibition wall's chip. */
-const Day = styled.span`
-  font-size: 12px;
-  font-weight: 800;
-  color: #ffffff;
-  background: #15150f;
-  border-radius: 999px;
-  padding: 3px 10px;
-  white-space: nowrap;
-`;
-
-/** The path walked so far: one crumb a day, each opening that day again. */
-const Crumbs = styled.nav`
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-  overflow: hidden;
-  font-size: ${font.small};
-  color: ${colour.secondary};
-  > span > button, > button {
-    font: inherit;
-    border: none;
-    background: transparent;
-    color: inherit;
-    cursor: pointer;
-    padding: 4px 6px;
-    border-radius: ${radius.control};
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 240px;
-  }
-  button:hover { color: ${colour.text}; background: ${colour.selected}; }
-  button[aria-current] { color: ${colour.text}; font-weight: 700; }
-`;
-
-const Disclaimer = styled.span`
-  font-size: 12px;
-  color: ${colour.secondary};
-  border: 1px solid ${colour.border};
-  border-radius: 999px;
-  padding: 4px 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
 `;
 
 const NAV: { key: Screen; label: string }[] = [
@@ -361,26 +328,7 @@ export default function SimulationApp() {
     const walked = current ? pathTo(detail, current.id) : [];
     return (
       <Root>
-        <Header>
-          <Brand>MEDial</Brand>
-          {current && <Day>{dayName(current)}</Day>}
-          <Crumbs aria-label="고른 길">
-            {walked.map((g, i) => (
-              <span key={g.id} style={{ display: 'contents' }}>
-                {i > 0 && <span aria-hidden>→</span>}
-                <button type="button" aria-current={g.id === current?.id ? 'step' : undefined}
-                  title={`${dayName(g)} · ${g.label}`} onClick={() => void it.choose(g.id)}>
-                  {dayName(g)} · {g.label}
-                </button>
-              </span>
-            ))}
-            {current && <button type="button" onClick={it.restartPath}>↺ 처음부터</button>}
-          </Crumbs>
-          <span style={{ flex: 1 }} />
-          <Disclaimer title={detail.session.stopDetail ?? undefined}>
-            화면 속 사람과 대화는 전부 시뮬레이션입니다 · 이름은 가명, 모습은 지어낸 그림입니다
-          </Disclaimer>
-        </Header>
+
 
         {(playbackError || s.error || it.error) && (
           <Notices>
@@ -391,8 +339,8 @@ export default function SimulationApp() {
         )}
 
         {!current && (
-          <ChoiceScreen detail={detail} current={null} onChoose={(id) => void it.choose(id)}
-            onRestart={it.restartPath} />
+          <IntroScreen opening={openingOf(detail)}
+            onFinish={() => { const first = openingOf(detail); if (first) void it.choose(first.id); }} />
         )}
 
         {current && screen === 'case' && loaded && (
@@ -404,6 +352,7 @@ export default function SimulationApp() {
             dayEnd={{ text: `${dayName(current)}가 끝났습니다`, action: '주민 리뷰를 보시겠습니까',
                       note: dayFacts(current) ? dayLine(dayFacts(current)!) : null }}
             onReadEvaluations={() => it.setScreen('evaluations')}
+            strip={{ day: dayName(current), note: walked.map((g) => g.label).join(' → '), onRestart: it.restartPath }}
           />
         )}
 
@@ -422,6 +371,9 @@ export default function SimulationApp() {
         {current && screen === 'improve' && (
           <ChoiceScreen detail={detail} current={current} onChoose={(id) => void it.choose(id)}
             onRestart={it.restartPath} />
+        )}
+        {current && (
+          <Foot>화면 속 사람과 대화는 전부 시뮬레이션입니다 · 이름은 가명, 모습은 지어낸 그림입니다</Foot>
         )}
       </Root>
     );

@@ -12,6 +12,9 @@ import { usePlayback } from '../scene/playback';
 import { learnPeople, personName, sentenceFor } from '../selectors/story';
 import { dayChangeLines } from '../selectors/words';
 import ChoiceScreen from './ChoiceScreen';
+import IntroScreen, { openingLines } from './IntroScreen';
+import { foldAsking } from '../scene/JudgmentPanel';
+import { openingOf, pathCount } from '../selectors/tree';
 import CompareScreen, { type CompareDecisions } from './CompareScreen';
 import EvaluationsScreen from './EvaluationsScreen';
 import { versionName } from '../ui/primitives';
@@ -508,7 +511,10 @@ describe('a record that carries its scenes (the exhibition record)', () => {
     learnPeople(scenes.people);
     observe({ run: { ...detail, scenes }, at: { seq: at.seq } });
     expect(screen.getByText('어르신, 다시 부릅니다.', { exact: false })).toBeDefined();
-    expect(screen.getByText('응답 없는 안부 확인 · P1 가명일')).toBeDefined();
+    // The panel's subtitle; the same request is also a line in the day's ledger,
+    // which names its need and its person in separate cells.
+    expect(screen.getAllByText('응답 없는 안부 확인 · P1 가명일').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('오늘의 요약')).toBeDefined();
     expect(screen.getByText('09:30 안부 문진에 응답이 없다')).toBeDefined();
     // What MEDial keeps back is said as such.
     expect(screen.getByText(/말하지 않는다 — 그 밖의 시각/)).toBeDefined();
@@ -516,6 +522,51 @@ describe('a record that carries its scenes (the exhibition record)', () => {
     expect(screen.getAllByText('P1 가명일').length).toBeGreaterThan(0);
     learnPeople(null);
     expect(personName('P1')).toBe('P1');
+  });
+});
+
+describe('foldAsking', () => {
+  it('says a repeated call once, with how many times', () => {
+    const rows = foldAsking([
+      { actorId: 'P1', verdict: 'asking', heard: null },
+      { actorId: 'P1', verdict: 'asking', heard: null },
+      { actorId: 'P6', verdict: 'asking', heard: null },
+    ]);
+    expect(rows.map((r) => [r.actorId, r.times])).toEqual([['P1', 2], ['P6', 1]]);
+  });
+
+  it('keeps answered calls as they were, each with its own words', () => {
+    const rows = foldAsking([
+      { actorId: 'P1', verdict: 'no_answer', heard: '09:30 응답 없음' },
+      { actorId: 'P1', verdict: 'no_answer', heard: '09:40 응답 없음' },
+    ]);
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.heard)).toEqual(['09:30 응답 없음', '09:40 응답 없음']);
+  });
+});
+
+describe('IntroScreen', () => {
+  const spec = (ruleType: string, currentRule: string) => ({ ruleType, currentRule }) as never;
+  const opening = { ruleCatalog: [
+    spec('retry_before_help', '응답이 없으면 본인에게 10분 간격으로 1회 다시 연락한 뒤 다음 단계로 간다.'),
+    spec('contact_order', '본인에게 닿지 않으면 이장에게 확인을 부탁한다.'),
+    spec('quiet_period', '같은 사람에게 다시 연락하기까지 비워 두는 시간이 없다.'),
+    spec('disclosure_scope', '제3자에게 연락 시각과 공개 동의된 평소 일과까지 함께 전달한다.'),
+    spec('institution_deadline', '접수 후 60분 안에 풀리지 않으면 기관으로 넘긴다.'),
+  ] } as unknown as GenerationDetail;
+
+  it('says the first version in four answers, taken from its own rules', () => {
+    const lines = openingLines(opening);
+    expect(lines.map((l) => l.head)).toEqual(['누구에게 먼저', '얼마나 기다리나', '무엇을 알리나', '언제 기관에 넘기나']);
+    expect(lines[0].text).toContain('이장에게 확인을 부탁한다');
+    expect(lines[1].text).toContain('10분 간격으로 1회');
+    expect(lines[3].text).toContain('60분');
+  });
+
+  it('has nothing to press, and says it is a simulation', () => {
+    render(<IntroScreen opening={opening} onFinish={noop} />);
+    expect(screen.queryAllByRole('button').length).toBe(0);
+    expect(screen.getByText(/시뮬레이션입니다/)).toBeDefined();
   });
 });
 
@@ -538,11 +589,9 @@ describe('ChoiceScreen', () => {
     ],
   } as SessionDetail;
 
-  it('starts with the first settings, one card each', () => {
-    render(<ChoiceScreen detail={tree} current={null} onChoose={noop} onRestart={noop} />);
-    expect(screen.getByText('MEDial을 어떤 규칙으로 처음 켤 것인가')).toBeDefined();
-    expect(screen.getByText('빠르게 확인한다')).toBeDefined();
-    expect(screen.getByText('주민을 덜 부른다')).toBeDefined();
+  it('does not offer the first settings: the opening is fixed to the first one', () => {
+    expect(openingOf(tree)?.id).toBe('a');
+    expect(pathCount(tree, 'a')).toBe(1);
   });
 
   it('offers the day\'s revisions, and one that was never run cannot be chosen', () => {

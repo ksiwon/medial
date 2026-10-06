@@ -1,12 +1,13 @@
 import styled from 'styled-components';
 import type { GenerationDetail, SessionDetail } from '../api/iteration';
-import { childFor, dayFacts, dayName, pathTo, rootsOf } from '../selectors/tree';
+import { childFor, dayFacts, dayName, pathCount, pathTo } from '../selectors/tree';
 import { colour, font } from '../ui/theme';
 
 // Choosing the next version, in a record whose versions branch (selectors/tree).
 //
-// Three moments, as the exhibition wall had them: the first setting before day
-// one, the revision after each day, and the end of the third day. Every option
+// Two moments, as the exhibition wall had them: the revision after each day and
+// the end of the third day. The first setting is not chosen - the opening film
+// (IntroScreen) states it and day one starts. Every option
 // on screen was run when the record was made, so choosing one opens a day that
 // already happened - it starts nothing. A revision that was never run is shown
 // and cannot be chosen.
@@ -117,37 +118,13 @@ const Again = styled.button`
 
 interface Props {
   detail: SessionDetail;
-  /** The version whose day was just read; null before the first choice. */
-  current: GenerationDetail | null;
+  /** The version whose day was just read. */
+  current: GenerationDetail;
   onChoose: (generationId: string) => void;
   onRestart: () => void;
 }
 
 export default function ChoiceScreen({ detail, current, onChoose, onRestart }: Props) {
-  if (!current) {
-    return (
-      <Sheet>
-        <Inner>
-          <Eyebrow>전시 시작 · 첫 배포 설정</Eyebrow>
-          <Headline>MEDial을 어떤 규칙으로 처음 켤 것인가</Headline>
-          <Lead>
-            같은 마을, 같은 사건입니다. 다른 것은 MEDial이 따르는 운영 규칙뿐입니다. 사흘 동안 날마다
-            하나씩 고쳐 갑니다.
-          </Lead>
-          <Cards>
-            {rootsOf(detail).map((root, i) => (
-              <Card key={root.id} onClick={() => onChoose(root.id)}>
-                <small>설정 {i + 1}</small>
-                <strong>{root.label}</strong>
-                <p>{root.confirmationReason}</p>
-              </Card>
-            ))}
-          </Cards>
-        </Inner>
-      </Sheet>
-    );
-  }
-
   if (current.changeSets.length === 0) {
     return (
       <Sheet>
@@ -155,7 +132,7 @@ export default function ChoiceScreen({ detail, current, onChoose, onRestart }: P
           <Eyebrow>사흘이 끝났습니다</Eyebrow>
           <Headline>고른 것과, 마을이 어떻게 됐는지</Headline>
           <Lead>
-            27가지 경로 가운데 하나입니다. 이 결과는 미리 계산해 둔 것이고, 실시간 모델 호출은 없습니다.
+            첫 설정에서 갈라지는 {pathCount(detail, pathTo(detail, current.id)[0]?.id ?? '')}가지 경로 가운데 하나입니다. 이 결과는 미리 계산해 둔 것이고, 실시간 모델 호출은 없습니다.
           </Lead>
           <Summary>
             <thead>

@@ -16,10 +16,10 @@ import { personName } from '../selectors/story';
 import { colour, font, radius } from '../ui/theme';
 import { ActivityIcon, FaceChip, FaceMark, VehicleMark } from './Marks';
 
-// The real map of 은점마을: the source raster as it was drawn - north to the
-// right, the 1.15 km north-south run lying along the screen (mapFrame.ts) - flat,
+// The real map of 은점마을: the source raster turned upright - north at the top,
+// the 1.15 km north-south run standing in a tall column (mapFrame.ts) - flat,
 // at the source's own proportions. Nothing here invents terrain or stretches it.
-// All fits the whole village; 채움 crops the edges to fill the panel.
+// The whole village fits the column; zooming leaves it and 전체 comes back.
 //
 // Three rules from doc 15 section 5 shape the drawing:
 //
@@ -92,8 +92,8 @@ const Corner = styled.div`
 
 const Tools = styled(Corner)`
   right: 12px;
-  bottom: 26px;
-  flex-direction: column;
+  bottom: 30px;
+  flex-direction: row;
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid ${colour.border};
   border-radius: ${radius.control};
@@ -287,12 +287,6 @@ const OutChip = styled.span`
   > span { font-weight: 400; color: ${colour.secondary}; }
 `;
 
-const Note = styled.span`
-  margin-left: auto;
-  font-size: 11px;
-  color: ${colour.unknown};
-`;
-
 /** Place names worth a label, at every zoom now that the map lies along the
  *  screen and has the room (as on the exhibition wall). Houses are never
  *  labelled: which named resident lives in which building is not put on screen. */
@@ -329,9 +323,9 @@ export default function VillageMap({
   const [vx, vy, vw, vh] = frame.viewBox;
   const home: View = useMemo(() => ({ x: vx, y: vy, w: vw, h: vh }), [vx, vy, vw, vh]);
   const [view, setView] = useState<View>(home);
-  // The whole village first; 채움 (fill the panel, cropping the edges) is the
-  // opt-in. It opened filled before, and the user asked to see everything.
-  const [fitMode, setFitMode] = useState<'fill' | 'all' | null>('all');
+  // The whole village, always: the column is the village's own shape. Zooming
+  // leaves it; 전체 returns.
+  const [fitMode, setFitMode] = useState<'all' | null>('all');
   const [box, setBox] = useState({ width: 1, height: 1 });
   const [hovered, setHovered] = useState<string | null>(null);
   /** The card Escape just closed. The marker keeps focus and often the pointer
@@ -358,20 +352,9 @@ export default function VillageMap({
     return () => observer.disconnect();
   }, []);
 
-  // Cover the map column without deforming geography; All is an explicit fit.
-  const fillView = useMemo(() => {
-    const raster = village.mapImage;
-    const x = raster ? 0 : home.x;
-    const y = raster ? 0 : home.y;
-    const w = raster ? raster.sourceWidthPx : home.w;
-    const h = raster ? raster.sourceHeightPx : home.h;
-    const scale = Math.max(box.width / w, box.height / h);
-    const width = box.width / scale, height = box.height / scale;
-    return { x: x + (w-width)/2, y: y + (h-height)/2, w: width, h: height };
-  }, [home, village.mapImage, box]);
   useEffect(() => {
-    if (box.width > 1 && box.height > 1 && fitMode) setView(fitMode === 'fill' ? fillView : home);
-  }, [fillView, home, box, fitMode]);
+    if (box.width > 1 && box.height > 1 && fitMode) setView(home);
+  }, [home, box, fitMode]);
 
   const project = useMemo(() => projector(view, box), [view, box]);
 
@@ -557,6 +540,7 @@ export default function VillageMap({
               y={0}
               width={mapImage!.sourceWidthPx}
               height={mapImage!.sourceHeightPx}
+              transform={frame.rasterTransform ?? undefined}
               opacity={medial ? 0.72 : 1}
               style={{ filter: 'saturate(0.92)' }}
               onError={() => setMapBroken(true)}
@@ -690,8 +674,7 @@ export default function VillageMap({
           <ToolButton onClick={() => { setFitMode(null); setView((v) => zoomBy(v, 1.2, home)); }} title="축소">
             －
           </ToolButton>
-          <ToolButton onClick={() => setFitMode(fitMode === 'all' ? 'fill' : 'all')}
-            title={fitMode === 'all' ? '지도 칸 채우기' : '마을 전체 보기'}>{fitMode === 'all' ? '채움' : '전체'}</ToolButton>
+          <ToolButton onClick={() => setFitMode('all')} title="마을 전체 보기">전체</ToolButton>
         </Tools>
 
         {active && activeAt && (
@@ -756,7 +739,8 @@ export default function VillageMap({
 
       {/* Who is not on the map, always in view (the exhibition wall's strip):
           a place without a coordinate is a name here, never a guessed point. */}
-      <Outside aria-live="polite">
+      <Outside aria-live="polite"
+        title={outside.length > 0 ? '마을 밖은 이 지도에 좌표가 없어 목록으로만 적습니다. 지도 여백에 임의로 놓지 않습니다.' : undefined}>
         <strong>{outside.length ? '지금 마을 밖에 있는 사람' : '마을 밖에 나가 있는 사람 없음'}</strong>
         {outside.map((pose) => (
           <OutChip key={pose.id}>
@@ -768,9 +752,6 @@ export default function VillageMap({
           <OutChip>
             MEDial이 위치를 모르는 사람<span>{projected.unlocated.length}명</span>
           </OutChip>
-        )}
-        {outside.length > 0 && (
-          <Note>마을 밖은 이 지도에 좌표가 없어 목록으로만 적습니다. 지도 여백에 임의로 놓지 않습니다.</Note>
         )}
       </Outside>
     </>

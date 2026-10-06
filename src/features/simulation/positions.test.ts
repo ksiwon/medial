@@ -23,19 +23,19 @@ describe('map frame', () => {
     mapImage: northUpMatrix ? { northUpMatrix, sourceWidthPx: 1230, sourceHeightPx: 490 } : null,
   }) as unknown as VillagePayload;
 
-  it('draws the village as its source map was drawn: north to the right', () => {
+  it('keeps every point north-up and turns only the source raster', () => {
     const frame = mapFrame(village([0, -1, 1, 0, 0, 1230]));
-    // The northern end of the strip (y = 0) is at the right edge of the source.
-    expect(frame.at(100, 0)).toEqual([1230, 100]);
-    expect(frame.at(100, 1230)).toEqual([0, 100]);
-    expect(frame.viewBox).toEqual([0, 0, 1230, 490]);
-    expect(frame.northDeg).toBe(90);
+    expect(frame.at(100, 0)).toEqual([100, 0]);
+    expect(frame.at(100, 1230)).toEqual([100, 1230]);
+    expect(frame.viewBox).toEqual([0, 0, 490, 1230]);
+    expect(frame.northDeg).toBe(0);
+    expect(frame.rasterTransform).toBe('matrix(0 -1 1 0 0 1230)');
   });
 
-  it('turns nothing when there is no source raster', () => {
+  it('draws no raster transform for a village without a source raster', () => {
     const frame = mapFrame(village());
     expect(frame.at(12, 34)).toEqual([12, 34]);
     expect(frame.viewBox).toEqual([0, 0, 490, 1230]);
-    expect(frame.northDeg).toBe(0);
+    expect(frame.rasterTransform).toBeNull();
   });
 });

@@ -1,51 +1,40 @@
 import type { VillagePayload } from './api/types';
 
 // Which way the village lies on screen. Every coordinate the server sends is
-// north-up; the screen draws 은점마을 the way its source map was drawn, with the
-// 1.15 km north-south run lying along the screen and north to the right - the
-// exhibition wall's layout (2026-09-30). A north-up strip left half of a wide
-// screen empty.
+// north-up, and the screen now draws it that way too: the 1.15 km north-south
+// run stands upright in a tall column beside the stage, north at the top.
 //
-// This is the one place that turns coordinates for the screen. Positions,
-// clustering and the server stay north-up. Without a raster (the synthetic
-// village) there is no source drawing to follow and nothing turns.
+// History, because it was turned twice. On 2026-09-30 the map was laid down the
+// way its source raster was drawn (north to the right) to match the exhibition
+// wall. On 2026-10-06 the researcher moved the map into a permanent left column
+// beside the stage; a column that tall wants the village upright, so it stands
+// again. The raster is the only thing that is not north-up - it is drawn with
+// `rasterTransform` (VillageMap) instead of turning every coordinate.
+//
+// Nothing here turns a point any more. `at` stays so the callers that draw a
+// point do not each learn that.
 
 export interface MapFrame {
-  /** A north-up point, where it is drawn. */
+  /** A north-up point, where it is drawn: itself. */
   at: (x: number, y: number) => [number, number];
-  /** The village's viewBox, in drawn coordinates. */
+  /** The village's viewBox. */
   viewBox: [number, number, number, number];
-  /** Rotation of the north arrow, in degrees clockwise from up. */
+  /** Rotation of the north arrow, in degrees clockwise from up: always 0. */
   northDeg: number;
-  /** True when the raster is drawn as it is, without a transform. */
-  sourceOriented: boolean;
+  /** SVG `matrix(...)` that puts the source raster upright, or null when the
+   *  village has no raster (the synthetic one). */
+  rasterTransform: string | null;
 }
 
 export function mapFrame(village: VillagePayload): MapFrame {
   const [vx, vy, vw, vh] = village.geometry.viewBox;
   const m = village.mapImage?.northUpMatrix;
-  if (!m) {
-    return { at: (x, y) => [x, y], viewBox: [vx, vy, vw, vh], northDeg: 0, sourceOriented: false };
-  }
-  // northUpMatrix takes a source pixel to north-up: X = a·sx + c·sy + e,
-  // Y = b·sx + d·sy + f. The screen wants the source pixel back.
-  const [a, b, c, d, e, f] = m;
-  const det = a * d - b * c || 1;
-  const at = (x: number, y: number): [number, number] => [
-    (d * (x - e) - c * (y - f)) / det,
-    (-b * (x - e) + a * (y - f)) / det,
-  ];
-  const corners = [at(vx, vy), at(vx + vw, vy), at(vx, vy + vh), at(vx + vw, vy + vh)];
-  const xs = corners.map((p) => p[0]);
-  const ys = corners.map((p) => p[1]);
-  const x0 = Math.min(...xs);
-  const y0 = Math.min(...ys);
-  // North (0, -1) through the inverse's linear part.
-  const [nx, ny] = [c / det, -a / det];
   return {
-    at,
-    viewBox: [x0, y0, Math.max(...xs) - x0, Math.max(...ys) - y0],
-    northDeg: Math.round((Math.atan2(nx, -ny) * 180) / Math.PI),
-    sourceOriented: true,
+    at: (x, y) => [x, y],
+    viewBox: [vx, vy, vw, vh],
+    northDeg: 0,
+    // northUpMatrix takes a source pixel to north-up: X = a·sx + c·sy + e,
+    // Y = b·sx + d·sy + f - SVG's matrix(a b c d e f) exactly.
+    rasterTransform: m ? `matrix(${m.join(' ')})` : null,
   };
 }

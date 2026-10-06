@@ -25,6 +25,21 @@ export function rootsOf(detail: SessionDetail): GenerationDetail[] {
     .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
 }
 
+/**
+ * The version the exhibition opens with: the first setting the record lists.
+ * The record ran three; the exhibition fixes this one, so the other two first
+ * settings (and the paths under them) are kept in the record and never reached.
+ */
+export function openingOf(detail: SessionDetail): GenerationDetail | null {
+  return rootsOf(detail)[0] ?? null;
+}
+
+/** How many complete walks lead down from `rootId`: its leaves. */
+export function pathCount(detail: SessionDetail, rootId: string): number {
+  const parents = new Set(detail.generations.map((g) => g.parentGenerationId));
+  return detail.generations.filter((g) => !parents.has(g.id) && pathTo(detail, g.id)[0]?.id === rootId).length;
+}
+
 /** The version a revision of `generation` led to, or null when it was not run. */
 export function childFor(detail: SessionDetail, changeSetId: string): GenerationDetail | null {
   return detail.generations.find((g) => g.appliedChangeSetId === changeSetId) ?? null;

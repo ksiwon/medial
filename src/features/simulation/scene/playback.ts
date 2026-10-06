@@ -157,7 +157,9 @@ export const usePlayback = create<PlaybackState>((set, get) => {
     seekTime: (ms) => {
       const reel = get().reel;
       if (!reel) return;
-      set({ playing: false });
+      // Moving the day moves everyone: a card opened on where someone *was* would
+      // go on describing a place they have left.
+      set({ playing: false, selectedCluster: null, selectedActor: null });
       at(reel.atTime(ms));
     },
 
