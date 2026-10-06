@@ -50,6 +50,7 @@ const List = styled.ol`
 `;
 
 const Row = styled.li<{ $tint: string; $live: boolean }>`
+  cursor: pointer;
   display: grid;
   grid-template-columns: 54px 1fr;
   gap: 4px 10px;
@@ -60,6 +61,8 @@ const Row = styled.li<{ $tint: string; $live: boolean }>`
   > time { font-variant-numeric: tabular-nums; font-weight: 800; color: ${colour.text}; }
   > div > b { font-size: ${font.body}; font-weight: 700; }
   > div > i { font-style: normal; color: ${colour.secondary}; font-size: ${font.small}; margin-left: 8px; }
+  > div > u { text-decoration: none; margin-left: 8px; font-size: 11px; font-weight: 800; color: ${colour.warn};
+              background: ${colour.warnSurface}; border-radius: 999px; padding: 1px 8px; }
   > div > p { margin: 3px 0 0; font-size: ${font.small}; color: ${colour.secondary}; line-height: 1.5; }
 `;
 
@@ -81,30 +84,34 @@ const Empty = styled.p`
 
 interface Props {
   rows: LedgerRow[];
+  /** What happened that MEDial never saw. Only the researcher's view lists it. */
+  unseen: LedgerRow[];
   episodes: Episode[];
   onSeek: (ms: number) => void;
 }
 
-export default function DayLedger({ rows, episodes, onSeek }: Props) {
+export default function DayLedger({ rows, unseen, episodes, onSeek }: Props) {
   const tints = requestColour(episodes);
+  const all = [...rows, ...unseen].sort((a, b) => a.firstMs - b.firstMs);
   return (
     <Box aria-label="오늘의 요약">
       <Head>
         <h2>오늘의 요약</h2>
-        <span>{rows.length === 0 ? '아직 접수된 요청이 없습니다' : `요청 ${rows.length}건`}</span>
+        <span>{all.length === 0 ? '아직 접수된 요청이 없습니다' : `${rows.length}건${unseen.length ? ` · MEDial이 보지 못한 일 ${unseen.length}건` : ''}`}</span>
       </Head>
-      {rows.length === 0 ? (
+      {all.length === 0 ? (
         <Empty>하루가 시작되면 MEDial이 받은 요청이 시각 순으로 여기에 쌓입니다.</Empty>
       ) : (
         <List>
-          {rows.map((row) => {
-            const live = row.state === 'open';
+          {all.map((row) => {
+            const live = row.state === 'open' && row.medial;
             const tint = tints.get(row.steps[0].requestId) ?? colour.primary;
             return (
-              <Row key={row.key} $tint={tint} $live={live}>
+              <Row key={row.key} $tint={tint} $live={live}
+                onClick={() => onSeek(row.firstMs)} title={`${formatClock(row.firstMs)}로 이동`}>
                 <time>{formatClock(row.firstMs)}</time>
                 <div>
-                  <b>{row.need}</b>
+                  <b>{row.need}</b>{!row.medial && <u>MEDial은 모름</u>}
                   {row.subjectId && <i>{personName(row.subjectId)}</i>}
                   <p>
                     <Steps>
@@ -113,8 +120,8 @@ export default function DayLedger({ rows, episodes, onSeek }: Props) {
                           {i > 0 && <span aria-hidden> → </span>}
                           <a role="button" tabIndex={0} style={{ cursor: 'pointer' }}
                             title={`${formatClock(step.atMs)}로 이동`}
-                            onClick={() => onSeek(step.atMs)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') onSeek(step.atMs); }}>
+                            onClick={(e) => { e.stopPropagation(); onSeek(step.atMs); }}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onSeek(step.atMs); } }}>
                             {step.title}
                           </a>
                           {/* A request can run across the day (the trip out at seven, the

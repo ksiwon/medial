@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Resident Agents as Evaluators — Graduation Show (easy English)</title>
+<meta name="viewport" content="width=1280">
+<!--
+  Graduation show talk (2026-10-07), in plain English for reading aloud. 틀은 박정원_동문학술_발표자료.pdf 를 따른다:
+  1280×720, 표지·맺음은 남색 바탕, 본문은 종이색 바탕, 빨강 소제목 → 굵은 두 줄 결론 → 3단 → 한 줄.
+  캡처는 sim 서버를 직접 열어 찍은 실제 화면이고, 주민은 P번호로만 쓴다(이름은 본문에 옮기지 않는다).
+  화면 속 이름은 익명 페르소나의 가명이며 화면 아래 고지가 그렇게 말한다.
+-->
+<style>
+@font-face { font-family: "Pretendard Variable"; src: url("./PretendardVariable.woff2") format("woff2-variations"); font-weight: 45 920; }
+@page { size: 1280px 720px; margin: 0; }
+:root {
+  --paper: #f4efe8; --card: #eae5de; --ink: #1c1a17; --mute: #6f6a63; --rule: #d9d3cb;
+  --red: #c8412c; --night: #181a21; --night-ink: #f3efe7; --night-mute: #b9b6b0; --salmon: #ee8b73;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #888; }
+body { font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", "Malgun Gothic", sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
+.slide { position: relative; width: 1280px; height: 720px; overflow: hidden; background: var(--paper); page-break-after: always; break-after: page; padding: 0 72px; }
+.slide.dark { background: var(--night); color: var(--night-ink); }
+.kicker { position: absolute; top: 56px; left: 72px; font-size: 17px; font-weight: 700; color: var(--red); letter-spacing: -0.01em; }
+.dark .kicker { color: var(--salmon); }
+.page { position: absolute; top: 56px; right: 72px; font-size: 17px; color: var(--mute); }
+.dark .page { color: var(--night-mute); }
+h1.title { position: absolute; top: 112px; left: 72px; right: 72px; font-size: 42px; line-height: 1.22; font-weight: 800; letter-spacing: -0.035em; word-break: keep-all; }
+.cols { position: absolute; left: 72px; right: 72px; top: 248px; display: grid; gap: 32px; }
+.cols.c3 { grid-template-columns: repeat(3, 1fr); }
+.cols.c2 { grid-template-columns: repeat(2, 1fr); }
+.card { background: var(--card); padding: 24px 24px 22px; min-height: 280px; }
+.rule { border-top: 2px solid var(--rule); padding-top: 22px; }
+.dark .rule { border-top-color: var(--night-ink); }
+.k { font-size: 17px; font-weight: 700; color: var(--red); margin-bottom: 18px; }
+.dark .k { color: var(--salmon); }
+.h { font-size: 26px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 14px; word-break: keep-all; }
+ul { list-style: none; }
+li { position: relative; padding-left: 20px; font-size: 21px; line-height: 1.5; margin: 0 0 10px; word-break: keep-all; }
+li::before { content: "•"; position: absolute; left: 2px; color: var(--mute); }
+.dark li::before { color: var(--night-mute); }
+.foot { position: absolute; left: 72px; right: 72px; bottom: 56px; font-size: 22px; line-height: 1.5; word-break: keep-all; }
+.foot b { font-weight: 800; }
+.shot { position: absolute; background-size: cover; background-position: top left; border: 1px solid var(--rule); background-color: #fff; }
+.cap { position: absolute; font-size: 16px; color: var(--mute); text-align: center; }
+.row { display: grid; grid-template-columns: 150px 1fr; align-items: baseline; margin-bottom: 20px; }
+.row .l { font-size: 18px; font-weight: 700; color: var(--red); }
+.row .v { font-size: 25px; font-weight: 500; letter-spacing: -0.02em; word-break: keep-all; }
+.quote { font-size: 20px; line-height: 1.5; }
+.num { font-size: 60px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+.num small { font-size: 26px; font-weight: 500; color: var(--mute); margin-left: 4px; }
+.lab { font-size: 17px; color: var(--mute); margin-top: 6px; }
+/* cover */
+.cover .eyebrow { position: absolute; top: 56px; left: 72px; font-size: 18px; color: var(--night-mute); }
+.cover .tag { position: absolute; top: 262px; left: 72px; font-size: 19px; font-weight: 700; color: var(--salmon); }
+.cover h1 { position: absolute; top: 300px; left: 72px; font-size: 72px; line-height: 1.12; font-weight: 800; letter-spacing: -0.04em; }
+.cover .sub { position: absolute; top: 470px; left: 72px; width: 480px; padding-top: 22px; border-top: 1px solid #3a3c44; font-size: 26px; }
+.cover .sub small { display: block; margin-top: 8px; font-size: 19px; color: var(--night-mute); }
+.cover .bg { position: absolute; right: 0; top: 0; bottom: 0; width: 520px; background: url("shot-village.webp") center/cover; opacity: .9; }
+.cover .bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, var(--night) 0%, rgba(24,26,33,.2) 60%, rgba(24,26,33,.35) 100%); }
+</style>
+</head>
+<body>
+
+<!-- 1 · cover -->
+<section class="slide dark cover">
+  <div class="eyebrow">2026 Graduation Show · KAIST Industrial Design</div>
+  <div class="bg"></div>
+  <div class="tag">A pretend village · MEDial</div>
+  <h1>Resident Agents<br>as Evaluators</h1>
+  <div class="sub">Jungwon Park<small>KAIST Industrial Design · AI Experience Lab</small></div>
+</section>
+
+<!-- 2 · what the show does -->
+<section class="slide">
+  <div class="kicker">What this show does</div><div class="page">02 / 07</div>
+  <h1 class="title">You become a service designer.<br>You check an AI service for three days.</h1>
+  <div class="cols c3">
+    <div class="card"><div class="k">01 · You watch</div><div class="h">A day in the village</div>
+      <ul><li>12 villagers go about their day</li><li>A day when nobody answers the check</li><li>Who the AI asks for help</li></ul></div>
+    <div class="card"><div class="k">02 · You read</div><div class="h">What villagers say</div>
+      <ul><li>Each person speaks only about what happened to them</li><li>No score. No ranking.</li><li>If nothing happened to them, it says so</li></ul></div>
+    <div class="card"><div class="k">03 · You choose</div><div class="h">One request</div>
+      <ul><li>At the end of each day, pick one of three</li><li>Your choice becomes the next day's rule</li><li>See how the village changes</li></ul></div>
+  </div>
+  <div class="foot">Real designers use this tool between visits to the village. Here, <b>you</b> do the job, in three days.</div>
+</section>
+
+<!-- 3 · one visit -->
+<section class="slide">
+  <div class="kicker">One visit</div><div class="page">03 / 07</div>
+  <h1 class="title">About five minutes.<br>Three days, one story.</h1>
+  <div class="cols" style="grid-template-columns:repeat(5,1fr);gap:18px;top:262px">
+    <div class="rule"><div class="k">Waiting screen</div><div class="h" style="font-size:22px">Intro film</div><ul><li style="font-size:18px">66 seconds, no touch</li><li style="font-size:18px">Who this is for</li></ul></div>
+    <div class="rule"><div class="k">Day 1 · about 1:40</div><div class="h" style="font-size:22px">A safety check</div><ul><li style="font-size:18px">No answer</li><li style="font-size:18px">In the field, all fine</li></ul></div>
+    <div class="rule"><div class="k">Choose ①</div><div class="h" style="font-size:22px">One request</div><ul><li style="font-size:18px">Read what they said</li><li style="font-size:18px">Pick one of three</li></ul></div>
+    <div class="rule"><div class="k">Day 2 · about 1:10</div><div class="h" style="font-size:22px">They remember</div><ul><li style="font-size:18px">The same thing again</li></ul></div>
+    <div class="rule"><div class="k">Day 3 · about 2:15</div><div class="h" style="font-size:22px">Pier, then emergency</div><ul><li style="font-size:18px">Something the AI missed</li><li style="font-size:18px">That evening</li></ul></div>
+  </div>
+  <div class="foot">All three days take about 15 minutes. For a visit, we play <b>only the scenes that tell the story</b>.</div>
+</section>
+
+<!-- 4 · demo -->
+<section class="slide">
+  <div class="kicker">Demo · the scene to show</div><div class="page">04 / 07</div>
+  <h1 class="title" style="font-size:40px;right:640px">The AI cannot see<br>everything.</h1>
+  <div style="position:absolute;left:72px;top:262px;width:500px">
+    <div class="row"><div class="l">Day 3 morning</div><div class="v">Two brothers at the pier. “My chest feels a little tight.”</div></div>
+    <div class="row"><div class="l">The AI</div><div class="v">Nobody told it. <b>It does not know.</b></div></div>
+    <div class="row"><div class="l">That evening</div><div class="v">An emergency at the same man's house.</div></div>
+    <div style="border-top:1px solid var(--rule);padding-top:18px;margin-top:6px;font-size:19px;line-height:1.55;color:var(--mute)">
+      People who stay quiet are not seen by the system. This is the scene we most want you to see.</div>
+  </div>
+  <div class="shot" style="left:620px;top:104px;width:588px;height:350px;background-image:url('shot-pier.webp');background-size:cover"></div>
+  <div class="shot" style="left:620px;top:470px;width:288px;height:171px;background-image:url('shot-d2.webp');background-size:cover"></div>
+  <div class="shot" style="left:920px;top:470px;width:288px;height:171px;background-image:url('shot-emergency.webp');background-size:cover"></div>
+  <div class="cap" style="left:620px;top:650px;width:588px">Top: Day 3 pier · Bottom: Day 2 check again / Day 3 emergency — real screens</div>
+</section>
+
+<!-- 5 · request -->
+<section class="slide">
+  <div class="kicker">Demo · where you choose</div><div class="page">05 / 07</div>
+  <h1 class="title">You choose a request, not a number.<br>You see why it came up.</h1>
+  <div class="shot" style="left:72px;top:238px;width:700px;height:300px;background-image:url('shot-choice.webp');background-position:top left;background-size:100% auto"></div>
+  <div class="cap" style="left:72px;top:546px;width:700px">The real screen (Korean). The three cards are explained on the right.</div>
+  <div style="position:absolute;left:810px;top:238px;width:398px">
+    <div class="row" style="grid-template-columns:1fr;margin-bottom:14px"><div class="l">Request 1</div><div class="v" style="font-size:21px">“Do not only rely on the village head. Ask close neighbors first.”</div></div>
+    <div class="row" style="grid-template-columns:1fr;margin-bottom:14px"><div class="l">Request 2</div><div class="v" style="font-size:21px">“Let people who must go the long way home ride too.”</div></div>
+    <div class="row" style="grid-template-columns:1fr;margin-bottom:0"><div class="l">Request 3</div><div class="v" style="font-size:21px">“Ask people who are close to them first.”</div></div>
+  </div>
+  <div class="foot" style="bottom:46px">When you choose, <b>the next day was already made</b>. The show does not call an AI while you watch.</div>
+</section>
+
+<!-- 6 · hall -->
+<section class="slide">
+  <div class="kicker">In the hall</div><div class="page">06 / 07</div>
+  <h1 class="title">Today it is one screen.<br>You choose with your own hand.</h1>
+  <div class="cols c3">
+    <div class="rule"><div class="k">Works now</div><div class="h">One screen</div>
+      <ul><li>Intro film, three days, summary</li><li>Pick a request with mouse or touch</li><li>The map card closes when the mouse leaves</li></ul></div>
+    <div class="rule"><div class="k">Running</div><div class="h">It runs by itself</div>
+      <ul><li>Plays a record made in advance</li><li>No network. No AI call.</li><li>After 60 seconds with no touch on the summary, it goes back to the intro</li></ul></div>
+    <div class="rule"><div class="k">Next step</div><div class="h">Wall + tablet</div>
+      <ul><li>Wall: the village day</li><li>Tablet: choose a request</li><li>Not split yet</li></ul></div>
+  </div>
+  <div class="foot">Nine paths are ready. <b>Whatever you choose, the next day really exists.</b></div>
+</section>
+
+<!-- 7 · limits -->
+<section class="slide dark">
+  <div class="kicker">What we say · what we do not say</div><div class="page">07 / 07</div>
+  <h1 class="title">This does not replace people.</h1>
+  <div class="cols c2" style="top:262px">
+    <div class="rule"><div class="k">We say</div><div class="h">Everything on screen is pretend</div>
+      <ul><li>The people, talk, and faces are made up. Names are not real.</li><li>These opinions are not real villagers' opinions</li><li>It helps before the next visit to the village</li></ul></div>
+    <div class="rule"><div class="k">Not done yet</div><div class="h">Zero checks with real people</div>
+      <ul><li>Real villagers have not checked this: 0</li><li>People trying it for usability: 0</li><li>Three days is a simulation, not a long study</li></ul></div>
+  </div>
+  <div class="foot" style="color:var(--night-ink)">At the next visit, we ask the real villagers first, and only then show them this.</div>
+</section>
+
+<!-- A1 · appendix -->
+<section class="slide">
+  <div class="kicker">Appendix · if you ask</div><div class="page">A1</div>
+  <h1 class="title">Most requests did not change the numbers.<br>Only one did.</h1>
+  <div class="cols c3">
+    <div class="rule"><div class="k">9 paths · Day 3 numbers</div>
+      <div class="num">8<small>of 9</small></div><div class="lab">Same result: 30 minutes to check · 3 favors for the village head · 0 refusals</div></div>
+    <div class="rule"><div class="k">The one that was different</div>
+      <div class="num">6<small>refusals</small></div><div class="lab">Ask neighbors first — 40 minutes, and 6 refusals</div></div>
+    <div class="rule"><div class="k">Why</div>
+      <div class="h" style="font-size:24px">Only one person can move in the daytime</div>
+      <div class="lab">So most rule changes reach the same person</div></div>
+  </div>
+  <div class="foot">So we do <b>not say “your choice changes the result.”</b> We say the same request reads differently in how people react and who carries the load.</div>
+</section>
+
+</body>
+</html>

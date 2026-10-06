@@ -207,3 +207,50 @@ describe('judgmentOf', () => {
     expect(judgmentOf('req-P1-1', log[0].seq, log, [], rules).rules.map((r) => r.label)).toEqual(['연락 순서']);
   });
 });
+
+describe('playing only the scenes that tell the story', () => {
+  const all = () => episodes();
+  const ids = () => [...new Set(all().map((e) => e.requestId))];
+  const play = (featured: string[] | null) =>
+    buildReel({ episodes: all(), events, timeline, pace: 1, featured: featured && new Set(featured), ...DAY });
+
+  it('is shorter, and the requests left out are still in the record', () => {
+    const [first] = ids();
+    expect(ids().length).toBeGreaterThan(1);
+    const full = play(null), story = play([first]);
+    expect(story.total).toBeLessThan(full.total);
+    // The ledger, the bars and the evaluations read `episodes`: leaving a scene out of the
+    // playback must not take its request out of the day.
+    expect(story.episodes.map((e) => e.requestId)).toEqual(full.episodes.map((e) => e.requestId));
+  });
+
+  it('plays no scene for a request it left out, and every scene for one it kept', () => {
+    const [first, ...rest] = ids();
+    const story = play([first]);
+    const played = new Set(story.segments.flatMap((s) => (s.kind === 'map' ? [] : [story.episodes[s.episode].requestId])));
+    expect([...played]).toEqual([first]);
+    expect(rest.length).toBeGreaterThan(0);
+    // Every line of the kept request is still there.
+    const lines = story.segments.filter((s) => s.kind === 'line').length;
+    const want = all().filter((e) => e.requestId === first).flatMap((e) => e.beats).reduce((n, b) => n + b.lines.length, 0);
+    expect(lines).toBe(want);
+  });
+
+  it('never leaves a gap in the day: the map picks up where the last scene or map left off', () => {
+    const [first] = ids();
+    const story = play([first]);
+    const day = story.segments.filter((s) => s.kind === 'map');
+    // Map stretches are contiguous in the clock they cover, past a scene that was left out too.
+    for (let i = 1; i < day.length; i += 1) {
+      const a = day[i - 1], b = day[i];
+      if (a.kind === 'map' && b.kind === 'map') expect(b.w0).toBeGreaterThanOrEqual(a.w1);
+    }
+    expect(day[0].kind === 'map' && day[0].w0).toBe(DAY.dayStartMs);
+    const last = day[day.length - 1];
+    expect(last.kind === 'map' && last.w1).toBe(DAY.dayEndMs);
+  });
+
+  it('plays everything when the record names nothing', () => {
+    expect(play(null).total).toBe(buildReel({ episodes: all(), events, timeline, pace: 1, ...DAY }).total);
+  });
+});

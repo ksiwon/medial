@@ -415,6 +415,9 @@ export interface StoredScenes {
   /** Pseudonyms of the anonymised persona pack the record was made from. */
   people: Record<string, string>;
   episodes: import('../scene/types').Episode[];
+  /** The Tasks worth playing when a visitor has minutes, not a quarter hour. The record says which
+   *  (scripts/import_exhibition.py FEATURED); the screen chooses nothing. */
+  featured?: string[];
   /** MEDial's panel for each Task, by the Task's id (an episode's requestId). */
   panels: Record<string, { subtitle: string; judgment: import('../scene/judgment').Judgment }>;
 }

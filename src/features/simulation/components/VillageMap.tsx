@@ -466,6 +466,22 @@ export default function VillageMap({
     return () => observer.disconnect();
   }, [active?.key]);
 
+  // A card opened by hover closes when the pointer is no longer over its marker or
+  // the card. The browser sends `mouseenter` for a marker that was drawn *under* a
+  // pointer that did not move (a new day opens, markers are redrawn), but never the
+  // matching `mouseleave` - so the card stayed open with the pointer far away
+  // (found recording the demo, 2026-10-06). Only a hover is closed this way: a card
+  // the reader pinned (clicked) stays until they close it.
+  useEffect(() => {
+    if (!hovered || selectedCluster) return;
+    const onMove = (event: PointerEvent) => {
+      if (!pointerIsOver(event.target as Element | null, hovered)) onHover(null);
+    };
+    window.addEventListener('pointermove', onMove);
+    return () => window.removeEventListener('pointermove', onMove);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hovered, selectedCluster]);
+
   /** Leaving a marker, or moving to another one, forgets an Escape: the key
    *  hides the card that is open, it does not make a marker permanently mute. */
   const onHover = (key: string | null) => {
@@ -756,6 +772,11 @@ export default function VillageMap({
       </Outside>
     </>
   );
+}
+
+/** Is the pointer on the marker `key`, or on an overlay (its card, the zoom tools)? */
+export function pointerIsOver(target: Element | null, key: string): boolean {
+  return Boolean(target?.closest?.(`[data-marker="${CSS.escape(key)}"], [data-overlay]`));
 }
 
 function placeName(cluster: Cluster, village: VillagePayload): string {

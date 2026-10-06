@@ -3,8 +3,10 @@ import type { Episode } from '../scene/types';
 import { ledgerAt, needOf } from './dayLedger';
 
 const min = (h: number, m = 0) => (h * 60 + m) * 60_000;
-const episode = (requestId: string, subjectId: string, title: string, start: number, end = start): Episode => ({
-  requestId, subjectId, title, firstOfRequest: true, startMs: start, endMs: end, beats: [],
+const episode = (requestId: string, subjectId: string, title: string, start: number, end = start,
+  medial = true): Episode => ({
+  requestId, subjectId, title, firstOfRequest: true, startMs: start, endMs: end,
+  beats: [{ medial } as Episode['beats'][number]],
 });
 
 const day: Episode[] = [
@@ -76,6 +78,35 @@ describe('day ledger', () => {
     const ledger = ledgerAt(instant, min(9, 30) + 30_000, () => null);
     expect(ledger.rows[0].state).toBe('open');
     expect(ledgerAt(instant, min(9, 40), () => null).rows[0].state).toBe('done');
+  });
+});
+
+describe('what MEDial did not see', () => {
+  const pier = episode('a1', 'P8', '항구에서 한 말', min(10, 56), min(11), false);
+
+  it('does not count a scene MEDial was not in as its own request', () => {
+    const ledger = ledgerAt([...day, pier], min(11, 30), subtitleOf);
+    expect(ledger.rows.map((r) => r.need)).toEqual(['응답 없는 안부 확인']);
+    expect(ledger.taken).toBe(1);
+  });
+
+  it('says it apart, as something that happened and was not seen', () => {
+    const ledger = ledgerAt([...day, pier], min(11, 30), subtitleOf);
+    expect(ledger.unseen.map((r) => r.steps[0].title)).toEqual(['항구에서 한 말']);
+    // It is not "open" work: MEDial is not doing it.
+    expect(ledger.open).toBe(0);
+  });
+
+  it('does not show it before it has happened', () => {
+    expect(ledgerAt([...day, pier], min(10), subtitleOf).unseen).toEqual([]);
+  });
+
+  it('counts a request as MEDial own when any one of its Tasks had MEDial in it', () => {
+    const mixed = [episode('x1', 'P1', '본인에게 연락', min(9), min(9, 5), true),
+      episode('x2', 'P1', '집에 가서 확인', min(9, 30), min(9, 50), false)];
+    const ledger = ledgerAt(mixed, min(10), () => '응답 없는 안부 확인 · P1 ◯◯◯');
+    expect(ledger.rows).toHaveLength(1);
+    expect(ledger.unseen).toHaveLength(0);
   });
 });
 

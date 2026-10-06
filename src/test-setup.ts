@@ -17,3 +17,10 @@ if (typeof Element !== 'undefined' && !Element.prototype.setPointerCapture) {
   Element.prototype.releasePointerCapture = () => {};
   Element.prototype.hasPointerCapture = () => false;
 }
+
+// ...nor CSS.escape, which the map uses to find a marker by its key. The keys in
+// these tests are plain words, so the identity function is what a browser would
+// return for them.
+if (typeof globalThis.CSS === 'undefined' || !('escape' in globalThis.CSS)) {
+  (globalThis as unknown as { CSS: { escape: (s: string) => string } }).CSS = { escape: (s: string) => s };
+}

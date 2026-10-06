@@ -28,6 +28,8 @@ export interface LedgerRow {
   firstMs: number;
   lastMs: number;
   steps: LedgerStep[];
+  /** MEDial took part in at least one beat of this request. */
+  medial: boolean;
   /** Not begun yet at the playhead - the ledger never shows these. */
   state: 'open' | 'done';
   /** Someone the request has asked so far, in order, once each. */
@@ -35,7 +37,11 @@ export interface LedgerRow {
 }
 
 export interface Ledger {
+  /** Requests MEDial took part in. A scene it was not in is not its request. */
   rows: LedgerRow[];
+  /** What happened that MEDial never saw - said apart from its own work, because
+   *  the study's premise is that people who bear things quietly are not seen. */
+  unseen: LedgerRow[];
   /** Requests MEDial has taken on, finished, and still has open at the playhead. */
   taken: number;
   done: number;
@@ -77,8 +83,11 @@ export function ledgerAt(
     const last = parts[parts.length - 1];
     const row = byKey.get(key) ?? {
       key, need, subjectId: first.subjectId, firstMs: first.startMs, lastMs: last.endMs,
-      steps: [], state: 'open' as const, asked: [],
+      steps: [], state: 'open' as const, asked: [], medial: false,
     };
+    // One beat with MEDial in it makes the whole request its own; a Task it was
+    // never in (two brothers on a pier) does not.
+    if (parts.some((part) => part.beats.some((beat) => beat.medial))) row.medial = true;
     row.firstMs = Math.min(row.firstMs, first.startMs);
     row.lastMs = Math.max(row.lastMs, last.endMs);
     row.steps.push({
@@ -90,8 +99,9 @@ export function ledgerAt(
     byKey.set(key, row);
   }
 
-  const rows = [...byKey.values()]
-    .filter((row) => atMs >= row.firstMs)
+  const started = [...byKey.values()].filter((row) => atMs >= row.firstMs);
+  const unseen = started.filter((row) => !row.medial);
+  const rows = started.filter((row) => row.medial)
     .map((row): LedgerRow => ({
       ...row,
       steps: row.steps.sort((a, b) => a.atMs - b.atMs),
@@ -104,6 +114,7 @@ export function ledgerAt(
 
   return {
     rows,
+    unseen: unseen.map((row): LedgerRow => ({ ...row, steps: row.steps.sort((a, b) => a.atMs - b.atMs), state: 'done' })),
     taken: rows.length,
     done: rows.filter((r) => r.state === 'done').length,
     open: rows.filter((r) => r.state === 'open').length,

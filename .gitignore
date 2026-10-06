@@ -22,6 +22,10 @@ local-archive/
 docs/presentations/screenshots/
 # 발표자료 PDF에도 그 캡처가 통째로 들어 있다.
 docs/presentations/*.pdf
+# 2026-10-07 전시 발표: 캡처(shot-*)에 같은 화면이 들어 있고, 폰트(PretendardVariable)는 npm 패키지에서 복사한 것이다.
+# HTML 원본만 저장소에 둔다. 그림을 다시 받으려면 DEVELOPMENT.md 의 2026-10-07 절을 따른다.
+docs/presentations/2026-10-07-exhibition/shot-*.webp
+docs/presentations/2026-10-07-exhibition/*.woff2
 
 .vscode/
 .idea/

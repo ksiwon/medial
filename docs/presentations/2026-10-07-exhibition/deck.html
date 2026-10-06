@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>Resident Agents as Evaluators — 졸업전시 발표자료</title>
+<meta name="viewport" content="width=1280">
+<!--
+  졸업전시 발표 (2026-10-07). 틀은 박정원_동문학술_발표자료.pdf 를 따른다:
+  1280×720, 표지·맺음은 남색 바탕, 본문은 종이색 바탕, 빨강 소제목 → 굵은 두 줄 결론 → 3단 → 한 줄.
+  캡처는 sim 서버를 직접 열어 찍은 실제 화면이고, 주민은 P번호로만 쓴다(이름은 본문에 옮기지 않는다).
+  화면 속 이름은 익명 페르소나의 가명이며 화면 아래 고지가 그렇게 말한다.
+-->
+<style>
+@font-face { font-family: "Pretendard Variable"; src: url("./PretendardVariable.woff2") format("woff2-variations"); font-weight: 45 920; }
+@page { size: 1280px 720px; margin: 0; }
+:root {
+  --paper: #f4efe8; --card: #eae5de; --ink: #1c1a17; --mute: #6f6a63; --rule: #d9d3cb;
+  --red: #c8412c; --night: #181a21; --night-ink: #f3efe7; --night-mute: #b9b6b0; --salmon: #ee8b73;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #888; }
+body { font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", "Malgun Gothic", sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
+.slide { position: relative; width: 1280px; height: 720px; overflow: hidden; background: var(--paper); page-break-after: always; break-after: page; padding: 0 72px; }
+.slide.dark { background: var(--night); color: var(--night-ink); }
+.kicker { position: absolute; top: 56px; left: 72px; font-size: 17px; font-weight: 700; color: var(--red); letter-spacing: -0.01em; }
+.dark .kicker { color: var(--salmon); }
+.page { position: absolute; top: 56px; right: 72px; font-size: 17px; color: var(--mute); }
+.dark .page { color: var(--night-mute); }
+h1.title { position: absolute; top: 112px; left: 72px; right: 72px; font-size: 44px; line-height: 1.22; font-weight: 800; letter-spacing: -0.035em; word-break: keep-all; }
+.cols { position: absolute; left: 72px; right: 72px; top: 248px; display: grid; gap: 32px; }
+.cols.c3 { grid-template-columns: repeat(3, 1fr); }
+.cols.c2 { grid-template-columns: repeat(2, 1fr); }
+.card { background: var(--card); padding: 24px 24px 22px; min-height: 280px; }
+.rule { border-top: 2px solid var(--rule); padding-top: 22px; }
+.dark .rule { border-top-color: var(--night-ink); }
+.k { font-size: 17px; font-weight: 700; color: var(--red); margin-bottom: 18px; }
+.dark .k { color: var(--salmon); }
+.h { font-size: 26px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 14px; word-break: keep-all; }
+ul { list-style: none; }
+li { position: relative; padding-left: 20px; font-size: 21px; line-height: 1.5; margin: 0 0 10px; word-break: keep-all; }
+li::before { content: "•"; position: absolute; left: 2px; color: var(--mute); }
+.dark li::before { color: var(--night-mute); }
+.foot { position: absolute; left: 72px; right: 72px; bottom: 56px; font-size: 22px; line-height: 1.5; word-break: keep-all; }
+.foot b { font-weight: 800; }
+.shot { position: absolute; background-size: cover; background-position: top left; border: 1px solid var(--rule); background-color: #fff; }
+.cap { position: absolute; font-size: 16px; color: var(--mute); text-align: center; }
+.row { display: grid; grid-template-columns: 150px 1fr; align-items: baseline; margin-bottom: 20px; }
+.row .l { font-size: 18px; font-weight: 700; color: var(--red); }
+.row .v { font-size: 25px; font-weight: 500; letter-spacing: -0.02em; word-break: keep-all; }
+.quote { font-size: 20px; line-height: 1.5; }
+.num { font-size: 60px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+.num small { font-size: 26px; font-weight: 500; color: var(--mute); margin-left: 4px; }
+.lab { font-size: 17px; color: var(--mute); margin-top: 6px; }
+/* cover */
+.cover .eyebrow { position: absolute; top: 56px; left: 72px; font-size: 18px; color: var(--night-mute); }
+.cover .tag { position: absolute; top: 262px; left: 72px; font-size: 19px; font-weight: 700; color: var(--salmon); }
+.cover h1 { position: absolute; top: 300px; left: 72px; font-size: 72px; line-height: 1.12; font-weight: 800; letter-spacing: -0.04em; }
+.cover .sub { position: absolute; top: 470px; left: 72px; width: 480px; padding-top: 22px; border-top: 1px solid #3a3c44; font-size: 26px; }
+.cover .sub small { display: block; margin-top: 8px; font-size: 19px; color: var(--night-mute); }
+.cover .bg { position: absolute; right: 0; top: 0; bottom: 0; width: 520px; background: url("shot-village.webp") center/cover; opacity: .9; }
+.cover .bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, var(--night) 0%, rgba(24,26,33,.2) 60%, rgba(24,26,33,.35) 100%); }
+</style>
+</head>
+<body>
+
+<!-- 1 · 표지 -->
+<section class="slide dark cover">
+  <div class="eyebrow">2026 졸업전시 · KAIST 산업디자인학과</div>
+  <div class="bg"></div>
+  <div class="tag">Simulated Rural Village · MEDial</div>
+  <h1>Resident Agents<br>as Evaluators</h1>
+  <div class="sub">박정원<small>KAIST 산업디자인학과 · AI Experience Lab</small></div>
+</section>
+
+<!-- 2 · 전시가 하는 일 -->
+<section class="slide">
+  <div class="kicker">전시가 하는 일</div><div class="page">02 / 07</div>
+  <h1 class="title">관람객은 마을의 사흘 동안<br>MEDial을 검토하는 서비스 디자이너가 됩니다.</h1>
+  <div class="cols c3">
+    <div class="card"><div class="k">01 · 봅니다</div><div class="h">마을의 하루</div>
+      <ul><li>은점마을 12명이 일과대로 움직임</li><li>안부 확인에 응답이 없는 날</li><li>MEDial이 누구에게 무엇을 부탁하는지</li></ul></div>
+    <div class="card"><div class="k">02 · 읽습니다</div><div class="h">주민들의 평가</div>
+      <ul><li>각자 자기가 겪은 일만 말함</li><li>겪지 않은 사람은 미경험</li><li>점수도 순위도 없음</li></ul></div>
+    <div class="card"><div class="k">03 · 고릅니다</div><div class="h">디자이너의 요청</div>
+      <ul><li>하루가 끝나면 요청 셋 중 하나</li><li>고른 것이 다음 날의 규칙</li><li>다음 날 마을이 어떻게 달라지나</li></ul></div>
+  </div>
+  <div class="foot">원래는 서비스 디자이너가 현장 방문 사이에 쓰는 도구입니다. 전시에서는 그 일을 <b>사흘로 줄여</b> 관람객에게 맡깁니다.</div>
+</section>
+
+<!-- 3 · 한 번의 관람 -->
+<section class="slide">
+  <div class="kicker">한 번의 관람</div><div class="page">03 / 07</div>
+  <h1 class="title">약 5분 — 본 것이 이어지는<br>사흘을 한 번에 따라갑니다.</h1>
+  <div class="cols" style="grid-template-columns:repeat(5,1fr);gap:18px;top:262px">
+    <div class="rule"><div class="k">대기 화면</div><div class="h" style="font-size:22px">소개 영상</div><ul><li style="font-size:18px">조작 없이 66초</li><li style="font-size:18px">누구를 위한 것인가</li></ul></div>
+    <div class="rule"><div class="k">1일차 · 약 1분 40초</div><div class="h" style="font-size:22px">안부 확인</div><ul><li style="font-size:18px">응답이 없다</li><li style="font-size:18px">밭에 있었다</li></ul></div>
+    <div class="rule"><div class="k">고르기 ①</div><div class="h" style="font-size:22px">요청 하나</div><ul><li style="font-size:18px">주민의 평가를 읽고</li><li style="font-size:18px">셋 중 하나</li></ul></div>
+    <div class="rule"><div class="k">2일차 · 약 1분 10초</div><div class="h" style="font-size:22px">어제를 기억하는 대화</div><ul><li style="font-size:18px">같은 일이 또</li></ul></div>
+    <div class="rule"><div class="k">3일차 · 약 2분 15초</div><div class="h" style="font-size:22px">항구 → 위급</div><ul><li style="font-size:18px">MEDial이 못 본 일</li><li style="font-size:18px">그날 저녁</li></ul></div>
+  </div>
+  <div class="foot">전체는 사흘에 약 15분이지만, 관람에는 <b>이야기를 전하는 장면만</b> 재생합니다. 나머지는 요약 줄에 남아 눌러서 볼 수 있습니다.</div>
+</section>
+
+<!-- 4 · 시연 -->
+<section class="slide">
+  <div class="kicker">시연 · 이 장면을 보여 줍니다</div><div class="page">04 / 07</div>
+  <h1 class="title" style="font-size:40px;right:640px">MEDial이 보지 못하는<br>일이 있습니다.</h1>
+  <div style="position:absolute;left:72px;top:262px;width:500px">
+    <div class="row"><div class="l">3일차 아침</div><div class="v">항구에서 형제가 말합니다. “아침부터 가슴이 좀 답답하네요.”</div></div>
+    <div class="row"><div class="l">MEDial</div><div class="v">두 사람이 말한 것이 없습니다. <b>모릅니다.</b></div></div>
+    <div class="row"><div class="l">그날 저녁</div><div class="v">같은 사람의 집에서 위급이 감지됩니다.</div></div>
+    <div style="border-top:1px solid var(--rule);padding-top:18px;margin-top:6px;font-size:19px;line-height:1.55;color:var(--mute);word-break:keep-all">
+      참는 사람은 시스템에 보이지 않습니다. 이 전시가 가장 보여 주고 싶은 장면입니다.</div>
+  </div>
+  <div class="shot" style="left:620px;top:104px;width:588px;height:350px;background-image:url('shot-pier.webp');background-size:cover"></div>
+  <div class="shot" style="left:620px;top:470px;width:288px;height:171px;background-image:url('shot-d2.webp');background-size:cover"></div>
+  <div class="shot" style="left:920px;top:470px;width:288px;height:171px;background-image:url('shot-emergency.webp');background-size:cover"></div>
+  <div class="cap" style="left:620px;top:650px;width:588px">위: 3일차 아침 항구 · 아래: 2일차 재확인 / 3일차 위급 — 실제 화면</div>
+</section>
+
+<!-- 5 · 요청 고르기 -->
+<section class="slide">
+  <div class="kicker">시연 · 관람객이 고르는 자리</div><div class="page">05 / 07</div>
+  <h1 class="title">규칙 값이 아니라 요청을 고르고,<br>그 이유를 주민이 겪은 일에서 읽습니다.</h1>
+  <div class="shot" style="left:72px;top:248px;width:1136px;height:330px;background-image:url('shot-choice.webp');background-position:top center;background-size:100% auto"></div>
+  <div class="cap" style="left:72px;top:586px;width:1136px">하루가 끝난 뒤의 요청 셋 · 요청 → 목적 → 주민이 겪은 이유 → 규칙이 어떻게 바뀌는가</div>
+  <div class="foot" style="bottom:46px">요청을 고르면 <b>미리 계산해 둔 다음 날</b>이 열립니다. 전시 중에는 모델을 부르지 않습니다.</div>
+</section>
+
+<!-- 6 · 전시장 -->
+<section class="slide">
+  <div class="kicker">전시장</div><div class="page">06 / 07</div>
+  <h1 class="title">지금은 화면 하나에서 관람객이 직접 고릅니다.</h1>
+  <div class="cols c3">
+    <div class="rule"><div class="k">지금 되는 것</div><div class="h">한 화면</div>
+      <ul><li>소개 영상 → 사흘 → 요약까지 한 흐름</li><li>마우스·터치로 요청 선택</li><li>지도 위 카드는 마우스가 떠나면 닫힘</li></ul></div>
+    <div class="rule"><div class="k">운영</div><div class="h">혼자 돕니다</div>
+      <ul><li>미리 계산한 기록 재생</li><li>네트워크·모델 호출 없음</li><li>사흘 요약에서 60초 조작이 없으면 소개 영상으로 돌아감</li></ul></div>
+    <div class="rule"><div class="k">다음 단계</div><div class="h">벽 화면 + 태블릿</div>
+      <ul><li>벽: 마을의 하루</li><li>태블릿: 요청 고르기</li><li>두 화면 분리는 아직 하지 않음</li></ul></div>
+  </div>
+  <div class="foot">9가지 길이 미리 돌려져 있어, 관람객이 어느 요청을 골라도 <b>그 다음 날이 실제로 있습니다.</b></div>
+</section>
+
+<!-- 7 · 경계 -->
+<section class="slide dark">
+  <div class="kicker">말하는 것과 말하지 않는 것</div><div class="page">07 / 07</div>
+  <h1 class="title">이것은 사람을 대신하지 않습니다.</h1>
+  <div class="cols c2" style="top:262px">
+    <div class="rule"><div class="k">말합니다</div><div class="h">화면 속은 전부 시뮬레이션</div>
+      <ul><li>인물·대화·모습은 지어낸 것, 이름은 가명</li><li>합성 평가는 실제 주민의 의견·만족·동의가 아님</li><li>방문 사이의 사전 탐색을 돕는 도구</li></ul></div>
+    <div class="rule"><div class="k">아직 하지 못한 것</div><div class="h">검증은 0건</div>
+      <ul><li>실제 주민의 검토 0건</li><li>사람이 써 본 사용성 검증 0회</li><li>사흘은 시뮬레이션이며 longitudinal study가 아님</li></ul></div>
+  </div>
+  <div class="foot" style="color:var(--night-ink)">다음 현장 방문에서, 이 평가를 먼저 숨기고 실제 주민에게 먼저 묻습니다.</div>
+</section>
+
+<!-- A1 · 부록 -->
+<section class="slide">
+  <div class="kicker">부록 · 질문을 받으면</div><div class="page">A1</div>
+  <h1 class="title">대부분의 요청은 숫자를 바꾸지 못했고,<br>한 요청만 결과를 바꿨습니다.</h1>
+  <div class="cols c3">
+    <div class="rule"><div class="k">9경로 · 3일차 지표</div>
+      <div class="num">8<small>/ 9</small></div><div class="lab">같은 숫자(확인까지 30분 · 이장 부탁 3번 · 거절 0번)</div></div>
+    <div class="rule"><div class="k">다르게 나온 하나</div>
+      <div class="num">6<small>번 거절</small></div><div class="lab">이웃 먼저 부탁 — 확인은 40분, 거절이 6번 생김</div></div>
+    <div class="rule"><div class="k">왜</div>
+      <div class="h" style="font-size:24px">낮에 움직일 수 있는 사람이 하나뿐입니다</div>
+      <div class="lab">그래서 대부분의 규칙 변경이 같은 사람에게 닿습니다</div></div>
+  </div>
+  <div class="foot">그래서 <b>“선택이 결과를 가른다”고 말하지 않습니다.</b> 같은 요청이 P1의 반응과 이장의 부담에서 다르게 읽힌다고 말합니다.</div>
+</section>
+
+</body>
+</html>

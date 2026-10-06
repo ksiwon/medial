@@ -381,7 +381,8 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
           </SceneLayer>
         </Stage>
 
-        <DayLedger rows={ledger.rows} episodes={reel?.episodes ?? []}
+        <DayLedger rows={ledger.rows} unseen={p.viewMode === 'researcher' ? ledger.unseen : []}
+          episodes={reel?.episodes ?? []}
           onSeek={(ms) => { p.seekTime(ms); void p.commit(); }} />
 
       {dayOver && (
@@ -448,13 +449,24 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
                 <option value="medial">MEDial이 아는 것</option>
               </Select>
             </label>
+            {/* Only a record that names its story scenes offers the choice. */}
+            {(detail.scenes?.featured?.length ?? 0) > 0 && (
+              <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                장면
+                <Select aria-label="재생할 장면" value={p.length}
+                  onChange={(e) => p.setLength(e.target.value as typeof p.length)}>
+                  <option value="story">핵심 장면만</option>
+                  <option value="all">모든 장면</option>
+                </Select>
+              </label>
+            )}
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
               <IconButton onClick={() => void p.jumpScene(-1)}>← 앞 장면</IconButton>
               <IconButton onClick={() => void p.jumpScene(1)}>다음 장면 →</IconButton>
               <IconButton onClick={() => void p.restart()}>처음으로</IconButton>
             </div>
             <Sub as="span">
-              장면 {reel?.episodes.length ?? 0}개 · {village.isSynthetic ? '합성 지도' : '원자료 지형'}
+              장면 {reel ? new Set(reel.segments.flatMap((x) => (x.kind === 'map' ? [] : [x.episode]))).size : 0}개 재생 · 요청 {reel?.episodes.length ?? 0}건 · {village.isSynthetic ? '합성 지도' : '원자료 지형'}
             </Sub>
             {/* Which day this run happened on: as recorded, or nudged. The
                 edits themselves are in the tooltip, one per person. */}

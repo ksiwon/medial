@@ -1,5 +1,5 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import attemptFixture from '../../../../fixtures/ui/attempt.json';
 import neighboursFixture from '../../../../fixtures/ui/attempt-neighbours.json';
 import eventsFixture from '../../../../fixtures/ui/events.json';
@@ -11,9 +11,12 @@ import type { AttemptDetail, DomainEvent, StoredScenes, VillagePayload } from '.
 import { usePlayback } from '../scene/playback';
 import { learnPeople, personName, sentenceFor } from '../selectors/story';
 import { dayChangeLines } from '../selectors/words';
-import ChoiceScreen from './ChoiceScreen';
+import ChoiceScreen, { SUMMARY_IDLE_S } from './ChoiceScreen';
 import IntroScreen, { openingLines } from './IntroScreen';
 import { foldAsking } from '../scene/JudgmentPanel';
+import DayLedger from '../components/DayLedger';
+import MedialDashboard from '../components/MedialDashboard';
+import { ledgerAt } from '../selectors/dayLedger';
 import { openingOf, pathCount } from '../selectors/tree';
 import CompareScreen, { type CompareDecisions } from './CompareScreen';
 import EvaluationsScreen from './EvaluationsScreen';
@@ -525,6 +528,50 @@ describe('a record that carries its scenes (the exhibition record)', () => {
   });
 });
 
+describe('what MEDial does not see', () => {
+  const min = (h: number, m = 0) => (h * 60 + m) * 60_000;
+  const ep = (requestId: string, subjectId: string, title: string, start: number, medial: boolean) =>
+    ({ requestId, subjectId, title, firstOfRequest: true, startMs: start, endMs: start + 240_000,
+       beats: [{ medial }] }) as never;
+  const episodes = [ep('w1', 'P1', '본인에게 연락', min(9, 30), true), ep('a1', 'P8', '항구에서 한 말', min(10, 56), false)];
+  const subtitles: Record<string, string> = { w1: '응답 없는 안부 확인 · P1', a1: '아침 항구에서 · P8' };
+  const ledger = ledgerAt(episodes, min(11, 30), (id) => subtitles[id]);
+
+  it('is listed for the researcher, marked as unknown to MEDial', () => {
+    render(<DayLedger rows={ledger.rows} unseen={ledger.unseen} episodes={episodes} onSeek={noop} />);
+    expect(screen.getByText('아침 항구에서')).toBeDefined();
+    expect(screen.getByText('MEDial은 모름')).toBeDefined();
+  });
+
+  it('goes to the request when its line is pressed, and to a step when that is', () => {
+    const seen: number[] = [];
+    render(<DayLedger rows={ledger.rows} unseen={ledger.unseen} episodes={episodes} onSeek={(ms) => seen.push(ms)} />);
+    // The heading is not a link, but a visitor presses it: the whole line goes to its first moment.
+    fireEvent.click(screen.getByText('응답 없는 안부 확인'));
+    expect(seen).toEqual([min(9, 30)]);
+    // A step goes to its own, and does not also send the row's.
+    fireEvent.click(screen.getByText('본인에게 연락'));
+    expect(seen).toEqual([min(9, 30), min(9, 30)]);
+    expect(seen.length).toBe(2);
+  });
+
+  it('is not listed at all in the MEDial-only view', () => {
+    render(<DayLedger rows={ledger.rows} unseen={[]} episodes={episodes} onSeek={noop} />);
+    expect(screen.queryByText('아침 항구에서')).toBeNull();
+    expect(screen.queryByText('MEDial은 모름')).toBeNull();
+  });
+
+  it('never reaches the dashboard, which holds only what MEDial holds', () => {
+    const { container } = render(<MedialDashboard ledger={ledger} atMs={min(11, 30)} next={null}
+      holdsOf={() => null} routine={{ onRoutine: 12, departed: 0, where: [] }} />);
+    expect(container.textContent).not.toContain('항구');
+    expect(container.textContent).not.toContain('P8');
+    // Two things happened by 11:30; MEDial took one of them, so it counts one.
+    expect(ledger.taken).toBe(1);
+    expect(container.textContent).toContain('1접수한 요청');
+  });
+});
+
 describe('foldAsking', () => {
   it('says a repeated call once, with how many times', () => {
     const rows = foldAsking([
@@ -567,6 +614,46 @@ describe('IntroScreen', () => {
     render(<IntroScreen opening={opening} onFinish={noop} />);
     expect(screen.queryAllByRole('button').length).toBe(0);
     expect(screen.getByText(/시뮬레이션입니다/)).toBeDefined();
+  });
+});
+
+describe('the end of the three days, in a hall', () => {
+  const base = session.generations[0];
+  const last = { ...base, id: 'z', index: 2, parentGenerationId: null, changeSets: [], reviews: [] } as GenerationDetail;
+  const detailOf = { ...session, generations: [last] } as SessionDetail;
+  const wait = (s: number) => act(() => { vi.advanceTimersByTime(s * 1000); });
+
+  it('goes back to the start by itself when nobody touches it', () => {
+    vi.useFakeTimers();
+    let restarted = 0;
+    render(<ChoiceScreen detail={detailOf} current={last} onChoose={noop} onRestart={() => { restarted += 1; }} />);
+    wait(SUMMARY_IDLE_S - 1);
+    expect(restarted).toBe(0);
+    wait(2);
+    expect(restarted).toBe(1);
+    vi.useRealTimers();
+  });
+
+  it('waits again when someone is still reading', () => {
+    vi.useFakeTimers();
+    let restarted = 0;
+    render(<ChoiceScreen detail={detailOf} current={last} onChoose={noop} onRestart={() => { restarted += 1; }} />);
+    wait(SUMMARY_IDLE_S - 5);
+    fireEvent.pointerDown(window);
+    wait(SUMMARY_IDLE_S - 5);
+    expect(restarted).toBe(0);
+    wait(10);
+    expect(restarted).toBe(1);
+    vi.useRealTimers();
+  });
+
+  it('says how long is left, so it does not vanish without warning', () => {
+    vi.useFakeTimers();
+    render(<ChoiceScreen detail={detailOf} current={last} onChoose={noop} onRestart={noop} />);
+    expect(screen.getByText(`${SUMMARY_IDLE_S}초 뒤 처음으로 돌아갑니다`)).toBeDefined();
+    wait(10);
+    expect(screen.getByText(`${SUMMARY_IDLE_S - 10}초 뒤 처음으로 돌아갑니다`)).toBeDefined();
+    vi.useRealTimers();
   });
 });
 

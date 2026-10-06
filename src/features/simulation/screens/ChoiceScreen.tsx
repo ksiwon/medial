@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import type { GenerationDetail, SessionDetail } from '../api/iteration';
 import { childFor, dayFacts, dayName, pathCount, pathTo } from '../selectors/tree';
+import { nameList, withParticle } from '../selectors/story';
 import { colour, font } from '../ui/theme';
 
 // Choosing the next version, in a record whose versions branch (selectors/tree).
@@ -79,6 +81,24 @@ const Card = styled.button`
   > p { margin: 0; font-size: ${font.small}; line-height: 1.65; color: ${colour.secondary}; }
 `;
 
+/** 무엇을 이루려는 요청인가. 제목이 부탁이면 이것은 그 부탁의 이유가 아니라 *목적*이다. */
+const Goal = styled.p`
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: ${colour.selected};
+  color: ${colour.primary} !important;
+  font-weight: 600;
+`;
+
+/** 이 요청이 어느 주민이 겪은 일에서 나왔는가 - 평가가 수정에 쓰인다는 연구의 연결 고리. */
+const From = styled.div`
+  font-size: 11.5px;
+  font-weight: 800;
+  color: ${colour.secondary};
+  > b { color: ${colour.text}; }
+`;
+
 const Rule = styled.div`
   margin-top: 6px;
   padding-top: 10px;
@@ -116,6 +136,13 @@ const Again = styled.button`
   color: #ffffff;
 `;
 
+const Idle = styled.span`
+  margin-left: 14px;
+  font-size: ${font.small};
+  color: ${colour.unknown};
+  font-variant-numeric: tabular-nums;
+`;
+
 interface Props {
   detail: SessionDetail;
   /** The version whose day was just read. */
@@ -124,43 +151,69 @@ interface Props {
   onRestart: () => void;
 }
 
+/**
+ * How long the three days' summary stays when nobody touches it, in seconds. In a hall the
+ * next visitor does not press "again" for the last one: the screen goes back to the opening
+ * film by itself. Long enough to read a three-row table, short enough that a visitor who
+ * walks up to a screen that has been left does not find the end of someone else's story.
+ */
+export const SUMMARY_IDLE_S = 60;
+
+/** The end of the walk: the days taken, and the way back - by itself, if nobody takes it. */
+function Ending({ detail, current, onRestart }: { detail: SessionDetail; current: GenerationDetail; onRestart: () => void }) {
+  const [left, setLeft] = useState(SUMMARY_IDLE_S);
+  useEffect(() => {
+    // Any touch or key starts the wait over: someone is still reading.
+    const reset = () => setLeft(SUMMARY_IDLE_S);
+    window.addEventListener('pointerdown', reset);
+    window.addEventListener('keydown', reset);
+    const tick = window.setInterval(() => setLeft((n) => n - 1), 1000);
+    return () => {
+      window.removeEventListener('pointerdown', reset);
+      window.removeEventListener('keydown', reset);
+      window.clearInterval(tick);
+    };
+  }, []);
+  useEffect(() => { if (left <= 0) onRestart(); }, [left, onRestart]);
+  return (
+    <Sheet>
+      <Inner>
+        <Eyebrow>사흘이 끝났습니다</Eyebrow>
+        <Headline>고른 것과, 마을이 어떻게 됐는지</Headline>
+        <Lead>
+          첫 설정에서 갈라지는 {pathCount(detail, pathTo(detail, current.id)[0]?.id ?? '')}가지 경로 가운데 하나입니다. 이 결과는 미리 계산해 둔 것이고, 실시간 모델 호출은 없습니다.
+        </Lead>
+        <Summary>
+          <thead>
+            <tr><th>날</th><th>그날 고른 것</th><th>확인까지</th><th>이장이 받은 부탁</th><th>거절</th>
+              <th>기관 인계</th><th>동승 주선</th></tr>
+          </thead>
+          <tbody>
+            {pathTo(detail, current.id).map((g) => {
+              const facts = dayFacts(g);
+              return (
+                <tr key={g.id}>
+                  <td><b>{dayName(g)}</b>{facts && <div>{facts.dayTitle}</div>}</td>
+                  <td>{g.label}</td>
+                  <td>{facts?.resolveMinutes != null ? `${facts.resolveMinutes}분` : '—'}</td>
+                  <td>{facts ? `${facts.headAsks}번` : '—'}</td>
+                  <td>{facts ? `${facts.refusals}번` : '—'}</td>
+                  <td>{facts?.handoff ?? '—'}</td>
+                  <td>{facts?.rideRefused ? '실패' : '—'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </Summary>
+        <Again onClick={onRestart}>처음부터 다른 길로</Again>
+        <Idle aria-live="off">{left}초 뒤 처음으로 돌아갑니다</Idle>
+      </Inner>
+    </Sheet>
+  );
+}
+
 export default function ChoiceScreen({ detail, current, onChoose, onRestart }: Props) {
-  if (current.changeSets.length === 0) {
-    return (
-      <Sheet>
-        <Inner>
-          <Eyebrow>사흘이 끝났습니다</Eyebrow>
-          <Headline>고른 것과, 마을이 어떻게 됐는지</Headline>
-          <Lead>
-            첫 설정에서 갈라지는 {pathCount(detail, pathTo(detail, current.id)[0]?.id ?? '')}가지 경로 가운데 하나입니다. 이 결과는 미리 계산해 둔 것이고, 실시간 모델 호출은 없습니다.
-          </Lead>
-          <Summary>
-            <thead>
-              <tr><th>날</th><th>그날 고른 것</th><th>확인까지</th><th>이장이 받은 부탁</th><th>거절</th>
-                <th>기관 인계</th><th>동승 주선</th></tr>
-            </thead>
-            <tbody>
-              {pathTo(detail, current.id).map((g) => {
-                const facts = dayFacts(g);
-                return (
-                  <tr key={g.id}>
-                    <td><b>{dayName(g)}</b>{facts && <div>{facts.dayTitle}</div>}</td>
-                    <td>{g.label}</td>
-                    <td>{facts?.resolveMinutes != null ? `${facts.resolveMinutes}분` : '—'}</td>
-                    <td>{facts ? `${facts.headAsks}번` : '—'}</td>
-                    <td>{facts ? `${facts.refusals}번` : '—'}</td>
-                    <td>{facts?.handoff ?? '—'}</td>
-                    <td>{facts?.rideRefused ? '실패' : '—'}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </Summary>
-          <Again onClick={onRestart}>처음부터 다른 길로</Again>
-        </Inner>
-      </Sheet>
-    );
-  }
+  if (current.changeSets.length === 0) return <Ending detail={detail} current={current} onRestart={onRestart} />;
 
   const labels = new Map(current.ruleCatalog.map((r) => [r.ruleType, r.label]));
   return (
@@ -181,7 +234,11 @@ export default function ChoiceScreen({ detail, current, onChoose, onRestart }: P
                 title={child ? undefined : '이 기록에서는 실행하지 않은 안입니다'}>
                 <small>{(rule?.semantic && labels.get(rule.semantic.ruleType)) ?? rule?.field ?? '수정안'}</small>
                 <strong>{changeSet.label}</strong>
+                {changeSet.expectedEffects[0] && <Goal>{changeSet.expectedEffects[0]}</Goal>}
                 <p>{changeSet.mechanism}</p>
+                {changeSet.affectedActors.length > 0 && (
+                  <From><b>{withParticle(nameList(changeSet.affectedActors), 'subject')}</b> 겪은 일에서 나온 요청</From>
+                )}
                 {rule && (
                   <Rule>
                     <s>{rule.beforeRule}</s>

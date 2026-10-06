@@ -12,6 +12,10 @@ import { font } from '../ui/theme';
 // the playhead and says nothing about the hours to come. "Asked" counts requests
 // a person was asked to help with, which is where the day's burden falls; it is
 // not a score of anyone.
+//
+// It holds only what MEDial holds. What happened and MEDial never saw (two brothers
+// on a pier) is not here - not even as a line saying so, which would hand MEDial
+// the place and the person. The researcher reads that on the map and in the ledger.
 
 const Box = styled.div`
   position: absolute;

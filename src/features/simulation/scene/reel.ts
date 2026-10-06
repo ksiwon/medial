@@ -60,9 +60,15 @@ interface Input {
   dayStartMs: number;
   dayEndMs: number;
   pace: number;
+  /**
+   * Which requests are played as scenes. Absent, all of them. The rest stay in `episodes` - the ledger,
+   * the bars and the evaluations count them - but the day runs past them on the map, so a visitor with
+   * five minutes sees the story and not every call. Chosen by the record (StoredScenes.featured).
+   */
+  featured?: ReadonlySet<string> | null;
 }
 
-export function buildReel({ episodes, events, timeline, dayStartMs, dayEndMs, pace }: Input): Reel {
+export function buildReel({ episodes, events, timeline, dayStartMs, dayEndMs, pace, featured = null }: Input): Reel {
   const segments: Segment[] = [];
   let total = 0;
   const push = (segment: Draft) => {
@@ -72,9 +78,13 @@ export function buildReel({ episodes, events, timeline, dayStartMs, dayEndMs, pa
   const errands = errandsOf(timeline);
 
   let clock = dayStartMs;
+  // The first scene that is actually played: the opening stretch of map runs up to it.
+  const firstPlayed = episodes.findIndex((episode) => !featured || featured.has(episode.requestId));
   episodes.forEach((episode, e) => {
-    const fromMap = episode.startMs - clock >= MAP_GAP_MS || e === 0;
-    if (fromMap) push(mapSegment(clock, episode.startMs, episode.startMs, e === 0 ? 1 : 1.4, errands));
+    // Not played: the day goes on over the map, and the clock passes it without a scene.
+    if (featured && !featured.has(episode.requestId)) return;
+    const fromMap = episode.startMs - clock >= MAP_GAP_MS || e === firstPlayed;
+    if (fromMap) push(mapSegment(clock, episode.startMs, episode.startMs, e === firstPlayed ? 1 : 1.4, errands));
     episode.beats.forEach((beat, b) => {
       const enter = b === 0 && fromMap ? ENTER_S : CUT_S;
       const reveal = b === 0 && episode.firstOfRequest;
@@ -94,7 +104,7 @@ export function buildReel({ episodes, events, timeline, dayStartMs, dayEndMs, pa
     });
     clock = Math.max(clock, episode.endMs);
   });
-  push(mapSegment(clock, dayEndMs, null, episodes.length ? 1.4 : 1, errands));
+  push(mapSegment(clock, dayEndMs, null, firstPlayed >= 0 ? 1.4 : 1, errands));
 
   const seqAtMs = (ms: number) => {
     let seq = 0;
