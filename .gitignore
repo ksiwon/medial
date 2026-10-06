@@ -26,6 +26,8 @@ docs/presentations/*.pdf
 # HTML 원본만 저장소에 둔다. 그림을 다시 받으려면 DEVELOPMENT.md 의 2026-10-07 절을 따른다.
 docs/presentations/2026-10-07-exhibition/shot-*.webp
 docs/presentations/2026-10-07-exhibition/*.woff2
+# 만든 PDF·영상(72MB)은 저장소가 아니라 이 폴더에 둔다. HTML 원본에서 다시 만들 수 있다(DEVELOPMENT.md 2026-10-07).
+docs/presentations/2026-10-07-exhibition/out/
 
 .vscode/
 .idea/
