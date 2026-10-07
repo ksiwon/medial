@@ -2,6 +2,7 @@ import styled from 'styled-components';
 import type { Comparison } from '../api/types';
 import { formatClock } from '../positions';
 import { pathWord } from '../selectors/story';
+import { pill } from '../ui/primitives';
 
 // Condition difference → decision difference → outcome difference, in that order
 // and never collapsed into a score.
@@ -75,12 +76,9 @@ const Note = styled.div`
 `;
 
 const Pill = styled.span<{ $tone?: string }>`
-  display: inline-block;
+  ${pill('xs')}
   border: 1px solid ${(p) => p.$tone ?? '#cfd6c8'};
   color: ${(p) => p.$tone ?? '#4c6151'};
-  border-radius: 999px;
-  padding: 0 7px;
-  font-size: 10px;
   margin-right: 4px;
 `;
 

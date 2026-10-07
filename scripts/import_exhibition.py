@@ -132,6 +132,14 @@ def node_subject(node: dict[str, Any]) -> str:
 #:           e2  the minutes before the ambulance
 FEATURED = {1: ["w2", "w3"], 2: ["w3"], 3: ["a1", "e1", "e2"]}
 
+#: The Tasks known before they begin (2026-10-07). The observe screen's timeline shows what has happened,
+#: and ahead of the playhead only these - what was planned before the day, never what a refusal or a
+#: silence or an emergency brings. Each is MEDial's own call at a time it set:
+#:
+#:   w1  the day's check-in call through the house's announcement clock (09:30, or 13:30 on day two)
+#:   t1  on day two, checking the booked clinic visit in town before finding a ride
+SCHEDULED = {1: ["w1"], 2: ["t1", "w1"], 3: ["w1"]}
+
 
 def now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
@@ -455,8 +463,9 @@ def build_day(bundle: dict[str, Any], node: dict[str, Any], village, policy: Pol
         scenes={"source": DATA_SOURCE, "model": scene["model"], "day": node["day"],
                 "title": node["title"], "summary": node["summary"], "people": names,
                 "episodes": episodes, "panels": panels,
-                # A Task id that is not in this day is a mistake in FEATURED, not something to skip quietly.
-                "featured": featured_of(node, panels)})
+                # A Task id that is not in this day is a mistake in the list, not something to skip quietly.
+                "featured": tasks_of(FEATURED, "핵심 장면", node, panels),
+                "scheduled": tasks_of(SCHEDULED, "예정된 일", node, panels)})
     return result, experienced
 
 
@@ -467,11 +476,11 @@ def fingerprint(events: list[DomainEvent]) -> str:
     return h.hexdigest()[:16]
 
 
-def featured_of(node: dict[str, Any], panels: dict[str, Any]) -> list[str]:
-    wanted = FEATURED.get(node["day"], [])
+def tasks_of(lists: dict[int, list[str]], what: str, node: dict[str, Any], panels: dict[str, Any]) -> list[str]:
+    wanted = lists.get(node["day"], [])
     missing = [t for t in wanted if t not in panels]
     if missing:
-        raise SystemExit("핵심 장면으로 정한 Task 가 %d일차에 없습니다: %s" % (node["day"], ", ".join(missing)))
+        raise SystemExit("%s(으)로 정한 Task 가 %d일차에 없습니다: %s" % (what, node["day"], ", ".join(missing)))
     return list(wanted)
 
 

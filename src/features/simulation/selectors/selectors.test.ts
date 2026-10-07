@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AgentReview, GenerationDetail, SessionDetail } from '../api/iteration';
 import type { DayRealization, DomainEvent } from '../api/types';
 import { personName, sentenceFor, withParticle } from './story';
-import { childFor, isTree, pathTo, rootsOf } from './tree';
+import { childFor, farthestPath, isTree, pathTo, rootsOf, ruleShifts } from './tree';
 import { reviewChanges } from './versionFacts';
 import { versionName } from '../ui/primitives';
 import {
@@ -203,5 +203,22 @@ describe('a session whose versions branch', () => {
     expect(pathTo(tree, 'a-1').map((r) => r.id)).toEqual(['a', 'a-1']);
     expect(childFor(tree, 'y')?.id).toBe('a-1');
     expect(childFor(tree, 'z')).toBeNull();
+  });
+
+  it('shows, as three days later, the walk whose last day ended most differently', () => {
+    const day = (id: string, parent: string | null, refusals: number, rule: string, label = id) => ({
+      id, parentGenerationId: parent, index: id.split('-').length - 1, label,
+      metrics: { exhibition: { quests: 1, refusals, headAsks: 1, resolveMinutes: 30 } },
+      ruleCatalog: [{ ruleType: 'contact_order', label: '누구에게 먼저', currentRule: rule },
+                    { ruleType: 'quiet_period', label: '간격', currentRule: '없다' }],
+    }) as unknown as GenerationDetail;
+    const walks = { generations: [
+      day('a', null, 0, '이장'), day('a-0', 'a', 0, '이장'), day('a-1', 'a', 0, '이웃', '이웃 먼저'),
+      day('a-0-0', 'a-0', 0, '이장'), day('a-1-0', 'a-1', 6, '이웃'), day('a-1-1', 'a-1', 6, '이웃'),
+    ] } as unknown as SessionDetail;
+    const walk = farthestPath(walks, 'a');
+    expect(walk.map((x) => x.id)).toEqual(['a', 'a-1', 'a-1-0']);
+    expect(ruleShifts(walk)).toEqual([{ ruleType: 'contact_order', label: '누구에게 먼저', before: '이장',
+      after: '이웃', request: '이웃 먼저', day: '1일차' }]);
   });
 });

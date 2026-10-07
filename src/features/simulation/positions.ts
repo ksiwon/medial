@@ -385,7 +385,15 @@ export function clusterPoses(poses: ActorPose[]): Cluster[] {
 export function spreadOverlaps<T extends { key: string; left: number; top: number }>(
   marks: T[],
   minGap: number,
+  /** Keep every mark's centre inside this box (the frame less a mark's half
+   *  size): a mark at the frame's edge is moved in, and keeps its leader line,
+   *  rather than drawn half off the map. */
+  bounds?: { left: number; top: number; right: number; bottom: number },
+  /** How much wider than tall a mark is: a mark the shape of a pill needs more
+   *  room beside it than above it. 1 is a circle. */
+  aspect = 1,
 ): Map<string, { left: number; top: number; moved: boolean }> {
+  const apart = (dx: number, dy: number) => Math.hypot(dx / aspect, dy);
   const placed: { key: string; left: number; top: number }[] = [];
   const out = new Map<string, { left: number; top: number; moved: boolean }>();
 
@@ -393,14 +401,18 @@ export function spreadOverlaps<T extends { key: string; left: number; top: numbe
   for (const mark of [...marks].sort((a, b) => a.top - b.top || a.key.localeCompare(b.key))) {
     let { left, top } = mark;
     for (let guard = 0; guard < 24; guard += 1) {
-      const hit = placed.find((p) => Math.hypot(p.left - left, p.top - top) < minGap);
+      const hit = placed.find((p) => apart(p.left - left, p.top - top) < minGap);
       if (!hit) break;
       // Walk outward along the line away from the mark we collided with.
       const dx = left - hit.left;
       const dy = top - hit.top || (dx === 0 ? 1 : 0);
-      const length = Math.hypot(dx, dy) || 1;
+      const length = apart(dx, dy) || 1;
       left = hit.left + (dx / length) * minGap;
       top = hit.top + (dy / length) * minGap;
+    }
+    if (bounds) {
+      left = Math.min(bounds.right, Math.max(bounds.left, left));
+      top = Math.min(bounds.bottom, Math.max(bounds.top, top));
     }
     placed.push({ key: mark.key, left, top });
     out.set(mark.key, {

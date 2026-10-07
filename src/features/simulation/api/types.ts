@@ -418,6 +418,9 @@ export interface StoredScenes {
   /** The Tasks worth playing when a visitor has minutes, not a quarter hour. The record says which
    *  (scripts/import_exhibition.py FEATURED); the screen chooses nothing. */
   featured?: string[];
+  /** The Tasks known before they begin - MEDial's own check-in call, a booked appointment. The
+   *  timeline lists these ahead of the playhead and nothing else (scripts/import_exhibition.py SCHEDULED). */
+  scheduled?: string[];
   /** MEDial's panel for each Task, by the Task's id (an episode's requestId). */
   panels: Record<string, { subtitle: string; judgment: import('../scene/judgment').Judgment }>;
 }

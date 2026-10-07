@@ -8,6 +8,7 @@ import JudgmentPanel from './JudgmentPanel';
 import { nameOf, type Judgment } from './judgment';
 import type { Beat, Frame, SceneLine } from './types';
 import { api } from '../api/client';
+import { pill } from '../ui/primitives';
 
 // One beat, filmed at eye level: a frame per place, the people there, and their
 // words beside them. The current line is sharp and the one before it fades
@@ -107,29 +108,24 @@ const Person = styled.div<{ $soft: boolean }>`
 `;
 
 const Label = styled.div`
+  ${pill('sm')}
   position: absolute;
   left: 10px;
   bottom: 10px;
-  font-size: 12px;
   font-weight: 800;
   color: #ffffff;
   background: rgba(21, 21, 15, 0.62);
-  border-radius: 999px;
-  padding: 4px 11px;
   > i { font-style: normal; font-weight: 700; opacity: 0.72; margin-left: 6px; }
 `;
 
 const Tag = styled.span`
+  ${pill('xs')}
   position: absolute;
   bottom: 44px;
   transform: translateX(-50%);
-  font-size: 11.5px;
   font-weight: 800;
-  white-space: nowrap;
   color: #15150f;
   background: rgba(255, 255, 255, 0.9);
-  border-radius: 999px;
-  padding: 3px 9px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
 `;
 

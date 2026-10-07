@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Episode } from '../scene/types';
-import { ledgerAt, needOf } from './dayLedger';
+import { ledgerAt, needOf, timelineAt } from './dayLedger';
 
 const min = (h: number, m = 0) => (h * 60 + m) * 60_000;
 const episode = (requestId: string, subjectId: string, title: string, start: number, end = start,
@@ -90,23 +90,40 @@ describe('what MEDial did not see', () => {
     expect(ledger.taken).toBe(1);
   });
 
-  it('says it apart, as something that happened and was not seen', () => {
-    const ledger = ledgerAt([...day, pier], min(11, 30), subtitleOf);
-    expect(ledger.unseen.map((r) => r.steps[0].title)).toEqual(['항구에서 한 말']);
-    // It is not "open" work: MEDial is not doing it.
-    expect(ledger.open).toBe(0);
-  });
-
-  it('does not show it before it has happened', () => {
-    expect(ledgerAt([...day, pier], min(10), subtitleOf).unseen).toEqual([]);
-  });
-
   it('counts a request as MEDial own when any one of its Tasks had MEDial in it', () => {
     const mixed = [episode('x1', 'P1', '본인에게 연락', min(9), min(9, 5), true),
       episode('x2', 'P1', '집에 가서 확인', min(9, 30), min(9, 50), false)];
     const ledger = ledgerAt(mixed, min(10), () => '응답 없는 안부 확인 · P1 ◯◯◯');
     expect(ledger.rows).toHaveLength(1);
-    expect(ledger.unseen).toHaveLength(0);
+    expect(timelineAt(mixed, min(10), new Set(), () => '응답 없는 안부 확인 · P1 ◯◯◯', true).every((t) => t.medial)).toBe(true);
+  });
+});
+
+describe('the timeline', () => {
+  const pier = episode('a1', 'P8', '항구에서 한 말', min(10, 56), min(11), false);
+  const all = [...day, pier];
+
+  it('lists what has begun, lights what is happening, and nothing unplanned ahead', () => {
+    const items = timelineAt(all, min(9, 41), new Set(), subtitleOf, true);
+    expect(items.map((i) => [i.title, i.state])).toEqual([['본인에게 연락', 'done'], ['이장에게 확인을 부탁', 'now']]);
+    expect(items[1].need).toBe('응답 없는 안부 확인');
+  });
+
+  it('lights one Task when the next begins the minute the last ends', () => {
+    const back = [episode('x1', 'P1', '본인에게 연락', min(9, 30), min(9, 40)), episode('x2', 'P1', '이장에게 확인을 부탁', min(9, 40), min(9, 42))];
+    expect(timelineAt(back, min(9, 40), new Set(), () => null, true).map((i) => i.state)).toEqual(['done', 'now']);
+  });
+
+  it('shows a scheduled Task ahead, without the name its outcome gives it', () => {
+    const items = timelineAt(all, min(8), new Set(['w1']), subtitleOf, true);
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ title: '본인에게 연락', state: 'planned', need: null });
+  });
+
+  it('says what MEDial did not see only in the researcher view, and only once it happened', () => {
+    expect(timelineAt(all, min(11, 30), new Set(), subtitleOf, true).find((i) => !i.medial)?.title).toBe('항구에서 한 말');
+    expect(timelineAt(all, min(11, 30), new Set(), subtitleOf, false).some((i) => !i.medial)).toBe(false);
+    expect(timelineAt(all, min(10), new Set(), subtitleOf, true).some((i) => !i.medial)).toBe(false);
   });
 });
 
@@ -120,19 +137,20 @@ describe('routine', () => {
     const r = routineAt([pose('P1', 'FARM'), pose('P2', 'FARM'), pose('P6', 'HALL', { diverges: true })], label);
     expect(r.onRoutine).toBe(2);
     expect(r.departed).toBe(1);
-    expect(r.where[0]).toEqual({ label: '밭', count: 2 });
+    expect(r.where[0]).toEqual({ label: '밭', count: 2, ids: ['P1', 'P2'], departed: [] });
+    expect(r.where[1].departed).toEqual(['P6']);
   });
 
   it('says a person at their own home is at home, not on the road', async () => {
     const { routineAt } = await import('./dayLedger');
     // placeLabel returns null for the viewer's own home; that must not read as "길 위".
     const r = routineAt([pose('P1', 'HOME:P1'), pose('P5', 'HOME:P5'), pose('P3', 'ROAD', { moving: true })], () => null);
-    expect(r.where).toEqual([{ label: '자택', count: 2 }, { label: '길 위', count: 1 }]);
+    expect(r.where.map((w) => [w.label, w.count])).toEqual([['자택', 2], ['길 위', 1]]);
   });
 
   it('names people outside the map as outside, not as nowhere', async () => {
     const { routineAt } = await import('./dayLedger');
     const r = routineAt([pose('P9', null, { offMap: true })], label);
-    expect(r.where).toEqual([{ label: '마을 밖', count: 1 }]);
+    expect(r.where.map((w) => [w.label, w.count])).toEqual([['마을 밖', 1]]);
   });
 });

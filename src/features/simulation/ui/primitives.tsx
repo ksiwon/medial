@@ -6,6 +6,37 @@ import { colour, font, radius } from './theme';
 // an ordinary row is separated by a rule and whitespace rather than wrapped in a
 // card, and a state is never carried by colour alone.
 
+/**
+ * Every rounded-end label in the app, in one of four sizes (2026-10-07). The
+ * height is fixed and the text is centred in it by flex, so the space above and
+ * below the letters is always equal and the space at the sides follows from the
+ * height (about 0.44 of it) instead of being picked per label.
+ *
+ *   xs 20 - a status tag inside a line       sm 26 - a chip, a badge, a choice
+ *   md 32 - a control                        lg 40 - the one thing to press next
+ */
+const PILL = {
+  xs: { h: 20, x: 9, f: 11 },
+  sm: { h: 26, x: 11, f: 12 },
+  md: { h: 32, x: 14, f: 13 },
+  lg: { h: 40, x: 18, f: 15 },
+} as const;
+
+export const pill = (size: keyof typeof PILL) => css`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  height: ${PILL[size].h}px;
+  padding: 0 ${PILL[size].x}px;
+  font-size: ${PILL[size].f}px;
+  line-height: 1;
+  white-space: nowrap;
+  vertical-align: middle;
+  border-radius: 999px;
+`;
+
 export const Panel = styled.section`
   border: 1px solid ${colour.border};
   border-radius: ${radius.panel};
@@ -226,14 +257,8 @@ function tagColour(kind: TagKind = 'neutral') {
 }
 
 export const Tag = styled.span<{ $kind?: TagKind }>`
-  display: inline-flex;
-  align-items: center;
+  ${pill('sm')}
   flex: none;
-  font-size: ${font.small};
-  line-height: 1.4;
-  border-radius: 999px;
-  padding: 1px 9px;
-  white-space: nowrap;
   color: ${(p) => tagColour(p.$kind).fg};
   background: ${(p) => tagColour(p.$kind).bg};
   border: 1px solid ${(p) => tagColour(p.$kind).br};

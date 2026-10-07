@@ -25,7 +25,7 @@ import {
   TextLink,
   versionName,
 } from './ui/primitives';
-import { colour, font, radius } from './ui/theme';
+import { colour, font, night, radius } from './ui/theme';
 
 // Three screens, and the shell that holds them.
 //
@@ -45,7 +45,8 @@ import { colour, font, radius } from './ui/theme';
 // what the same run offers, not the presence of an old feature. Stored findings
 // and every past attempt remain readable under 고급.
 
-const Root = styled.div`
+/** `$night`: the observe screen's ground, so the page around it is not a light frame. */
+const Root = styled.div<{ $night?: boolean }>`
   position: relative;
   /* 100% rather than 100vw: with a scrollbar present 100vw is wider than the
      content box, which is its own horizontal overflow. */
@@ -53,8 +54,8 @@ const Root = styled.div`
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: ${colour.app};
-  color: ${colour.text};
+  background: ${(p) => (p.$night ? night.ground : colour.app)};
+  color: ${(p) => (p.$night ? night.ink : colour.text)};
   font-family: ${font.family};
   font-size: ${font.body};
   overflow: hidden;
@@ -85,14 +86,13 @@ const Header = styled.header`
  *  and this boundary - a simulated resident's words are not a real resident's
  *  opinion - must not go with it. One strip at the foot, on every screen but the
  *  opening film, which says the same thing in its own corner. */
+/** One line under every screen of the walk, in the ground's own colour. */
 const Foot = styled.footer`
   flex: none;
-  padding: 5px 16px;
-  font-size: ${font.small};
-  color: ${colour.secondary};
+  padding: 0 16px 8px;
+  font-size: 11.5px;
+  opacity: 0.6;
   text-align: center;
-  border-top: 1px solid ${colour.border};
-  background: ${colour.surface};
 `;
 
 const Brand = styled.div`
@@ -327,7 +327,7 @@ export default function SimulationApp() {
     const current = it.pathStarted ? viewGeneration : null;
     const walked = current ? pathTo(detail, current.id) : [];
     return (
-      <Root>
+      <Root $night={!current || screen === 'case'}>
 
 
         {(playbackError || s.error || it.error) && (
@@ -339,7 +339,7 @@ export default function SimulationApp() {
         )}
 
         {!current && (
-          <IntroScreen opening={openingOf(detail)}
+          <IntroScreen detail={detail}
             onFinish={() => { const first = openingOf(detail); if (first) void it.choose(first.id); }} />
         )}
 

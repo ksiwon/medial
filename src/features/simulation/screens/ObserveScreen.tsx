@@ -1,7 +1,7 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import styled from 'styled-components';
 import type { AttemptDetail, DomainEvent, VillagePayload } from '../api/types';
-import DayLedger from '../components/DayLedger';
+import DayTimeline from '../components/DayTimeline';
 import MedialDashboard from '../components/MedialDashboard';
 import VillageMap from '../components/VillageMap';
 import { formatClock, medialKnowledge, placeLabel, posesAt } from '../positions';
@@ -11,39 +11,45 @@ import { DAY_START_MS, usePlayback } from '../scene/playback';
 import { PACES, REVEAL_STEP_S, REVEAL_STEPS } from '../scene/reel';
 import SceneStage from '../scene/SceneStage';
 import type { Beat, Episode } from '../scene/types';
-import { ledgerAt, routineAt } from '../selectors/dayLedger';
+import { ledgerAt, routineAt, timelineAt } from '../selectors/dayLedger';
 import { dayChangeLines, dayLabel } from '../selectors/words';
-import { IconButton, Select, Sub } from '../ui/primitives';
-import { colour, font, radius } from '../ui/theme';
+import { IconButton, Select, Sub, pill } from '../ui/primitives';
+import { night } from '../ui/theme';
 
 // 사례와 서비스 경험 - watching one run.
 //
-// Two columns (2026-10-06). The village map stands upright on the left and never
-// moves or shrinks: it is the one thing that is always there. On the right, from
-// top to bottom: the stage, the day's ledger, and the playback bar.
+// Three columns (2026-10-07). The village map stands upright on the left and never
+// moves or shrinks: it is the one thing that is always there. In the middle, the
+// stage over the playback bar. On the right, the day's timeline down a rail:
+// what has happened, what is happening, and what was scheduled - nothing else
+// ahead (components/DayTimeline).
 //
 // The stage is a request's scene when it has one - a frame per place, the people
 // there, their words as bubbles, and MEDial, which has no body, as its judgement
 // panel - and MEDial's dashboard when it does not, so it is never empty. The
 // ledger is one line per request up to the playhead.
 //
-// This replaced the one-stage arrangement (a map that filled the stage and shrank
-// into a card for each scene) and, before it, three columns. Their panels are
-// gone rather than hidden.
+// Before this the day's ledger sat under the stage and the playback track drew
+// every scene of the day as a coloured bar, which showed the evening's emergency
+// at five in the morning. Both are gone; the timeline is the one record.
 
 const Screen = styled.div`
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(300px, 26%) minmax(0, 1fr);
+  /* The map column is as wide as the village at its height (VillageMap onFitWidth),
+     within sensible bounds; the stage takes the rest. */
+  grid-template-columns: var(--map-w, minmax(280px, 24%)) minmax(0, 1fr) minmax(250px, 19%);
   gap: 12px;
   padding: 12px;
+  background: ${night.ground};
+  color: ${night.ink};
 
-  /* A narrow window cannot hold the village beside a filmed scene. The map goes
-     above, shorter, and the right column keeps the whole width. */
-  @media (max-width: 1000px) {
+  /* A narrow window cannot hold the village and the timeline beside a filmed
+     scene. They stack: the map above, shorter, then the stage, then the timeline. */
+  @media (max-width: 1100px) {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 36%) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 36%) minmax(520px, 1fr) minmax(320px, auto);
     overflow-y: auto;
   }
 `;
@@ -54,29 +60,25 @@ const MapColumn = styled.div`
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: ${colour.surface};
-  border: 1px solid ${colour.border};
-  border-radius: ${radius.panel};
+  background: ${night.panel};
+  border-radius: 14px;
 `;
 
 /** What the header used to say, now a strip on top of the map column: which day
  *  this is, the way back to the start, and that every person here is invented. */
 const MapStrip = styled.div`
   flex: none;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
-  border-bottom: 1px solid ${colour.border};
-  font-size: ${font.small};
-  color: ${colour.secondary};
-  > b { font-size: ${font.body}; font-weight: 800; color: ${colour.text}; letter-spacing: -0.02em; }
-  > em { font-style: normal; font-weight: 800; color: ${colour.surface}; background: ${colour.text};
-         border-radius: 999px; padding: 2px 9px; }
-  > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  > button { font: inherit; cursor: pointer; border: none; background: transparent; color: ${colour.secondary};
-             padding: 2px 4px; border-radius: ${radius.control}; }
-  > button:hover { color: ${colour.primary}; }
+  padding: 12px 14px;
+  font-size: 12px;
+  color: ${night.mute};
+  > div { display: flex; align-items: center; gap: 8px; }
+  > div > b { font-size: 15px; font-weight: 800; color: ${night.ink}; letter-spacing: 0.02em; }
+  > div > em { ${pill('xs')} font-style: normal; font-weight: 800; color: #fff; background: ${night.accent}; }
+  > div > button { ${pill('xs')} margin-left: auto; font: inherit; font-size: 11px; cursor: pointer; border: none;
+                   background: transparent; color: ${night.mute}; }
+  > div > button:hover { color: ${night.ink}; background: ${night.raised}; }
+  > p { margin: 8px 0 0; line-height: 1.45; word-break: keep-all; }
+  > p > b { color: ${night.ink}; font-weight: 800; }
 `;
 
 const MapBody = styled.div`
@@ -122,111 +124,21 @@ const DashLayer = styled.div<{ $on: boolean }>`
   pointer-events: ${(p) => (p.$on ? 'auto' : 'none')};
 `;
 
-const Transport = styled.div`
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 14px;
-  background: ${colour.surface};
-  border: 1px solid ${colour.border};
-  border-radius: ${radius.panel};
-`;
-
-const Clock = styled.span`
-  font-variant-numeric: tabular-nums;
-  font-size: ${font.section};
-  font-weight: 700;
-  min-width: 58px;
-`;
-
-/** The day's track: a bar per scene, coloured by its request, over the clock. */
-const Track = styled.div`
-  flex: 1;
-  min-width: 120px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  > input { width: 100%; margin: 0; accent-color: ${colour.primary}; }
-`;
-
-const Bars = styled.div`
-  position: relative;
-  height: 8px;
-  > i { position: absolute; top: 0; height: 6px; border-radius: 999px; opacity: 0.85; }
-`;
-
-const Ticks = styled.div`
-  display: flex;
-  justify-content: space-between;
-  font-size: ${font.micro};
-  color: ${colour.unknown};
-  font-variant-numeric: tabular-nums;
-  > span:last-child { color: ${colour.primary}; }
-`;
-
-const Paces = styled.div`
-  display: flex;
-  gap: 4px;
-  flex: none;
-`;
-
-const Pace = styled.button<{ $on: boolean }>`
-  font: inherit;
-  font-size: ${font.small};
-  font-weight: 700;
-  padding: 4px 9px;
-  border-radius: 999px;
-  cursor: pointer;
-  border: 1px solid ${(p) => (p.$on ? colour.text : colour.border)};
-  background: ${(p) => (p.$on ? colour.text : 'transparent')};
-  color: ${(p) => (p.$on ? '#ffffff' : colour.secondary)};
-`;
-
-/** Everything secondary to watching - the MEDial-only view, scene by scene, a
- *  new case - behind one gear. */
-const Settings = styled.details`
-  position: relative;
-  flex: none;
-  > summary {
-    cursor: pointer;
-    list-style: none;
-    color: ${colour.secondary};
-    font-size: 16px;
-    padding: 6px;
-    border-radius: ${radius.control};
-  }
-  > summary::-webkit-details-marker { display: none; }
-  > summary:focus-visible { outline: 2px solid ${colour.primary}; }
-  > div {
-    position: absolute;
-    right: 0;
-    bottom: 36px;
-    width: 240px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    background: ${colour.surface};
-    border: 1px solid ${colour.border};
-    border-radius: ${radius.control};
-    padding: 12px;
-    box-shadow: 0 4px 14px rgba(29, 41, 53, 0.14);
-    z-index: 8;
-    font-size: ${font.small};
-  }
-`;
-
 const DayEnd = styled.div`
   flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 8px 14px;
-  border-radius: ${radius.panel};
-  background: ${colour.selected};
-  font-size: ${font.small};
-  color: ${colour.primary};
+  gap: 12px;
+  padding: 12px 14px 12px 18px;
+  border-radius: 14px;
+  background: ${night.accentSoft};
+  box-shadow: inset 0 0 0 1px rgba(226, 84, 44, 0.5);
+  font-size: 14px;
+  color: ${night.ink};
+  > span > span { margin-left: 12px; color: ${night.mute}; }
+  > button { font: inherit; ${pill('md')} font-weight: 800; cursor: pointer; border: none;
+             background: ${night.accent}; color: #fff; }
 `;
 
 interface Props {
@@ -247,6 +159,7 @@ interface Props {
 
 export default function ObserveScreen({ village, detail, events, art, caseAction, dayEnd: ending, onReadEvaluations, strip }: Props) {
   const p = usePlayback();
+  const [mapWidth, setMapWidth] = useState<number | null>(null);
   const reel = p.reel;
   const position = p.position;
 
@@ -269,6 +182,13 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
     last.current = { episode, beat: episode.beats[segment.beat], e: segment.episode, b: segment.beat };
   }
   const scene = last.current;
+
+  // Where the stage is: its frames, marked on the map while the scene is on.
+  const spotlight = useMemo(
+    () => (inScene && scene ? scene.beat.frames.map((f) => ({ place: f.place, who: f.who, label: f.label })) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [inScene, scene?.e, scene?.b],
+  );
 
   const line = segment?.kind === 'line' ? segment.line : null;
   const typing = segment?.kind === 'line' && position!.offset < segment.typing;
@@ -303,12 +223,19 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
     : REVEAL_STEPS;
   const dayEnd = reel?.dayEndMs ?? DAY_START_MS;
   const dayOver = reel !== null && p.rt >= reel.total;
-  const tint = scene ? (requestColour(reel?.episodes ?? []).get(scene.episode.requestId) ?? colour.primary) : colour.primary;
+  const tint = scene ? (requestColour(reel?.episodes ?? []).get(scene.episode.requestId) ?? night.accent) : night.accent;
 
   // What the stage says between scenes: the day so far, read off the playhead.
   const subtitleOf = (requestId: string) => detail.scenes?.panels[requestId]?.subtitle ?? null;
+  // Who a Task asked for help: the people its panel says MEDial asked, less the
+  // person the request is about (calling someone to check on them is not asking
+  // them to help). Without this the dashboard's "asked today" was always empty.
+  const askedOf = (requestId: string) => {
+    const subject = reel?.episodes.find((e) => e.requestId === requestId)?.subjectId ?? null;
+    return (detail.scenes?.panels[requestId]?.judgment.asked ?? []).map((a) => a.actorId).filter((id) => id !== subject);
+  };
   const ledger = useMemo(
-    () => ledgerAt(reel?.episodes ?? [], atMs, subtitleOf),
+    () => ledgerAt(reel?.episodes ?? [], atMs, subtitleOf, askedOf),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [reel, atMs, detail.scenes],
   );
@@ -324,22 +251,35 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
     () => routineAt(poses, (place, id) => placeLabel(village, place, id)),
     [poses, village],
   );
+  // Only what was scheduled is known ahead: the dashboard's "다음은" and the
+  // timeline's faint lines both read this set (the record's `scheduled`).
+  const scheduled = useMemo(() => new Set(detail.scenes?.scheduled ?? []), [detail.scenes]);
   const next = useMemo(() => {
-    const episode = reel?.episodes.find((e) => e.startMs > atMs) ?? null;
+    const episode = reel?.episodes.find((e) => e.startMs > atMs && scheduled.has(e.requestId)) ?? null;
     return episode ? { startMs: episode.startMs, title: episode.title } : null;
-  }, [reel, atMs]);
+  }, [reel, atMs, scheduled]);
+  const timeline = useMemo(
+    () => timelineAt(reel?.episodes ?? [], atMs, scheduled, subtitleOf, p.viewMode === 'researcher'),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [reel, atMs, scheduled, detail.scenes, p.viewMode],
+  );
 
   return (
-    <Screen>
+    <Screen style={mapWidth ? ({ '--map-w': `clamp(200px, ${mapWidth}px, 34%)` } as React.CSSProperties) : undefined}>
       <MapColumn>
-        {strip && (
-          <MapStrip>
+        {/* The column's head: which day, the way back, the village's name and the
+            requests chosen so far. The name used to be a badge on the map's corner,
+            where it covered the people who live in the village's north end. */}
+        <MapStrip>
+          <div>
             <b>MEDial</b>
-            <em>{strip.day}</em>
-            <span title={strip.note}>{strip.note}</span>
-            <button type="button" onClick={strip.onRestart}>↺ 처음부터</button>
-          </MapStrip>
-        )}
+            {strip && <em>{strip.day}</em>}
+            {strip && <button type="button" onClick={strip.onRestart}>↺ 처음부터</button>}
+          </div>
+          {/* The note grows a request a day, so it wraps rather than being cut to "…"
+              in a column sized to the village. */}
+          <p><b>{village.isSynthetic ? '합성 마을' : '은점마을'}</b>{strip ? ` · ${strip.note}` : ''}</p>
+        </MapStrip>
         <MapBody>
         <VillageMap
           village={village}
@@ -350,8 +290,9 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
           taskColours={colours}
           selectedCluster={p.selectedCluster}
           selectedActor={p.selectedActor}
-          title={village.isSynthetic ? '합성 마을' : '은점마을'}
           onSelectCluster={p.selectCluster}
+          spotlight={spotlight}
+          onFitWidth={setMapWidth}
         />
         </MapBody>
       </MapColumn>
@@ -362,7 +303,8 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
               and would say twice what the judgement panel says once. */}
           <DashLayer $on={!inScene}>
             {!inScene && (
-              <MedialDashboard ledger={ledger} atMs={atMs} next={next} holdsOf={holdsOf} routine={routine} />
+              <MedialDashboard ledger={ledger} next={next} holdsOf={holdsOf}
+                routine={p.viewMode === 'researcher' ? routine : null} />
             )}
           </DashLayer>
           <SceneLayer $on={inScene} aria-hidden={!inScene}>
@@ -381,105 +323,70 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
           </SceneLayer>
         </Stage>
 
-        <DayLedger rows={ledger.rows} unseen={p.viewMode === 'researcher' ? ledger.unseen : []}
-          episodes={reel?.episodes ?? []}
-          onSeek={(ms) => { p.seekTime(ms); void p.commit(); }} />
-
       {dayOver && (
         <DayEnd>
           <span>
             <strong>{formatClock(dayEnd)} · {ending.text}</strong>
-            {ending.note && <span style={{ marginLeft: 12, color: colour.secondary }}>{ending.note}</span>}
+            {ending.note && <span>{ending.note}</span>}
           </span>
-          <IconButton onClick={onReadEvaluations}>{ending.action}</IconButton>
+          <button type="button" onClick={onReadEvaluations}>{ending.action} →</button>
         </DayEnd>
       )}
 
-      <Transport>
-        {/* This plays back a stored log. Stopping it stops nothing on the
-            server, whose own controls live in the progress strip. */}
-        <IconButton onClick={() => void (p.playing ? p.pause() : p.play())}>
-          {p.playing ? '⏸ 정지' : '▶ 재생'}
-        </IconButton>
-        <Clock>{formatClock(atMs)}</Clock>
-        <Track>
-          <Bars aria-hidden>
-            {(reel?.episodes ?? []).map((episode, i) => (
-              <i key={i} style={{
-                left: `${((episode.startMs - DAY_START_MS) / (dayEnd - DAY_START_MS)) * 100}%`,
-                width: `max(4px, ${((episode.endMs - episode.startMs) / (dayEnd - DAY_START_MS)) * 100}%)`,
-                background: requestColour(reel!.episodes).get(episode.requestId),
-              }} />
-            ))}
-          </Bars>
-          <input
-            type="range"
-            min={DAY_START_MS}
-            max={dayEnd}
-            step={60_000}
-            value={Math.min(Math.max(atMs, DAY_START_MS), dayEnd)}
-            onChange={(e) => p.seekTime(Number(e.target.value))}
-            onPointerUp={() => void p.commit()}
-            onKeyUp={() => void p.commit()}
-            aria-label="시각"
-          />
-          <Ticks aria-hidden>
-            <span>05:00</span>
-            <span>12:00</span>
-            <span>17:00</span>
-            <span>{formatClock(dayEnd)} 주민 평가</span>
-          </Ticks>
-        </Track>
-        <Paces role="group" aria-label="대사 속도">
-          {PACES.map((option) => (
-            <Pace key={option.value} $on={p.pace === option.value} aria-pressed={p.pace === option.value}
-              onClick={() => p.setPace(option.value)}>
-              {option.label}
-            </Pace>
-          ))}
-        </Paces>
-        <Settings>
-          <summary aria-label="재생 설정" title="재생 설정">⚙</summary>
-          <div>
-            <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-              보기
-              <Select aria-label="관찰 시점" value={p.viewMode}
-                onChange={(e) => p.setViewMode(e.target.value as typeof p.viewMode)}>
-                <option value="researcher">연구자 전체</option>
-                <option value="medial">MEDial이 아는 것</option>
-              </Select>
-            </label>
-            {/* Only a record that names its story scenes offers the choice. */}
-            {(detail.scenes?.featured?.length ?? 0) > 0 && (
-              <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                장면
-                <Select aria-label="재생할 장면" value={p.length}
-                  onChange={(e) => p.setLength(e.target.value as typeof p.length)}>
-                  <option value="story">핵심 장면만</option>
-                  <option value="all">모든 장면</option>
-                </Select>
-              </label>
-            )}
-            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-              <IconButton onClick={() => void p.jumpScene(-1)}>← 앞 장면</IconButton>
-              <IconButton onClick={() => void p.jumpScene(1)}>다음 장면 →</IconButton>
-              <IconButton onClick={() => void p.restart()}>처음으로</IconButton>
-            </div>
-            <Sub as="span">
-              장면 {reel ? new Set(reel.segments.flatMap((x) => (x.kind === 'map' ? [] : [x.episode]))).size : 0}개 재생 · 요청 {reel?.episodes.length ?? 0}건 · {village.isSynthetic ? '합성 지도' : '원자료 지형'}
-            </Sub>
-            {/* Which day this run happened on: as recorded, or nudged. The
-                edits themselves are in the tooltip, one per person. */}
-            {detail.metrics.dayRealization && (
-              <Sub as="span" title={dayChangeLines(detail.metrics.dayRealization).join('\n') || '기록된 일과를 그대로 썼습니다.'}>
-                {dayLabel(detail.metrics.dayRealization)}
-              </Sub>
-            )}
-            {caseAction && <IconButton onClick={caseAction.onClick}>{caseAction.label}</IconButton>}
-          </div>
-        </Settings>
-      </Transport>
       </Right>
+
+      <DayTimeline
+        items={timeline}
+        atMs={atMs}
+        dayStartMs={DAY_START_MS}
+        dayEndMs={dayEnd}
+        playing={p.playing}
+        onTogglePlay={() => void (p.playing ? p.pause() : p.play())}
+        onSeek={(ms) => p.seekTime(ms)}
+        onCommit={() => void p.commit()}
+        paces={PACES}
+        pace={p.pace}
+        onPace={p.setPace}
+        settings={
+          <>
+        <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+          보기
+          <Select aria-label="관찰 시점" value={p.viewMode}
+            onChange={(e) => p.setViewMode(e.target.value as typeof p.viewMode)}>
+            <option value="researcher">연구자 전체</option>
+            <option value="medial">MEDial이 아는 것</option>
+          </Select>
+        </label>
+        {/* Only a record that names its story scenes offers the choice. */}
+        {(detail.scenes?.featured?.length ?? 0) > 0 && (
+          <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+            장면
+            <Select aria-label="재생할 장면" value={p.length}
+              onChange={(e) => p.setLength(e.target.value as typeof p.length)}>
+              <option value="story">핵심 장면만</option>
+              <option value="all">모든 장면</option>
+            </Select>
+          </label>
+        )}
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          <IconButton onClick={() => void p.jumpScene(-1)}>← 앞 장면</IconButton>
+          <IconButton onClick={() => void p.jumpScene(1)}>다음 장면 →</IconButton>
+          <IconButton onClick={() => void p.restart()}>처음으로</IconButton>
+        </div>
+        <Sub as="span">
+          장면 {reel ? new Set(reel.segments.flatMap((x) => (x.kind === 'map' ? [] : [x.episode]))).size : 0}개 재생 · 요청 {reel?.episodes.length ?? 0}건 · {village.isSynthetic ? '합성 지도' : '원자료 지형'}
+        </Sub>
+        {/* Which day this run happened on: as recorded, or nudged. The
+            edits themselves are in the tooltip, one per person. */}
+        {detail.metrics.dayRealization && (
+          <Sub as="span" title={dayChangeLines(detail.metrics.dayRealization).join('\n') || '기록된 일과를 그대로 썼습니다.'}>
+            {dayLabel(detail.metrics.dayRealization)}
+          </Sub>
+        )}
+        {caseAction && <IconButton onClick={caseAction.onClick}>{caseAction.label}</IconButton>}
+          </>
+        }
+      />
     </Screen>
   );
 }

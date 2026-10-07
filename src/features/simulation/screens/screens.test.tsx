@@ -12,11 +12,11 @@ import { usePlayback } from '../scene/playback';
 import { learnPeople, personName, sentenceFor } from '../selectors/story';
 import { dayChangeLines } from '../selectors/words';
 import ChoiceScreen, { SUMMARY_IDLE_S } from './ChoiceScreen';
-import IntroScreen, { openingLines } from './IntroScreen';
+import IntroScreen from './IntroScreen';
 import { foldAsking } from '../scene/JudgmentPanel';
-import DayLedger from '../components/DayLedger';
+import DayTimeline from '../components/DayTimeline';
 import MedialDashboard from '../components/MedialDashboard';
-import { ledgerAt } from '../selectors/dayLedger';
+import { ledgerAt, timelineAt } from '../selectors/dayLedger';
 import { openingOf, pathCount } from '../selectors/tree';
 import CompareScreen, { type CompareDecisions } from './CompareScreen';
 import EvaluationsScreen from './EvaluationsScreen';
@@ -110,11 +110,11 @@ describe('ObserveScreen', () => {
 
   it('separates the recording from the run', () => {
     observe();
-    // The playback control is a clock over the village day (05:00-22:00) with
-    // the residents' review at its end; the loop's own start/pause/stop live in
+    // The playback control is the timeline's rail: the village day from its start
+    // to the residents' review at its end; the loop's own start/pause/stop live in
     // the progress strip, which is not this component.
-    expect(screen.getByLabelText('시각')).toBeDefined();
-    expect(screen.getByText(/^\d\d:\d\d 주민 평가$/)).toBeDefined();
+    expect(screen.getByRole('slider', { name: '시각' })).toBeDefined();
+    expect(screen.getByText('하루 끝 · 주민 평가')).toBeDefined();
     expect(screen.getByRole('group', { name: '대사 속도' })).toBeDefined();
     expect(screen.getByLabelText('재생 설정')).toBeDefined();
     expect(screen.getByText('새 사례 준비')).toBeDefined();
@@ -517,10 +517,12 @@ describe('a record that carries its scenes (the exhibition record)', () => {
     // The panel's subtitle; the same request is also a line in the day's ledger,
     // which names its need and its person in separate cells.
     expect(screen.getAllByText('응답 없는 안부 확인 · P1 가명일').length).toBeGreaterThan(0);
-    expect(screen.getByLabelText('오늘의 요약')).toBeDefined();
+    expect(screen.getByLabelText('오늘의 타임라인')).toBeDefined();
     expect(screen.getByText('09:30 안부 문진에 응답이 없다')).toBeDefined();
     // What MEDial keeps back is said as such.
     expect(screen.getByText(/말하지 않는다 — 그 밖의 시각/)).toBeDefined();
+    // The stage's place is marked on the map while the scene is on.
+    expect(screen.getAllByText(/^지금 대화 · /).length).toBeGreaterThan(0);
     // Both places are frames, and the person carries their name.
     expect(screen.getAllByText('P1 가명일').length).toBeGreaterThan(0);
     learnPeople(null);
@@ -537,38 +539,37 @@ describe('what MEDial does not see', () => {
   const subtitles: Record<string, string> = { w1: '응답 없는 안부 확인 · P1', a1: '아침 항구에서 · P8' };
   const ledger = ledgerAt(episodes, min(11, 30), (id) => subtitles[id]);
 
+  const items = (researcher: boolean) => timelineAt(episodes, min(11, 30), new Set(), (id) => subtitles[id], researcher);
+  const controls = { atMs: min(11, 30), dayStartMs: min(5), dayEndMs: min(22), playing: false, onTogglePlay: noop,
+    onCommit: noop, paces: [{ value: 1, label: '보통' }], pace: 1, onPace: noop, settings: null };
+
   it('is listed for the researcher, marked as unknown to MEDial', () => {
-    render(<DayLedger rows={ledger.rows} unseen={ledger.unseen} episodes={episodes} onSeek={noop} />);
-    expect(screen.getByText('아침 항구에서')).toBeDefined();
+    render(<DayTimeline {...controls} items={items(true)} onSeek={noop} />);
+    expect(screen.getByText('항구에서 한 말')).toBeDefined();
     expect(screen.getByText('MEDial은 모름')).toBeDefined();
   });
 
-  it('goes to the request when its line is pressed, and to a step when that is', () => {
+  it('goes to a Task when its line is pressed', () => {
     const seen: number[] = [];
-    render(<DayLedger rows={ledger.rows} unseen={ledger.unseen} episodes={episodes} onSeek={(ms) => seen.push(ms)} />);
-    // The heading is not a link, but a visitor presses it: the whole line goes to its first moment.
-    fireEvent.click(screen.getByText('응답 없는 안부 확인'));
-    expect(seen).toEqual([min(9, 30)]);
-    // A step goes to its own, and does not also send the row's.
+    render(<DayTimeline {...controls} items={items(true)} onSeek={(ms) => seen.push(ms)} />);
     fireEvent.click(screen.getByText('본인에게 연락'));
-    expect(seen).toEqual([min(9, 30), min(9, 30)]);
-    expect(seen.length).toBe(2);
+    expect(seen).toEqual([min(9, 30)]);
   });
 
   it('is not listed at all in the MEDial-only view', () => {
-    render(<DayLedger rows={ledger.rows} unseen={[]} episodes={episodes} onSeek={noop} />);
-    expect(screen.queryByText('아침 항구에서')).toBeNull();
+    render(<DayTimeline {...controls} items={items(false)} onSeek={noop} />);
+    expect(screen.queryByText('항구에서 한 말')).toBeNull();
     expect(screen.queryByText('MEDial은 모름')).toBeNull();
   });
 
   it('never reaches the dashboard, which holds only what MEDial holds', () => {
-    const { container } = render(<MedialDashboard ledger={ledger} atMs={min(11, 30)} next={null}
+    const { container } = render(<MedialDashboard ledger={ledger} next={null}
       holdsOf={() => null} routine={{ onRoutine: 12, departed: 0, where: [] }} />);
     expect(container.textContent).not.toContain('항구');
     expect(container.textContent).not.toContain('P8');
     // Two things happened by 11:30; MEDial took one of them, so it counts one.
     expect(ledger.taken).toBe(1);
-    expect(container.textContent).toContain('1접수한 요청');
+    expect(container.textContent).toContain('오늘 접수 1');
   });
 });
 
@@ -593,25 +594,8 @@ describe('foldAsking', () => {
 });
 
 describe('IntroScreen', () => {
-  const spec = (ruleType: string, currentRule: string) => ({ ruleType, currentRule }) as never;
-  const opening = { ruleCatalog: [
-    spec('retry_before_help', '응답이 없으면 본인에게 10분 간격으로 1회 다시 연락한 뒤 다음 단계로 간다.'),
-    spec('contact_order', '본인에게 닿지 않으면 이장에게 확인을 부탁한다.'),
-    spec('quiet_period', '같은 사람에게 다시 연락하기까지 비워 두는 시간이 없다.'),
-    spec('disclosure_scope', '제3자에게 연락 시각과 공개 동의된 평소 일과까지 함께 전달한다.'),
-    spec('institution_deadline', '접수 후 60분 안에 풀리지 않으면 기관으로 넘긴다.'),
-  ] } as unknown as GenerationDetail;
-
-  it('says the first version in four answers, taken from its own rules', () => {
-    const lines = openingLines(opening);
-    expect(lines.map((l) => l.head)).toEqual(['누구에게 먼저', '얼마나 기다리나', '무엇을 알리나', '언제 기관에 넘기나']);
-    expect(lines[0].text).toContain('이장에게 확인을 부탁한다');
-    expect(lines[1].text).toContain('10분 간격으로 1회');
-    expect(lines[3].text).toContain('60분');
-  });
-
   it('has nothing to press, and says it is a simulation', () => {
-    render(<IntroScreen opening={opening} onFinish={noop} />);
+    render(<IntroScreen detail={session} onFinish={noop} />);
     expect(screen.queryAllByRole('button').length).toBe(0);
     expect(screen.getByText(/시뮬레이션입니다/)).toBeDefined();
   });

@@ -1,6 +1,7 @@
 import styled from 'styled-components';
 import { colour, font } from '../ui/theme';
 import { VERDICT_WORD, nameOf, type Judgment } from './judgment';
+import { pill } from '../ui/primitives';
 
 // MEDial has no icon on screen. This panel is where it is: what it knows, the
 // rules it went through, who it asked and what it heard, and what it said -
@@ -95,12 +96,10 @@ const VERDICT_BG: Record<string, string> = {
 };
 
 const Pill = styled.em<{ $v: string }>`
+  ${pill('xs')}
   flex: none;
   font-style: normal;
-  font-size: 10.5px;
   font-weight: 800;
-  border-radius: 999px;
-  padding: 1px 7px;
   background: ${(p) => VERDICT_BG[p.$v] ?? '#3b3c38'};
   color: ${(p) => (p.$v === 'asking' ? colour.text : '#ffffff')};
 `;

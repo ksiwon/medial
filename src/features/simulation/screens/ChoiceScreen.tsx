@@ -4,6 +4,7 @@ import type { GenerationDetail, SessionDetail } from '../api/iteration';
 import { childFor, dayFacts, dayName, pathCount, pathTo } from '../selectors/tree';
 import { nameList, withParticle } from '../selectors/story';
 import { colour, font } from '../ui/theme';
+import { pill } from '../ui/primitives';
 
 // Choosing the next version, in a record whose versions branch (selectors/tree).
 //
@@ -50,10 +51,14 @@ export const Lead = styled.p`
   color: ${colour.secondary};
 `;
 
+/* The cards share their rows (subgrid): the kind, the request, its purpose, the
+   reason, whose experience it came from and the rule start at one height across
+   all three, however long any one card's title runs. */
 const Cards = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 14px;
+  column-gap: 14px;
+  row-gap: 14px;
 `;
 
 const Card = styled.button`
@@ -64,9 +69,12 @@ const Card = styled.button`
   border: 1px solid ${colour.border};
   border-radius: 12px;
   padding: 20px 20px 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-row: span 6;
+  grid-template-rows: subgrid;
+  row-gap: 8px;
+  align-content: start;
+  word-break: keep-all;
   color: ${colour.text};
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
   &:hover:not(:disabled) {
@@ -84,6 +92,10 @@ const Card = styled.button`
 /** 무엇을 이루려는 요청인가. 제목이 부탁이면 이것은 그 부탁의 이유가 아니라 *목적*이다. */
 const Goal = styled.p`
   margin: 0;
+  /* As tall as the tallest purpose in the row (the cards share rows): the
+     sentence sits in the middle of that height, not at its top. */
+  display: flex;
+  align-items: center;
   padding: 8px 10px;
   border-radius: 8px;
   background: ${colour.selected};
@@ -125,13 +137,11 @@ const Summary = styled.table`
 `;
 
 const Again = styled.button`
+  ${pill('lg')}
   font: inherit;
   font-weight: 800;
-  font-size: 15px;
   cursor: pointer;
   border: none;
-  border-radius: 999px;
-  padding: 12px 22px;
   background: #15150f;
   color: #ffffff;
 `;
@@ -234,17 +244,18 @@ export default function ChoiceScreen({ detail, current, onChoose, onRestart }: P
                 title={child ? undefined : '이 기록에서는 실행하지 않은 안입니다'}>
                 <small>{(rule?.semantic && labels.get(rule.semantic.ruleType)) ?? rule?.field ?? '수정안'}</small>
                 <strong>{changeSet.label}</strong>
-                {changeSet.expectedEffects[0] && <Goal>{changeSet.expectedEffects[0]}</Goal>}
+                {/* Every card keeps all six rows, empty or not, so the rows line up. */}
+                {changeSet.expectedEffects[0] ? <Goal>{changeSet.expectedEffects[0]}</Goal> : <span />}
                 <p>{changeSet.mechanism}</p>
-                {changeSet.affectedActors.length > 0 && (
+                {changeSet.affectedActors.length > 0 ? (
                   <From><b>{withParticle(nameList(changeSet.affectedActors), 'subject')}</b> 겪은 일에서 나온 요청</From>
-                )}
-                {rule && (
+                ) : <span />}
+                {rule ? (
                   <Rule>
                     <s>{rule.beforeRule}</s>
                     <b>{rule.afterRule}</b>
                   </Rule>
-                )}
+                ) : <span />}
               </Card>
             );
           })}

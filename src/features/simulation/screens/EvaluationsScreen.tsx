@@ -14,7 +14,7 @@ import {
 import type { DomainEvent } from '../api/types';
 import { formatClock } from '../positions';
 import { personName, sentenceFor } from '../selectors/story';
-import { Body, Callout, Disclosure, Hint, Mono, Row, Sub, Tag, TextLink } from '../ui/primitives';
+import { Body, Callout, Disclosure, Hint, Mono, Row, Sub, Tag, TextLink, pill } from '../ui/primitives';
 import { colour, font } from '../ui/theme';
 
 // Screen B: the resident evaluations, as the screen the loop arrives at.
@@ -99,12 +99,9 @@ const PersonRow = styled.div<{ $quiet: boolean }>`
 `;
 
 const Count = styled.span<{ $used: boolean }>`
+  ${pill('xs')}
   justify-self: start;
-  font-size: 11px;
   font-weight: 800;
-  border-radius: 999px;
-  padding: 2px 8px;
-  white-space: nowrap;
   background: ${(p) => (p.$used ? '#e6eefc' : 'transparent')};
   color: ${(p) => (p.$used ? '#1d4ed8' : colour.secondary)};
 `;
@@ -141,14 +138,12 @@ const Dimension = styled.div`
 `;
 
 const Next = styled.button`
+  ${pill('lg')}
   align-self: flex-start;
   font: inherit;
   font-weight: 800;
-  font-size: 15px;
   cursor: pointer;
   border: none;
-  border-radius: 999px;
-  padding: 12px 22px;
   background: #15150f;
   color: #ffffff;
   &:focus-visible { outline: 2px solid #e2542c; outline-offset: 2px; }

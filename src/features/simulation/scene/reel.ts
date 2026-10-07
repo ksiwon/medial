@@ -14,17 +14,20 @@ import type { Episode, Position, Segment } from './types';
 // The values (decided 2026-09-28 for the exhibition wall, D108):
 //   · a said line: '· · ·' 0.5 s, then 1.2 s + 0.14 s per character, held 2-8 s
 //   · a caption: 1.0 s + 0.07 s per character, 1.8-5 s
-//   · entering a scene from the map 0.8 s, cutting between beats 0.45 s; a
-//     request seen for the first time lights its four judgement steps 0.6 s apart
-//   · the map: 240 sim-minutes a second when nobody is on an errand, 20 while
-//     someone is travelling for a request, 6 in the last 8 minutes before a
-//     scene; at least 1.4 s between two scenes so the transition can be seen
+//   · entering a scene from the map 0.5 s, cutting between beats 0.3 s; a
+//     request seen for the first time lights its four judgement steps 0.35 s
+//     apart; a beat with no lines holds 1.6 s
+//   · the map: 360 sim-minutes a second when nobody is on an errand, 40 while
+//     someone is travelling for a request, 12 in the last 8 minutes before a
+//     scene; at least 1 s between two scenes so the transition can be seen
+//   · 2026-10-07: everything but the reading times above made faster after
+//     visitors found the playback too slow. The reading times did not change.
 //   · pace multiplies the reading times only (천천히 1.35 · 보통 1 · 빠르게 0.7)
 
 export const TYPING_S = 0.5;
-export const ENTER_S = 0.8;
-export const CUT_S = 0.45;
-export const REVEAL_STEP_S = 0.6;
+export const ENTER_S = 0.5;
+export const CUT_S = 0.3;
+export const REVEAL_STEP_S = 0.35;
 export const REVEAL_STEPS = 4;
 export const PACES = [
   { value: 1.35, label: '천천히' },
@@ -84,7 +87,7 @@ export function buildReel({ episodes, events, timeline, dayStartMs, dayEndMs, pa
     // Not played: the day goes on over the map, and the clock passes it without a scene.
     if (featured && !featured.has(episode.requestId)) return;
     const fromMap = episode.startMs - clock >= MAP_GAP_MS || e === firstPlayed;
-    if (fromMap) push(mapSegment(clock, episode.startMs, episode.startMs, e === firstPlayed ? 1 : 1.4, errands));
+    if (fromMap) push(mapSegment(clock, episode.startMs, episode.startMs, 1, errands));
     episode.beats.forEach((beat, b) => {
       const enter = b === 0 && fromMap ? ENTER_S : CUT_S;
       const reveal = b === 0 && episode.firstOfRequest;
@@ -100,11 +103,11 @@ export function buildReel({ episodes, events, timeline, dayStartMs, dayEndMs, pa
                typing: say ? TYPING_S * pace : 0,
                dur: say ? sayDuration(line.text, pace) : captionDuration(line.text, pace) });
       });
-      if (!n) push({ kind: 'hold', episode: e, beat: b, seq: beat.lastSeq, w0: beat.startMs, w1: beat.endMs, dur: 2.6 * pace });
+      if (!n) push({ kind: 'hold', episode: e, beat: b, seq: beat.lastSeq, w0: beat.startMs, w1: beat.endMs, dur: 1.6 * pace });
     });
     clock = Math.max(clock, episode.endMs);
   });
-  push(mapSegment(clock, dayEndMs, null, firstPlayed >= 0 ? 1.4 : 1, errands));
+  push(mapSegment(clock, dayEndMs, null, 1, errands));
 
   const seqAtMs = (ms: number) => {
     let seq = 0;
@@ -165,7 +168,7 @@ function mapSegment(w0: number, w1: number, next: number | null, minDur: number,
                     errand: (ms: number) => boolean): Draft {
   const cum = [0];
   for (let m = w0; m < w1; m += MINUTE) {
-    const rate = next !== null && next - m < 8 * MINUTE ? 6 : errand(m) ? 20 : 240;
+    const rate = next !== null && next - m < 8 * MINUTE ? 12 : errand(m) ? 40 : 360;
     cum.push(cum[cum.length - 1] + Math.min(1, (w1 - m) / MINUTE) / rate);
   }
   const raw = cum[cum.length - 1];

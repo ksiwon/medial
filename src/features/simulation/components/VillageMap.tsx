@@ -13,13 +13,19 @@ import {
 } from '../positions';
 import { mapFrame } from '../mapFrame';
 import { personName } from '../selectors/story';
-import { colour, font, radius } from '../ui/theme';
+import { colour, font, night, radius } from '../ui/theme';
 import { ActivityIcon, FaceChip, FaceMark, VehicleMark } from './Marks';
+import PillText, { plateSize } from '../ui/PillText';
+import { pill } from '../ui/primitives';
 
 // The real map of 은점마을: the source raster turned upright - north at the top,
 // the 1.15 km north-south run standing in a tall column (mapFrame.ts) - flat,
 // at the source's own proportions. Nothing here invents terrain or stretches it.
-// The whole village fits the column; zooming leaves it and 전체 comes back.
+// The map always fills the column's width (2026-10-07: a column narrower than the
+// village's proportions used to leave a blank strip at the side); the village's
+// north and south run above and below. Zooming leaves that view and 전체 comes back.
+// While a scene plays, the places it is filmed in are marked on the map (spotlight),
+// so the stage and the village are read as one.
 //
 // Three rules from doc 15 section 5 shape the drawing:
 //
@@ -33,12 +39,21 @@ import { ActivityIcon, FaceChip, FaceMark, VehicleMark } from './Marks';
 //    This file only stops marks from covering each other, and draws a leader
 //    line whenever it had to move one.
 
+/** A place the stage is in: a place key, who is there, and its name. */
+export interface Spot {
+  place: string | null;
+  who: string[];
+  label: string;
+}
+
 interface View {
   x: number;
   y: number;
   w: number;
   h: number;
 }
+
+const SPOT = '#e2542c';
 
 /** Screen mapping for preserveAspectRatio="xMidYMid meet". */
 function projector(view: View, box: { width: number; height: number }) {
@@ -71,8 +86,8 @@ const Frame = styled.div`
   position: relative;
   flex: 1;
   min-height: 0;
-  background: #f8f7f4;
-  border-bottom: 1px solid ${colour.border};
+  /* The map is the one light object on the night ground; past its edges is the ground. */
+  background: ${night.panel};
   overflow: hidden;
   touch-action: none;
 `;
@@ -94,25 +109,21 @@ const Tools = styled(Corner)`
   right: 12px;
   bottom: 30px;
   flex-direction: row;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid ${colour.border};
-  border-radius: ${radius.control};
-  padding: 3px;
+  background: rgba(18, 19, 16, 0.82);
+  border-radius: 999px;
+  padding: 3px 6px;
 `;
 
 const ToolButton = styled.button`
+  ${pill('md')}
   border: none;
   background: transparent;
-  color: ${colour.text};
+  color: ${night.ink};
   font-family: inherit;
-  font-size: ${font.small};
-  min-width: 28px;
-  height: 32px;
-  padding: 0 7px;
-  border-radius: 4px;
+  font-weight: 700;
   cursor: pointer;
   &:hover {
-    background: ${colour.selected};
+    background: rgba(246, 241, 232, 0.14);
   }
   &:focus-visible {
     outline: 2px solid ${colour.primary};
@@ -122,45 +133,32 @@ const ToolButton = styled.button`
 
 const Compass = styled.div`
   position: absolute;
-  right: 14px;
+  right: 12px;
   top: 10px;
-  font-size: ${font.small};
-  color: ${colour.secondary};
-  text-align: center;
-  pointer-events: none;
-  line-height: 1.2;
-`;
-
-/** The map's name, on the map itself. The panel used to carry a heading row
- *  with two tags (terrain source, which day); that row was 60px of a column
- *  whose whole point is the map, so the name became a small badge and the
- *  tags went behind the gear. */
-const MapTitle = styled.h2`
-  position: absolute;
-  left: 12px;
-  top: 10px;
-  margin: 0;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid ${colour.border};
-  color: ${colour.text};
-  border-radius: 999px;
-  padding: 3px 10px;
-  font-size: ${font.small};
-  font-weight: 600;
-  line-height: 1.4;
+  box-sizing: border-box;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  color: ${night.ink};
+  background: rgba(18, 19, 16, 0.82);
   pointer-events: none;
 `;
 
 const ModeBadge = styled.div`
+  ${pill('sm')}
   position: absolute;
   left: 12px;
-  top: 40px;
-  background: ${colour.surface};
-  border: 1px solid ${colour.border};
-  color: ${colour.secondary};
-  border-radius: 999px;
-  padding: 3px 10px;
-  font-size: ${font.small};
+  top: 10px;
+  background: rgba(18, 19, 16, 0.82);
+  color: ${night.mute};
   pointer-events: none;
 `;
 
@@ -176,8 +174,8 @@ const Credit = styled.div`
   text-align: right;
   font-size: 9px;
   line-height: 1.3;
-  color: ${colour.unknown};
-  background: rgba(255, 255, 255, 0.7);
+  color: ${night.mute};
+  background: rgba(18, 19, 16, 0.6);
   border-radius: 3px;
   padding: 0 4px;
   pointer-events: none;
@@ -261,30 +259,29 @@ const Facts = styled.dl`
 `;
 
 /** Everyone who has no coordinate on this map, as one row of names under it. */
+/* One height whoever is out: the map above it must not jump as people leave
+   and come back. Three rows of chips fit; more scroll inside. */
 const Outside = styled.div`
   flex: none;
+  height: 92px;
+  overflow-y: auto;
   display: flex;
   flex-wrap: wrap;
+  align-content: flex-start;
   align-items: center;
   gap: 6px 8px;
-  padding: 9px 14px;
-  border-top: 1px solid ${colour.border};
+  padding: 12px 14px;
   font-size: ${font.small};
-  color: ${colour.secondary};
-  > strong { font-weight: 700; color: ${colour.text}; margin-right: 4px; }
+  color: ${night.mute};
+  > strong { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; color: ${night.faint}; margin-right: 4px; }
 `;
 
 const OutChip = styled.span`
-  display: inline-flex;
-  gap: 6px;
-  align-items: baseline;
-  border: 1px solid ${colour.border};
-  border-radius: 999px;
-  padding: 3px 10px;
+  ${pill('sm')}
   font-weight: 700;
-  color: ${colour.text};
-  background: ${colour.surface};
-  > span { font-weight: 400; color: ${colour.secondary}; }
+  color: ${night.ink};
+  background: ${night.raised};
+  > span { font-weight: 400; color: ${night.mute}; }
 `;
 
 /** Place names worth a label, at every zoom now that the map lies along the
@@ -302,8 +299,11 @@ interface Props {
   /** Colour per still-running request: the ring on whoever is doing it. */
   taskColours?: Map<string, string>;
   selectedActor: string | null;
-  /** Shown as a small badge over the map's top-left corner. */
-  title: string;
+  /** The places the stage is showing now, marked on the map. Empty between scenes. */
+  spotlight?: Spot[];
+  /** The column width at which the whole village fills the frame exactly, for
+   *  the frame's present height: the screen sizes the column to it. */
+  onFitWidth?: (px: number) => void;
   onSelectCluster: (key: string | null, actorId?: string | null) => void;
 }
 
@@ -316,17 +316,41 @@ export default function VillageMap({
   selectedCluster,
   taskColours,
   selectedActor,
-  title,
   onSelectCluster,
+  spotlight = [],
+  onFitWidth,
 }: Props) {
   const frame = useMemo(() => mapFrame(village), [village]);
   const [vx, vy, vw, vh] = frame.viewBox;
-  const home: View = useMemo(() => ({ x: vx, y: vy, w: vw, h: vh }), [vx, vy, vw, vh]);
-  const [view, setView] = useState<View>(home);
-  // The whole village, always: the column is the village's own shape. Zooming
-  // leaves it; 전체 returns.
-  const [fitMode, setFitMode] = useState<'all' | null>('all');
+  // The land the map shows: the raster's own edges when there is one (the
+  // village's viewBox reaches past it on one side and short of it on the other),
+  // the viewBox otherwise.
+  const extent: View = useMemo(() => {
+    const image = village.mapImage;
+    if (!image?.northUpMatrix) return { x: vx, y: vy, w: vw, h: vh };
+    const [a, b, c, d, e, f] = image.northUpMatrix;
+    const corners = [[0, 0], [image.sourceWidthPx, 0], [0, image.sourceHeightPx], [image.sourceWidthPx, image.sourceHeightPx]]
+      .map(([px, py]) => [a * px + c * py + e, b * px + d * py + f]);
+    const xs = corners.map((p) => p[0]);
+    const ys = corners.map((p) => p[1]);
+    return { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+  }, [village.mapImage, vx, vy, vw, vh]);
   const [box, setBox] = useState({ width: 1, height: 1 });
+  // Edge to edge across, centred along: the view takes the column's shape.
+  const home: View = useMemo(() => {
+    const h = box.width > 1 && box.height > 1 ? extent.w * (box.height / box.width) : extent.h;
+    return { x: extent.x, w: extent.w, h, y: extent.y + extent.h / 2 - h / 2 };
+  }, [extent, box]);
+  const [view, setView] = useState<View>(home);
+  // The column is as wide as the village is, at the frame's height: then the map
+  // fills its frame both ways, with no strip at the side and nobody cut off the
+  // top or bottom (the village runs 1.2 km north-south; at a fixed width someone
+  // was always off the map).
+  useEffect(() => {
+    if (onFitWidth && box.height > 1) onFitWidth(Math.round(box.height * (extent.w / extent.h)));
+  }, [onFitWidth, box.height, extent]);
+  // Zooming leaves the fitted view; 전체 returns.
+  const [fitMode, setFitMode] = useState<'all' | null>('all');
   const [hovered, setHovered] = useState<string | null>(null);
   /** The card Escape just closed. The marker keeps focus and often the pointer
    *  too, and both of those open a card, so without this the card reopens in
@@ -340,7 +364,7 @@ export default function VillageMap({
   const frameRef = useRef<HTMLDivElement | null>(null);
   const drag = useRef<{ px: number; py: number; view: View } | null>(null);
 
-  useEffect(() => { setMapBroken(false); setFitMode('all'); }, [home]);
+  useEffect(() => { setMapBroken(false); setFitMode('all'); }, [extent]);
 
   useEffect(() => {
     const node = frameRef.current;
@@ -430,6 +454,27 @@ export default function VillageMap({
   );
   const outside = shown.filter((p) => p.offMap);
 
+  // A scene's frame is drawn where its place is: a named place, a home, or
+  // else where the people in it stand (a car, the road). A frame MEDial cannot
+  // place (its view, place unknown) is not drawn.
+  const spots = useMemo(() => {
+    const out: { key: string; x: number; y: number; label: string }[] = [];
+    for (const spot of spotlight) {
+      if (!spot.place) continue;
+      const named = village.places[spot.place]
+        ?? (spot.place.startsWith('HOME:') ? village.homes[spot.place.slice(5)] : undefined);
+      let point: [number, number] | null = named ? [named.x, named.y] : null;
+      if (!point) {
+        const there = shown.filter((p) => spot.who.includes(p.id) && !p.offMap && p.x != null && p.y != null);
+        if (there.length) point = [there.reduce((n, p) => n + p.x!, 0) / there.length, there.reduce((n, p) => n + p.y!, 0) / there.length];
+      }
+      if (!point) continue;
+      const [x, y] = frame.at(point[0], point[1]);
+      if (!out.some((o) => Math.hypot(o.x - x, o.y - y) < 20)) out.push({ key: spot.place, x, y, label: spot.label });
+    }
+    return out;
+  }, [spotlight, village, shown, frame]);
+
   // Where each group's mark is actually drawn, after nudging overlapping ones
   // apart. The anchor itself never moves; a nudged mark keeps a leader line.
   const layout = useMemo(() => {
@@ -437,8 +482,55 @@ export default function VillageMap({
       const point = project.toScreen(cluster.x, cluster.y);
       return { key: cluster.key, left: point.left, top: point.top };
     });
-    return spreadOverlaps(marks, FACE_D + 22);
-  }, [clusters, project]);
+    return spreadOverlaps(marks, FACE_D + 22,
+      box.width > 1 ? { left: 34, top: 20, right: box.width - 44, bottom: box.height - 20 } : undefined,
+      // A lone person's mark is a pill about twice as wide as it is tall.
+      1.35);
+  }, [clusters, project, box]);
+
+  // Where each place's name goes: beside its dot on the right, else the left,
+  // below or above - the first side where it covers no one's marker and stays in
+  // the frame. A name with no free side is not drawn (its dot still is): a name
+  // under a face could not be read and hid the face (2026-10-07 audit).
+  const placeLabels = useMemo(() => {
+    const out = new Map<string, { x: number; y: number; anchor: 'start' | 'middle' | 'end' }>();
+    const marks = clusters.map((cluster) => {
+      const at = layout.get(cluster.key);
+      if (!at) return null;
+      const alone = cluster.members.length === 1;
+      const left = at.left - (alone ? SOLO_LEFT : 28);
+      return { l: left, t: at.top - (alone ? 13 : 16), r: left + (alone ? SOLO_W : 56), b: at.top + (alone ? 13 : 16) };
+    }).filter((m): m is { l: number; t: number; r: number; b: number } => m !== null);
+    // The map's own controls sit over its corners: a name goes around them too.
+    const controls = [
+      { l: box.width - 52, t: 0, r: box.width, b: 52 },                          // north
+      { l: box.width - 150, t: box.height - 76, r: box.width, b: box.height },   // zoom tools, credit
+    ];
+    const taken = [...marks, ...controls];
+    for (const place of Object.values(village.places)) {
+      if (place.offMap || !LABELLED_PLACES.has(place.id)) continue;
+      const [px, py] = frame.at(place.x, place.y);
+      const p = project.toScreen(px, py);
+      const { w, h } = plateSize(place.label, 10);
+      const gap = 8;
+      const sides = [
+        { l: p.left + gap, t: p.top - h / 2, anchor: 'start' as const, tx: p.left + gap + 8.2, ty: p.top + 3.4 },
+        { l: p.left - gap - w, t: p.top - h / 2, anchor: 'end' as const, tx: p.left - gap - 8.2, ty: p.top + 3.4 },
+        { l: p.left - w / 2, t: p.top + gap, anchor: 'middle' as const, tx: p.left, ty: p.top + gap + h / 2 + 3.4 },
+        { l: p.left - w / 2, t: p.top - gap - h, anchor: 'middle' as const, tx: p.left, ty: p.top - gap - h / 2 + 3.4 },
+      ];
+      const free = sides.find((side) => {
+        const r = { l: side.l, t: side.t, r: side.l + w, b: side.t + h };
+        const inside = r.l >= 2 && r.t >= 2 && r.r <= box.width - 2 && r.b <= box.height - 2;
+        return inside && !taken.some((m) => r.l < m.r && r.r > m.l && r.t < m.b && r.b > m.t);
+      });
+      if (!free) continue;
+      taken.push({ l: free.l, t: free.t, r: free.l + w, b: free.t + h });
+      const at = project.toSvg(free.tx, free.ty);
+      out.set(place.id, { x: at.x, y: at.y, anchor: free.anchor });
+    }
+    return out;
+  }, [clusters, layout, village.places, frame, project, box]);
 
   const anchors = useMemo(() => {
     const out = new Map<string, { left: number; top: number }>();
@@ -544,7 +636,11 @@ export default function VillageMap({
           viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}
           preserveAspectRatio="xMidYMid meet"
         >
-          <rect x={vx - vw} y={vy - vh} width={vw * 3} height={vh * 3} fill="#f8f7f4" />
+          
+
+          {/* The land, light, on the dark ground: the raster's own edges, or the
+              village's frame when there is no raster. */}
+          <rect x={extent.x} y={extent.y} width={extent.w} height={extent.h} fill="#f8f7f4" />
 
           {/* The source's own map. Research material, fetched from the local API
               and never bundled. Desaturated so the people on top of it are the
@@ -603,8 +699,8 @@ export default function VillageMap({
           {Object.values(village.places)
             .filter((place) => !place.offMap)
             .map((place) => {
-              const label = LABELLED_PLACES.has(place.id);
               const [px, py] = frame.at(place.x, place.y);
+              const spot = placeLabels.get(place.id);
               return (
                 <g key={place.id} style={{ pointerEvents: 'none' }}>
                   <circle
@@ -615,27 +711,35 @@ export default function VillageMap({
                     stroke={colour.secondary}
                     strokeWidth={1.4 * k}
                   />
-                  {label && (
-                    // The sea's people stand on its point, so its name goes under
-                    // them rather than beside, where their markers covered it. A
-                    // place near the right edge (the road out, north) is named on
-                    // its left, or the edge cuts the name.
-                    <text
-                      x={place.id === 'SEA' ? px : px + (px > vx + vw * 0.85 ? -7 : 7) * k}
-                      y={place.id === 'SEA' ? py + 30 * k : py + 3.6 * k}
-                      textAnchor={place.id === 'SEA' ? 'middle' : px > vx + vw * 0.85 ? 'end' : undefined}
-                      fontSize={10 * k}
+                  {spot && (
+                    <PillText
+                      x={spot.x}
+                      y={spot.y}
+                      anchor={spot.anchor}
+                      size={10 * k}
+                      weight={600}
                       fill={colour.text}
-                      stroke="#ffffff"
-                      strokeWidth={2.6 * k}
-                      paintOrder="stroke"
-                    >
-                      {place.label}
-                    </text>
+                      plate="rgba(255, 255, 255, 0.86)"
+                      text={place.label}
+                      within={view}
+                    />
                   )}
                 </g>
               );
             })}
+
+          {/* Where the scene on the stage is happening: a pulsing ring and its name. */}
+          {spots.map((spot) => (
+            <g key={spot.key} pointerEvents="none">
+              <circle cx={spot.x} cy={spot.y} r={34 * k} fill="rgba(226, 84, 44, 0.16)" stroke={SPOT} strokeWidth={3 * k} />
+              <circle cx={spot.x} cy={spot.y} r={34 * k} fill="none" stroke={SPOT} strokeWidth={2 * k}>
+                <animate attributeName="r" values={`${34 * k};${58 * k}`} dur="1.4s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.9;0" dur="1.4s" repeatCount="indefinite" />
+              </circle>
+              <PillText x={spot.x} y={spot.y - 46 * k} anchor="middle" size={13 * k} weight={800}
+                fill="#fff" plate={SPOT} text={`지금 대화 · ${spot.label}`} within={view} />
+            </g>
+          ))}
 
           {clusters.map((cluster) => {
             const at = layout.get(cluster.key);
@@ -669,11 +773,10 @@ export default function VillageMap({
           })}
         </Svg>
 
-        <MapTitle>{title}</MapTitle>
         {medial && <ModeBadge>MEDial이 보고받은 위치만 표시 중</ModeBadge>}
 
         <Compass>
-          <div style={{ fontSize: 14, lineHeight: 1, transform: `rotate(${frame.northDeg}deg)` }}>▲</div>
+          <div style={{ fontSize: 10, lineHeight: 1, transform: `rotate(${frame.northDeg}deg)` }}>▲</div>
           <div>북</div>
         </Compass>
 
@@ -759,8 +862,10 @@ export default function VillageMap({
         title={outside.length > 0 ? '마을 밖은 이 지도에 좌표가 없어 목록으로만 적습니다. 지도 여백에 임의로 놓지 않습니다.' : undefined}>
         <strong>{outside.length ? '지금 마을 밖에 있는 사람' : '마을 밖에 나가 있는 사람 없음'}</strong>
         {outside.map((pose) => (
-          <OutChip key={pose.id}>
-            {personName(pose.id)}
+          // P-number and where: the full name made three chips a row too wide
+          // for a column sized to the village, and the fourth row was hidden.
+          <OutChip key={pose.id} title={personName(pose.id)}>
+            {pose.id}
             <span>{pose.activity === '알 수 없음' ? (placeLabel(village, pose.place, pose.id) ?? '마을 밖') : pose.activity}</span>
           </OutChip>
         ))}
@@ -968,19 +1073,8 @@ function ClusterMark({
       </text>}
 
       {medial && (
-        <text
-          x={x}
-          y={y - r - 6 * k}
-          fontSize={10 * k}
-          textAnchor="middle"
-          fill={colour.secondary}
-          stroke="#ffffff"
-          strokeWidth={2.4 * k}
-          paintOrder="stroke"
-          style={{ pointerEvents: 'none' }}
-        >
-          보고받은 위치
-        </text>
+        <PillText x={x} y={y - r - 6 * k} anchor="middle" size={10 * k} weight={600}
+          fill={colour.secondary} plate="rgba(255, 255, 255, 0.86)" text="보고받은 위치" />
       )}
     </g>
   );

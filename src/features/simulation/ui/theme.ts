@@ -22,6 +22,23 @@ export const colour = {
   unknown: '#8B96A1',
 } as const;
 
+/** The exhibition's night palette (2026-10-07): the opening film and the observe
+ *  screen share it, so watching the village reads as one piece with the film
+ *  rather than a dark player beside a light admin panel. The village map is the
+ *  one light object on it. `accent` is "now" everywhere - the lit timeline line,
+ *  the ring on the map where the stage is, the open request. */
+export const night = {
+  ground: '#121310',
+  panel: '#1b1c18',
+  raised: '#25261f',
+  line: 'rgba(246, 241, 232, 0.10)',
+  ink: '#f6f1e8',
+  mute: 'rgba(246, 241, 232, 0.66)',
+  faint: 'rgba(246, 241, 232, 0.40)',
+  accent: '#e2542c',
+  accentSoft: 'rgba(226, 84, 44, 0.16)',
+} as const;
+
 /** One font stack: Pretendard, shipped with the build.
  *
  *  An earlier stack named 'Pretendard' without loading it, so every screen was

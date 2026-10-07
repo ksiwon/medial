@@ -37,11 +37,9 @@ export interface LedgerRow {
 }
 
 export interface Ledger {
-  /** Requests MEDial took part in. A scene it was not in is not its request. */
+  /** Requests MEDial took part in. A scene it was not in is not its request
+   *  (the timeline says those apart: timelineAt). */
   rows: LedgerRow[];
-  /** What happened that MEDial never saw - said apart from its own work, because
-   *  the study's premise is that people who bear things quietly are not seen. */
-  unseen: LedgerRow[];
   /** Requests MEDial has taken on, finished, and still has open at the playhead. */
   taken: number;
   done: number;
@@ -99,9 +97,7 @@ export function ledgerAt(
     byKey.set(key, row);
   }
 
-  const started = [...byKey.values()].filter((row) => atMs >= row.firstMs);
-  const unseen = started.filter((row) => !row.medial);
-  const rows = started.filter((row) => row.medial)
+  const rows = [...byKey.values()].filter((row) => atMs >= row.firstMs && row.medial)
     .map((row): LedgerRow => ({
       ...row,
       steps: row.steps.sort((a, b) => a.atMs - b.atMs),
@@ -114,7 +110,6 @@ export function ledgerAt(
 
   return {
     rows,
-    unseen: unseen.map((row): LedgerRow => ({ ...row, steps: row.steps.sort((a, b) => a.atMs - b.atMs), state: 'done' })),
     taken: rows.length,
     done: rows.filter((r) => r.state === 'done').length,
     open: rows.filter((r) => r.state === 'open').length,
@@ -122,21 +117,82 @@ export function ledgerAt(
   };
 }
 
-/** Where the village is at the playhead, in words: the routine the day sits on. */
+/** One Task on the day's timeline. */
+export interface TimelineItem {
+  requestId: string;
+  title: string;
+  /** The request it belongs to, said once it has begun ("응답 없는 안부 확인"). */
+  need: string | null;
+  subjectId: string | null;
+  startMs: number;
+  endMs: number;
+  /** Over, happening at the playhead, or not begun but known ahead (scheduled). */
+  state: 'done' | 'now' | 'planned';
+  /** MEDial took part. A Task it was never in is something it did not see. */
+  medial: boolean;
+}
+
+/**
+ * The day as a timeline at `atMs`: every Task begun so far, in order, and the
+ * Tasks the record says were scheduled ahead and have not begun.
+ *
+ * Nothing else ahead is listed. A call that comes because someone did not answer,
+ * or an emergency in the evening, is not known until it happens - only what was
+ * planned before the day (MEDial's own check-in call, a booked appointment) is.
+ * A planned Task says what it is, never how it went: its request's name is the
+ * panel's, which is written from the outcome ("응답 없는" 안부 확인), so it waits.
+ * What MEDial never saw is listed only when `showUnseen` (the researcher's view).
+ */
+export function timelineAt(
+  episodes: Episode[],
+  atMs: number,
+  scheduled: ReadonlySet<string>,
+  subtitleOf: (requestId: string) => string | null | undefined,
+  showUnseen: boolean,
+): TimelineItem[] {
+  const tasks = new Map<string, Episode[]>();
+  for (const episode of episodes) tasks.set(episode.requestId, [...(tasks.get(episode.requestId) ?? []), episode]);
+  // A Task belongs to MEDial when its request does (as in ledgerAt): the visit a
+  // village head makes because MEDial asked is MEDial's work, though it is not there.
+  const keyOf = (requestId: string, first: Episode) =>
+    `${needOf(subtitleOf(requestId), first.title)}|${first.subjectId ?? ''}`;
+  const ours = new Set([...tasks].filter(([, parts]) => parts.some((part) => part.beats.some((beat) => beat.medial)))
+    .map(([requestId, parts]) => keyOf(requestId, parts[0])));
+  const items: TimelineItem[] = [];
+  for (const [requestId, parts] of tasks) {
+    const first = parts[0];
+    const startMs = Math.min(...parts.map((p) => p.startMs));
+    const endMs = Math.max(...parts.map((p) => p.endMs));
+    const medial = ours.has(keyOf(requestId, first));
+    const begun = atMs >= startMs;
+    if (!begun && !scheduled.has(requestId)) continue;
+    if (!medial && !showUnseen) continue;
+    items.push({
+      requestId, title: first.title, subjectId: first.subjectId, startMs, endMs, medial,
+      need: begun ? needOf(subtitleOf(requestId), first.title) : null,
+      // Over at its end: the call that ends at 09:40 is not still lit when the next begins at 09:40.
+      state: !begun ? 'planned' : atMs < Math.max(endMs, startMs + 60_000) ? 'now' : 'done',
+    });
+  }
+  return items.sort((a, b) => a.startMs - b.startMs);
+}
+
+/** Where the village is at the playhead: the routine the day sits on. */
 export interface Routine {
   /** People where their ordinary day puts them. */
   onRoutine: number;
   /** People doing something other than their routine - the day's departures. */
   departed: number;
-  /** A few of the places people are, most-occupied first, with a head count. */
-  where: { label: string; count: number }[];
+  /** Every place someone is, most-occupied first: who is there, and which of
+   *  them are off their ordinary day. */
+  where: { label: string; count: number; ids: string[]; departed: string[] }[];
 }
 
 export function routineAt(
   poses: { place: string | null; offMap: boolean; moving: boolean; divergesFromBaseline: boolean; id: string }[],
   labelOf: (place: string | null, id: string) => string | null,
 ): Routine {
-  const counts = new Map<string, number>();
+  const groups = new Map<string, { ids: string[]; departed: string[] }>();
   for (const pose of poses) {
     // A home is a home. placeLabel leaves a person's own home unnamed (a person
     // is not told where they live), which is not the same as being on the road:
@@ -145,12 +201,16 @@ export function routineAt(
       : pose.moving ? '길 위'
         : pose.place?.startsWith('HOME:') ? '자택'
           : labelOf(pose.place, pose.id) ?? '길 위';
-    counts.set(label, (counts.get(label) ?? 0) + 1);
+    const group = groups.get(label) ?? { ids: [], departed: [] };
+    group.ids.push(pose.id);
+    if (pose.divergesFromBaseline) group.departed.push(pose.id);
+    groups.set(label, group);
   }
   const departed = poses.filter((p) => p.divergesFromBaseline).length;
   return {
     onRoutine: poses.length - departed,
     departed,
-    where: [...counts].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count).slice(0, 5),
+    where: [...groups].map(([label, g]) => ({ label, count: g.ids.length, ids: g.ids, departed: g.departed }))
+      .sort((a, b) => b.count - a.count),
   };
 }
