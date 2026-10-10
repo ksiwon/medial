@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import styled from 'styled-components';
 import type { AttemptDetail, DomainEvent, VillagePayload } from '../api/types';
 import DayTimeline from '../components/DayTimeline';
+import DaySummary from '../components/DaySummary';
 import MedialDashboard from '../components/MedialDashboard';
 import VillageMap from '../components/VillageMap';
 import { formatClock, medialKnowledge, placeLabel, posesAt } from '../positions';
@@ -150,9 +151,11 @@ interface Props {
   onReadEvaluations: () => void;
   /** Which day this is and the way back, for a record that is walked day by day. */
   strip?: { day: string };
+  /** The rules the visitor changed on the way here, by the name the judgement panel gives them. */
+  changedRules?: readonly string[];
 }
 
-export default function ObserveScreen({ village, detail, events, art, dayEnd: ending, onReadEvaluations, strip }: Props) {
+export default function ObserveScreen({ village, detail, events, art, dayEnd: ending, onReadEvaluations, strip, changedRules = [] }: Props) {
   const p = usePlayback();
   /** To the next scene, and on playing from there (jumpScene stops the clock). */
   const skip = async () => {
@@ -300,10 +303,12 @@ export default function ObserveScreen({ village, detail, events, art, dayEnd: en
           {/* Not mounted behind a scene: an invisible layer would still be read out,
               and would say twice what the judgement panel says once. */}
           <DashLayer $on={!inScene}>
-            {!inScene && (
-              <MedialDashboard ledger={ledger} next={next} holdsOf={holdsOf}
-                routine={p.viewMode === 'researcher' ? routine : null} />
-            )}
+            {!inScene && (dayOver
+              ? <DaySummary items={timeline} />
+              : (
+                <MedialDashboard ledger={ledger} next={next} holdsOf={holdsOf}
+                  routine={p.viewMode === 'researcher' ? routine : null} />
+              ))}
           </DashLayer>
           <SceneLayer $on={inScene} aria-hidden={!inScene}>
             {scene && judgment && (
@@ -315,7 +320,7 @@ export default function ObserveScreen({ village, detail, events, art, dayEnd: en
                 line={line}
                 typing={typing}
                 seconds={beatSeconds}
-                panel={{ title: scene.episode.title, subtitle: stored?.subtitle ?? null, tint, judgment, lit }}
+                panel={{ title: scene.episode.title, subtitle: stored?.subtitle ?? null, tint, judgment, lit, changedRules }}
               />
             )}
           </SceneLayer>

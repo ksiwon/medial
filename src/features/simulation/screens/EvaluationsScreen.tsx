@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import {
   ASSESSMENT_LABELS,
@@ -273,7 +273,6 @@ const Note = styled.p`
 const Next = styled.button`
   ${pill('lg')}
   ${beckon}
-  align-self: flex-start;
   height: ${px(56)};
   padding: 0 ${space.xl};
   font: inherit;
@@ -287,6 +286,35 @@ const Next = styled.button`
   &::after { content: '→'; margin-left: ${px(4)}; }
   &:hover { transform: translateY(-2px); }
   &:focus-visible { outline: 2px solid ${night.ink}; outline-offset: 4px; }
+`;
+
+const Actions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: ${space.lg};
+`;
+
+const Back = styled.button`
+  ${pill('md')}
+  height: ${px(56)};
+  padding: 0 ${space.xl};
+  font: inherit;
+  font-size: ${px(16)};
+  font-weight: 800;
+  cursor: pointer;
+  color: ${night.ink};
+  background: transparent;
+  border: 1px solid ${inkA(0.3)};
+  &:hover { border-color: ${inkA(0.7)}; }
+  &:focus-visible { outline: 2px solid ${night.ink}; outline-offset: 4px; }
+`;
+
+const Count = styled.span`
+  font-size: ${px(16)};
+  font-weight: 700;
+  color: ${night.mute};
+  font-variant-numeric: tabular-nums;
 `;
 
 const Empty = styled.div`
@@ -358,6 +386,9 @@ interface Props {
 
 const NO_ART: ReadonlySet<string> = new Set();
 
+/** How many residents a page holds: what fits side by side on a wall screen. More are a button away. */
+const PER_PAGE = 4;
+
 export default function EvaluationsScreen({
   detail,
   generation,
@@ -375,6 +406,8 @@ export default function EvaluationsScreen({
     [generation],
   );
   const eventsById = useMemo(() => new Map((events?.list ?? []).map((e) => [e.id, e])), [events]);
+  const [page, setPage] = useState(0);
+  useEffect(() => setPage(0), [generation?.id]);
   const synthesis = generation?.synthesis ?? null;
   const parentDay = detail.generations.find((g) => g.id === generation?.parentGenerationId) ?? null;
   const before = useMemo(
@@ -397,6 +430,7 @@ export default function EvaluationsScreen({
     );
   }
 
+  const pages = Math.ceil(asked.length / PER_PAGE);
   const others = residents.filter((id) => !asked.some((r) => r.actorId === id)).length;
 
   return (
@@ -415,7 +449,7 @@ export default function EvaluationsScreen({
         </Context>
 
         <Cards>
-          {asked.map((review) => (
+          {asked.slice(page * PER_PAGE, (page + 1) * PER_PAGE).map((review) => (
             <PersonCard key={review.id} review={review} art={art}
               cited={events?.attemptId === review.attemptId ? eventsById : null}
               yesterday={before.get(review.actorId) ?? null}
@@ -455,10 +489,18 @@ export default function EvaluationsScreen({
         <Note>
           합성 평가입니다. 실제 주민의 만족도나 동의가 아니며, 나중에 실제 주민이 확인·반박할 대상입니다.
         </Note>
-        {/* The last day has nothing left to change: its evaluations lead to the result. */}
-        <Next onClick={onGoToImprove}>
-          {generation.changeSets.length > 0 ? '이 평가를 보고 무엇을 고칠지 고른다' : '결과 보러 가기'}
-        </Next>
+        <Actions>
+          {pages > 1 && page > 0 && <Back onClick={() => setPage(page - 1)}>← 앞 주민</Back>}
+          {page < pages - 1 ? (
+            <Next onClick={() => setPage(page + 1)}>다음 주민 보기</Next>
+          ) : (
+            /* The last day has nothing left to change: its evaluations lead to the result. */
+            <Next onClick={onGoToImprove}>
+              {generation.changeSets.length > 0 ? '이 평가를 보고 무엇을 고칠지 고른다' : '결과 보러 가기'}
+            </Next>
+          )}
+          {pages > 1 && <Count>{page + 1} / {pages} · 주민 {asked.length}명</Count>}
+        </Actions>
       </Inner>
     </Sheet>
   );

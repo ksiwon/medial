@@ -77,3 +77,21 @@ export function dayLine(facts: DayFacts): string {
     ...(facts.resolveMinutes != null ? [`확인까지 ${facts.resolveMinutes}분`] : []),
     `이장이 받은 부탁 ${facts.headAsks}번`, `거절 ${facts.refusals}번`].join(' · ');
 }
+
+/**
+ * The names of the rules the visitor changed on the way to this day, as the
+ * judgement panel names a rule: each choice on the path (a change set applied to
+ * the day before it) contributes the rule it edits.
+ */
+export function changedRuleNames(detail: SessionDetail, generationId: string): string[] {
+  const names: string[] = [];
+  for (const g of pathTo(detail, generationId)) {
+    if (!g.appliedChangeSetId || !g.parentGenerationId) continue;
+    const parent = detail.generations.find((x) => x.id === g.parentGenerationId);
+    const rule = parent?.changeSets.find((c) => c.id === g.appliedChangeSetId)?.changes[0];
+    if (!parent || !rule) continue;
+    const label = (rule.semantic && parent.ruleCatalog.find((r) => r.ruleType === rule.semantic!.ruleType)?.label) ?? rule.field;
+    if (label && !names.includes(label)) names.push(label);
+  }
+  return names;
+}

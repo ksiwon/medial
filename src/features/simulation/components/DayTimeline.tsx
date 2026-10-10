@@ -109,9 +109,9 @@ const Clock = styled.time`
 
 /** Past the scene on screen, to the next one - the only control a visitor needs besides play. */
 const Skip = styled.button`
-  ${pill('sm')}
+  ${pill('md')}
   font: inherit;
-  font-weight: 700;
+  font-weight: 800;
   cursor: pointer;
   border: 1px solid ${inkA(0.25)};
   background: transparent;

@@ -11,9 +11,9 @@ const ASK_MS = 3000;
 
 const Button = styled.button<{ $asking: boolean }>`
   font: inherit;
-  font-size: ${px(12)};
+  font-size: ${px(16)};
   font-weight: 800;
-  height: ${px(28)};
+  height: ${px(36)};
   padding: 0 ${space.lg};
   border-radius: ${radius.pill};
   cursor: pointer;

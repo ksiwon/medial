@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import type { GenerationDetail, SessionDetail } from '../api/iteration';
 import { childFor, dayFacts, dayName, pathCount, pathTo } from '../selectors/tree';
-import { nameList, withParticle } from '../selectors/story';
+import { nameList, personName, withParticle } from '../selectors/story';
 import { accentA, inkA, night, px, radius, space } from '../ui/theme';
 import { Inner, PageHead, Sheet } from '../ui/page';
 import Portrait from '../ui/Portrait';
@@ -157,16 +157,24 @@ const Day = styled.li`
   > p { margin: 0; font-size: ${px(16)}; line-height: 1.6; color: ${night.mute}; word-break: keep-all; }
 `;
 
-const Facts = styled.dl`
+/** What the residents of that day said, in their words: the page's answer to "what happened". */
+const Said = styled.blockquote`
   margin: 0;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: ${space.sm} ${space.lg};
-  padding-top: ${px(16)};
+  padding-top: ${space.lg};
   border-top: 1px solid ${night.line};
   font-size: ${px(16)};
-  > dt { color: ${night.mute}; }
-  > dd { margin: 0; font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; color: ${night.ink}; }
+  line-height: 1.7;
+  color: ${night.ink};
+  word-break: keep-all;
+  > cite { display: block; margin-bottom: ${space.sm}; font-style: normal; font-size: ${px(12)}; font-weight: 800; letter-spacing: 0.08em; color: ${night.faint}; }
+`;
+
+/** The rule the visitor put in force that day. */
+const Rule2 = styled.div`
+  font-size: ${px(16)};
+  line-height: 1.6;
+  color: ${night.mute};
+  > b { display: block; margin-bottom: ${space.xs}; font-size: ${px(12)}; letter-spacing: 0.08em; color: ${night.accent}; }
 `;
 
 const Again = styled.button`
@@ -230,23 +238,27 @@ function Ending({ detail, current, onRestart }: { detail: SessionDetail; current
     <Sheet>
       <Inner>
         <PageHead eyebrow="사흘이 끝났습니다" title="고른 것과, 마을이 어떻게 됐는지">
-          첫 설정에서 갈라지는 {pathCount(detail, pathTo(detail, current.id)[0]?.id ?? '')}가지 경로 가운데 하나입니다. 이 결과는 미리 계산해 둔 것이고, 실시간 모델 호출은 없습니다.
+          첫 설정에서 갈라지는 {pathCount(detail, pathTo(detail, current.id)[0]?.id ?? '')}가지 경로 가운데 하나입니다. 날마다 마을에서 일어난 일이 다르니 숫자로 견주지 말고, 그날 주민의 말과 여러분이 바꾼 규칙을 읽어 주세요. 이 결과는 미리 계산해 둔 것이고, 실시간 모델 호출은 없습니다.
         </PageHead>
         <Days>
           {pathTo(detail, current.id).map((g) => {
             const facts = dayFacts(g);
+            const parent = detail.generations.find((x) => x.id === g.parentGenerationId);
+            const rule = parent?.changeSets.find((c) => c.id === g.appliedChangeSetId)?.changes[0];
+            const voice = [...g.reviews]
+              .filter((r) => r.usageStatus !== 'no_experience')
+              .sort((x, y) => x.actorId.localeCompare(y.actorId, undefined, { numeric: true }))[0];
             return (
               <Day key={g.id}>
                 <small>{dayName(g)}</small>
                 <strong>{g.label}</strong>
                 {facts && <p>{facts.dayTitle}</p>}
-                <Facts>
-                  <dt>확인까지</dt><dd>{facts?.resolveMinutes != null ? `${facts.resolveMinutes}분` : '—'}</dd>
-                  <dt>이장이 받은 부탁</dt><dd>{facts ? `${facts.headAsks}번` : '—'}</dd>
-                  <dt>거절</dt><dd>{facts ? `${facts.refusals}번` : '—'}</dd>
-                  <dt>기관 인계</dt><dd>{facts?.handoff ?? '—'}</dd>
-                  <dt>동승 주선</dt><dd>{facts?.rideRefused ? '실패' : '—'}</dd>
-                </Facts>
+                {rule && (
+                  <Rule2><b>이날 바뀐 규칙</b>{rule.afterRule}</Rule2>
+                )}
+                {voice && (
+                  <Said><cite>{personName(voice.actorId)}의 말</cite>{voice.overallNarrative}</Said>
+                )}
               </Day>
             );
           })}

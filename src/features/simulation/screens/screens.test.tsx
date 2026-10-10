@@ -12,11 +12,11 @@ import { usePlayback } from '../scene/playback';
 import { learnPeople, personName, sentenceFor } from '../selectors/story';
 import ChoiceScreen, { SUMMARY_IDLE_S } from './ChoiceScreen';
 import IntroScreen from './IntroScreen';
-import { foldAsking } from '../scene/JudgmentPanel';
+import JudgmentPanel, { foldAsking } from '../scene/JudgmentPanel';
 import DayTimeline from '../components/DayTimeline';
 import MedialDashboard from '../components/MedialDashboard';
 import { ledgerAt, timelineAt } from '../selectors/dayLedger';
-import { openingOf, pathCount } from '../selectors/tree';
+import { changedRuleNames, openingOf, pathCount } from '../selectors/tree';
 import EvaluationsScreen from './EvaluationsScreen';
 import ObserveScreen from './ObserveScreen';
 
@@ -245,6 +245,21 @@ describe('EvaluationsScreen', () => {
     expect(screen.queryByText('이 평가를 보고 무엇을 고칠지 고른다')).toBeNull();
   });
 
+  it('pages the residents by four and leads on with a button until the last page', () => {
+    const day = ordered()[0];
+    const asked = day.reviews.filter((r) => r.usageStatus !== 'no_experience');
+    if (asked.length === 0) return;
+    const many = Array.from({ length: 5 }, (_, i) => ({ ...asked[0], id: `r${i}`, actorId: `P${i + 1}` }));
+    const { container } = evaluations({ generation: { ...day, reviews: many } });
+    expect(container.querySelectorAll('article')).toHaveLength(4);
+    expect(screen.queryByText('이 평가를 보고 무엇을 고칠지 고른다')).toBeNull();
+    fireEvent.click(screen.getByText('다음 주민 보기'));
+    expect(container.querySelectorAll('article')).toHaveLength(1);
+    expect(screen.getByText('이 평가를 보고 무엇을 고칠지 고른다')).toBeDefined();
+    fireEvent.click(screen.getByText('← 앞 주민'));
+    expect(container.querySelectorAll('article')).toHaveLength(4);
+  });
+
   it('keeps the issue groups, with the original items they were made of', () => {
     if ((ordered()[0].synthesis?.issueGroups.length ?? 0) === 0) return;
     const { container } = evaluations();
@@ -417,6 +432,31 @@ describe('the end of the three days, in a hall', () => {
   });
 });
 
+describe('JudgmentPanel rules', () => {
+  const judgment = {
+    question: null, knows: [], asked: [], ruledOut: [], told: null, withheld: null, rationale: null, result: null,
+    rules: [{ label: '연락 최소 간격', sentence: '15분을 비워 둔다' }, { label: '제3자에게 알리는 범위', sentence: '사실만 전달한다' }],
+  } as unknown as Parameters<typeof JudgmentPanel>[0]['judgment'];
+  const panel = (changedRules: string[]) => render(
+    <JudgmentPanel title="t" tint="#000" judgment={judgment} lit={4} absent={false} waiting={null} changedRules={changedRules} />,
+  );
+
+  it('says every rule in full when the visitor has changed none', () => {
+    panel([]);
+    expect(screen.getByText('15분을 비워 둔다', { exact: false })).toBeDefined();
+    expect(screen.getByText('사실만 전달한다', { exact: false })).toBeDefined();
+    expect(screen.queryByText('내가 고친 규칙')).toBeNull();
+  });
+
+  it('marks the rule the visitor changed and shrinks the others to their names', () => {
+    panel(['연락 최소 간격']);
+    expect(screen.getByText('내가 고친 규칙')).toBeDefined();
+    expect(screen.getByText('15분을 비워 둔다', { exact: false })).toBeDefined();
+    expect(screen.getByText('제3자에게 알리는 범위')).toBeDefined();
+    expect(screen.queryByText('사실만 전달한다', { exact: false })).toBeNull();
+  });
+});
+
 describe('ChoiceScreen', () => {
   const base = session.generations[0];
   const gen = (id: string, over: Partial<GenerationDetail>): GenerationDetail =>
@@ -449,6 +489,18 @@ describe('ChoiceScreen', () => {
     expect(chosen).toBe('a1');
     expect((screen.getByText('돌리지 않은 안').closest('button') as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getAllByText('후 규칙').length).toBe(2);
+  });
+
+  it('names the rules the visitor changed on the way to a day', () => {
+    expect(changedRuleNames(tree, 'a')).toEqual([]);
+    expect(changedRuleNames(tree, 'a1')).toEqual(['retry']);
+  });
+
+  it('says what each day changed and what a resident said, with no numbers to compare', () => {
+    const { container } = render(<ChoiceScreen detail={tree} current={tree.generations[2]} onChoose={noop} onRestart={noop} />);
+    expect(container.textContent).toContain('이날 바뀐 규칙');
+    expect(container.textContent).toContain('후 규칙');
+    expect(container.textContent).not.toContain('확인까지');
   });
 
   it('ends the walk with the days taken and a way back', () => {

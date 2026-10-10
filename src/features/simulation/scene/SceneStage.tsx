@@ -207,7 +207,7 @@ interface Props {
   typing: boolean;
   /** Real seconds the beat plays for, for the slow push-in. */
   seconds: number;
-  panel: { title: string; subtitle?: string | null; tint: string; judgment: Judgment; lit: number };
+  panel: { title: string; subtitle?: string | null; tint: string; judgment: Judgment; lit: number; changedRules?: readonly string[] };
 }
 
 export default function SceneStage({ beat, beatKey, village, art, line, typing, seconds, panel }: Props) {

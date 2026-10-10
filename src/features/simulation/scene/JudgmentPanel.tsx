@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { colour, font, night, radius } from '../ui/theme';
+import { colour, font, night, radius, space } from '../ui/theme';
 import { VERDICT_WORD, nameOf, type Judgment } from './judgment';
 import { pill } from '../ui/primitives';
 
@@ -74,6 +74,36 @@ const Step = styled.li<{ $on: boolean }>`
   ul { margin: 0; padding: 0; }
 `;
 
+/** A rule the visitor changed is said in full and marked; the others shrink to their names. */
+const Mine = styled.span`
+  margin-left: ${space.sm};
+  padding: 0 ${space.sm};
+  border-radius: ${radius.pill};
+  background: ${night.accent};
+  color: #fff;
+  font-size: calc(12px * var(--k, 1));
+  font-weight: 800;
+  white-space: nowrap;
+`;
+
+function RuleList({ rules, changed }: { rules: { label: string; sentence: string }[]; changed: readonly string[] }) {
+  const mine = rules.filter((r) => changed.includes(r.label));
+  if (mine.length === 0) {
+    return <ul>{rules.map((r) => <li key={r.label}><b>{r.label}</b><br />{r.sentence}</li>)}</ul>;
+  }
+  const rest = rules.filter((r) => !changed.includes(r.label));
+  return (
+    <ul>
+      {mine.map((r) => (
+        <li key={r.label} style={{ fontSize: 'calc(16px * var(--k, 1))' }}>
+          <b>{r.label}</b><Mine>내가 고친 규칙</Mine><br />{r.sentence}
+        </li>
+      ))}
+      {rest.map((r) => <li key={r.label} style={{ opacity: 0.55 }}>{r.label}</li>)}
+    </ul>
+  );
+}
+
 const None = styled.div`
   font-size: calc(12px * var(--k, 1));
   color: #8d8980;
@@ -134,7 +164,7 @@ export function foldAsking(asked: Judgment['asked']): (Judgment['asked'][number]
   return out;
 }
 
-export default function JudgmentPanel({ title, subtitle, tint, judgment, lit, absent, waiting }: {
+export default function JudgmentPanel({ title, subtitle, tint, judgment, lit, absent, waiting, changedRules = [] }: {
   title: string;
   subtitle?: string | null;
   tint: string;
@@ -143,6 +173,8 @@ export default function JudgmentPanel({ title, subtitle, tint, judgment, lit, ab
   lit: number;
   absent: boolean;
   waiting: string | null;
+  /** The rules the visitor changed on the way here: the ones that matter on this screen. */
+  changedRules?: readonly string[];
 }) {
   const j = judgment;
   return (
@@ -159,7 +191,7 @@ export default function JudgmentPanel({ title, subtitle, tint, judgment, lit, ab
         <Step $on={lit > 1}>
           <h4>걸린 규칙</h4>
           {j.rules.length
-            ? <ul>{j.rules.map((r) => <li key={r.label}><b>{r.label}</b><br />{r.sentence}</li>)}</ul>
+            ? <RuleList rules={j.rules} changed={changedRules} />
             : <None>아직 이 요청에 걸린 운영 규칙이 없다</None>}
         </Step>
         <Step $on={lit > 2}>

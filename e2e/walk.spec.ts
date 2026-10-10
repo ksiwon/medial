@@ -82,6 +82,10 @@ test('소개 → 1일차 → 주민 평가 → 수정안 고르기를 걷는다'
   await expect(page.getByText('미경험')).toHaveCount(0);
   await expect(page.locator('article').first()).toBeVisible();
 
+  // More than four residents are paged: a button leads on until the last page.
+  const next = page.getByRole('button', { name: '다음 주민 보기' });
+  while (await next.isVisible()) await next.click();
+
   // Then the revision to choose; a revision that was never run cannot be chosen.
   await page.getByRole('button', { name: /이 평가를 보고 무엇을 고칠지/ }).click();
   await expect(page.getByRole('heading', { name: '무엇을 고칠 것인가' })).toBeVisible();

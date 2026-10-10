@@ -6,7 +6,7 @@ import IntroScreen from './screens/IntroScreen';
 import ObserveScreen from './screens/ObserveScreen';
 import { useIterationStore } from './iterationStore';
 import { usePlayback } from './scene/playback';
-import { dayFacts, dayLine, dayName, openingOf } from './selectors/tree';
+import { changedRuleNames, dayFacts, dayLine, dayName, openingOf } from './selectors/tree';
 import { useSimStore } from './store';
 import HomeButton from './ui/HomeButton';
 import { preloadPortraits } from './ui/Portrait';
@@ -205,6 +205,7 @@ export default function SimulationApp() {
                     note: dayFacts(current) ? dayLine(dayFacts(current)!) : null }}
           onReadEvaluations={() => it.setScreen('evaluations')}
           strip={{ day: dayName(current) }}
+          changedRules={changedRuleNames(detail, current.id)}
         />
       )}
 
