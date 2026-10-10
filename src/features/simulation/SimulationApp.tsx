@@ -9,7 +9,7 @@ import { usePlayback } from './scene/playback';
 import { changedRuleNames, dayFacts, dayLine, dayName, openingOf } from './selectors/tree';
 import { useSimStore } from './store';
 import HomeButton from './ui/HomeButton';
-import { preloadPortraits } from './ui/Portrait';
+import { preloadArt } from './ui/Portrait';
 import { Callout, Mono } from './ui/primitives';
 import { font, night } from './ui/theme';
 import { useUiScale } from './ui/uiScale';
@@ -120,10 +120,9 @@ export default function SimulationApp() {
     if (owner && owner.id !== it.viewGenerationId) setViewGeneration(owner.id);
   }, [s.activeId, it.detail, it.viewGenerationId, setViewGeneration]);
 
-  // The faces the evaluation cards will show, fetched while the day plays.
-  useEffect(() => {
-    if (s.village && s.art.size > 0) preloadPortraits(s.village.residents.map((r) => r.id), s.art);
-  }, [s.art, s.village]);
+  // Every drawing, fetched while the film plays: the first scene of a day and the
+  // evaluation faces are then already here.
+  useEffect(() => { preloadArt(s.art); }, [s.art]);
 
   const viewGeneration = useMemo(
     () => it.detail?.generations.find((g) => g.id === it.viewGenerationId) ?? null,
@@ -167,8 +166,7 @@ export default function SimulationApp() {
             <div>
               <strong>읽을 기록이 없습니다.</strong>
               <div style={{ marginTop: 8 }}>
-                전시 기록을 가져오려면 <Mono>python scripts/import_exhibition.py --replace</Mono> 를 실행한 뒤
-                다시 여세요.
+                서버가 읽는 기록(<Mono>local-data/runs/sim.sqlite3</Mono>)이 비어 있습니다. 기록을 채운 뒤 다시 여세요.
               </div>
             </div>
           </Callout>

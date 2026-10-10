@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS attempts (
     trace_json TEXT NOT NULL DEFAULT '[]',
     -- The day as scenes (episodes of beats, lines and MEDial's panel), when the
     -- record carries them rather than the screen deriving them from the log:
-    -- the exhibition record (scripts/import_exhibition.py). Empty otherwise.
+    -- the exhibition record (stored in sim.sqlite3). Empty otherwise.
     scenes_json TEXT NOT NULL DEFAULT '{}'
 );
 CREATE TABLE IF NOT EXISTS events (

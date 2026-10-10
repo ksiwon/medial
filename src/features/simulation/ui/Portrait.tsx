@@ -46,13 +46,11 @@ const Disc = styled.div<{ $size: number }>`
   }
 `;
 
-/** Starts loading the faces of these people, so a reading page that shows them finds
- *  them already there instead of an empty disc while a large picture arrives. */
-export function preloadPortraits(actorIds: readonly string[], art: ReadonlySet<string>) {
-  for (const id of actorIds) {
-    const picture = portraitOf(id, art);
-    if (picture) new Image().src = api.artUrl(picture);
-  }
+/** Starts loading every drawn picture (47 small files, ~11 MB, served from this machine),
+ *  so neither a reading page's faces nor a scene's backdrop and figures are an empty
+ *  frame while a large picture arrives for the first time. */
+export function preloadArt(art: ReadonlySet<string>) {
+  for (const id of art) new Image().src = api.artUrl(id);
 }
 
 export default function Portrait({ actorId, art, size = 72 }: { actorId: string; art: ReadonlySet<string>; size?: number }) {

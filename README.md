@@ -62,11 +62,8 @@ macOS·Linux·Git Bash에서는 `./run-sim.sh` · `./run-real.sh` 입니다.
 
 **sim이 재생하는 기록은 둘 중 하나입니다.** 지금은 전시 기록입니다 — 전시 생성기가 사흘 동안
 날마다 셋 중 하나를 고르는 27경로를 전부 미리 돌려 둔 것(대화·주민 평가·수정안 포함)이고, 앱의 엔진이
-만든 것이 아니라는 것을 기록과 화면이 함께 말합니다:
-
-```bash
-python scripts/import_exhibition.py --replace   # 보관된 전시 묶음 → sim.sqlite3
-```
+만든 것이 아니라는 것을 기록과 화면이 함께 말합니다. 그 기록은 `local-data/runs/sim.sqlite3` 하나이며(git 밖),
+가져오는 스크립트는 없습니다(2026-10-10 삭제). 이 파일을 잃으면 다시 만들 수 없으니 따로 복사해 둡니다.
 
 real에서 돌린 실험을 대신 재생하려면 얼립니다 (전시 기록을 덮어씁니다):
 
@@ -141,11 +138,9 @@ npm run e2e
 | `src/features/simulation/` | 세 화면 · 지도 · 장면 재생(`scene/`) · 주민 평가 · 규칙 편집기 · 비교 · 현장 기록 · sim의 기록 목록 |
 | `run-sim.*` · `run-real.*` · `scripts/launch.sh` | 두 버전의 실행 파일과 그 공통 스크립트 |
 | `scripts/freeze_sim.py` | real의 기록을 sim이 재생할 사본으로 얼린다 |
-| `scripts/import_exhibition.py` | 보관된 전시 기록(사흘 · 27경로)을 sim이 재생할 기록으로 옮긴다 |
 | `scripts/art.mjs` | 관찰 화면의 장면 그림(배경·인물 레이어)을 그린다 → `local-data/art/` |
 | `scripts/import_village/` | 원자료 → 정규화 레지스트리 (출처 검증 포함) |
 | `docs/research/` | 지금 기준인 연구 문서 · 데이터 계약 · 설계 결정 기록 |
 | `docs/research/history/` | 지나온 기획·명세·프롬프트 (역사. 지금 구조를 정당화하지 않습니다) |
 | `docs/presentations/` | 발표자료 · 연구노트 (캡처와 PDF는 커밋하지 않습니다) |
 | `local-data/` | 원자료에서 파생된 레지스트리, 두 버전의 실행 기록(`runs/`), 장면 그림(`art/`). **커밋하지 않습니다** |
-| `local-archive/` | 실행 DB 백업. **커밋하지 않습니다** |

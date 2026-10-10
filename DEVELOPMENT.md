@@ -90,8 +90,9 @@ Windows에서는 `run-sim.cmd` · `run-real.cmd` 를 더블클릭해도 됩니�
 정리합니다. 직접 띄우려면 `python server/sim_main.py --mode sim|real` 과 `npm run dev`.
 버전을 정하지 않은 서버는 뜨지 않습니다(`mode.py`의 `ModeNotSet`).
 
-sim이 재생하는 기록은 둘 중 하나입니다 (2026-09-30, D112). 지금은 **전시 기록**(사흘 · 27경로):
-`python scripts/import_exhibition.py --replace` (보관된 `bundle.json` → `sim.sqlite3`). real의 기록을
+sim이 재생하는 기록은 둘 중 하나입니다 (2026-09-30, D112). 지금은 **전시 기록**(사흘 · 27경로)이며
+`local-data/runs/sim.sqlite3` 에 있습니다. 가져오던 `import_exhibition.py` 와 그 원본(`local-archive/`)은
+2026-10-10에 지웠습니다 — 이 파일이 유일한 사본입니다. real의 기록을
 얼리려면 `python scripts/freeze_sim.py` (`real.sqlite3` → `sim.sqlite3`, 덮어쓸 때 `--replace`, 돌고 있는
 세션이 있으면 거부) — 이것은 전시 기록을 덮어씁니다.
 
@@ -304,6 +305,10 @@ npm run e2e                            # 6 passed (Chromium, 합성 마을, .run
   고정, 장면은 기록이 정한 핵심 장면만. 설정 칸의 보기(연구자/MEDial 시점) · 장면 범위 · 앞 장면 · 하루 실현 라벨은 화면에서 지웠다.
 - **큰 화면.** 2000px 이상에서 평가 카드를 한 줄에 4명까지. 측정(1440 · 2560 · 3840): 관찰 · 하루 끝 · 마무리는 어디서도 스크롤이 없고, 평가 ·
   선택은 2560 · 3840에서 4명 이하인 날은 없다. 5명인 3일차(지금 기록)와 1440에서는 스크롤이 남는다.
+- **옛 잔재 정리(2026-10-10).** `scripts/import_exhibition.py` 와 원본 `local-archive/`(전시 생성기 · `bundle.json` · 옛 DB 백업),
+  `docs/presentations/screenshots/`, `.run`의 점검 산출물 약 140MB를 지웠다(모두 git 밖). 전시 기록은 `local-data/runs/sim.sqlite3`
+  하나만 남았고 다시 가져올 길이 없다 — 아래 옛 기록 중 `import_exhibition.py` · `local-archive/` 를 말하는 항목은 역사다.
+  기록이 비면 화면은 "서버가 읽는 기록이 비어 있습니다"만 말한다.
 - **최종 검토 반영(2026-10-10).** 평가는 한 쪽에 4명, 5명 이상이면 "다음 주민 보기 →" 버튼으로 쪽을 넘김(마지막 쪽에서 선택/결과 버튼).
   하루 끝 가운데 화면은 "오늘 일어난 일"(그날 Task를 시각 · 이름 · 누구 일인지로 크게). 마무리 화면은 수치 표를 지우고 날마다
   "이날 바뀐 규칙"과 그날 주민 한 명의 말만. 판단 패널은 방문자가 고친 규칙을 "내가 고친 규칙"으로 표시해 문장을 다 보이고, 나머지는 이름만.

@@ -399,8 +399,8 @@ export interface AttemptDetail {
   deck: DeckPayload;
   resources: ResourceRevision;
   lineageNote?: string;
-  /** The day as scenes, when the record carries them (the exhibition record,
-   *  scripts/import_exhibition.py); null when the screen derives them from the
+  /** The day as scenes, when the record carries them (the exhibition record);
+   *  null when the screen derives them from the
    *  log. */
   scenes?: StoredScenes | null;
 }
@@ -416,10 +416,10 @@ export interface StoredScenes {
   people: Record<string, string>;
   episodes: import('../scene/types').Episode[];
   /** The Tasks worth playing when a visitor has minutes, not a quarter hour. The record says which
-   *  (scripts/import_exhibition.py FEATURED); the screen chooses nothing. */
+   *  (the exhibition record); the screen chooses nothing. */
   featured?: string[];
   /** The Tasks known before they begin - MEDial's own check-in call, a booked appointment. The
-   *  timeline lists these ahead of the playhead and nothing else (scripts/import_exhibition.py SCHEDULED). */
+   *  timeline lists these ahead of the playhead and nothing else (the exhibition record). */
   scheduled?: string[];
   /** MEDial's panel for each Task, by the Task's id (an episode's requestId). */
   panels: Record<string, { subtitle: string; judgment: import('../scene/judgment').Judgment }>;

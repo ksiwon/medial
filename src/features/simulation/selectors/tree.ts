@@ -3,7 +3,7 @@ import type { GenerationDetail, SessionDetail } from '../api/iteration';
 // A session whose versions branch.
 //
 // The engine's loop is one line: a researcher confirms one Change Set and the
-// next version runs it. The exhibition record (scripts/import_exhibition.py) ran
+// next version runs it. The exhibition record (stored in sim.sqlite3) ran
 // every option instead - three first settings, and three revisions after every
 // day - so its versions are a tree, and reading it is walking one path through
 // it: pick a first setting, watch the day, read the reviews, pick a revision,
@@ -55,7 +55,7 @@ export function pathTo(detail: SessionDetail, id: string | null): GenerationDeta
 /** "1일차": in the exhibition record a version is a day. */
 export const dayName = (generation: { index: number }) => `${generation.index + 1}일차`;
 
-/** What the exhibition record measured of a day (import_exhibition.py). */
+/** What the exhibition record measured of a day (stored in the record). */
 export interface DayFacts {
   dayTitle: string;
   quests: number;
