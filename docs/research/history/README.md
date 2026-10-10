@@ -14,3 +14,4 @@
 | 15 | v0.4 화면 재설계 명세 |
 | 26 | 2026-09-15 리팩터링 감사와 계획 (실행 기록은 `../28_REFACTOR_LOG_2026-09-15.md`) |
 | `IMPLEMENTATION_*` · `NEXT_IMPLEMENTATION_PROMPT` | 09-10 구현 프롬프트와 리뷰 |
+| `DEVELOPMENT_HISTORY.md` | `DEVELOPMENT.md`에서 덜어 낸 오래된 개발 기록(v0.2~v0.4 · MAS 재구축 · 지운 전시 데모) |

@@ -5,8 +5,8 @@
 1. `docs/research/19_RESIDENT_AGENTS_AS_EVALUATORS.md` — 최우선 연구 기준
 2. `docs/research/22_MEDIAL_IMPROVEMENT_TARGETS.md` — MEDial 개선 대상과 편집 경계
 3. `docs/research/23_QUEST_TASK_CHANGE_SET.md` — Quest/Task 최소 모델과 Change Set 계약
-4. `DEVELOPMENT.md` — 구현됨/부분 구현/미구현 상태. **맨 위 "2026-09-15 리팩터링" 절이 현재
-   상태이고 그 아래는 역사다**
+4. `DEVELOPMENT.md` — 구현됨/부분 구현/미구현 상태. **"현재 상태" 절이 지금이고, "최근 기록"은
+   최신순이다.** 더 오래된 역사(v0.2~v0.4 · MAS 재구축)는 `docs/research/history/DEVELOPMENT_HISTORY.md`
 5. `docs/research/28_REFACTOR_LOG_2026-09-15.md` — 지금 구조가 왜 이런지, 무엇을 하지 않았는지
 6. 작업과 관련된 `docs/research/` 문서와 `DECISIONS.md`
 
@@ -67,11 +67,12 @@ MEDial 자체, 범용 사회 시뮬레이터, 3D 마을, 자동 정책 최적화
 지정된 사건만 이어 가고 남의 context를 읽지 않는다. 그 밖의 다일 확장(30일 곡선, 학습·호감도 갱신)은
 여전히 하지 않는다.
 
-기본 UI의 중심은 `Village Scenario / Resident Evaluations / Improve & Validate`이며, 화면에서는
-`사례와 서비스 경험 / 주민 평가 / 개선과 확인`이다. 원시 로그, 해시, fork/rerun, 모델·예산,
-전체 계보는 필요한 경우 고급/감사 영역에서 제공한다.
+기본 UI는 하나의 길이다: 소개 영상 → 관찰(사례와 서비스 경험) → 주민 평가 → 수정안 고르기(개선과 확인).
+화면은 저장된 기록을 **읽기만** 한다. 옛 준비 · 비교 · 변경 작성기 · 현장 기록지 화면은 2026-10-10에
+연구자 결정으로 지웠다 — 다시 만들지 않는다. 원시 로그, 해시, fork/rerun, 모델·예산, 전체 계보는 서버의
+감사 API와 `docs`에 있다.
 
-새 실행을 만드는 경로는 **Change Set 확정 하나**다. 두 번째 실행 경로를 다시 만들지 않는다.
+서버에서 새 실행을 만드는 경로는 **Change Set 확정 하나**다. 두 번째 실행 경로를 다시 만들지 않는다.
 운영 규칙은 `iteration/semantic_rules.py`의 타입에서만 나오고, 전후 문장과 실행 바인딩은 거기서
 생성된다 — 문장이나 바인딩을 따로 편집하는 입력을 다시 만들지 않는다. 공동체 자료(주민·역할·
 관계·장부·시나리오)는 `case_bundle.py`의 CaseBundle에 있고, 엔진에 특정 주민 id를 적지 않는다.
