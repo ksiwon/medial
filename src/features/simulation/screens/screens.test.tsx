@@ -10,7 +10,6 @@ import type { GenerationDetail, SessionDetail } from '../api/iteration';
 import type { AttemptDetail, DomainEvent, StoredScenes, VillagePayload } from '../api/types';
 import { usePlayback } from '../scene/playback';
 import { learnPeople, personName, sentenceFor } from '../selectors/story';
-import { dayChangeLines } from '../selectors/words';
 import ChoiceScreen, { SUMMARY_IDLE_S } from './ChoiceScreen';
 import IntroScreen from './IntroScreen';
 import { foldAsking } from '../scene/JudgmentPanel';
@@ -55,7 +54,7 @@ function observe({ run = detail, log = events, at }: {
   log?: DomainEvent[];
   at?: { ms: number } | { seq: number };
 } = {}) {
-  usePlayback.setState({ viewMode: 'researcher', pace: 1, playing: false });
+  usePlayback.setState({ viewMode: 'researcher', playing: false });
   usePlayback.getState().load({ attemptId: run.attempt.id, detail: run, events: log, village });
   const reel = usePlayback.getState().reel!;
   const rt = !at ? 0 : 'ms' in at ? reel.atTime(at.ms) : reel.atSeq(at.seq);
@@ -76,8 +75,6 @@ afterEach(cleanup);
 describe('ObserveScreen', () => {
   it('shows the village on the map when nothing is being said', () => {
     observe({ at: hour(6) });
-    // Which ground the map stands on is still stated, behind the gear.
-    expect(screen.getByText(new RegExp(village.isSynthetic ? '합성 지도' : '원자료 지형'))).toBeDefined();
     expect(screen.queryByLabelText('MEDial의 판단')).toBeNull();
   });
 
@@ -88,8 +85,10 @@ describe('ObserveScreen', () => {
     // the progress strip, which is not this component.
     expect(screen.getByRole('slider', { name: '시각' })).toBeDefined();
     expect(screen.getByText('하루 끝 · 주민 평가')).toBeDefined();
-    expect(screen.getByRole('group', { name: '대사 속도' })).toBeDefined();
-    expect(screen.getByLabelText('재생 설정')).toBeDefined();
+    // No speed buttons and no settings gear: one pace, and a way to skip.
+    expect(screen.queryByRole('group', { name: '대사 속도' })).toBeNull();
+    expect(screen.queryByLabelText('재생 설정')).toBeNull();
+    expect(screen.getByText('건너뛰기 →')).toBeDefined();
     expect(screen.queryByText('실행 중지')).toBeNull();
   });
 
@@ -144,18 +143,6 @@ describe('ObserveScreen', () => {
       expect(screen.getAllByText(row.reason!).length).toBeGreaterThan(0);
     }
     expect(screen.queryByText('persona_condition')).toBeNull();
-  });
-
-  it('names the day the run took place on, and lists its edits behind a tooltip', () => {
-    observe();
-    const day = detail.metrics.dayRealization!;
-    const tag = screen.getByText(
-      { source_baseline: '기록된 하루 그대로', source_jittered: '기록된 시각이 조금 다른 하루',
-        plausible_extension: '외출 하나가 다른 하루' }[day.classification],
-    );
-    // One line per edit, plus one per person deliberately left alone.
-    const lines = dayChangeLines(day);
-    if (lines.length > 0) expect(tag.getAttribute('title')?.split('\n')).toEqual(lines);
   });
 });
 
@@ -321,7 +308,16 @@ describe('what MEDial does not see', () => {
 
   const items = (researcher: boolean) => timelineAt(episodes, min(11, 30), new Set(), (id) => subtitles[id], researcher);
   const controls = { atMs: min(11, 30), dayStartMs: min(5), dayEndMs: min(22), playing: false, onTogglePlay: noop,
-    onCommit: noop, paces: [{ value: 1, label: '보통' }], pace: 1, onPace: noop, settings: null };
+    onCommit: noop, onSkip: noop, canSkip: true };
+
+  it('has no speed buttons and no gear, and skips to the next scene', () => {
+    let skipped = 0;
+    render(<DayTimeline {...controls} onSeek={noop} items={items(true)} onSkip={() => { skipped += 1; }} />);
+    for (const label of ['천천히', '보통', '빠르게']) expect(screen.queryByText(label)).toBeNull();
+    expect(screen.queryByLabelText('재생 설정')).toBeNull();
+    fireEvent.click(screen.getByText('건너뛰기 →'));
+    expect(skipped).toBe(1);
+  });
 
   it('is listed for the researcher, marked as unknown to MEDial', () => {
     render(<DayTimeline {...controls} items={items(true)} onSeek={noop} />);

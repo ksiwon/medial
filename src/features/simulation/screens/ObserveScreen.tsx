@@ -8,12 +8,11 @@ import { formatClock, medialKnowledge, placeLabel, posesAt } from '../positions'
 import { openRequests, requestColour } from '../scene/colours';
 import { judgmentOf } from '../scene/judgment';
 import { DAY_START_MS, usePlayback } from '../scene/playback';
-import { PACES, REVEAL_STEP_S, REVEAL_STEPS } from '../scene/reel';
+import { REVEAL_STEP_S, REVEAL_STEPS } from '../scene/reel';
 import SceneStage from '../scene/SceneStage';
 import type { Beat, Episode } from '../scene/types';
 import { ledgerAt, routineAt, timelineAt } from '../selectors/dayLedger';
-import { dayChangeLines, dayLabel } from '../selectors/words';
-import { IconButton, Select, Sub, beckon, pill } from '../ui/primitives';
+import { beckon, pill } from '../ui/primitives';
 import { accentA, night, radius } from '../ui/theme';
 
 // 사례와 서비스 경험 - watching one run.
@@ -155,6 +154,13 @@ interface Props {
 
 export default function ObserveScreen({ village, detail, events, art, dayEnd: ending, onReadEvaluations, strip }: Props) {
   const p = usePlayback();
+  /** To the next scene, and on playing from there (jumpScene stops the clock). */
+  const skip = async () => {
+    const { jumpScene, play, reel: current } = usePlayback.getState();
+    await jumpScene(1);
+    const { rt } = usePlayback.getState();
+    if (current && rt < current.total - 0.01) await play();
+  };
   const [mapWidth, setMapWidth] = useState<number | null>(null);
   const reel = p.reel;
   const position = p.position;
@@ -215,7 +221,7 @@ export default function ObserveScreen({ village, detail, events, art, dayEnd: en
   }, [reel, scene?.e, scene?.b]);
 
   const lit = segment?.kind === 'lead' && segment.reveal
-    ? Math.max(0, Math.min(REVEAL_STEPS, Math.floor((position!.offset - segment.enter) / (REVEAL_STEP_S * p.pace)) + 1))
+    ? Math.max(0, Math.min(REVEAL_STEPS, Math.floor((position!.offset - segment.enter) / REVEAL_STEP_S) + 1))
     : REVEAL_STEPS;
   const dayEnd = reel?.dayEndMs ?? DAY_START_MS;
   const dayOver = reel !== null && p.rt >= reel.total;
@@ -336,47 +342,8 @@ export default function ObserveScreen({ village, detail, events, art, dayEnd: en
         onTogglePlay={() => void (p.playing ? p.pause() : p.play())}
         onSeek={(ms) => p.seekTime(ms)}
         onCommit={() => void p.commit()}
-        paces={PACES}
-        pace={p.pace}
-        onPace={p.setPace}
-        settings={
-          <>
-        <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-          보기
-          <Select aria-label="관찰 시점" value={p.viewMode}
-            onChange={(e) => p.setViewMode(e.target.value as typeof p.viewMode)}>
-            <option value="researcher">연구자 전체</option>
-            <option value="medial">MEDial이 아는 것</option>
-          </Select>
-        </label>
-        {/* Only a record that names its story scenes offers the choice. */}
-        {(detail.scenes?.featured?.length ?? 0) > 0 && (
-          <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-            장면
-            <Select aria-label="재생할 장면" value={p.length}
-              onChange={(e) => p.setLength(e.target.value as typeof p.length)}>
-              <option value="story">핵심 장면만</option>
-              <option value="all">모든 장면</option>
-            </Select>
-          </label>
-        )}
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          <IconButton onClick={() => void p.jumpScene(-1)}>← 앞 장면</IconButton>
-          <IconButton onClick={() => void p.jumpScene(1)}>다음 장면 →</IconButton>
-          <IconButton onClick={() => void p.restart()}>하루 다시 보기</IconButton>
-        </div>
-        <Sub as="span">
-          장면 {reel ? new Set(reel.segments.flatMap((x) => (x.kind === 'map' ? [] : [x.episode]))).size : 0}개 재생 · 요청 {reel?.episodes.length ?? 0}건 · {village.isSynthetic ? '합성 지도' : '원자료 지형'}
-        </Sub>
-        {/* Which day this run happened on: as recorded, or nudged. The
-            edits themselves are in the tooltip, one per person. */}
-        {detail.metrics.dayRealization && (
-          <Sub as="span" title={dayChangeLines(detail.metrics.dayRealization).join('\n') || '기록된 일과를 그대로 썼습니다.'}>
-            {dayLabel(detail.metrics.dayRealization)}
-          </Sub>
-        )}
-          </>
-        }
+        onSkip={() => void skip()}
+        canSkip={!!reel && p.rt < reel.total - 0.01}
       />
     </Screen>
   );

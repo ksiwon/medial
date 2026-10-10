@@ -1,6 +1,3 @@
-import type { DayRealization, StepChange } from '../api/types';
-import { formatClock } from '../positions';
-import { personName } from './story';
 
 // Plain words for the engine's own vocabulary: policy fields, contact
 // strategies, decline rules, the realized day.
@@ -93,51 +90,4 @@ export function refusalReason(rule: string | null | undefined, reason: string | 
   const key = (rule ?? '').trim() || said;
   if (!key) return '사유가 기록되지 않음';
   return RULE[key] ?? `사유가 기록되지 않음 (규칙 ${key})`;
-}
-
-// ---------------------------------------------------------------- the day
-
-const DAY: Record<DayRealization['classification'], string> = {
-  source_baseline: '기록된 하루 그대로',
-  source_jittered: '기록된 시각이 조금 다른 하루',
-  plausible_extension: '외출 하나가 다른 하루',
-};
-
-export const dayLabel = (day: DayRealization | undefined | null): string =>
-  day ? DAY[day.classification] : '하루 기록 없음';
-
-/** One line per edit the realization made, checkable against the source. */
-export function dayChangeLines(day: DayRealization | undefined | null): string[] {
-  if (!day) return [];
-  const out: string[] = [];
-  for (const resident of day.residents) {
-    for (const change of resident.changes) {
-      out.push(`${personName(resident.actorId)} · ${changeText(change)}`);
-    }
-    if (resident.excludedReason) {
-      out.push(`${personName(resident.actorId)} · 그대로 둠 (${resident.excludedReason})`);
-    }
-  }
-  return out;
-}
-
-function changeText(change: StepChange): string {
-  const before = change.beforeMs === null ? null : formatClock(change.beforeMs);
-  const after = change.afterMs === null ? null : formatClock(change.afterMs);
-  const delta =
-    change.beforeMs !== null && change.afterMs !== null
-      ? Math.round((change.afterMs - change.beforeMs) / 60000)
-      : null;
-  switch (change.kind) {
-    case 'jitter':
-      return `${change.target} ${before} → ${after}${
-        delta === null ? '' : ` (${delta > 0 ? `${delta}분 늦게` : `${-delta}분 일찍`})`
-      }`;
-    case 'clamp':
-      return `${change.target} ${before} → ${after} (이동 시간에 맞춰 되돌림)`;
-    case 'skip_outing':
-      return `${change.target} 외출을 거름`;
-    case 'repeat_outing':
-      return `${change.target} 한 번 더 다녀옴`;
-  }
 }

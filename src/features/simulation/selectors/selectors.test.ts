@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { GenerationDetail, SessionDetail } from '../api/iteration';
-import type { DayRealization, DomainEvent } from '../api/types';
+import type { DomainEvent } from '../api/types';
 import { personName, sentenceFor, withParticle } from './story';
 import { childFor, isTree, openingOf, pathTo } from './tree';
 import {
-  dayChangeLines,
-  dayLabel,
   inputName,
   paramName,
   refusalReason,
@@ -125,20 +123,6 @@ describe('words', () => {
     expect(refusalReason('brand_new_code', 'brand_new_code')).toContain('사유가 기록되지 않음');
     expect(refusalReason(null, null)).toBe('사유가 기록되지 않음');
     expect(inputName('day')).toBe('뽑힌 하루');
-  });
-
-  it('describes the day in one line and its edits per person', () => {
-    const day: DayRealization = {
-      id: 'day-1', seed: 7, villageContentHash: 'h', environmentRevisionId: 'env-v2',
-      classification: 'source_jittered',
-      residents: [{ actorId: 'P1', steps: [], excludedReason: null, changes: [
-        { index: 0, kind: 'jitter', target: 'FARM', beforeMs: 9 * 3_600_000,
-          afterMs: 9 * 3_600_000 + 12 * 60_000, note: '' }] }],
-      assumptions: [],
-    };
-    expect(dayLabel(day)).toBe('기록된 시각이 조금 다른 하루');
-    expect(dayChangeLines(day)).toEqual(['P1 · FARM 09:00 → 09:12 (12분 늦게)']);
-    expect(dayLabel(undefined)).toBe('하루 기록 없음');
   });
 });
 

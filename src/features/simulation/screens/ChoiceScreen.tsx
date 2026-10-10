@@ -50,7 +50,7 @@ const Card = styled.button`
   background: ${night.panel};
   border: 1px solid ${night.line};
   border-radius: ${radius.card};
-  padding: ${space.xl} ${space.xl} ${space.xl};
+  padding: ${space.xl} ${space.xl} ${space.lg};
   display: grid;
   grid-row: span 7;
   grid-template-rows: subgrid;

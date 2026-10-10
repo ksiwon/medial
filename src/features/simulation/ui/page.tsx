@@ -12,14 +12,14 @@ export const Sheet = styled.div`
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: ${space.huge} ${space.xl} ${space.huge};
+  padding: ${space.xxl} ${space.xl} ${space.md};
   background: ${night.ground};
   color: ${night.ink};
   scrollbar-color: ${night.raised} transparent;
 `;
 
 export const Inner = styled.div`
-  max-width: calc(1320px * var(--k, 1));
+  max-width: calc(1440px * var(--k, 1));
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -53,7 +53,7 @@ const Headline = styled.h1`
 `;
 
 const Lead = styled.p`
-  margin: ${space.lg} 0 0;
+  margin: ${space.md} 0 0;
   max-width: calc(760px * var(--k, 1));
   font-size: ${px(16)};
   line-height: 1.7;

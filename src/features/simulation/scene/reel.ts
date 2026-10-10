@@ -22,18 +22,14 @@ import type { Episode, Position, Segment } from './types';
 //     scene; at least 1 s between two scenes so the transition can be seen
 //   · 2026-10-07: everything but the reading times above made faster after
 //     visitors found the playback too slow. The reading times did not change.
-//   · pace multiplies the reading times only (천천히 1.35 · 보통 1 · 빠르게 0.7)
+//   · pace multiplies the reading times only; the exhibition fixes it at 1 (2026-10-10:
+//     the speed buttons were removed, a visitor skips to the next scene instead)
 
 const TYPING_S = 0.5;
 const ENTER_S = 0.5;
 const CUT_S = 0.3;
 export const REVEAL_STEP_S = 0.35;
 export const REVEAL_STEPS = 4;
-export const PACES = [
-  { value: 1.35, label: '천천히' },
-  { value: 1, label: '보통' },
-  { value: 0.7, label: '빠르게' },
-] as const;
 
 const MINUTE = 60_000;
 /** A segment before it is placed on the reel. */

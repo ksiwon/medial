@@ -1,9 +1,9 @@
-import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { formatClock } from '../positions';
 import type { TimelineItem } from '../selectors/dayLedger';
 import { personName } from '../selectors/story';
-import { accentA, font, inkA, night, px, radius, shadeA } from '../ui/theme';
+import { accentA, font, inkA, night, px, radius } from '../ui/theme';
 import { pill } from '../ui/primitives';
 
 // 오늘의 타임라인: the right-hand column of the observe screen, and the day's
@@ -107,52 +107,18 @@ const Clock = styled.time`
   font-variant-numeric: tabular-nums;
 `;
 
-const Paces = styled.div`
-  display: flex;
-  gap: 4px;
-  flex: 1;
-`;
-
-const Pace = styled.button<{ $on: boolean }>`
+/** Past the scene on screen, to the next one - the only control a visitor needs besides play. */
+const Skip = styled.button`
   ${pill('sm')}
   font: inherit;
   font-weight: 700;
   cursor: pointer;
-  border: 1px solid ${(p) => (p.$on ? PAPER : 'rgba(246, 241, 232, 0.25)')};
-  background: ${(p) => (p.$on ? PAPER : 'transparent')};
-  color: ${(p) => (p.$on ? INK : 'rgba(246, 241, 232, 0.75)')};
-`;
-
-/** Everything secondary to watching, behind one gear. Opens downwards. */
-const Settings = styled.details`
-  position: relative;
-  flex: none;
-  > summary {
-    cursor: pointer;
-    list-style: none;
-    color: ${inkA(0.75)};
-    font-size: calc(16px * var(--k, 1));
-    padding: 4px 8px;
-    border-radius: ${radius.control};
-  }
-  > summary::-webkit-details-marker { display: none; }
-  > summary:focus-visible { outline: 2px solid ${PAPER}; }
-  > div {
-    position: absolute;
-    right: 0;
-    top: 36px;
-    width: 240px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    background: #fff;
-    color: #1d2935;
-    border-radius: ${radius.control};
-    padding: 12px;
-    box-shadow: 0 8px 20px ${shadeA(0.35)};
-    z-index: 8;
-    font-size: ${font.small};
-  }
+  border: 1px solid ${inkA(0.25)};
+  background: transparent;
+  color: ${inkA(0.75)};
+  &:hover:not(:disabled) { color: ${PAPER}; border-color: ${inkA(0.6)}; }
+  &:disabled { opacity: 0.4; cursor: default; }
+  &:focus-visible { outline: 2px solid ${PAPER}; outline-offset: 2px; }
 `;
 
 const Note = styled.p`
@@ -328,15 +294,13 @@ interface Props {
   /** Move the clock (while dragging), and settle it (on release). */
   onSeek: (ms: number) => void;
   onCommit: () => void;
-  paces: readonly { value: number; label: string }[];
-  pace: number;
-  onPace: (pace: number) => void;
-  /** What the gear opens. */
-  settings: ReactNode;
+  /** To the next scene; absent or `canSkip` false when the day is over. */
+  onSkip: () => void;
+  canSkip: boolean;
 }
 
 export default function DayTimeline({
-  items, atMs, dayStartMs, dayEndMs, playing, onTogglePlay, onSeek, onCommit, paces, pace, onPace, settings,
+  items, atMs, dayStartMs, dayEndMs, playing, onTogglePlay, onSeek, onCommit, onSkip, canSkip,
 }: Props) {
   const track = useRef<HTMLOListElement>(null);
   const scroll = useRef<HTMLDivElement>(null);
@@ -402,18 +366,7 @@ export default function DayTimeline({
           <Clock>{formatClock(atMs)}</Clock>
         </Row>
         <Row>
-          <Paces role="group" aria-label="대사 속도">
-            {paces.map((option) => (
-              <Pace key={option.value} type="button" $on={pace === option.value} aria-pressed={pace === option.value}
-                onClick={() => onPace(option.value)}>
-                {option.label}
-              </Pace>
-            ))}
-          </Paces>
-          <Settings>
-            <summary aria-label="재생 설정" title="재생 설정">⚙</summary>
-            <div>{settings}</div>
-          </Settings>
+          <Skip type="button" onClick={onSkip} disabled={!canSkip}>건너뛰기 →</Skip>
         </Row>
         <Note title="앞일은 예정된 것만 보입니다. 선을 끌어 시각을 옮깁니다.">
           {seen === 0 ? '아직 일어난 일이 없습니다' : `지금까지 ${seen}건`} · 선을 끌어 시각 이동

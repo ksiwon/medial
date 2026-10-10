@@ -69,6 +69,12 @@ const Cards = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(560px * var(--k, 1))), 1fr));
   gap: ${space.lg};
   align-items: start;
+  /* A wall screen has the width for every resident of the day side by side. */
+  @media (min-width: 2000px) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(300px * var(--k, 1))), 1fr));
+    > article { padding: ${space.lg} ${space.lg} ${space.lg}; gap: ${space.lg}; }
+    > article blockquote { font-size: ${px(20)}; padding-top: ${space.xl}; }
+  }
 `;
 
 const Card = styled.article`
@@ -396,9 +402,7 @@ export default function EvaluationsScreen({
   return (
     <Sheet>
       <Inner>
-        <PageHead eyebrow={eyebrow} title="주민 평가">
-          오늘 서비스를 겪은 주민이 자기 말로 남긴 평가입니다. 무엇을 겪었고 무엇을 바라는지가 함께 있습니다.
-        </PageHead>
+        <PageHead eyebrow={eyebrow} title="주민 평가" />
         <Context>
           <div>
             <ContextTag>이 날의 설정</ContextTag>

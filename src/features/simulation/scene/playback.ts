@@ -25,16 +25,10 @@ interface Run {
   village: VillagePayload;
 }
 
-/** How much of a day is played as scenes: the ones the record says tell the story, or every one. */
-export type PlayLength = 'story' | 'all';
-
 interface PlaybackState {
   run: Run | null;
   reel: Reel | null;
   viewMode: ViewMode;
-  /** Multiplies how long lines stay up; see PACES in reel.ts. */
-  pace: number;
-  length: PlayLength;
   rt: number;
   position: Position | null;
   playing: boolean;
@@ -44,9 +38,6 @@ interface PlaybackState {
   selectedActor: string | null;
 
   load: (run: Run) => void;
-  setViewMode: (mode: ViewMode) => void;
-  setPace: (pace: number) => void;
-  setLength: (length: PlayLength) => void;
   play: () => Promise<void>;
   pause: () => Promise<void>;
   tick: (deltaMs: number) => void;
@@ -66,7 +57,7 @@ const commandId = (name: string) => `cmd-${name}-${Date.now()}-${commandCounter+
 const describe = (error: unknown) =>
   error instanceof ApiError ? error.message : error instanceof Error ? error.message : String(error);
 
-function reelFor(run: Run, viewMode: ViewMode, pace: number, length: PlayLength = 'story'): Reel {
+function reelFor(run: Run, viewMode: ViewMode): Reel {
   const timeline = run.detail.timeline ?? null;
   return buildReel({
     // A record that carries its scenes plays them as recorded; otherwise they
@@ -77,9 +68,10 @@ function reelFor(run: Run, viewMode: ViewMode, pace: number, length: PlayLength 
     timeline,
     dayStartMs: DAY_START_MS,
     dayEndMs: timeline?.horizonMs ?? DAY_END_MS,
-    pace,
-    // The record names the scenes that tell the story; 'all' plays every one.
-    featured: length === 'story' && run.detail.scenes?.featured?.length ? new Set(run.detail.scenes.featured) : null,
+    // One pace for everyone (the exhibition has no speed control), and only the
+    // scenes the record says tell the story.
+    pace: 1,
+    featured: run.detail.scenes?.featured?.length ? new Set(run.detail.scenes.featured) : null,
   });
 }
 
@@ -106,8 +98,6 @@ export const usePlayback = create<PlaybackState>((set, get) => {
     run: null,
     reel: null,
     viewMode: 'researcher',
-    pace: 1,
-    length: 'story',
     rt: 0,
     position: null,
     playing: false,
@@ -116,40 +106,10 @@ export const usePlayback = create<PlaybackState>((set, get) => {
     selectedActor: null,
 
     load: (run) => {
-      const reel = reelFor(run, get().viewMode, get().pace, get().length);
+      const reel = reelFor(run, get().viewMode);
       set({ run, reel, playing: false, selectedCluster: null, selectedActor: null });
       // Reopen where the researcher left off: the cursor lives in the database.
       at(reel.atSeq(run.detail.attempt.cursorSeq ?? 0), reel);
-    },
-
-    setViewMode: (viewMode) => {
-      const { run, pace } = get();
-      if (!run) return set({ viewMode });
-      const seq = cursor();
-      const reel = reelFor(run, viewMode, pace, get().length);
-      set({ viewMode, reel, selectedCluster: null });
-      at(reel.atSeq(seq), reel);
-    },
-
-    setLength: (length) => {
-      const { run, viewMode, pace } = get();
-      if (!run) return set({ length });
-      // The layout changes (scenes appear or go), so keep the *moment*, not the offset.
-      const seq = cursor();
-      const reel = reelFor(run, viewMode, pace, length);
-      set({ length, reel });
-      at(reel.atSeq(seq), reel);
-    },
-
-    setPace: (pace) => {
-      const { run, viewMode, position } = get();
-      if (!run || !position) return set({ pace });
-      // Same layout, other durations: keep the segment and how far into it.
-      const reel = reelFor(run, viewMode, pace, get().length);
-      const share = position.segment.dur ? position.offset / position.segment.dur : 0;
-      const segment = reel.segments[position.index];
-      set({ pace, reel });
-      at(segment ? segment.r0 + segment.dur * share : 0, reel);
     },
 
     play: async () => {
