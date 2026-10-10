@@ -1,6 +1,6 @@
 import * as React from 'react';
-import styled, { css } from 'styled-components';
-import { colour, font, px, radius } from './theme';
+import styled, { css, keyframes } from 'styled-components';
+import { accentA, colour, font, px, radius } from './theme';
 
 // Shared atoms. Two rules run through all of them, both from doc 15 section 7:
 // an ordinary row is separated by a rule and whitespace rather than wrapped in a
@@ -21,6 +21,33 @@ const PILL = {
   md: { h: 32, x: 16, f: 16 },
   lg: { h: 40, x: 20, f: 16 },
 } as const;
+
+const ping = keyframes`
+  0% { transform: scale(1); opacity: 0.85; }
+  70%, 100% { transform: scale(1.16, 1.5); opacity: 0; }
+`;
+
+/**
+ * "Press this next": the one button that carries the walk forward (the day's end,
+ * the end of the evaluations) sends a ring out from itself, again and again, until
+ * it is pressed. Drawn on ::before, so it does not move the button or change its
+ * shadow; a person who asks their system for less motion gets a steady glow instead.
+ */
+export const beckon = css`
+  position: relative;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 2px solid ${accentA(0.9)};
+    pointer-events: none;
+    animation: ${ping} 1.6s ease-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &::before { animation: none; opacity: 1; inset: -4px; border-color: ${accentA(0.5)}; }
+  }
+`;
 
 export const pill = (size: keyof typeof PILL) => css`
   display: inline-flex;

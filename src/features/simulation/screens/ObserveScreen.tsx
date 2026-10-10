@@ -13,7 +13,7 @@ import SceneStage from '../scene/SceneStage';
 import type { Beat, Episode } from '../scene/types';
 import { ledgerAt, routineAt, timelineAt } from '../selectors/dayLedger';
 import { dayChangeLines, dayLabel } from '../selectors/words';
-import { IconButton, Select, Sub, pill } from '../ui/primitives';
+import { IconButton, Select, Sub, beckon, pill } from '../ui/primitives';
 import { accentA, night, radius } from '../ui/theme';
 
 // 사례와 서비스 경험 - watching one run.
@@ -131,8 +131,12 @@ const DayEnd = styled.div`
   box-shadow: inset 0 0 0 1px ${accentA(0.5)};
   font-size: calc(16px * var(--k, 1));
   color: ${night.ink};
-  > span > span { margin-left: 12px; color: ${night.mute}; }
-  > button { font: inherit; ${pill('md')} font-weight: 800; cursor: pointer; border: none;
+  /* The title is one line and the facts are another: two weights of text that
+     share a line wrap in the middle of a phrase. Each fact is kept whole. */
+  > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  > div > p { margin: 0; display: flex; flex-wrap: wrap; gap: 0 12px; font-size: calc(12px * var(--k, 1)); color: ${night.mute}; }
+  > div > p > span { white-space: nowrap; }
+  > button { flex: none; font: inherit; ${pill('md')} ${beckon} font-weight: 800; cursor: pointer; border: none;
              background: ${night.accent}; color: #fff; }
 `;
 
@@ -313,10 +317,10 @@ export default function ObserveScreen({ village, detail, events, art, dayEnd: en
 
       {dayOver && (
         <DayEnd>
-          <span>
+          <div>
             <strong>{formatClock(dayEnd)} · {ending.text}</strong>
-            {ending.note && <span>{ending.note}</span>}
-          </span>
+            {ending.note && <p>{ending.note.split(' · ').map((fact) => <span key={fact}>{fact}</span>)}</p>}
+          </div>
           <button type="button" onClick={onReadEvaluations}>{ending.action} →</button>
         </DayEnd>
       )}

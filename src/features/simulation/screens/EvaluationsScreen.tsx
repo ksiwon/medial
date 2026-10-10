@@ -14,7 +14,7 @@ import { formatClock } from '../positions';
 import { personName, sentenceFor } from '../selectors/story';
 import { Inner, PageHead, Sheet } from '../ui/page';
 import Portrait from '../ui/Portrait';
-import { pill } from '../ui/primitives';
+import { beckon, pill } from '../ui/primitives';
 import { accentA, cardGround, font, inkA, night, px, radius, shadow, space } from '../ui/theme';
 
 // Screen B: the resident evaluations, as the screen the loop arrives at.
@@ -42,14 +42,19 @@ const Context = styled.div`
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: ${space.sm} ${space.lg};
+  gap: ${space.sm} ${space.xl};
   padding: ${space.md} ${space.lg};
   border-radius: ${radius.card};
   background: ${night.panel};
   border: 1px solid ${night.line};
   font-size: ${px(16)};
   color: ${night.mute};
-  > b, > span > b { color: ${night.ink}; font-weight: 800; }
+  /* The setting, and what is said about who is here, are separate things that
+     wrap as wholes: a bold label and a muted sentence on one line break in the middle. */
+  > div { display: flex; align-items: center; gap: ${space.md}; white-space: nowrap; color: ${night.ink}; font-weight: 800; }
+  > span { white-space: nowrap; }
+  > span > b { color: ${night.ink}; font-weight: 800; }
+  > span.long { white-space: normal; min-width: min(100%, ${px(320)}); flex: 1; }
 `;
 
 const ContextTag = styled.span`
@@ -262,6 +267,7 @@ const Note = styled.p`
 
 const Next = styled.button`
   ${pill('lg')}
+  ${beckon}
   align-self: flex-start;
   height: ${px(56)};
   padding: 0 ${space.xl};
@@ -396,12 +402,14 @@ export default function EvaluationsScreen({
           오늘 서비스를 겪은 주민이 자기 말로 남긴 평가입니다. 무엇을 겪었고 무엇을 바라는지가 함께 있습니다.
         </PageHead>
         <Context>
-          <ContextTag>이 날의 설정</ContextTag>
-          <b>{generation.label}</b>
-          <span>
-            · 서비스를 겪고 평가한 주민 <b>{asked.length}명</b>
-            {others > 0 && ` · 나머지 ${others}명은 겪은 일이 없어 평가에 넣지 않았고, 불만족으로 세지 않습니다`}
-          </span>
+          <div>
+            <ContextTag>이 날의 설정</ContextTag>
+            <span>{generation.label}</span>
+          </div>
+          <span>서비스를 겪고 평가한 주민 <b>{asked.length}명</b></span>
+          {others > 0 && (
+            <span className="long">나머지 {others}명은 겪은 일이 없어 평가에 넣지 않았고, 불만족으로 세지 않습니다</span>
+          )}
         </Context>
 
         <Cards>

@@ -79,13 +79,14 @@ export const space = {
   huge: px(48),
 } as const;
 
-/** The corner scale. A thing that is a control, a panel of the observe screen, or a
- *  card of a reading page has one radius, and these are the only ones. */
+/** The corner scale. A rectangle (a card, a panel, a bar) is nearly square-cornered -
+ *  heavily rounded boxes read as a template - and roundness is kept for what is
+ *  small and pressed or named: the pill (a button, a tag) and the round (a face). */
 export const radius = {
   xs: px(4),
-  control: px(8),
-  panel: px(16),
-  card: px(24),
+  control: px(4),
+  panel: px(8),
+  card: px(8),
   pill: '1000px',
   round: '50%',
 } as const;
