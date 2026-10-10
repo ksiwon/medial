@@ -39,10 +39,10 @@ const Box = styled.div`
 
 const Top = styled.header`
   flex: none;
-  > small { display: block; font-size: 12px; font-weight: 800; letter-spacing: 0.14em; color: ${night.accent}; }
-  > h2 { margin: 10px 0 0; font-size: clamp(22px, 2.1vw, 32px); line-height: 1.3; font-weight: 800;
+  > small { display: block; font-size: calc(12px * var(--k, 1)); font-weight: 800; letter-spacing: 0.14em; color: ${night.accent}; }
+  > h2 { margin: 10px 0 0; font-size: calc(clamp(22px, 2.1vw, 32px) * var(--k, 1)); line-height: 1.3; font-weight: 800;
          letter-spacing: -0.03em; word-break: keep-all; }
-  > p { margin: 10px 0 0; font-size: 15px; color: ${night.mute}; font-variant-numeric: tabular-nums; }
+  > p { margin: 10px 0 0; font-size: calc(15px * var(--k, 1)); color: ${night.mute}; font-variant-numeric: tabular-nums; }
   > p > b { color: ${night.ink}; font-weight: 800; }
   > p > i { font-style: normal; margin: 0 10px; color: ${night.faint}; }
 `;
@@ -62,10 +62,10 @@ const Col = styled.section`
   gap: 12px;
   overflow: hidden;
   > h3 { margin: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
-         font-size: 12px; font-weight: 800; letter-spacing: 0.1em; color: ${night.faint}; }
+         font-size: calc(12px * var(--k, 1)); font-weight: 800; letter-spacing: 0.1em; color: ${night.faint}; }
   /* Same size as the heading it sits in: a larger figure here pushed this heading
      2px below the one beside it in the next column. */
-  > h3 > span { font-size: 12px; font-weight: 600; letter-spacing: 0; color: ${night.mute}; }
+  > h3 > span { font-size: calc(12px * var(--k, 1)); font-weight: 600; letter-spacing: 0; color: ${night.mute}; }
 `;
 
 const Places = styled.div`
@@ -81,8 +81,8 @@ const Place = styled.div`
   border-radius: 12px;
   background: ${night.raised};
   > header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-  > header > b { font-size: 16px; font-weight: 800; letter-spacing: -0.02em; }
-  > header > em { font-style: normal; font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  > header > b { font-size: calc(16px * var(--k, 1)); font-weight: 800; letter-spacing: -0.02em; }
+  > header > em { font-style: normal; font-size: calc(22px * var(--k, 1)); font-weight: 800; font-variant-numeric: tabular-nums; }
   > ul { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 `;
 
@@ -92,7 +92,7 @@ const Person = styled.li<{ $off: boolean }>`
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  font-size: 11px;
+  font-size: calc(11px * var(--k, 1));
   font-weight: 700;
   color: ${night.mute};
   > span { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
@@ -101,7 +101,7 @@ const Person = styled.li<{ $off: boolean }>`
 
 const Legend = styled.p`
   margin: 0;
-  font-size: 12px;
+  font-size: calc(12px * var(--k, 1));
   color: ${night.faint};
   > i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px;
         box-shadow: inset 0 0 0 2px ${night.accent}; vertical-align: -1px; }
@@ -112,8 +112,8 @@ const Card = styled.div`
   border-radius: 12px;
   background: ${night.accentSoft};
   box-shadow: inset 0 0 0 1px rgba(226, 84, 44, 0.45);
-  > b { display: block; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; }
-  > em { display: block; margin-top: 10px; font-style: normal; font-size: 11px; font-weight: 800;
+  > b { display: block; font-size: calc(17px * var(--k, 1)); font-weight: 800; letter-spacing: -0.01em; }
+  > em { display: block; margin-top: 10px; font-style: normal; font-size: calc(11px * var(--k, 1)); font-weight: 800;
          letter-spacing: 0.08em; color: ${night.accent}; }
   > em[data-unknown='true'] { color: ${night.faint}; }
   > ul { margin: 4px 0 0; padding-left: 16px; font-size: ${font.small}; line-height: 1.6; color: ${night.mute}; }
@@ -126,14 +126,14 @@ const Bars = styled.ul`
   display: flex;
   flex-direction: column;
   gap: 9px;
-  > li { display: grid; grid-template-columns: 92px 1fr 22px; align-items: center; gap: 10px; font-size: 13px; }
+  > li { display: grid; grid-template-columns: 92px 1fr 22px; align-items: center; gap: 10px; font-size: calc(13px * var(--k, 1)); }
   > li > i { display: block; height: 8px; border-radius: 999px; background: ${night.accent}; min-width: 6px; }
   > li > em { font-style: normal; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
 `;
 
 const Quiet = styled.p`
   margin: 0;
-  font-size: 15px;
+  font-size: calc(15px * var(--k, 1));
   line-height: 1.6;
   color: ${night.mute};
   word-break: keep-all;

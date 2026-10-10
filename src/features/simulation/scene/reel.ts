@@ -24,9 +24,9 @@ import type { Episode, Position, Segment } from './types';
 //     visitors found the playback too slow. The reading times did not change.
 //   · pace multiplies the reading times only (천천히 1.35 · 보통 1 · 빠르게 0.7)
 
-export const TYPING_S = 0.5;
-export const ENTER_S = 0.5;
-export const CUT_S = 0.3;
+const TYPING_S = 0.5;
+const ENTER_S = 0.5;
+const CUT_S = 0.3;
 export const REVEAL_STEP_S = 0.35;
 export const REVEAL_STEPS = 4;
 export const PACES = [
@@ -40,8 +40,8 @@ const MINUTE = 60_000;
 type Draft = Segment extends infer S ? (S extends Segment ? Omit<S, 'r0'> : never) : never;
 const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x));
 
-export const sayDuration = (text: string, pace: number) => (TYPING_S + clamp(1.2 + 0.14 * text.length, 2, 8)) * pace;
-export const captionDuration = (text: string, pace: number) => clamp(1 + 0.07 * text.length, 1.8, 5) * pace;
+const sayDuration = (text: string, pace: number) => (TYPING_S + clamp(1.2 + 0.14 * text.length, 2, 8)) * pace;
+const captionDuration = (text: string, pace: number) => clamp(1 + 0.07 * text.length, 1.8, 5) * pace;
 
 export interface Reel {
   segments: Segment[];

@@ -27,7 +27,7 @@ export interface ActorPose {
   ridingWith: string | null;
 }
 
-export function segmentAt(segments: Segment[], atMs: number): Segment | null {
+function segmentAt(segments: Segment[], atMs: number): Segment | null {
   for (const seg of segments) {
     if (seg.startMs <= atMs && atMs < seg.endMs) return seg;
   }
@@ -301,7 +301,7 @@ export function placeLabel(
   return village.places[place]?.label ?? placeWord(place);
 }
 
-export function placeXY(village: VillagePayload, place: string): [number, number] | null {
+function placeXY(village: VillagePayload, place: string): [number, number] | null {
   if (place.startsWith('HOME:')) {
     const home = village.homes[place.slice(5)];
     return home ? [home.x, home.y] : null;

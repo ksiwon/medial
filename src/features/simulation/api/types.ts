@@ -425,30 +425,6 @@ export interface StoredScenes {
   panels: Record<string, { subtitle: string; judgment: import('../scene/judgment').Judgment }>;
 }
 
-export interface Snapshot {
-  atMs: number;
-  cursorSeq: number;
-  eventSeq: number;
-  actors: {
-    id: string;
-    displayName: string;
-    isVillageHead: boolean;
-    group: string;
-    x: number | null;
-    y: number | null;
-    place: string | null;
-    moving: boolean;
-    mode: string | null;
-    activity: string | null;
-    onTask: boolean;
-    requestId: string | null;
-    offMap: boolean;
-    baselineActivity: string | null;
-    divergesFromBaseline: boolean;
-  }[];
-  activeReservations: Reservation[];
-}
-
 export interface DataIssue {
   id: string;
   claim: string;
@@ -519,38 +495,6 @@ export interface VillagePayload {
   } | null;
 }
 
-export interface EvidenceCard {
-  id: string;
-  subjectId: string;
-  kind: 'fact' | 'interpretation' | 'assumption' | 'unknown';
-  field: string;
-  claim: string;
-  pointer: string;
-  sourceKind: string;
-  confidence: 'high' | 'medium' | 'low';
-  quoteHash: string | null;
-  note: string | null;
-}
-
-export interface PersonaProfile {
-  subjectId: string;
-  revisionId: string;
-  displayName: string;
-  ageBand: string;
-  livesAlone: boolean | null;
-  drivesSelf: boolean | null;
-  hasVehicle: boolean | null;
-  seatCapacity: number | null;
-  closeContacts: string[];
-  groupLabel: string;
-  acceptanceConditions: string[];
-  declineConditions: string[];
-  unknowns: string[];
-  evidence: EvidenceCard[];
-  interviewBasis: string;
-  speechSource: string;
-}
-
 export interface PersonaProvenance {
   dataSource: string;
   revisionId: string;
@@ -559,11 +503,6 @@ export interface PersonaProvenance {
   jointInterview: string[];
   noInterview: string[];
   note: string;
-}
-
-export interface PersonasPayload {
-  provenance: PersonaProvenance;
-  profiles: PersonaProfile[];
 }
 
 export interface DesignFinding {
@@ -617,38 +556,6 @@ export interface Catalog {
   };
   attempts: Attempt[];
   findings: DesignFinding[];
-}
-
-export interface Comparison {
-  conditionDifference: {
-    attemptId: string; label: string; lineage: Lineage;
-    parentId: string | null; parentSeq: number | null;
-    policyId: string; policyLabel: string; contactStrategy: string;
-    params: PolicyParams; changedFields: string[];
-    deckId: string; resourceRevisionId: string; seed: number; adapter: string;
-    inputHashes: Record<string, string>;
-    personaRevisionId: string; baselineRevisionId: string; engineVersion: string;
-  }[];
-  decisionDifference: { attemptId: string; steps: TraceStep[] }[];
-  outcomeDifference: {
-    attemptId: string; resolved: number; unresolved: number;
-    resolutionPaths: string[]; meanWaitMinutesResolvedOnly: number | null;
-    contactAttempts: number; neighbourMinutes: number;
-    institutionStaffMinutes: number; institutionQueueWaitMinutes: number;
-    disclosure: Record<string, { recipientCount: number; fieldCount: number }>;
-    residentBurden: Record<string, Burden>;
-    transport: TransportMetrics;
-    emergencyClassifications: number;
-  }[];
-  /** Field-by-field, computed from the real policy objects rather than from the
-   *  free-text ``changes`` list. */
-  policyDifference: { field: string; values: Record<string, unknown> }[];
-  /** False when the two runs did not actually share their inputs. The screen
-   *  must not call such a pair a controlled comparison. */
-  controlled: boolean;
-  differingInputs: string[];
-  claim: string;
-  note: string;
 }
 
 export interface CommandResult {

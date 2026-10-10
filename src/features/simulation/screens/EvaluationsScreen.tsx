@@ -3,135 +3,154 @@ import styled from 'styled-components';
 import {
   ASSESSMENT_LABELS,
   DIMENSION_LABELS,
-  USAGE_LABELS,
   type AgentReview,
   type Assessment,
   type GenerationDetail,
   type ReviewItem,
   type SessionDetail,
-  type UsageStatus,
 } from '../api/iteration';
 import type { DomainEvent } from '../api/types';
 import { formatClock } from '../positions';
 import { personName, sentenceFor } from '../selectors/story';
+import { Inner, PageHead, Sheet } from '../ui/page';
 import { Body, Callout, Disclosure, Hint, Mono, Row, Sub, Tag, TextLink, pill } from '../ui/primitives';
-import { colour, font } from '../ui/theme';
+import { colour, font, night, px } from '../ui/theme';
 
 // Screen B: the resident evaluations, as the screen the loop arrives at.
 //
 // Doc 19 section 9 puts Resident Evaluations at the centre. Two boundaries are
 // load-bearing:
 //
-//  - 미경험 / 제안받고 거절 / 응답 못 함 / 미해결 are four different states and
-//    none of them is a complaint. They are never sorted as negative;
+//  - a resident who went through nothing that day is not here: nothing was
+//    experienced, so nothing is evaluated, and their silence is not a complaint
+//    or a score. The page says how many there were, once, and no more;
 //  - every evaluation is simulated, whether or not the persona came from source
-//    material, and the page says so under the list.
+//    material, and the page says so under the cards.
 //
 // There is no total, no average, no ranking and no winner here.
 //
-// The layout is the exhibition wall's (2026-09-30): one row a person - who, how
-// many things they went through, what they said in their own words, and when
-// those things happened. People who met the service come first; everyone else
-// is a quiet row saying they did not, which is not a complaint. A row whose
-// review carries dimension items (the engine's reviews do; the exhibition's are
-// one sentence each) opens to them - reasons, evidence, what they asked for and
-// what they could not judge - with the 판단 불가 ones folded.
+// What a service designer reads (2026-10-10), per resident who went through the
+// day and was asked: who they are, what the service did to them (the day's own
+// events, each one opening its scene), what they said in their own words, what
+// they asked to change, and what they said the day before. A card whose review
+// carries dimension items (the engine's reviews do; the exhibition's are one
+// paragraph each) opens to them - reasons, evidence, what they could not judge.
 
-const Sheet = styled.div`
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 40px 20px 48px;
+/** What day this is and what was in force: the thing the people below are
+ *  evaluating. */
+const Context = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: ${px(8)} ${px(14)};
+  font-size: ${px(14.5)};
+  color: ${colour.secondary};
+  > b, > span > b { color: ${colour.text}; font-weight: 800; }
 `;
 
-const Inner = styled.div`
-  max-width: 1132px;
-  margin: 0 auto;
+const ContextTag = styled.span`
+  ${pill('md')}
+  font-weight: 800;
+  background: ${night.deep};
+  color: #fff;
+`;
+
+const Cards = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(520px * var(--k, 1))), 1fr));
+  gap: ${px(16)};
+  align-items: start;
+`;
+
+const Card = styled.article`
   display: flex;
   flex-direction: column;
-  gap: 16px;
-`;
-
-const Eyebrow = styled.div`
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  color: #e2542c;
-`;
-
-const Headline = styled.h1`
-  margin: 4px 0 0;
-  font-size: 32px;
-  line-height: 1.2;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-`;
-
-const Lead = styled.p`
-  margin: 0;
-  max-width: 660px;
-  font-size: 14.5px;
-  line-height: 1.7;
-  color: ${colour.secondary};
-`;
-
-const Table = styled.div`
+  gap: ${px(14)};
+  padding: ${px(20)} ${px(22)};
   border: 1px solid ${colour.border};
-  border-radius: 12px;
-  overflow: hidden;
+  border-radius: 14px;
   background: ${colour.surface};
 `;
 
-const PersonRow = styled.div<{ $quiet: boolean }>`
-  display: grid;
-  grid-template-columns: 130px 64px minmax(0, 1fr);
-  gap: 4px 12px;
-  align-items: baseline;
-  padding: ${(p) => (p.$quiet ? '12px 18px' : '16px 18px')};
-  border-top: 1px solid ${colour.border};
-  background: ${(p) => (p.$quiet ? '#f4f3f0' : colour.surface)};
-  &:first-child { border-top: none; }
-  > strong { font-size: 14px; font-weight: 800; }
-  @media (max-width: 640px) {
-    grid-template-columns: minmax(0, 1fr) auto;
-    > div, > span:last-child { grid-column: 1 / -1; }
-  }
-`;
-
-const Count = styled.span<{ $used: boolean }>`
-  ${pill('xs')}
-  justify-self: start;
-  font-weight: 800;
-  background: ${(p) => (p.$used ? '#e6eefc' : 'transparent')};
-  color: ${(p) => (p.$used ? '#1d4ed8' : colour.secondary)};
-`;
-
-const Said = styled.div`
-  min-width: 0;
+const Who = styled.header`
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  > p { margin: 0; font-size: 14.5px; line-height: 1.6; color: ${colour.text}; }
-  > small { font-size: 12px; color: ${colour.secondary}; }
+  flex-wrap: wrap;
+  align-items: center;
+  gap: ${px(8)};
+  > strong { font-size: ${px(17)}; font-weight: 800; letter-spacing: -0.02em; }
 `;
 
-const Quiet = styled.span`
-  font-size: 13px;
+const Role = styled.span`
+  ${pill('xs')}
+  font-weight: 800;
+  color: ${colour.secondary};
+  background: #f1efea;
+`;
+
+const Count = styled.span`
+  ${pill('xs')}
+  margin-left: auto;
+  font-weight: 800;
+  background: #e6eefc;
+  color: #1d4ed8;
+`;
+
+/** What they said, as the card's centre: their own words, set apart. */
+const Quote = styled.blockquote`
+  margin: 0;
+  padding: ${px(2)} 0 ${px(2)} ${px(16)};
+  border-left: 4px solid ${night.accent};
+  font-size: ${px(16)};
+  line-height: 1.7;
+  letter-spacing: -0.01em;
+  color: ${colour.text};
+  word-break: keep-all;
+`;
+
+const Label = styled.div`
+  font-size: ${px(11.5)};
+  font-weight: 800;
+  letter-spacing: 0.06em;
   color: ${colour.secondary};
 `;
 
-const Items = styled.div`
-  align-self: stretch;
-  margin-top: 6px;
+/** The day's events the person went through, in the order they happened. */
+const WentList = styled.ol`
+  margin: ${px(6)} 0 0;
+  padding: 0;
+  list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: ${px(4)};
+  > li { display: flex; align-items: baseline; gap: ${px(10)}; font-size: ${px(14)}; line-height: 1.5; }
+  > li > time { flex: none; font-weight: 800; font-variant-numeric: tabular-nums; color: ${colour.text}; }
+  > li > span { min-width: 0; color: ${colour.text}; }
+`;
+
+/** What they asked to be different: the line a designer acts on. */
+const Asked = styled.div`
+  padding: ${px(12)} ${px(14)};
+  border-radius: 10px;
+  background: #fdf1ec;
+  > ul { margin: ${px(6)} 0 0; padding-left: ${px(18)}; font-size: ${px(14.5)}; line-height: 1.6; color: ${colour.text}; font-weight: 700; }
+`;
+
+const Yesterday = styled.div`
+  font-size: ${px(14)};
+  line-height: 1.65;
+  color: ${colour.secondary};
+  margin-top: ${px(4)};
+`;
+
+const Items = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${px(10)};
 `;
 
 const Dimension = styled.div`
   border-top: 1px solid ${colour.border};
-  padding-top: 10px;
+  padding-top: ${px(10)};
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -144,9 +163,9 @@ const Next = styled.button`
   font-weight: 800;
   cursor: pointer;
   border: none;
-  background: #15150f;
+  background: ${night.deep};
   color: #ffffff;
-  &:focus-visible { outline: 2px solid #e2542c; outline-offset: 2px; }
+  &:focus-visible { outline: 2px solid ${night.accent}; outline-offset: 2px; }
 `;
 
 const ASSESSMENT_TAG: Record<Assessment, 'positive' | 'mixed' | 'negative' | 'unknown'> = {
@@ -156,45 +175,50 @@ const ASSESSMENT_TAG: Record<Assessment, 'positive' | 'mixed' | 'negative' | 'un
   unknown: 'unknown',
 };
 
-/** Reading order, not a ranking. People who met the service come first because
- *  they are the ones with something to read; 미경험 is not "worst". */
-const USAGE_ORDER: UsageStatus[] = [
-  'used',
-  'offered_unfulfilled',
-  'offered_declined',
-  'offered_no_response',
-  'not_offered',
-  'no_experience',
-];
+/** What a service designer reads an assessment as. */
+const ASSESSMENT_SAYS: Record<Assessment, string> = {
+  positive: '좋았던 점',
+  mixed: '엇갈린 점',
+  negative: '불편했던 점',
+  unknown: '판단 불가',
+};
 
-function sortReviews(reviews: AgentReview[]): AgentReview[] {
-  return [...reviews].sort((a, b) => {
-    const byUsage = USAGE_ORDER.indexOf(a.usageStatus) - USAGE_ORDER.indexOf(b.usageStatus);
-    if (byUsage !== 0) return byUsage;
-    return a.actorId.localeCompare(b.actorId, undefined, { numeric: true });
-  });
+const ROLE_LABELS: Record<AgentReview['actorRole'], string> = {
+  resident: '주민',
+  village_head: '이장',
+  health_staff: '보건소 직원',
+  health_director: '보건소장',
+};
+
+function byActor(a: AgentReview, b: AgentReview) {
+  return a.actorId.localeCompare(b.actorId, undefined, { numeric: true });
 }
 
+interface WentRow { id: string; time: string; title: string }
+
 /** What someone went through, as the log says it: "09:30 본인에게 연락". A Task
- *  event says its title; any other event its own sentence. At most five. */
-function experiencedLine(review: AgentReview, eventsById: Map<string, DomainEvent> | null): string | null {
-  if (!eventsById) return null;
-  const said: string[] = [];
+ *  event says its title; any other event its own sentence. */
+function wentThrough(review: AgentReview, eventsById: Map<string, DomainEvent> | null): WentRow[] {
+  if (!eventsById) return [];
+  const said: WentRow[] = [];
+  const seen = new Set<string>();
   for (const id of review.experiencedEventIds) {
     const event = eventsById.get(id);
     if (!event) continue;
     const title = typeof event.payload.title === 'string' ? event.payload.title : sentenceFor(event)?.text;
-    if (title) said.push(`${formatClock(event.simTimeMs)} ${title}`);
+    if (!title) continue;
+    const time = formatClock(event.simTimeMs);
+    if (seen.has(`${time} ${title}`)) continue;
+    seen.add(`${time} ${title}`);
+    said.push({ id, time, title });
   }
-  if (said.length === 0) return null;
-  return said.length > 5 ? `${said.slice(0, 5).join(' · ')} 외 ${said.length - 5}건` : said.join(' · ');
+  return said;
 }
 
 interface Props {
   detail: SessionDetail;
   generation: GenerationDetail | null;
-  /** Everyone in the village, so a person without a review is still listed -
-   *  as not having met the service, never as a blank or a complaint. */
+  /** Everyone in the village: only to say how many went through nothing. */
   residents: string[];
   /** Opens the cited scene on the experience screen and moves its cursor. A
    *  read of a stored log; no adapter runs. */
@@ -216,16 +240,25 @@ export default function EvaluationsScreen({
   eyebrow,
   events = null,
 }: Props) {
-  const reviews = useMemo(() => sortReviews(generation?.reviews ?? []), [generation]);
-  const [openId, setOpenId] = useState<string | null>(null);
+  // Only those who went through the day and were asked. A review of someone who
+  // went through nothing says nothing, so it is not shown.
+  const asked = useMemo(
+    () => (generation?.reviews ?? []).filter((r) => r.usageStatus !== 'no_experience').sort(byActor),
+    [generation],
+  );
   const eventsById = useMemo(() => new Map((events?.list ?? []).map((e) => [e.id, e])), [events]);
   const synthesis = generation?.synthesis ?? null;
+  const parentDay = detail.generations.find((g) => g.id === generation?.parentGenerationId) ?? null;
+  const before = useMemo(
+    () => new Map((parentDay?.reviews ?? []).filter((r) => r.usageStatus !== 'no_experience').map((r) => [r.actorId, r])),
+    [parentDay],
+  );
 
-  if (!generation || reviews.length === 0) {
+  if (!generation || asked.length === 0) {
     return (
       <Sheet>
         <Inner>
-          <Headline>주민 평가</Headline>
+          <PageHead title="주민 평가" />
           <Callout>
             <div>
               {detail.running
@@ -238,102 +271,30 @@ export default function EvaluationsScreen({
     );
   }
 
-  // Met the service: anything but 미경험. Everyone else, reviewed or not, is one
-  // quiet row - the review of someone who went through nothing says nothing.
-  const met = reviews.filter((r) => r.usageStatus !== 'no_experience');
-  const reviewed = new Set(reviews.map((r) => r.actorId));
-  const quiet = [
-    ...reviews.filter((r) => r.usageStatus === 'no_experience').map((r) => r.actorId),
-    ...residents.filter((id) => !reviewed.has(id)),
-  ].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  const others = residents.filter((id) => !asked.some((r) => r.actorId === id)).length;
 
   return (
     <Sheet>
       <Inner>
-        <div>
-          <Eyebrow>{eyebrow}</Eyebrow>
-          <Headline>주민 평가</Headline>
-        </div>
-        <Lead>
-          각자 <strong style={{ color: colour.text }}>자기가 겪은 일만</strong> 근거로 말합니다. 겪지 않은
-          사람은 아래에 따로 두고, 불만족으로 세지 않습니다. 점수도 순위도 매기지 않습니다.
-        </Lead>
+        <PageHead eyebrow={eyebrow} title="주민 평가" />
+        <Context>
+          <ContextTag>이 날의 설정</ContextTag>
+          <b>{generation.label}</b>
+          <span>
+            · 서비스를 겪고 평가한 주민 <b>{asked.length}명</b>
+            {others > 0 && ` · 나머지 ${others}명은 겪은 일이 없어 평가에 넣지 않았고, 불만족으로 세지 않습니다`}
+          </span>
+        </Context>
 
-        <Table>
-          {met.map((review) => {
-            const cited = events?.attemptId === review.attemptId ? eventsById : null;
-            const line = experiencedLine(review, cited);
-            const judged = review.items.filter((item) => item.assessment !== 'unknown');
-            const abstained = review.items.filter((item) => item.assessment === 'unknown');
-            const open = openId === review.id;
-            return (
-              <PersonRow key={review.id} $quiet={false}>
-                <strong>{personName(review.actorId)}</strong>
-                <Count $used>겪음 {review.experiencedEventIds.length}건</Count>
-                <Said>
-                  <p>{review.overallNarrative}</p>
-                  {line && <small>{line}</small>}
-                  {review.items.length > 0 && (
-                    <TextLink onClick={() => setOpenId(open ? null : review.id)}>
-                      {open ? '평가 항목 닫기' : `평가 항목 ${review.items.length}개 보기`}
-                    </TextLink>
-                  )}
-                  {open && (
-                    <Items>
-                      {judged.map((item) => (
-                        <DimensionRow key={item.dimension} item={item} attemptId={review.attemptId}
-                          eventsById={cited} onOpenScene={onOpenScene} />
-                      ))}
-                      {abstained.length > 0 && (
-                        <Disclosure>
-                          <summary>
-                            판단 불가 {abstained.length}개 —{' '}
-                            {abstained.map((item) => DIMENSION_LABELS[item.dimension]).join(', ')}
-                          </summary>
-                          <div>
-                            {abstained.map((item) => (
-                              <DimensionRow key={item.dimension} item={item} attemptId={review.attemptId}
-                                eventsById={cited} onOpenScene={onOpenScene} />
-                            ))}
-                          </div>
-                        </Disclosure>
-                      )}
-                      {review.items.some((i) => i.requestedChange) && (
-                        <div>
-                          <Sub>요청한 변경</Sub>
-                          <ul style={{ margin: '4px 0 0', paddingLeft: 18, lineHeight: 1.7 }}>
-                            {review.items.filter((i) => i.requestedChange).map((item, index) => (
-                              <li key={index}>{item.requestedChange}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {review.unknowns.length > 0 && (
-                        <div>
-                          <Sub>판단할 수 없는 것</Sub>
-                          <ul style={{ margin: '4px 0 0', paddingLeft: 18, lineHeight: 1.7 }}>
-                            {review.unknowns.map((unknown) => <li key={unknown}>{unknown}</li>)}
-                          </ul>
-                        </div>
-                      )}
-                      <Sub>
-                        {USAGE_LABELS[review.usageStatus]} · {review.adapter} 어댑터 · 리뷰{' '}
-                        <Mono>{review.id}</Mono>
-                      </Sub>
-                    </Items>
-                  )}
-                </Said>
-              </PersonRow>
-            );
-          })}
-          {quiet.map((id) => (
-            <PersonRow key={id} $quiet>
-              <strong>{personName(id)}</strong>
-              <Count $used={false}>미경험</Count>
-              <Quiet>오늘 이 서비스와 아무 일도 겪지 않았습니다.</Quiet>
-            </PersonRow>
+        <Cards>
+          {asked.map((review) => (
+            <PersonCard key={review.id} review={review}
+              cited={events?.attemptId === review.attemptId ? eventsById : null}
+              yesterday={before.get(review.actorId) ?? null}
+              yesterdayName={parentDay?.label ?? null}
+              onOpenScene={onOpenScene} />
           ))}
-        </Table>
+        </Cards>
 
         <Sub>
           합성 평가입니다. 실제 주민의 만족도나 동의가 아니며, 나중에 실제 주민이 확인·반박할 대상입니다.
@@ -352,7 +313,7 @@ export default function EvaluationsScreen({
                   </Row>
                   {issue.reviewItemRefs.map((ref) => {
                     const [reviewId, indexText] = ref.split('#');
-                    const review = reviews.find((r) => r.id === reviewId);
+                    const review = asked.find((r) => r.id === reviewId);
                     const item = review?.items[Number(indexText)];
                     return review && item ? (
                       <Sub key={ref}>
@@ -373,6 +334,106 @@ export default function EvaluationsScreen({
   );
 }
 
+function PersonCard({
+  review,
+  cited,
+  yesterday,
+  yesterdayName,
+  onOpenScene,
+}: {
+  review: AgentReview;
+  cited: Map<string, DomainEvent> | null;
+  yesterday: AgentReview | null;
+  yesterdayName: string | null;
+  onOpenScene: (attemptId: string, eventId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const went = wentThrough(review, cited);
+  const judged = review.items.filter((item) => item.assessment !== 'unknown');
+  const abstained = review.items.filter((item) => item.assessment === 'unknown');
+  const asks = review.items.map((i) => i.requestedChange).filter((c): c is string => Boolean(c));
+  return (
+    <Card title={`${review.adapter} 어댑터 · ${review.id}`}>
+      <Who>
+        <strong>{personName(review.actorId)}</strong>
+        <Role>{ROLE_LABELS[review.actorRole]}</Role>
+        <Count>겪은 일 {review.experiencedEventIds.length}건</Count>
+      </Who>
+
+      <Quote>{review.overallNarrative}</Quote>
+
+      {asks.length > 0 && (
+        <Asked>
+          <Label>바라는 것</Label>
+          <ul>{asks.map((ask, index) => <li key={index}>{ask}</li>)}</ul>
+        </Asked>
+      )}
+
+      {went.length > 0 && (
+        <div>
+          <Label>겪은 일</Label>
+          <WentList>
+            {went.map((w) => (
+              <li key={w.id}>
+                <time>{w.time}</time>
+                <span>
+                  {w.title}{' '}
+                  <TextLink onClick={() => onOpenScene(review.attemptId, w.id)}>장면 보기</TextLink>
+                </span>
+              </li>
+            ))}
+          </WentList>
+        </div>
+      )}
+
+      {yesterday && yesterdayName && (
+        <Disclosure>
+          <summary>{yesterdayName} 날에는 이렇게 말했습니다</summary>
+          <Yesterday>{yesterday.overallNarrative}</Yesterday>
+        </Disclosure>
+      )}
+
+      {review.items.length > 0 && (
+        <>
+          <TextLink style={{ alignSelf: 'flex-start' }} onClick={() => setOpen(!open)}>
+            {open ? '평가 항목 닫기' : `평가 항목 ${review.items.length}개 보기`}
+          </TextLink>
+          {open && (
+            <Items>
+              {judged.map((item) => (
+                <DimensionRow key={item.dimension} item={item} attemptId={review.attemptId}
+                  eventsById={cited} onOpenScene={onOpenScene} />
+              ))}
+              {abstained.length > 0 && (
+                <Disclosure>
+                  <summary>
+                    판단 불가 {abstained.length}개 —{' '}
+                    {abstained.map((item) => DIMENSION_LABELS[item.dimension]).join(', ')}
+                  </summary>
+                  <div>
+                    {abstained.map((item) => (
+                      <DimensionRow key={item.dimension} item={item} attemptId={review.attemptId}
+                        eventsById={cited} onOpenScene={onOpenScene} />
+                    ))}
+                  </div>
+                </Disclosure>
+              )}
+              {review.unknowns.length > 0 && (
+                <div>
+                  <Label>판단할 수 없는 것</Label>
+                  <ul style={{ margin: '4px 0 0', paddingLeft: 18, lineHeight: 1.7 }}>
+                    {review.unknowns.map((unknown) => <li key={unknown}>{unknown}</li>)}
+                  </ul>
+                </div>
+              )}
+            </Items>
+          )}
+        </>
+      )}
+    </Card>
+  );
+}
+
 function DimensionRow({
   item,
   attemptId,
@@ -390,7 +451,7 @@ function DimensionRow({
   return (
     <Dimension>
       <Row style={{ gap: 8 }}>
-        <Tag $kind={ASSESSMENT_TAG[item.assessment]}>{ASSESSMENT_LABELS[item.assessment]}</Tag>
+        <Tag $kind={ASSESSMENT_TAG[item.assessment]}>{ASSESSMENT_SAYS[item.assessment]}</Tag>
         <strong>{DIMENSION_LABELS[item.dimension]}</strong>
       </Row>
       <Body style={{ margin: 0 }}>{item.reason}</Body>

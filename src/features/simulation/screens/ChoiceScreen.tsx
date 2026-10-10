@@ -3,7 +3,8 @@ import styled from 'styled-components';
 import type { GenerationDetail, SessionDetail } from '../api/iteration';
 import { childFor, dayFacts, dayName, pathCount, pathTo } from '../selectors/tree';
 import { nameList, withParticle } from '../selectors/story';
-import { colour, font } from '../ui/theme';
+import { colour, font, night } from '../ui/theme';
+import { Inner, PageHead, Sheet } from '../ui/page';
 import { pill } from '../ui/primitives';
 
 // Choosing the next version, in a record whose versions branch (selectors/tree).
@@ -14,42 +15,6 @@ import { pill } from '../ui/primitives';
 // on screen was run when the record was made, so choosing one opens a day that
 // already happened - it starts nothing. A revision that was never run is shown
 // and cannot be chosen.
-
-const Sheet = styled.div`
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 40px 20px 48px;
-`;
-
-const Inner = styled.div`
-  max-width: 1132px;
-  margin: 0 auto;
-`;
-
-export const Eyebrow = styled.div`
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  color: #e2542c;
-`;
-
-export const Headline = styled.h1`
-  margin: 8px 0 10px;
-  font-size: 32px;
-  line-height: 1.2;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  color: ${colour.text};
-`;
-
-export const Lead = styled.p`
-  margin: 0 0 22px;
-  max-width: 660px;
-  font-size: 14.5px;
-  line-height: 1.7;
-  color: ${colour.secondary};
-`;
 
 /* The cards share their rows (subgrid): the kind, the request, its purpose, the
    reason, whose experience it came from and the rule start at one height across
@@ -78,14 +43,14 @@ const Card = styled.button`
   color: ${colour.text};
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
   &:hover:not(:disabled) {
-    border-color: #e2542c;
+    border-color: ${night.accent};
     box-shadow: 0 6px 18px rgba(29, 41, 53, 0.1);
     transform: translateY(-1px);
   }
-  &:focus-visible { outline: 2px solid #e2542c; outline-offset: 2px; }
+  &:focus-visible { outline: 2px solid ${night.accent}; outline-offset: 2px; }
   &:disabled { cursor: default; opacity: 0.55; }
-  > small { font-size: 11.5px; font-weight: 800; color: ${colour.secondary}; }
-  > strong { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; }
+  > small { font-size: calc(11.5px * var(--k, 1)); font-weight: 800; color: ${colour.secondary}; }
+  > strong { font-size: calc(18px * var(--k, 1)); font-weight: 800; letter-spacing: -0.02em; }
   > p { margin: 0; font-size: ${font.small}; line-height: 1.65; color: ${colour.secondary}; }
 `;
 
@@ -105,7 +70,7 @@ const Goal = styled.p`
 
 /** 이 요청이 어느 주민이 겪은 일에서 나왔는가 - 평가가 수정에 쓰인다는 연구의 연결 고리. */
 const From = styled.div`
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--k, 1));
   font-weight: 800;
   color: ${colour.secondary};
   > b { color: ${colour.text}; }
@@ -142,7 +107,7 @@ const Again = styled.button`
   font-weight: 800;
   cursor: pointer;
   border: none;
-  background: #15150f;
+  background: ${night.deep};
   color: #ffffff;
 `;
 
@@ -188,11 +153,9 @@ function Ending({ detail, current, onRestart }: { detail: SessionDetail; current
   return (
     <Sheet>
       <Inner>
-        <Eyebrow>사흘이 끝났습니다</Eyebrow>
-        <Headline>고른 것과, 마을이 어떻게 됐는지</Headline>
-        <Lead>
+        <PageHead eyebrow="사흘이 끝났습니다" title="고른 것과, 마을이 어떻게 됐는지">
           첫 설정에서 갈라지는 {pathCount(detail, pathTo(detail, current.id)[0]?.id ?? '')}가지 경로 가운데 하나입니다. 이 결과는 미리 계산해 둔 것이고, 실시간 모델 호출은 없습니다.
-        </Lead>
+        </PageHead>
         <Summary>
           <thead>
             <tr><th>날</th><th>그날 고른 것</th><th>확인까지</th><th>이장이 받은 부탁</th><th>거절</th>
@@ -229,12 +192,10 @@ export default function ChoiceScreen({ detail, current, onChoose, onRestart }: P
   return (
     <Sheet>
       <Inner>
-        <Eyebrow>{dayName(current)} → {current.index + 2}일차 · 수정안 고르기</Eyebrow>
-        <Headline>무엇을 고칠 것인가</Headline>
-        <Lead>
+        <PageHead eyebrow={`${dayName(current)} → ${current.index + 2}일차 · 수정안 고르기`} title="무엇을 고칠 것인가">
           오늘 주민들이 겪은 일에서 나온 세 가지입니다. 하나만 고를 수 있고, 고른 것이 내일의 규칙이
-          됩니다. 나머지 조건은 그대로 둡니다.
-        </Lead>
+          되어 내일의 시뮬레이션이 여러분의 선택대로 달라집니다. 나머지 조건은 그대로 둡니다.
+        </PageHead>
         <Cards>
           {current.changeSets.map((changeSet) => {
             const child = childFor(detail, changeSet.id);

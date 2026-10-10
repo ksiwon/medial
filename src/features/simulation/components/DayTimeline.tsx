@@ -3,7 +3,7 @@ import styled, { keyframes } from 'styled-components';
 import { formatClock } from '../positions';
 import type { TimelineItem } from '../selectors/dayLedger';
 import { personName } from '../selectors/story';
-import { font, night } from '../ui/theme';
+import { font, night, px } from '../ui/theme';
 import { pill } from '../ui/primitives';
 
 // 오늘의 타임라인: the right-hand column of the observe screen, and the day's
@@ -55,7 +55,7 @@ const Hour = styled.span`
   position: absolute;
   left: ${RAIL_X + 12}px;
   transform: translateY(-50%);
-  font-size: 11px;
+  font-size: calc(11px * var(--k, 1));
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: ${night.faint};
@@ -100,7 +100,7 @@ const Play = styled.button`
 const Clock = styled.time`
   flex: 1;
   text-align: right;
-  font-size: 34px;
+  font-size: calc(34px * var(--k, 1));
   line-height: 1;
   font-weight: 800;
   letter-spacing: -0.03em;
@@ -131,7 +131,7 @@ const Settings = styled.details`
     cursor: pointer;
     list-style: none;
     color: rgba(246, 241, 232, 0.75);
-    font-size: 16px;
+    font-size: calc(16px * var(--k, 1));
     padding: 4px 6px;
     border-radius: 6px;
   }
@@ -157,7 +157,7 @@ const Settings = styled.details`
 
 const Note = styled.p`
   margin: 0;
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--k, 1));
   color: rgba(246, 241, 232, 0.55);
 `;
 
@@ -261,7 +261,7 @@ const Item = styled.li<{ $state: TimelineItem['state'] | 'edge' }>`
     gap: 10px;
   }
   > div > b {
-    font-size: ${(p) => (p.$state === 'now' ? '20px' : p.$state === 'edge' ? '13px' : '16px')};
+    font-size: ${(p) => px(p.$state === 'now' ? 20 : p.$state === 'edge' ? 13 : 16)};
     font-weight: 800;
     letter-spacing: -0.02em;
     line-height: ${TITLE_H}px;
@@ -282,7 +282,7 @@ const Item = styled.li<{ $state: TimelineItem['state'] | 'edge' }>`
 
 const Detail = styled.p`
   margin: 6px 0 0;
-  font-size: 13.5px;
+  font-size: calc(13.5px * var(--k, 1));
   line-height: 1.55;
   color: rgba(246, 241, 232, 0.88);
   word-break: keep-all;

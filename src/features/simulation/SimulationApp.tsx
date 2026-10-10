@@ -1,51 +1,32 @@
 import { useEffect, useMemo, useRef } from 'react';
 import styled from 'styled-components';
-import ComparePanel from './components/ComparePanel';
-import FieldSheet from './components/FieldSheet';
-import GenerationPanel from './components/GenerationPanel';
-import ProgressBar from './components/ProgressBar';
 import ChoiceScreen from './screens/ChoiceScreen';
-import IntroScreen from './screens/IntroScreen';
-import CompareScreen from './screens/CompareScreen';
 import EvaluationsScreen from './screens/EvaluationsScreen';
+import IntroScreen from './screens/IntroScreen';
 import ObserveScreen from './screens/ObserveScreen';
-import PrepareScreen from './screens/PrepareScreen';
-import RecordingsScreen from './screens/RecordingsScreen';
-import { useIterationStore, type Screen } from './iterationStore';
+import { useIterationStore } from './iterationStore';
 import { usePlayback } from './scene/playback';
-import { dayFacts, dayLine, dayName, isTree, openingOf, pathTo } from './selectors/tree';
+import { dayFacts, dayLine, dayName, openingOf } from './selectors/tree';
 import { useSimStore } from './store';
-import {
-  Button,
-  Callout,
-  Disclosure,
-  Mono,
-  Sub,
-  Tag,
-  TextLink,
-  versionName,
-} from './ui/primitives';
-import { colour, font, night, radius } from './ui/theme';
+import { Callout, Mono } from './ui/primitives';
+import { colour, font, night } from './ui/theme';
+import { useUiScale } from './ui/uiScale';
 
-// Three screens, and the shell that holds them.
+// The walk, and the shell that holds it:
 //
-//   사례와 서비스 경험 - the village, the conditions this comparison fixes, the
-//                        run, and the scenes an evaluation cites;
-//   주민 평가          - where the loop lands when a day ends (doc 19 section 9);
-//   개선과 확인        - the change, its confirmation, the before/after, and the
-//                        field record.
+//   소개 영상          - why this exists, and who the visitor is; it ends by
+//                        opening day one;
+//   관찰               - the day, as a scene, a map and a timeline;
+//   주민 평가          - the residents who went through the day, in their words;
+//   수정안 고르기      - the revision that becomes the next day's rule.
 //
-// The six research steps of doc 12 still run in that order on the server and
-// ProgressBar says where the loop is; they are not six things to click.
-//
-// Removed on 2026-09-15 (26번 F10): the manual A/B flow, the standalone policy
-// editor and "apply this finding", because each was a *second* way to create a
-// revision and an attempt. One new-execution path now exists - confirm a Change
-// Set - and the research condition RQ2 compares is a read-only difference in
-// what the same run offers, not the presence of an old feature. Stored findings
-// and every past attempt remain readable under 고급.
+// Every day shown was run when the record was made (selectors/tree): choosing a
+// revision opens that day, it starts nothing. The old second flow - preparing a
+// run, comparing versions, the field sheet - was removed on 2026-10-10 with the
+// rest of the interface that created runs; one path is left to read.
 
-/** `$night`: the observe screen's ground, so the page around it is not a light frame. */
+/** `$night`: the film's and the observe screen's ground, so the page around
+ *  them is not a light frame. */
 const Root = styled.div<{ $night?: boolean }>`
   position: relative;
   /* 100% rather than 100vw: with a scrollbar present 100vw is wider than the
@@ -61,119 +42,16 @@ const Root = styled.div<{ $night?: boolean }>`
   overflow: hidden;
 `;
 
-const Header = styled.header`
-  min-height: 56px;
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 8px 20px;
-  border-bottom: 1px solid ${colour.border};
-  background: ${colour.surface};
-
-  /* Narrow, the three screen names and the badges were competing for one row
-     and the nav was clipped under the wordmark (seen at 800px in a browser).
-     The header takes a second row instead, and the badges - which are context,
-     not navigation - drop off first. */
-  @media (max-width: 900px) {
-    flex-wrap: wrap;
-    row-gap: 8px;
-  }
-`;
-
-/** Every screen of a walked record says what its people are. It used to ride in
- *  the header; the header went with the two-column observe screen (2026-10-06),
- *  and this boundary - a simulated resident's words are not a real resident's
- *  opinion - must not go with it. One strip at the foot, on every screen but the
- *  opening film, which says the same thing in its own corner. */
-/** One line under every screen of the walk, in the ground's own colour. */
+/** Every screen of the walk says what its people are. A simulated resident's
+ *  words are not a real resident's opinion, and this boundary must not leave
+ *  with a header: one line at the foot of every screen but the opening film,
+ *  which says the same in its own corner. */
 const Foot = styled.footer`
   flex: none;
   padding: 0 16px 8px;
-  font-size: 11.5px;
+  font-size: ${font.small};
   opacity: 0.6;
   text-align: center;
-`;
-
-const Brand = styled.div`
-  font-size: ${font.brand};
-  font-weight: 700;
-  letter-spacing: -0.3px;
-`;
-
-/* The three screens are one cycle, and the nav says so: numbered, joined by
-   arrows, and closed by a return arrow from the third back to the first. Three
-   unmarked words in a row read as tabs, and a reader could not tell they were
-   steps of a loop (the user, 2026-09-15). */
-const Nav = styled.nav`
-  display: flex;
-  align-items: center;
-  gap: 2px;
-
-  @media (max-width: 900px) {
-    order: 3;
-    width: 100%;
-  }
-`;
-
-const Arrow = styled.span`
-  color: ${colour.unknown};
-  font-size: ${font.small};
-  padding: 0 4px;
-  user-select: none;
-`;
-
-/** The loop closing: after 개선과 확인 the confirmed change becomes the next
- *  case. Drawn as the arrow going back, never as a fourth step. */
-const Return = styled.span`
-  color: ${colour.unknown};
-  font-size: ${font.small};
-  padding: 0 4px 0 2px;
-  white-space: nowrap;
-  user-select: none;
-`;
-
-const NavItem = styled.button<{ $active: boolean }>`
-  font-family: inherit;
-  white-space: nowrap;
-  font-size: ${font.body};
-  border: none;
-  background: ${(p) => (p.$active ? colour.selected : 'transparent')};
-  color: ${(p) => (p.$active ? colour.primary : colour.secondary)};
-  font-weight: ${(p) => (p.$active ? 600 : 400)};
-  border-radius: ${radius.control};
-  padding: 6px 12px 6px 8px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  &:hover:not(:disabled) {
-    color: ${colour.primary};
-  }
-  &:focus-visible {
-    outline: 2px solid ${colour.primary};
-    outline-offset: 1px;
-  }
-  &:disabled {
-    opacity: 0.4;
-    cursor: default;
-  }
-`;
-
-const StepNo = styled.span<{ $active: boolean }>`
-  flex: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  background: ${(p) => (p.$active ? colour.primary : 'transparent')};
-  color: ${(p) => (p.$active ? colour.surface : colour.secondary)};
-  border: 1px solid ${(p) => (p.$active ? colour.primary : colour.border)};
 `;
 
 const Notices = styled.div`
@@ -184,28 +62,8 @@ const Notices = styled.div`
   padding: 12px 20px 0;
 `;
 
-const Secondary = styled.div`
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 24px 20px 40px;
-`;
-
-const SecondaryInner = styled.div`
-  max-width: 1080px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-`;
-
-const NAV: { key: Screen; label: string }[] = [
-  { key: 'case', label: '사례와 서비스 경험' },
-  { key: 'evaluations', label: '주민 평가' },
-  { key: 'improve', label: '개선과 확인' },
-];
-
 export default function SimulationApp() {
+  useUiScale();
   const s = useSimStore();
   const it = useIterationStore();
   const playing = usePlayback((state) => state.playing);
@@ -218,19 +76,6 @@ export default function SimulationApp() {
     void it.init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // The audit comparison of two stored attempts is a read; it is refreshed only
-  // while that advanced view is open.
-  useEffect(() => {
-    if (it.compareView === 'all_generations' && s.compareIds.length >= 2) {
-      void s.refreshComparison();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [it.compareView, s.compareIds.join(',')]);
-
-  // The poll is the loop's own; stop it when the screen goes away rather than
-  // leaving a timer talking to a session nobody is watching.
-  useEffect(() => () => useIterationStore.getState().stopPolling(), []);
 
   // requestAnimationFrame moves the playhead of a stored recording; it never
   // advances the simulation itself.
@@ -255,12 +100,16 @@ export default function SimulationApp() {
 
   const loaded = s.activeId ? s.attempts[s.activeId] : null;
 
-  // The version being read is the version of the day that is loaded. They were
-  // two states: the workspace reopens the *last* stored attempt (v1's, in a
-  // finished loop) while the version select started at v0, so the map played
-  // v1's day under a v0 label and the evaluations cited a log that was not
-  // loaded (seen 2026-09-29). Every control that picks a version also loads its
-  // day, so following the loaded day in this one direction keeps them one.
+  // The opening film is waiting time: day one's record is read during it.
+  const prefetch = s.prefetch;
+  useEffect(() => {
+    if (!it.detail || it.pathStarted) return;
+    const first = openingOf(it.detail)?.attemptIds[0];
+    if (first) void prefetch(first);
+  }, [it.detail, it.pathStarted, prefetch]);
+
+  // The version being read is the version of the day that is loaded: a scene
+  // opened from an evaluation loads another day, and the screens follow it.
   const setViewGeneration = it.setViewGeneration;
   useEffect(() => {
     const owner = it.detail?.generations.find((g) => s.activeId && g.attemptIds.includes(s.activeId));
@@ -281,7 +130,7 @@ export default function SimulationApp() {
               <strong>시뮬레이션 서버에 연결하지 못했습니다.</strong>
               <div style={{ marginTop: 6 }}>{s.error}</div>
               <div style={{ marginTop: 8 }}>
-                <Mono>python server/sim_main.py</Mono> 를 실행한 뒤 새로고침하세요. API 키는 필요
+                <Mono>python server/sim_main.py --mode sim</Mono> 를 실행한 뒤 새로고침하세요. API 키는 필요
                 없습니다.
               </div>
             </div>
@@ -291,10 +140,7 @@ export default function SimulationApp() {
     );
   }
 
-  // The empty state is the prepare screen, so the village registry and the
-  // capabilities are all that has to be loaded before anything is usable.
-  // Rendering no longer waits for an attempt to exist.
-  if (!s.village || !s.catalog) {
+  if (!s.village || !it.loaded) {
     return (
       <Root>
         <Notices>
@@ -304,373 +150,74 @@ export default function SimulationApp() {
     );
   }
 
-  const screen = it.screen;
-  // A record whose versions branch - the exhibition record - is walked one day
-  // at a time by choosing (selectors/tree, ChoiceScreen): first setting, day,
-  // reviews, revision, next day. Its shell is the wall's: the day, the path,
-  // and what is simulated; the three screens are reached by that walk.
-  const tree = isTree(it.detail);
-  // sim plays what real ran and starts nothing; real generates as it goes.
-  // Everything below that differs between the two reads this one flag.
-  const sim = s.catalog.mode === 'sim';
-  const hasRun = loaded != null;
-  const hasEvaluations = (it.detail?.generations ?? []).some((g) => g.reviews.length > 0);
-  // The case screen is either setting a run up or reading the one that ran.
-  // Unpinned, it follows the workspace: a stored run opens as the run.
-  const caseView =
-    it.caseView === 'auto' ? (hasRun ? 'experience' : 'setup')
-      : it.caseView === 'experience' && hasRun ? 'experience'
-        : 'setup';
-
-  if (tree && it.detail) {
-    const detail = it.detail;
-    const current = it.pathStarted ? viewGeneration : null;
-    const walked = current ? pathTo(detail, current.id) : [];
+  if (!it.detail) {
     return (
-      <Root $night={!current || screen === 'case'}>
-
-
-        {(playbackError || s.error || it.error) && (
-          <Notices>
-            <Callout $tone="error">
-              <div style={{ flex: 1 }}>{playbackError ?? s.error ?? it.error}</div>
-            </Callout>
-          </Notices>
-        )}
-
-        {!current && (
-          <IntroScreen detail={detail}
-            onFinish={() => { const first = openingOf(detail); if (first) void it.choose(first.id); }} />
-        )}
-
-        {current && screen === 'case' && loaded && (
-          <ObserveScreen
-            village={s.village}
-            detail={loaded.detail}
-            events={loaded.events}
-            art={s.art}
-            dayEnd={{ text: `${dayName(current)}가 끝났습니다`, action: '주민 리뷰를 보시겠습니까',
-                      note: dayFacts(current) ? dayLine(dayFacts(current)!) : null }}
-            onReadEvaluations={() => it.setScreen('evaluations')}
-            strip={{ day: dayName(current), note: walked.map((g) => g.label).join(' → '), onRestart: it.restartPath }}
-          />
-        )}
-
-        {current && screen === 'evaluations' && (
-          <EvaluationsScreen
-            detail={detail}
-            generation={current}
-            residents={s.village.residents.map((r) => r.id)}
-            eyebrow={`${dayName(current)}가 끝났습니다`}
-            onOpenScene={(attemptId, eventId) => void it.openScene(attemptId, eventId)}
-            onGoToImprove={() => it.setScreen('improve')}
-            events={loaded ? { attemptId: loaded.detail.attempt.id, list: loaded.events } : null}
-          />
-        )}
-
-        {current && screen === 'improve' && (
-          <ChoiceScreen detail={detail} current={current} onChoose={(id) => void it.choose(id)}
-            onRestart={it.restartPath} />
-        )}
-        {current && (
-          <Foot>화면 속 사람과 대화는 전부 시뮬레이션입니다 · 이름은 가명, 모습은 지어낸 그림입니다</Foot>
-        )}
+      <Root>
+        <Notices>
+          <Callout>
+            <div>
+              <strong>읽을 기록이 없습니다.</strong>
+              <div style={{ marginTop: 6 }}>
+                전시 기록을 가져오려면 <Mono>python scripts/import_exhibition.py --replace</Mono> 를 실행한 뒤
+                다시 여세요.
+              </div>
+            </div>
+          </Callout>
+        </Notices>
       </Root>
     );
   }
 
+  const detail = it.detail;
+  const current = it.pathStarted ? viewGeneration : null;
+  const screen = it.screen;
   return (
-    <Root>
-      <Header>
-        <Brand>MEDial</Brand>
-        <Nav aria-label="연구 순환">
-          {NAV.map((item, index) => (
-            <span key={item.key} style={{ display: 'contents' }}>
-              {index > 0 && <Arrow aria-hidden>→</Arrow>}
-              <NavItem
-                $active={screen === item.key}
-                aria-current={screen === item.key ? 'page' : undefined}
-                disabled={
-                  (item.key === 'evaluations' && !hasEvaluations) ||
-                  (item.key === 'improve' && !it.detail)
-                }
-                title={
-                  item.key === 'evaluations' && !hasEvaluations
-                    ? '아직 이 사례의 주민 평가가 없습니다'
-                    : item.key === 'improve' && !it.detail
-                      ? '먼저 사례를 하나 실행하세요'
-                      : undefined
-                }
-                onClick={() => it.setScreen(item.key)}
-              >
-                <StepNo $active={screen === item.key} aria-hidden>
-                  {index + 1}
-                </StepNo>
-                {item.label}
-              </NavItem>
-            </span>
-          ))}
-          <Return title="확인된 개선안이 다음 사례가 됩니다. 3 → 1로 돌아가 다시 한 바퀴.">
-            ↺ 다시 1로
-          </Return>
-        </Nav>
-        <span style={{ flex: 1 }} />
-        {it.detail && (
-          <Sub as="span" style={{ whiteSpace: 'nowrap', overflow: 'hidden',
-                                  textOverflow: 'ellipsis', maxWidth: 360 }}>
-            {it.detail.session.label}
-          </Sub>
-        )}
-        <Tag
-          $kind={sim ? 'warn' : 'positive'}
-          title={sim
-            ? '미리 돌려 둔 기록을 재생합니다. 모델을 부르지 않고 새 실행을 만들지 않습니다.'
-            : '실행할 때마다 새로 계산하고, 모델 어댑터를 고르면 모델이 실시간으로 생성합니다.'}
-        >
-          {sim ? 'sim · 미리 돌려 둔 기록' : 'real · 실시간 생성'}
-        </Tag>
-        {/* Who the residents are. Source-derived personas are the real people of
-            the village the study was done in; the synthetic fixture says so
-            instead, and never borrows that name. */}
-        <Tag $kind={s.catalog.personas.dataSource === 'synthetic' ? 'warn' : 'unknown'}>
-          {s.catalog.personas.dataSource === 'synthetic'
-            ? `합성 페르소나 · ${s.catalog.personas.personaCount}명`
-            : `실제 남해군 은점마을 주민 ${s.catalog.personas.personaCount}명`}
-        </Tag>
-      </Header>
-
-      {/* The loop's own progress, on every screen where a loop exists. Its
-          controls are the run's; the map's playback bar is the recording's. */}
-      {it.detail && !(screen === 'case' && caseView === 'setup') && (
-        <ProgressBar
-          detail={it.detail}
-          viewGenerationId={it.viewGenerationId}
-          busy={it.busy}
-          onSelectGeneration={(id) => {
-            it.setViewGeneration(id);
-            const generation = it.detail?.generations.find((g) => g.id === id);
-            // Reading an earlier version switches what the map shows and
-            // nothing else: the loop keeps running where it was.
-            if (generation?.attemptIds[0]) void s.setActive(generation.attemptIds[0]);
-          }}
-          onCommand={sim ? undefined : (name) => void it.send(name)}
-        />
-      )}
-
-      {(s.error || playbackError || s.notice || it.error || it.notice) && (
+    <Root $night={!current || screen === 'case'}>
+      {(playbackError || s.error || it.error) && (
         <Notices>
-          {playbackError && (
-            <Callout $tone="error">
-              <div style={{ flex: 1 }}>{playbackError}</div>
-              <Button onClick={usePlayback.getState().dismissError}>닫기</Button>
-            </Callout>
-          )}
-          {s.error && (
-            <Callout $tone="error">
-              <div style={{ flex: 1 }}>{s.error}</div>
-            </Callout>
-          )}
-          {s.notice && (
-            <Callout>
-              <div style={{ flex: 1 }}>{s.notice}</div>
-              <Button onClick={s.dismissNotice}>닫기</Button>
-            </Callout>
-          )}
-          {it.error && (
-            <Callout $tone="error">
-              <div style={{ flex: 1 }}>{it.error}</div>
-              <Button onClick={it.dismiss}>닫기</Button>
-            </Callout>
-          )}
-          {it.notice && (
-            <Callout>
-              <div style={{ flex: 1 }}>{it.notice}</div>
-              <Button onClick={it.dismiss}>닫기</Button>
-            </Callout>
-          )}
+          <Callout $tone="error">
+            <div style={{ flex: 1 }}>{playbackError ?? s.error ?? it.error}</div>
+          </Callout>
         </Notices>
       )}
 
-      {screen === 'case' && caseView === 'setup' && sim && (
-        <Secondary>
-          <RecordingsScreen
-            sessions={it.sessions}
-            currentId={hasRun ? it.sessionId : null}
-            onOpen={(id) => void it.switchSession(id)}
-            onReturn={() => it.setCaseView('experience')}
-          />
-        </Secondary>
+      {!current && (
+        <IntroScreen
+          onFinish={() => { const first = openingOf(detail); if (first) void it.choose(first.id); }} />
       )}
 
-      {screen === 'case' && caseView === 'setup' && !sim &&
-        (it.capabilities ? (
-          <Secondary>
-            <PrepareScreen
-              catalog={s.catalog}
-              capabilities={it.capabilities}
-              startPolicyId="policy-IT-v0"
-              phase={it.startPhase}
-              busy={it.busy}
-              onStart={(body) => void it.startExperiment(body)}
-              onRetryStart={() => void it.retryStart()}
-              canReturn={hasRun}
-              onReturn={() => it.setCaseView('experience')}
-            />
-          </Secondary>
-        ) : (
-          <Notices>
-            <Callout>사례 정보를 불러오는 중입니다.</Callout>
-          </Notices>
-        ))}
-
-      {screen === 'case' && caseView === 'experience' && loaded && (
+      {current && screen === 'case' && loaded && (
         <ObserveScreen
           village={s.village}
           detail={loaded.detail}
           events={loaded.events}
           art={s.art}
-          caseAction={{ label: sim ? '다른 기록 보기' : '새 사례 준비',
-                         onClick: () => it.setCaseView('setup') }}
-          dayEnd={{ text: '하루가 끝났습니다', action: '주민 평가 읽기 →' }}
+          dayEnd={{ text: `${dayName(current)}가 끝났습니다`, action: '주민 리뷰를 보시겠습니까',
+                    note: dayFacts(current) ? dayLine(dayFacts(current)!) : null }}
           onReadEvaluations={() => it.setScreen('evaluations')}
+          strip={{ day: dayName(current), onRestart: it.restartPath }}
         />
       )}
 
-      {screen === 'evaluations' && it.detail && (
+      {current && screen === 'evaluations' && (
         <EvaluationsScreen
-          detail={it.detail}
-          generation={viewGeneration ?? it.detail.generations[0] ?? null}
+          detail={detail}
+          generation={current}
           residents={s.village.residents.map((r) => r.id)}
-          eyebrow={viewGeneration ? versionName(viewGeneration.index, viewGeneration.label) : ''}
+          eyebrow={`${dayName(current)}가 끝났습니다`}
           onOpenScene={(attemptId, eventId) => void it.openScene(attemptId, eventId)}
           onGoToImprove={() => it.setScreen('improve')}
           events={loaded ? { attemptId: loaded.detail.attempt.id, list: loaded.events } : null}
         />
       )}
 
-      {screen === 'improve' && it.detail && (
-        <>
-          {it.compareView === 'summary' && (
-            <CompareScreen
-              detail={it.detail}
-              comparison={it.comparison}
-              leftId={it.compareLeftId}
-              rightId={it.compareRightId}
-              busy={it.busy}
-              onSetSides={it.setCompareSides}
-              onOpenScene={(attemptId, eventId) => void it.openScene(attemptId, eventId)}
-              decisions={sim ? null : {
-                onConfirmChangeSet: (id, reason) => void it.confirmChangeSet(id, reason),
-                onSaveResearcherChangeSet: (body) => it.saveResearcherChangeSet(body),
-                onDeclineChanges: (reason) => void it.declineChanges(reason),
-                onOpenFieldSheet: () => it.setFieldSheet(true),
-              }}
-              onOpenAllAttempts={() => it.setCompareView('all_generations')}
-              onReadEvaluations={() => it.setScreen('evaluations')}
-            />
-          )}
-
-          {/* Advanced, read-only: every version's row and the attempt-level
-              audit comparison. Nothing here starts a run. */}
-          {it.compareView !== 'summary' && (
-            <Secondary>
-              <SecondaryInner>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <TextLink onClick={() => it.setCompareView('summary')}>← 개선과 확인으로</TextLink>
-                  <span style={{ flex: 1 }} />
-                  <Sub as="span">고급 · 읽기 전용</Sub>
-                </div>
-
-                {it.comparison ? (
-                  <GenerationPanel
-                    comparison={it.comparison}
-                    viewGenerationId={it.viewGenerationId}
-                    onSelect={(id) => {
-                      it.setViewGeneration(id);
-                      const generation = it.detail?.generations.find((g) => g.id === id);
-                      if (generation?.attemptIds[0]) void s.setActive(generation.attemptIds[0]);
-                    }}
-                  />
-                ) : (
-                  <Callout>아직 비교할 버전이 없습니다.</Callout>
-                )}
-
-                <Callout>
-                  <div>
-                    <strong>시도 단위 감사 조회</strong>
-                    <div style={{ marginTop: 4 }}>
-                      저장된 시도 두 개를 골라 입력·정책·결과 차이를 읽습니다. 여기서는 아무것도
-                      실행되지 않습니다.
-                    </div>
-                  </div>
-                </Callout>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {s.catalog.attempts.slice(-12).map((attempt) => (
-                    <Button
-                      key={attempt.id}
-                      $pressed={s.compareIds.includes(attempt.id)}
-                      style={{ minHeight: 32, fontSize: font.small }}
-                      onClick={() => s.toggleCompare(attempt.id)}
-                    >
-                      {attempt.label || attempt.id}
-                    </Button>
-                  ))}
-                </div>
-                {s.comparison ? (
-                  <ComparePanel comparison={s.comparison} />
-                ) : (
-                  <Callout>비교하려면 위에서 시도를 두 개 이상 고르세요.</Callout>
-                )}
-
-                {s.findings.length > 0 && (
-                  <Disclosure>
-                    <summary>기록된 발견 {s.findings.length}건 (읽기 전용 이력)</summary>
-                    <div>
-                      {s.findings.map((finding) => (
-                        <Sub key={finding.id}>
-                          <Mono>{finding.id}</Mono> — {finding.observation} → {finding.nextChange}
-                        </Sub>
-                      ))}
-                    </div>
-                  </Disclosure>
-                )}
-
-                {loaded && (
-                  <Disclosure>
-                    <summary>기술 정보 · 현재 열려 있는 시도</summary>
-                    <div>
-                      <Sub>
-                        시도 <Mono>{loaded.detail.attempt.id}</Mono> · seed{' '}
-                        {loaded.detail.attempt.seed} · 엔진{' '}
-                        <Mono>{loaded.detail.attempt.engineVersion}</Mono>
-                      </Sub>
-                      {Object.entries(loaded.detail.attempt.inputHashes).map(([key, value]) => (
-                        <Sub key={key}>
-                          {key} <Mono>{value}</Mono>
-                        </Sub>
-                      ))}
-                    </div>
-                  </Disclosure>
-                )}
-              </SecondaryInner>
-            </Secondary>
-          )}
-        </>
+      {current && screen === 'improve' && (
+        <ChoiceScreen detail={detail} current={current} onChoose={(id) => void it.choose(id)}
+          onRestart={it.restartPath} />
       )}
-
-      {it.fieldSheetOpen && it.detail && (
-        <FieldSheet
-          detail={it.detail}
-          suggestedGenerationId={it.compareRightId}
-          busy={it.busy}
-          onClose={() => it.setFieldSheet(false)}
-          onDecide={(body) => void it.decide(body)}
-          onSubmitHuman={(body) => void it.submitHumanReview(body)}
-          onRecordDisclosure={(body) => void it.recordDisclosure(body)}
-          onOpenScene={(attemptId, eventId) => void it.openScene(attemptId, eventId)}
-        />
+      {current && (
+        <Foot>화면 속 사람과 대화는 전부 시뮬레이션입니다 · 이름은 가명, 모습은 지어낸 그림입니다</Foot>
       )}
-
     </Root>
   );
 }

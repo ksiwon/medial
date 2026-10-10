@@ -8,6 +8,7 @@ import JudgmentPanel from './JudgmentPanel';
 import { nameOf, type Judgment } from './judgment';
 import type { Beat, Frame, SceneLine } from './types';
 import { api } from '../api/client';
+import { night, px } from '../ui/theme';
 import { pill } from '../ui/primitives';
 
 // One beat, filmed at eye level: a frame per place, the people there, and their
@@ -94,7 +95,7 @@ const Unknown = styled.div`
   align-items: center;
   justify-content: center;
   color: #6b675f;
-  font-size: 28px;
+  font-size: calc(28px * var(--k, 1));
   font-weight: 800;
   letter-spacing: -0.02em;
 `;
@@ -124,7 +125,7 @@ const Tag = styled.span`
   bottom: 44px;
   transform: translateX(-50%);
   font-weight: 800;
-  color: #15150f;
+  color: ${night.deep};
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
 `;
@@ -154,12 +155,12 @@ const Bubble = styled.div<{ $side: 'r' | 'l' | 'med'; $old: boolean; $typing: bo
   max-width: ${(p) => (p.$side === 'med' ? '100%' : 'min(46%, 440px)')};
   align-self: ${(p) => (p.$side === 'r' ? 'flex-start' : 'flex-end')};
   background: ${(p) => (p.$side === 'med' ? '#fff6f2' : '#ffffff')};
-  border: ${(p) => (p.$side === 'med' ? '1.5px solid #e2542c' : 'none')};
-  color: #15150f;
+  border: ${(p) => (p.$side === 'med' ? `1.5px solid ${night.accent}` : 'none')};
+  color: ${night.deep};
   border-radius: 14px;
   ${(p) => (p.$side === 'r' ? 'border-bottom-left-radius: 4px;' : 'border-bottom-right-radius: 4px;')}
   padding: ${(p) => (p.$typing ? '10px 14px' : '9px 13px 10px')};
-  font-size: ${(p) => (p.$typing ? '18px' : '16px')};
+  font-size: ${(p) => px(p.$typing ? 18 : 16)};
   letter-spacing: ${(p) => (p.$typing ? '0.2em' : '-0.01em')};
   line-height: 1.45;
   font-weight: 600;
@@ -168,7 +169,7 @@ const Bubble = styled.div<{ $side: 'r' | 'l' | 'med'; $old: boolean; $typing: bo
   transform: ${(p) => (p.$old ? 'translateY(-6px) scale(0.97)' : 'none')};
   transition: opacity 0.35s ease, transform 0.35s ease;
   animation: ${pop} 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2);
-  > b { display: block; font-size: 11px; font-weight: 800; color: ${(p) => (p.$side === 'med' ? '#e2542c' : '#6b675f')}; margin-bottom: 2px; }
+  > b { display: block; font-size: calc(11px * var(--k, 1)); font-weight: 800; color: ${(p) => (p.$side === 'med' ? night.accent : '#6b675f')}; margin-bottom: 2px; }
 `;
 
 /** An act the log recorded without words. A subtitle, never a speech bubble. */
@@ -184,7 +185,7 @@ const Caption = styled.div`
   > span {
     max-width: 70%;
     text-align: center;
-    font-size: 15px;
+    font-size: calc(15px * var(--k, 1));
     font-weight: 700;
     line-height: 1.45;
     color: #ffffff;

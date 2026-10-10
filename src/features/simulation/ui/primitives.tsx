@@ -1,6 +1,6 @@
 import * as React from 'react';
 import styled, { css } from 'styled-components';
-import { colour, font, radius } from './theme';
+import { colour, font, px, radius } from './theme';
 
 // Shared atoms. Two rules run through all of them, both from doc 15 section 7:
 // an ordinary row is separated by a rule and whitespace rather than wrapped in a
@@ -28,49 +28,13 @@ export const pill = (size: keyof typeof PILL) => css`
   justify-content: center;
   gap: 6px;
   box-sizing: border-box;
-  height: ${PILL[size].h}px;
-  padding: 0 ${PILL[size].x}px;
-  font-size: ${PILL[size].f}px;
+  height: ${px(PILL[size].h)};
+  padding: 0 ${px(PILL[size].x)};
+  font-size: ${px(PILL[size].f)};
   line-height: 1;
   white-space: nowrap;
   vertical-align: middle;
   border-radius: 999px;
-`;
-
-export const Panel = styled.section`
-  border: 1px solid ${colour.border};
-  border-radius: ${radius.panel};
-  background: ${colour.surface};
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  min-width: 0;
-`;
-
-export const PanelHead = styled.div`
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 12px 16px;
-  border-bottom: 1px solid ${colour.border};
-  flex: none;
-`;
-
-export const PanelTitle = styled.h2`
-  margin: 0;
-  font-size: ${font.section};
-  font-weight: 600;
-  letter-spacing: -0.2px;
-  color: ${colour.text};
-`;
-
-export const PageTitle = styled.h1`
-  margin: 0;
-  font-size: ${font.page};
-  font-weight: 650;
-  letter-spacing: -0.5px;
-  color: ${colour.text};
 `;
 
 export const Body = styled.p`
@@ -87,29 +51,12 @@ export const Sub = styled.p`
   color: ${colour.secondary};
 `;
 
-export const Scroll = styled.div`
-  overflow-y: auto;
-  overflow-x: hidden;
-  min-height: 0;
-  flex: 1;
-`;
-
 export const Row = styled.div`
   display: flex;
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
   min-width: 0;
-`;
-
-/** A plain list row: a rule and padding, no border box. */
-export const Line = styled.div`
-  padding: 10px 16px;
-  border-bottom: 1px solid ${colour.border};
-  min-width: 0;
-  &:last-child {
-    border-bottom: none;
-  }
 `;
 
 const control = css`
@@ -128,19 +75,6 @@ const control = css`
   }
 `;
 
-export const Input = styled.input`
-  ${control}
-  width: 100%;
-`;
-
-export const TextArea = styled.textarea`
-  ${control}
-  width: 100%;
-  min-height: 68px;
-  line-height: 1.55;
-  resize: vertical;
-`;
-
 export const Select = styled.select`
   ${control}
   cursor: pointer;
@@ -148,40 +82,6 @@ export const Select = styled.select`
   /* A narrow select cuts a long option through the middle of a character;
      Chromium honours the ellipsis here and says the name was shortened. */
   text-overflow: ellipsis;
-`;
-
-export const Field = styled.label`
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: ${font.small};
-  color: ${colour.secondary};
-  min-width: 0;
-`;
-
-/** One primary per working area; everything else is secondary or a text link. */
-export const Button = styled.button<{ $primary?: boolean; $pressed?: boolean }>`
-  font-family: inherit;
-  font-size: ${font.body};
-  min-height: 38px;
-  padding: 8px 16px;
-  border-radius: ${radius.control};
-  cursor: pointer;
-  border: 1px solid ${(p) => (p.$primary ? colour.primary : colour.border)};
-  background: ${(p) =>
-    p.$primary ? colour.primary : p.$pressed ? colour.selected : colour.surface};
-  color: ${(p) => (p.$primary ? '#FFFFFF' : colour.text)};
-  &:hover:not(:disabled) {
-    border-color: ${colour.primary};
-  }
-  &:focus-visible {
-    outline: 2px solid ${colour.primary};
-    outline-offset: 1px;
-  }
-  &:disabled {
-    opacity: 0.45;
-    cursor: default;
-  }
 `;
 
 export const TextLink = styled.button`
@@ -320,69 +220,9 @@ export const Mono = styled.code`
   word-break: break-all;
 `;
 
-export const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  font-size: ${font.small};
-  th,
-  td {
-    border-bottom: 1px solid ${colour.border};
-    padding: 8px 10px;
-    text-align: left;
-    vertical-align: top;
-    line-height: 1.5;
-  }
-  th {
-    color: ${colour.secondary};
-    font-weight: 600;
-  }
-  td.num {
-    font-variant-numeric: tabular-nums;
-  }
-`;
-
-/** Wide content scrolls inside itself; the page body never scrolls sideways. */
-export const HScroll = styled.div`
-  overflow-x: auto;
-  min-width: 0;
-`;
-
-/** Text for a numeric criterion, keeping "not measured" distinct from zero. */
-export function showValue(value: number | null | undefined): string {
-  if (value === null || value === undefined) return '미수집';
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
-}
-
-export function showDelta(value: number): string {
-  if (value === 0) return '±0';
-  return value > 0 ? `+${value.toFixed(1)}` : value.toFixed(1);
-}
-
-/** Generation labels already start with their own "v1 · " prefix in the stored
- *  record, so prefixing the index again prints "v1 · v1 · ...". */
-export function versionName(index: number, label: string): string {
-  // Stored v0 labels carry the prefix twice ("v0 · v0 · 초기 운영안"): the
-  // engine prefixed a policy label that already had it. Records are not
-  // rewritten, so the name is read with the prefix said once.
-  const prefix = `v${index} · `;
-  let rest = label;
-  while (rest.startsWith(prefix)) rest = rest.slice(prefix.length);
-  return `${prefix}${rest}`;
-}
-
-/** One line that must not break or spill out of its box. The full text stays
- *  reachable as the element's own title. */
-export const Clip = styled.span`
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-`;
-
 const HintButton = styled.button`
   font-family: inherit;
-  font-size: 11px;
+  font-size: calc(11px * var(--k, 1));
   line-height: 1;
   width: 16px;
   height: 16px;
@@ -495,23 +335,5 @@ export function Hint({ label, children }: { label: string; children: React.React
         </Bubble>
       )}
     </>
-  );
-}
-
-/** A heading or table label with its explanation folded into a hint. */
-export function WithHint({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint: React.ReactNode;
-  children?: React.ReactNode;
-}) {
-  return (
-    <span style={{ display: 'inline' }}>
-      {children ?? label}
-      <Hint label={label}>{hint}</Hint>
-    </span>
   );
 }

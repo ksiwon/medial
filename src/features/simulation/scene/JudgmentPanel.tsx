@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { colour, font } from '../ui/theme';
+import { colour, font, night } from '../ui/theme';
 import { VERDICT_WORD, nameOf, type Judgment } from './judgment';
 import { pill } from '../ui/primitives';
 
@@ -28,7 +28,7 @@ const Box = styled.aside<{ $absent: boolean }>`
 `;
 
 const Kicker = styled.div`
-  font-size: 11px;
+  font-size: calc(11px * var(--k, 1));
   font-weight: 800;
   letter-spacing: 0.09em;
   color: #f08a5d;
@@ -39,7 +39,7 @@ const Title = styled.div`
   align-items: center;
   gap: 8px;
   margin-top: 4px;
-  font-size: 16px;
+  font-size: calc(16px * var(--k, 1));
   font-weight: 800;
   line-height: 1.3;
   > i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
@@ -48,7 +48,7 @@ const Title = styled.div`
 /** Which case the Task belongs to and whom it is about. */
 const Subtitle = styled.div`
   margin: 2px 0 0 17px;
-  font-size: 12px;
+  font-size: calc(12px * var(--k, 1));
   color: #a9a59d;
 `;
 
@@ -65,17 +65,17 @@ const Steps = styled.ol`
 `;
 
 const Step = styled.li<{ $on: boolean }>`
-  border-left: 3px solid ${(p) => (p.$on ? '#e2542c' : '#3b3c38')};
+  border-left: 3px solid ${(p) => (p.$on ? night.accent : '#3b3c38')};
   padding: 2px 0 2px 11px;
   opacity: ${(p) => (p.$on ? 1 : 0.35)};
   transition: opacity 0.45s ease, border-color 0.45s ease;
-  > h4 { margin: 0 0 3px; font-size: 11px; font-weight: 800; letter-spacing: 0.05em; color: #a9a59d; }
-  li { font-size: 13px; line-height: 1.45; margin: 2px 0 2px 14px; }
+  > h4 { margin: 0 0 3px; font-size: calc(11px * var(--k, 1)); font-weight: 800; letter-spacing: 0.05em; color: #a9a59d; }
+  li { font-size: calc(13px * var(--k, 1)); line-height: 1.45; margin: 2px 0 2px 14px; }
   ul { margin: 0; padding: 0; }
 `;
 
 const None = styled.div`
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--k, 1));
   color: #8d8980;
 `;
 
@@ -83,11 +83,11 @@ const Row = styled.div`
   display: flex;
   gap: 7px;
   align-items: baseline;
-  font-size: 13px;
+  font-size: calc(13px * var(--k, 1));
   line-height: 1.4;
   margin: 3px 0;
   > b { flex: none; }
-  > span { color: #bdb9b1; font-size: 12px; }
+  > span { color: #bdb9b1; font-size: calc(12px * var(--k, 1)); }
 `;
 
 const VERDICT_BG: Record<string, string> = {
@@ -112,7 +112,7 @@ const Away = styled.div`
   font-size: ${font.small};
   line-height: 1.5;
   color: #cfcbc3;
-  > strong { display: block; font-size: 15px; color: #ffffff; margin-top: 3px; }
+  > strong { display: block; font-size: calc(15px * var(--k, 1)); color: #ffffff; margin-top: 3px; }
 `;
 
 /**

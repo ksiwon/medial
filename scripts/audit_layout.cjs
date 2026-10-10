@@ -162,7 +162,7 @@ const AUDIT = () => {
     };
     await p.goto('http://localhost:5173/');
     // the film: the end of each scene, when everything in it has appeared
-    const ends = [11.5, 24.5, 33.5, 40.5, 53.5, 60.5];
+    const ends = [5, 10.5, 16, 27.5, 35.5, 44.5];
     const t0 = Date.now();
     for (let i = 0; i < ends.length; i += 1) {
       await p.waitForTimeout(Math.max(0, ends[i] * 1000 - (Date.now() - t0)));

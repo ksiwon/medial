@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { AgentReview, GenerationDetail, SessionDetail } from '../api/iteration';
+import type { GenerationDetail, SessionDetail } from '../api/iteration';
 import type { DayRealization, DomainEvent } from '../api/types';
 import { personName, sentenceFor, withParticle } from './story';
-import { childFor, farthestPath, isTree, pathTo, rootsOf, ruleShifts } from './tree';
-import { reviewChanges } from './versionFacts';
-import { versionName } from '../ui/primitives';
+import { childFor, isTree, openingOf, pathTo } from './tree';
 import {
   dayChangeLines,
   dayLabel,
@@ -144,49 +142,6 @@ describe('words', () => {
   });
 });
 
-describe('reviewChanges', () => {
-  const review = (actorId: string, attemptId: string,
-                  items: [AgentReview['items'][number]['dimension'], AgentReview['items'][number]['assessment'], string[]][]) =>
-    ({
-      actorId,
-      attemptId,
-      items: items.map(([dimension, assessment, eventRefs]) => ({
-        dimension, assessment, reason: `${actorId} ${dimension} ${assessment}`, eventRefs,
-        evidenceRefs: [], requestedChange: null,
-      })),
-    }) as unknown as AgentReview;
-  const version = (reviews: AgentReview[]) => ({ reviews }) as unknown as GenerationDetail;
-
-  it('names each resident dimension that moved, with the later reason and event', () => {
-    const moved = reviewChanges(
-      version([review('P4', 'a0', [['time_labour', 'mixed', ['ev-1']], ['help_resolution', 'positive', []]])]),
-      version([review('P4', 'a1', [['time_labour', 'negative', ['ev-9']], ['help_resolution', 'positive', []]])]),
-    );
-    expect(moved).toEqual([{
-      actorId: 'P4', dimension: 'time_labour', before: 'mixed', after: 'negative',
-      reason: 'P4 time_labour negative', attemptId: 'a1', eventId: 'ev-9',
-    }]);
-  });
-
-  it('does not pair a resident who has no single review on each side', () => {
-    // Two scenarios, two reviews: there is no one pair to compare, and
-    // choosing one would invent a change.
-    const left = version([review('P2', 'a0', [['choice_refusal', 'positive', []]]),
-                          review('P2', 'b0', [['choice_refusal', 'negative', []]])]);
-    const right = version([review('P2', 'a1', [['choice_refusal', 'mixed', []]]),
-                           review('P9', 'a1', [['choice_refusal', 'mixed', []]])]);
-    expect(reviewChanges(left, right)).toEqual([]);
-  });
-});
-
-describe('versionName', () => {
-  it('says the version prefix once, even on a stored label that has it twice', () => {
-    expect(versionName(0, 'v0 · v0 · 초기 운영안')).toBe('v0 · 초기 운영안');
-    expect(versionName(0, 'v0 · 초기 운영안')).toBe('v0 · 초기 운영안');
-    expect(versionName(1, '동선 기준으로 시험')).toBe('v1 · 동선 기준으로 시험');
-  });
-});
-
 describe('a session whose versions branch', () => {
   const g = (id: string, parent: string | null, applied: string | null = null) =>
     ({ id, parentGenerationId: parent, appliedChangeSetId: applied, index: parent ? 1 : 0 }) as GenerationDetail;
@@ -199,26 +154,9 @@ describe('a session whose versions branch', () => {
   });
 
   it('walks from a first setting down, and finds the day a revision led to', () => {
-    expect(rootsOf(tree).map((r) => r.id)).toEqual(['a', 'b']);
+    expect(openingOf(tree)?.id).toBe('a');
     expect(pathTo(tree, 'a-1').map((r) => r.id)).toEqual(['a', 'a-1']);
     expect(childFor(tree, 'y')?.id).toBe('a-1');
     expect(childFor(tree, 'z')).toBeNull();
-  });
-
-  it('shows, as three days later, the walk whose last day ended most differently', () => {
-    const day = (id: string, parent: string | null, refusals: number, rule: string, label = id) => ({
-      id, parentGenerationId: parent, index: id.split('-').length - 1, label,
-      metrics: { exhibition: { quests: 1, refusals, headAsks: 1, resolveMinutes: 30 } },
-      ruleCatalog: [{ ruleType: 'contact_order', label: '누구에게 먼저', currentRule: rule },
-                    { ruleType: 'quiet_period', label: '간격', currentRule: '없다' }],
-    }) as unknown as GenerationDetail;
-    const walks = { generations: [
-      day('a', null, 0, '이장'), day('a-0', 'a', 0, '이장'), day('a-1', 'a', 0, '이웃', '이웃 먼저'),
-      day('a-0-0', 'a-0', 0, '이장'), day('a-1-0', 'a-1', 6, '이웃'), day('a-1-1', 'a-1', 6, '이웃'),
-    ] } as unknown as SessionDetail;
-    const walk = farthestPath(walks, 'a');
-    expect(walk.map((x) => x.id)).toEqual(['a', 'a-1', 'a-1-0']);
-    expect(ruleShifts(walk)).toEqual([{ ruleType: 'contact_order', label: '누구에게 먼저', before: '이장',
-      after: '이웃', request: '이웃 먼저', day: '1일차' }]);
   });
 });

@@ -16,7 +16,7 @@ import type { Position } from './types';
 
 /** The village day runs 05:00-22:00, as in the source diorama. */
 export const DAY_START_MS = 5 * 60 * 60 * 1000;
-export const DAY_END_MS = 22 * 60 * 60 * 1000;
+const DAY_END_MS = 22 * 60 * 60 * 1000;
 
 interface Run {
   attemptId: string;
@@ -217,10 +217,3 @@ export const usePlayback = create<PlaybackState>((set, get) => {
   };
 });
 
-/** Events the current view may show, up to the cursor. MEDial's view keeps only
- *  what was addressed to it. */
-export function visibleEvents(events: DomainEvent[], cursorSeq: number, viewMode: ViewMode): DomainEvent[] {
-  return events.filter(
-    (event) => event.seq <= cursorSeq && (viewMode === 'researcher' || event.visibility.includes('MEDial')),
-  );
-}

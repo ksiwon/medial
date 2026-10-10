@@ -35,15 +35,6 @@ const PARAM: Record<string, string> = {
 
 export const paramName = (field: string): string => PARAM[field] ?? field;
 
-export function paramValue(value: unknown): string {
-  if (value === null || value === undefined) return '없음';
-  if (typeof value === 'boolean') return value ? '예' : '아니오';
-  if (typeof value === 'string' && value in STRATEGY) return STRATEGY[value];
-  if (value === 'minimal') return '최소한만';
-  if (value === 'named') return '이름까지';
-  return String(value);
-}
-
 /** The inputs a controlled comparison holds fixed, named for a reader. */
 const INPUT: Record<string, string> = {
   deck: '시나리오',

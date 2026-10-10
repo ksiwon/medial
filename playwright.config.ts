@@ -7,11 +7,12 @@ import { fileURLToPath } from 'node:url';
 // The mount tests (vitest + jsdom) prove a screen does not throw and does not
 // print an internal name where a sentence belongs. They cannot see layout, and
 // they cannot see the API and the screen disagree. This runs both processes
-// and drives a headless Chromium through the same three screens a researcher
-// uses, so a change can be looked at rather than reasoned about.
+// and drives a headless Chromium through the walk the exhibition shows (opening
+// film, the day, the evaluations, the revision to choose), so a change can be
+// looked at rather than reasoned about. The interface only reads a stored
+// record; the test makes one through the server's API first.
 //
-// It is the real version (it runs what the test starts), with the rule adapters
-// and no key: nothing here calls a model.
+// It uses the rule adapters and no key: nothing here calls a model.
 //
 // Everything points away from the researcher's data: the API is given its own
 // database under .run/ and the SYNTHETIC village and personas, so the run
@@ -30,10 +31,6 @@ export default defineConfig({
   workers: 1,
   timeout: 60_000,
   reporter: [['list']],
-  // shots.spec.ts photographs the screens for slides rather than asserting
-  // claims about them, so the checking run leaves it alone. `npm run shots`
-  // runs it through playwright.shots.config.ts.
-  testIgnore: ['**/shots.spec.ts'],
   use: {
     baseURL: `http://localhost:${WEB_PORT}`,
     viewport: { width: 1440, height: 900 },

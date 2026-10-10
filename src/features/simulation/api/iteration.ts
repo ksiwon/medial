@@ -43,15 +43,6 @@ export type UsageStatus =
   | 'not_offered'
   | 'no_experience';
 
-export const USAGE_LABELS: Record<UsageStatus, string> = {
-  used: '이용함',
-  offered_declined: '제안받고 거절',
-  offered_no_response: '연락받았으나 응답 없음',
-  offered_unfulfilled: '제안은 있었으나 이어지지 않음',
-  not_offered: '제안 없음',
-  no_experience: '미경험',
-};
-
 export interface ReviewItem {
   dimension: ReviewDimension;
   assessment: Assessment;
@@ -256,35 +247,6 @@ export type SessionStatus =
   | 'failed'
   | 'cancelled';
 
-export const STATUS_LABELS: Record<SessionStatus, string> = {
-  created: '시작 전',
-  running_cycle: '하루 실행 중',
-  collecting_reviews: '주민 평가 받는 중',
-  synthesizing: '주민 평가 종합 중',
-  proposing_changes: '개선안 작성 중',
-  validating_changes: '개선안 검증 중',
-  executing_revision: '확정한 수정안으로 하루 실행 중',
-  awaiting_confirmation: '연구자가 수정안을 확정하기를 기다림',
-  ready_for_designer: '반복 끝 · 현장 검토할 안을 고를 차례',
-  budget_exhausted: '예산 종료 (완료 아님)',
-  no_valid_change: '실행 가능한 개선안 없음',
-  stalled: '정체 (같은 변경이 반복됨)',
-  paused: '일시정지',
-  failed: '실패',
-  cancelled: '사용자 중단',
-};
-
-/** States the loop is still moving through, so the screen can poll. */
-export const RUNNING_STATUSES: SessionStatus[] = [
-  'created',
-  'running_cycle',
-  'collecting_reviews',
-  'synthesizing',
-  'proposing_changes',
-  'validating_changes',
-  'executing_revision',
-];
-
 export interface CriteriaRevision {
   id: string;
   label: string;
@@ -476,24 +438,6 @@ export interface DisclosureRecord {
   note: string;
 }
 
-export const CORRESPONDENCE_LABELS: Record<string, string> = {
-  agreement: '대체로 일치',
-  correction: '정정 필요',
-  disagreement: '충돌 (다르다)',
-  unknown: '판단 불가',
-  // Kept for records written before 2026-09-15, shown as stored.
-  partial: '일부 일치 (옛 기록)',
-};
-
-export const CORRECTION_TARGET_LABELS: Record<string, string> = {
-  case_material: '자료 (채록·관계·일과)',
-  world_assumption: '세계 가정 (연락·거리 등)',
-  behaviour_model: '주민 행동 모델',
-  service_rule: '서비스 운영 규칙',
-  evaluation: '이 평가 자체',
-  synthesis: '평가 종합',
-};
-
 export interface Capabilities {
   /** Which service is being evaluated (server iteration/services.py). */
   service?: { serviceId: string; label: string; category: string };
@@ -551,22 +495,4 @@ export interface SessionDetail extends SessionStatusPayload {
   disclosures: DisclosureRecord[];
   modelCalls: Record<string, unknown>[];
   capabilities: Capabilities;
-}
-
-export interface GenerationComparison {
-  sessionId: string;
-  criteria: CriteriaRevision;
-  initialSnapshotHash: string;
-  note: string;
-  generations: (Pick<
-    Generation,
-    'id' | 'index' | 'label' | 'parentGenerationId' | 'policyRevisionId' | 'outcome' |
-    'confirmedBy' | 'confirmationReason' | 'attemptIds'
-  > & {
-    vector: Record<string, number | null>;
-    reviewCounts: Record<string, number>;
-    requiredViolations: string[];
-    comparedToParent: GenerationMetrics['comparedToParent'];
-    policy: { id: string; label: string; changes: string[]; params: Record<string, unknown> } | null;
-  })[];
 }

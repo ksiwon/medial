@@ -69,16 +69,14 @@ const MapColumn = styled.div`
 const MapStrip = styled.div`
   flex: none;
   padding: 12px 14px;
-  font-size: 12px;
+  font-size: calc(12px * var(--k, 1));
   color: ${night.mute};
   > div { display: flex; align-items: center; gap: 8px; }
-  > div > b { font-size: 15px; font-weight: 800; color: ${night.ink}; letter-spacing: 0.02em; }
+  > div > b { font-size: calc(15px * var(--k, 1)); font-weight: 800; color: ${night.ink}; letter-spacing: 0.02em; }
   > div > em { ${pill('xs')} font-style: normal; font-weight: 800; color: #fff; background: ${night.accent}; }
-  > div > button { ${pill('xs')} margin-left: auto; font: inherit; font-size: 11px; cursor: pointer; border: none;
+  > div > button { ${pill('xs')} margin-left: auto; font: inherit; font-size: calc(11px * var(--k, 1)); cursor: pointer; border: none;
                    background: transparent; color: ${night.mute}; }
   > div > button:hover { color: ${night.ink}; background: ${night.raised}; }
-  > p { margin: 8px 0 0; line-height: 1.45; word-break: keep-all; }
-  > p > b { color: ${night.ink}; font-weight: 800; }
 `;
 
 const MapBody = styled.div`
@@ -134,7 +132,7 @@ const DayEnd = styled.div`
   border-radius: 14px;
   background: ${night.accentSoft};
   box-shadow: inset 0 0 0 1px rgba(226, 84, 44, 0.5);
-  font-size: 14px;
+  font-size: calc(14px * var(--k, 1));
   color: ${night.ink};
   > span > span { margin-left: 12px; color: ${night.mute}; }
   > button { font: inherit; ${pill('md')} font-weight: 800; cursor: pointer; border: none;
@@ -146,18 +144,15 @@ interface Props {
   detail: AttemptDetail;
   events: DomainEvent[];
   art: ReadonlySet<string>;
-  /** Leave this run for another: set a new case up (real), or pick another
-   *  recording (sim). The run stays stored either way. */
-  caseAction?: { label: string; onClick: () => void };
   /** What the strip says at 22:00, and its button; `note` is a line of facts. */
   dayEnd: { text: string; action: string; note?: string | null };
   /** The day is over: the evaluations are the next thing to read. */
   onReadEvaluations: () => void;
   /** Which day this is and the way back, for a record that is walked day by day. */
-  strip?: { day: string; note: string; onRestart: () => void };
+  strip?: { day: string; onRestart: () => void };
 }
 
-export default function ObserveScreen({ village, detail, events, art, caseAction, dayEnd: ending, onReadEvaluations, strip }: Props) {
+export default function ObserveScreen({ village, detail, events, art, dayEnd: ending, onReadEvaluations, strip }: Props) {
   const p = usePlayback();
   const [mapWidth, setMapWidth] = useState<number | null>(null);
   const reel = p.reel;
@@ -276,9 +271,6 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
             {strip && <em>{strip.day}</em>}
             {strip && <button type="button" onClick={strip.onRestart}>↺ 처음부터</button>}
           </div>
-          {/* The note grows a request a day, so it wraps rather than being cut to "…"
-              in a column sized to the village. */}
-          <p><b>{village.isSynthetic ? '합성 마을' : '은점마을'}</b>{strip ? ` · ${strip.note}` : ''}</p>
         </MapStrip>
         <MapBody>
         <VillageMap
@@ -383,7 +375,6 @@ export default function ObserveScreen({ village, detail, events, art, caseAction
             {dayLabel(detail.metrics.dayRealization)}
           </Sub>
         )}
-        {caseAction && <IconButton onClick={caseAction.onClick}>{caseAction.label}</IconButton>}
           </>
         }
       />

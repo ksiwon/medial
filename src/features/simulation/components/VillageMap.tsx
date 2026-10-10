@@ -1,3 +1,4 @@
+import { useUiScale } from '../ui/uiScale';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { api } from '../api/client';
@@ -53,7 +54,7 @@ interface View {
   h: number;
 }
 
-const SPOT = '#e2542c';
+const SPOT = night.accent;
 
 /** Screen mapping for preserveAspectRatio="xMidYMid meet". */
 function projector(view: View, box: { width: number; height: number }) {
@@ -144,7 +145,7 @@ const Compass = styled.div`
   align-items: center;
   justify-content: center;
   gap: 1px;
-  font-size: 10px;
+  font-size: calc(10px * var(--k, 1));
   font-weight: 800;
   line-height: 1;
   color: ${night.ink};
@@ -172,7 +173,7 @@ const Credit = styled.div`
   bottom: 6px;
   max-width: 60%;
   text-align: right;
-  font-size: 9px;
+  font-size: calc(9px * var(--k, 1));
   line-height: 1.3;
   color: ${night.mute};
   background: rgba(18, 19, 16, 0.6);
@@ -263,25 +264,18 @@ const Facts = styled.dl`
    and come back. Three rows of chips fit; more scroll inside. */
 const Outside = styled.div`
   flex: none;
-  height: 92px;
+  max-height: 148px;
   overflow-y: auto;
   display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  align-items: center;
-  gap: 6px 8px;
+  flex-direction: column;
+  gap: 6px;
   padding: 12px 14px;
   font-size: ${font.small};
   color: ${night.mute};
-  > strong { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; color: ${night.faint}; margin-right: 4px; }
-`;
-
-const OutChip = styled.span`
-  ${pill('sm')}
-  font-weight: 700;
-  color: ${night.ink};
-  background: ${night.raised};
-  > span { font-weight: 400; color: ${night.mute}; }
+  > strong { font-size: calc(11px * var(--k, 1)); font-weight: 800; letter-spacing: 0.08em; color: ${night.faint}; }
+  /* One line a place: "읍내: P2, P3". */
+  > p { margin: 0; line-height: 1.45; word-break: keep-all; }
+  > p > b { color: ${night.ink}; font-weight: 800; }
 `;
 
 /** Place names worth a label, at every zoom now that the map lies along the
@@ -380,6 +374,7 @@ export default function VillageMap({
     if (box.width > 1 && box.height > 1 && fitMode) setView(home);
   }, [home, box, fitMode]);
 
+  const ui = useUiScale();
   const project = useMemo(() => projector(view, box), [view, box]);
 
   const onWheel = useCallback(
@@ -453,6 +448,13 @@ export default function VillageMap({
     [shown, frame],
   );
   const outside = shown.filter((p) => p.offMap);
+  // Who is away, a line a place, in the order the places first appear.
+  const outsideByPlace: { where: string; ids: string[] }[] = [];
+  for (const pose of outside) {
+    const where = pose.activity === '알 수 없음' ? (placeLabel(village, pose.place, pose.id) ?? '마을 밖') : pose.activity;
+    const line = outsideByPlace.find((l) => l.where === where);
+    if (line) line.ids.push(pose.id); else outsideByPlace.push({ where, ids: [pose.id] });
+  }
 
   // A scene's frame is drawn where its place is: a named place, a home, or
   // else where the people in it stand (a car, the road). A frame MEDial cannot
@@ -612,7 +614,7 @@ export default function VillageMap({
   const mapImage = village.mapImage;
   const hasRaster = Boolean(mapImage) && !mapBroken;
   /** SVG units per screen pixel. */
-  const k = 1 / (project.scale || 1);
+  const k = ui / (project.scale || 1);
 
   const selectedMember =
     active?.members.find((m) => m.id === selectedActor) ?? active?.members[0] ?? null;
@@ -776,7 +778,7 @@ export default function VillageMap({
         {medial && <ModeBadge>MEDial이 보고받은 위치만 표시 중</ModeBadge>}
 
         <Compass>
-          <div style={{ fontSize: 10, lineHeight: 1, transform: `rotate(${frame.northDeg}deg)` }}>▲</div>
+          <div style={{ fontSize: `calc(10px * var(--k, 1))`, lineHeight: 1, transform: `rotate(${frame.northDeg}deg)` }}>▲</div>
           <div>북</div>
         </Compass>
 
@@ -860,20 +862,13 @@ export default function VillageMap({
           a place without a coordinate is a name here, never a guessed point. */}
       <Outside aria-live="polite"
         title={outside.length > 0 ? '마을 밖은 이 지도에 좌표가 없어 목록으로만 적습니다. 지도 여백에 임의로 놓지 않습니다.' : undefined}>
-        <strong>{outside.length ? '지금 마을 밖에 있는 사람' : '마을 밖에 나가 있는 사람 없음'}</strong>
-        {outside.map((pose) => (
-          // P-number and where: the full name made three chips a row too wide
-          // for a column sized to the village, and the fourth row was hidden.
-          <OutChip key={pose.id} title={personName(pose.id)}>
-            {pose.id}
-            <span>{pose.activity === '알 수 없음' ? (placeLabel(village, pose.place, pose.id) ?? '마을 밖') : pose.activity}</span>
-          </OutChip>
+        <strong>{outside.length ? '마을 밖' : '마을 밖에 나가 있는 사람 없음'}</strong>
+        {outsideByPlace.map(({ where, ids }) => (
+          // P-numbers only: a full name made the line too wide for a column
+          // sized to the village.
+          <p key={where} title={ids.map(personName).join(', ')}><b>{where}</b>: {ids.join(', ')}</p>
         ))}
-        {projected && (
-          <OutChip>
-            MEDial이 위치를 모르는 사람<span>{projected.unlocated.length}명</span>
-          </OutChip>
-        )}
+        {projected && <p><b>MEDial이 위치를 모르는 사람</b>: {projected.unlocated.length}명</p>}
       </Outside>
     </>
   );

@@ -415,7 +415,7 @@ def build_day(bundle: dict[str, Any], node: dict[str, Any], village, policy: Pol
                 "rationale": None, "result": None,
             },
         }
-        finished = emit(EventType.task_completed, hhmm(task["end"]), lead, task,
+        emit(EventType.task_completed, hhmm(task["end"]), lead, task,
                         {"requestId": task["id"], "outcome": task["outcome"]})
         for who in {actor(a) for a in task["actors"]} | ({subject} if subject else set()):
             experienced.setdefault(who, []).append(started.id)

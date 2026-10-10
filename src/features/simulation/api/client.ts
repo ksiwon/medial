@@ -1,22 +1,9 @@
-import type {
-  Capabilities,
-  GenerationComparison,
-  IterationSession,
-  SessionDetail,
-  SessionStatusPayload,
-} from './iteration';
-import type {
-  AttemptDetail,
-  Catalog,
-  CommandResult,
-  Comparison,
-  DesignFinding,
-  DomainEvent,
-  PersonasPayload,
-  PolicyRevision,
-  Snapshot,
-  VillagePayload,
-} from './types';
+import type { IterationSession, SessionDetail } from './iteration';
+import type { AttemptDetail, CommandResult, DomainEvent, VillagePayload } from './types';
+
+// What the screens read from the local API. Every call here is a read of a
+// stored record - except `command`, which moves a stored attempt's playhead
+// (play, pause, seek). Nothing starts a run.
 
 const BASE = '/api/sim';
 
@@ -58,15 +45,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-export interface PolicyEdit {
-  reason: string;
-  label?: string;
-  contactStrategy?: string;
-  params?: Record<string, unknown>;
-}
-
 export const api = {
-  catalog: () => request<Catalog>('/catalog'),
   village: () => request<VillagePayload>('/village'),
   /** The raster is served by the local API from the git-ignored registry, so it
    *  is never part of the built bundle. */
@@ -75,177 +54,18 @@ export const api = {
    *  the map: served locally, never bundled. Empty for a synthetic village. */
   art: () => request<{ names: string[] }>('/village/art'),
   artUrl: (name: string) => `${BASE}/village/art/${encodeURIComponent(name)}`,
-  personas: () => request<PersonasPayload>('/personas'),
 
   attempt: (id: string) => request<AttemptDetail>(`/attempts/${id}`),
   events: (id: string, after = 0) =>
     request<{ events: DomainEvent[] }>(`/attempts/${id}/events?after=${after}`),
-  snapshot: (id: string, seq: number) =>
-    request<Snapshot>(`/attempts/${id}/snapshot?seq=${seq}`),
-
-  createAttempt: (policyId: string, deckId?: string, resourceId?: string, label?: string) =>
-    request<AttemptDetail>('/attempts', {
-      method: 'POST',
-      body: JSON.stringify({
-        policyId,
-        ...(deckId ? { scenarioDeckId: deckId } : {}),
-        ...(resourceId ? { resourceRevisionId: resourceId } : {}),
-        label,
-      }),
-    }),
-
-  /** Same initial state, edited policy. */
-  rerun: (id: string, body: PolicyEdit) =>
-    request<AttemptDetail>(`/attempts/${id}/rerun`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  /** Branch at a point in the parent's log; the prefix is kept. */
-  fork: (id: string, atSeq: number, body: PolicyEdit) =>
-    request<AttemptDetail>(`/attempts/${id}/fork`, {
-      method: 'POST',
-      body: JSON.stringify({ ...body, atSeq }),
-    }),
-
-  policies: () => request<{ policies: PolicyRevision[] }>('/policies'),
-  createPolicy: (baseId: string, body: PolicyEdit) =>
-    request<PolicyRevision>('/policies', {
-      method: 'POST',
-      body: JSON.stringify({ baseId, ...body }),
-    }),
-
-  findings: () => request<{ findings: DesignFinding[] }>('/findings'),
-  createFinding: (body: {
-    coreItem: string;
-    comparedAttemptIds: string[];
-    observation: string;
-    interpretation: string;
-    nextChange: string;
-    fromPolicyId: string;
-  }) => request<DesignFinding>('/findings', { method: 'POST', body: JSON.stringify(body) }),
-  applyFinding: (
-    findingId: string,
-    body: {
-      attemptId: string;
-      mode: 'rerun' | 'fork';
-      atSeq?: number;
-      contactStrategy?: string;
-      params?: Record<string, unknown>;
-    },
-  ) =>
-    request<AttemptDetail>(`/findings/${findingId}/apply`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
   command: (id: string, commandId: string, name: string, seq?: number) =>
     request<CommandResult>(`/attempts/${id}/commands`, {
       method: 'POST',
       body: JSON.stringify({ commandId, name, seq }),
     }),
-  compare: (ids: string[]) => request<Comparison>(`/compare?ids=${ids.join(',')}`),
 
-  // -- review-driven iteration ------------------------------------------
-  // The loop runs on the server; the screen polls it. `blocking` is never set
-  // from here, so a model-backed generation cannot hold a request open.
   iteration: {
-    capabilities: () => request<Capabilities>('/iteration/capabilities'),
-    sessions: () =>
-      request<{ sessions: IterationSession[]; startPolicyId: string;
-                capabilities: Capabilities }>(
-        '/iteration/sessions',
-      ),
-    create: (body: {
-      label: string;
-      coreItem: string;
-      basePolicyId: string;
-      developmentDeckRefs: string[];
-      resourceRevisionId: string;
-      maxGenerations: number;
-      maxChangeSetsPerGeneration?: number;
-      callBudget?: number;
-      behaviourAdapter?: string;
-      reviewAdapter?: string;
-      improvementAdapter?: string;
-    }) =>
-      request<SessionDetail>('/iteration/sessions', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      }),
+    sessions: () => request<{ sessions: IterationSession[] }>('/iteration/sessions'),
     detail: (id: string) => request<SessionDetail>(`/iteration/sessions/${id}`),
-    status: (id: string) => request<SessionStatusPayload>(`/iteration/sessions/${id}/status`),
-    generations: (id: string) =>
-      request<GenerationComparison>(`/iteration/sessions/${id}/generations`),
-    command: (id: string, commandId: string, name: string, payload: Record<string, unknown> = {}) =>
-      request<SessionStatusPayload>(`/iteration/sessions/${id}/commands`, {
-        method: 'POST',
-        body: JSON.stringify({ commandId, name, payload }),
-      }),
-    /** Record that a respondent has now been shown the simulated evaluation.
-     *  Refused by the server when their independent answer is not on file. */
-    recordDisclosure: (
-      id: string,
-      body: {
-        packageId: string;
-        episodeId: string;
-        respondentId: string;
-        shownReviewIds: string[];
-      },
-    ) =>
-      request<{ id: string; disclosedAt: string }>(
-        `/iteration/sessions/${id}/disclosures`,
-        { method: 'POST', body: JSON.stringify(body) },
-      ),
-    decide: (
-      id: string,
-      body: {
-        disposition: 'adopt_for_field_review' | 'hold' | 'reject';
-        generationId?: string | null;
-        reasons: string[];
-        supportedConditions: string[];
-        tradeoffs: string[];
-        dissent: string[];
-        unansweredQuestions: string[];
-      },
-    ) =>
-      request<{ decision: unknown; package: unknown }>(`/iteration/sessions/${id}/decision`, {
-        method: 'POST',
-        body: JSON.stringify(body),
-      }),
-    buildPackage: (id: string, generationId: string) =>
-      request<unknown>(`/iteration/sessions/${id}/field-package/${generationId}`, {
-        method: 'POST',
-      }),
-    /** The only call that creates source="human" data. Nothing else may. */
-    submitHumanReview: (
-      id: string,
-      body: {
-        packageId: string;
-        reviewerRole: string;
-        elicitation: string;
-        actorId?: string | null;
-        selectedEpisodeIds: string[];
-        responses: Record<string, unknown>[];
-        corrections: Record<string, unknown>[];
-        agreement: string;
-        consentScope: string;
-        respondentId?: string;
-        respondentRole?: string;
-        subjectActorId?: string | null;
-        episodeId?: string | null;
-        reviewItemRefs?: string[];
-        responseStage?: string;
-        disclosureRecordId?: string | null;
-        correspondence?: string | null;
-        correctionTarget?: string | null;
-        reason?: string;
-        responseKind?: string;
-      },
-    ) =>
-      request<{ id: string; source: 'human' }>(`/iteration/sessions/${id}/human-reviews`, {
-        method: 'POST',
-        body: JSON.stringify(body),
-      }),
   },
 };

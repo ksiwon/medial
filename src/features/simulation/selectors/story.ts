@@ -192,8 +192,7 @@ export function withParticle(name: string, particle: Particle): string {
 }
 
 /** Shorthand: the person's display name already carrying its subject particle. */
-export const subj = (id: string | null | undefined) => withParticle(personName(id), 'subject');
-export const obj = (id: string | null | undefined) => withParticle(personName(id), 'object');
+const subj = (id: string | null | undefined) => withParticle(personName(id), 'subject');
 
 
 /** How a contact went, as an adverb: "전화로 연락했습니다". */

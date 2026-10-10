@@ -20,7 +20,7 @@ const byId = (detail: SessionDetail, id: string | null) =>
   detail.generations.find((g) => g.id === id) ?? null;
 
 /** The first settings, in the order the record lists them. */
-export function rootsOf(detail: SessionDetail): GenerationDetail[] {
+function rootsOf(detail: SessionDetail): GenerationDetail[] {
   return detail.generations.filter((g) => !g.parentGenerationId)
     .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
 }
@@ -76,44 +76,4 @@ export function dayLine(facts: DayFacts): string {
   return [`오늘 요청 ${facts.quests}건`,
     ...(facts.resolveMinutes != null ? [`확인까지 ${facts.resolveMinutes}분`] : []),
     `이장이 받은 부탁 ${facts.headAsks}번`, `거절 ${facts.refusals}번`].join(' · ');
-}
-
-/**
- * The walk the opening film shows as "three days later": of the complete walks
- * down from `rootId`, the one whose last day ended furthest from the rest - the
- * most refusals, the earliest id on a tie. Most walks end on the same numbers
- * (the record's one daytime helper takes most rule changes), so a walk picked
- * any other way would show two rules changing and nothing following from it.
- */
-export function farthestPath(detail: SessionDetail, rootId: string): GenerationDetail[] {
-  const parents = new Set(detail.generations.map((g) => g.parentGenerationId));
-  const walks = detail.generations
-    .filter((g) => !parents.has(g.id))
-    .map((leaf) => pathTo(detail, leaf.id))
-    .filter((walk) => walk[0]?.id === rootId)
-    .sort((a, b) => a[a.length - 1].id.localeCompare(b[b.length - 1].id, undefined, { numeric: true }));
-  const refusals = (walk: GenerationDetail[]) => dayFacts(walk[walk.length - 1])?.refusals ?? 0;
-  return walks.reduce<GenerationDetail[]>((best, walk) => (refusals(walk) > refusals(best) ? walk : best), walks[0] ?? []);
-}
-
-/** One rule as the walk changed it, and the request that changed it. */
-export interface RuleShift {
-  ruleType: string;
-  label: string;
-  before: string;
-  after: string;
-  /** The request chosen at the end of `day`. */
-  request: string;
-  day: string;
-}
-
-/** What each step of a walk changed, read off the versions' own rule sentences. */
-export function ruleShifts(walk: GenerationDetail[]): RuleShift[] {
-  return walk.slice(1).flatMap((next, i) => {
-    const before = new Map(walk[i].ruleCatalog.map((r) => [r.ruleType, r.currentRule ?? '']));
-    return next.ruleCatalog
-      .filter((r) => (r.currentRule ?? '') !== before.get(r.ruleType))
-      .map((r) => ({ ruleType: r.ruleType, label: r.label, before: before.get(r.ruleType) ?? '',
-                     after: r.currentRule ?? '', request: next.label, day: dayName(walk[i]) }));
-  });
 }
