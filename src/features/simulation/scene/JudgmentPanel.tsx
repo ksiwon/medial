@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { colour, font, night } from '../ui/theme';
+import { colour, font, night, radius } from '../ui/theme';
 import { VERDICT_WORD, nameOf, type Judgment } from './judgment';
 import { pill } from '../ui/primitives';
 
@@ -17,7 +17,7 @@ const Box = styled.aside<{ $absent: boolean }>`
   /* The frames stop at --panel-w; without this the padding made the panel
      32 px wider than that and it lay over the pictures' right edge. */
   box-sizing: border-box;
-  padding: 16px 18px 16px 14px;
+  padding: 16px 20px 16px 16px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -28,7 +28,7 @@ const Box = styled.aside<{ $absent: boolean }>`
 `;
 
 const Kicker = styled.div`
-  font-size: calc(11px * var(--k, 1));
+  font-size: calc(12px * var(--k, 1));
   font-weight: 800;
   letter-spacing: 0.09em;
   color: #f08a5d;
@@ -42,12 +42,12 @@ const Title = styled.div`
   font-size: calc(16px * var(--k, 1));
   font-weight: 800;
   line-height: 1.3;
-  > i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  > i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 `;
 
 /** Which case the Task belongs to and whom it is about. */
 const Subtitle = styled.div`
-  margin: 2px 0 0 17px;
+  margin: 2px 0 0 16px;
   font-size: calc(12px * var(--k, 1));
   color: #a9a59d;
 `;
@@ -58,34 +58,34 @@ const Steps = styled.ol`
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
 `;
 
 const Step = styled.li<{ $on: boolean }>`
-  border-left: 3px solid ${(p) => (p.$on ? night.accent : '#3b3c38')};
-  padding: 2px 0 2px 11px;
+  border-left: 4px solid ${(p) => (p.$on ? night.accent : '#3b3c38')};
+  padding: 2px 0 2px 12px;
   opacity: ${(p) => (p.$on ? 1 : 0.35)};
   transition: opacity 0.45s ease, border-color 0.45s ease;
-  > h4 { margin: 0 0 3px; font-size: calc(11px * var(--k, 1)); font-weight: 800; letter-spacing: 0.05em; color: #a9a59d; }
-  li { font-size: calc(13px * var(--k, 1)); line-height: 1.45; margin: 2px 0 2px 14px; }
+  > h4 { margin: 0 0 4px; font-size: calc(12px * var(--k, 1)); font-weight: 800; letter-spacing: 0.05em; color: #a9a59d; }
+  li { font-size: calc(12px * var(--k, 1)); line-height: 1.45; margin: 2px 0 2px 16px; }
   ul { margin: 0; padding: 0; }
 `;
 
 const None = styled.div`
-  font-size: calc(12.5px * var(--k, 1));
+  font-size: calc(12px * var(--k, 1));
   color: #8d8980;
 `;
 
 const Row = styled.div`
   display: flex;
-  gap: 7px;
+  gap: 8px;
   align-items: baseline;
-  font-size: calc(13px * var(--k, 1));
+  font-size: calc(12px * var(--k, 1));
   line-height: 1.4;
-  margin: 3px 0;
+  margin: 4px 0;
   > b { flex: none; }
   > span { color: #bdb9b1; font-size: calc(12px * var(--k, 1)); }
 `;
@@ -105,14 +105,14 @@ const Pill = styled.em<{ $v: string }>`
 `;
 
 const Away = styled.div`
-  margin-top: 10px;
+  margin-top: 12px;
   border: 1px dashed #6b675f;
-  border-radius: 10px;
-  padding: 10px 12px;
+  border-radius: ${radius.panel};
+  padding: 12px 12px;
   font-size: ${font.small};
   line-height: 1.5;
   color: #cfcbc3;
-  > strong { display: block; font-size: calc(15px * var(--k, 1)); color: #ffffff; margin-top: 3px; }
+  > strong { display: block; font-size: calc(16px * var(--k, 1)); color: #ffffff; margin-top: 4px; }
 `;
 
 /**

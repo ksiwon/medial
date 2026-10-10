@@ -58,14 +58,51 @@ export const font = {
   family:
     '"Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", Roboto, sans-serif',
   page: `calc(24px * ${K})`,
-  section: `calc(18px * ${K})`,
-  brand: `calc(18px * ${K})`,
-  body: `calc(14px * ${K})`,
+  section: `calc(20px * ${K})`,
+  brand: `calc(20px * ${K})`,
+  body: `calc(16px * ${K})`,
   small: `calc(12px * ${K})`,
   /** Map place names and required attribution only. Never primary information. */
-  micro: `calc(10px * ${K})`,
+  micro: `calc(12px * ${K})`,
 } as const;
 
-export const space = [4, 8, 12, 16, 24, 32] as const;
+/** The scale every gap, padding and margin on the reading pages is picked from.
+ *  Named steps, not numbers, so two pages that mean "a little" or "a section apart"
+ *  cannot drift to 14 and 16. Each goes through the type scale (`px`). */
+export const space = {
+  xs: px(4),
+  sm: px(8),
+  md: px(12),
+  lg: px(16),
+  xl: px(24),
+  xxl: px(32),
+  huge: px(48),
+} as const;
 
-export const radius = { panel: '10px', control: '6px' } as const;
+/** The corner scale. A thing that is a control, a panel of the observe screen, or a
+ *  card of a reading page has one radius, and these are the only ones. */
+export const radius = {
+  xs: px(4),
+  control: px(8),
+  panel: px(16),
+  card: px(24),
+  pill: '1000px',
+  round: '50%',
+} as const;
+
+/** Light on the night ground: the cream of the ink and the orange of the accent at an
+ *  opacity, and the black under a raised thing. One place for every "a bit see-through". */
+export const inkA = (a: number) => `rgba(246, 241, 232, ${a})`;
+export const accentA = (a: number) => `rgba(226, 84, 44, ${a})`;
+export const shadeA = (a: number) => `rgba(0, 0, 0, ${a})`;
+
+/** What a raised card and the one thing to press sit on. */
+export const shadow = {
+  card: `0 ${px(20)} ${px(40)} ${shadeA(0.35)}`,
+  cardLit: `0 ${px(24)} ${px(48)} ${accentA(0.22)}`,
+  button: `0 ${px(12)} ${px(28)} ${accentA(0.35)}`,
+  buttonLit: `0 ${px(16)} ${px(32)} ${accentA(0.45)}`,
+} as const;
+
+/** A card of the reading pages: raised at the top, settling into the panel. */
+export const cardGround = `linear-gradient(180deg, ${night.raised} 0%, ${night.panel} 50%)`;

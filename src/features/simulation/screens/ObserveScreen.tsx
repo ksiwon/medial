@@ -14,7 +14,7 @@ import type { Beat, Episode } from '../scene/types';
 import { ledgerAt, routineAt, timelineAt } from '../selectors/dayLedger';
 import { dayChangeLines, dayLabel } from '../selectors/words';
 import { IconButton, Select, Sub, pill } from '../ui/primitives';
-import { night } from '../ui/theme';
+import { accentA, night, radius } from '../ui/theme';
 
 // 사례와 서비스 경험 - watching one run.
 //
@@ -39,7 +39,7 @@ const Screen = styled.div`
   display: grid;
   /* The map column is as wide as the village at its height (VillageMap onFitWidth),
      within sensible bounds; the stage takes the rest. */
-  grid-template-columns: var(--map-w, minmax(280px, 24%)) minmax(0, 1fr) minmax(250px, 19%);
+  grid-template-columns: var(--map-w, minmax(280px, 24%)) minmax(0, 1fr) minmax(252px, 19%);
   gap: 12px;
   padding: 12px;
   background: ${night.ground};
@@ -61,22 +61,19 @@ const MapColumn = styled.div`
   flex-direction: column;
   overflow: hidden;
   background: ${night.panel};
-  border-radius: 14px;
+  border-radius: ${radius.panel};
 `;
 
 /** What the header used to say, now a strip on top of the map column: which day
- *  this is, the way back to the start, and that every person here is invented. */
+ *  this is, and that every person here is invented (the way back to the start is in the foot). */
 const MapStrip = styled.div`
   flex: none;
-  padding: 12px 14px;
+  padding: 12px 16px;
   font-size: calc(12px * var(--k, 1));
   color: ${night.mute};
   > div { display: flex; align-items: center; gap: 8px; }
-  > div > b { font-size: calc(15px * var(--k, 1)); font-weight: 800; color: ${night.ink}; letter-spacing: 0.02em; }
+  > div > b { font-size: calc(16px * var(--k, 1)); font-weight: 800; color: ${night.ink}; letter-spacing: 0.02em; }
   > div > em { ${pill('xs')} font-style: normal; font-weight: 800; color: #fff; background: ${night.accent}; }
-  > div > button { ${pill('xs')} margin-left: auto; font: inherit; font-size: calc(11px * var(--k, 1)); cursor: pointer; border: none;
-                   background: transparent; color: ${night.mute}; }
-  > div > button:hover { color: ${night.ink}; background: ${night.raised}; }
 `;
 
 const MapBody = styled.div`
@@ -92,7 +89,7 @@ const Right = styled.div`
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 `;
 
 const Stage = styled.div`
@@ -128,11 +125,11 @@ const DayEnd = styled.div`
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 14px 12px 18px;
-  border-radius: 14px;
+  padding: 12px 16px 12px 20px;
+  border-radius: ${radius.panel};
   background: ${night.accentSoft};
-  box-shadow: inset 0 0 0 1px rgba(226, 84, 44, 0.5);
-  font-size: calc(14px * var(--k, 1));
+  box-shadow: inset 0 0 0 1px ${accentA(0.5)};
+  font-size: calc(16px * var(--k, 1));
   color: ${night.ink};
   > span > span { margin-left: 12px; color: ${night.mute}; }
   > button { font: inherit; ${pill('md')} font-weight: 800; cursor: pointer; border: none;
@@ -149,7 +146,7 @@ interface Props {
   /** The day is over: the evaluations are the next thing to read. */
   onReadEvaluations: () => void;
   /** Which day this is and the way back, for a record that is walked day by day. */
-  strip?: { day: string; onRestart: () => void };
+  strip?: { day: string };
 }
 
 export default function ObserveScreen({ village, detail, events, art, dayEnd: ending, onReadEvaluations, strip }: Props) {
@@ -269,7 +266,6 @@ export default function ObserveScreen({ village, detail, events, art, dayEnd: en
           <div>
             <b>MEDial</b>
             {strip && <em>{strip.day}</em>}
-            {strip && <button type="button" onClick={strip.onRestart}>↺ 처음부터</button>}
           </div>
         </MapStrip>
         <MapBody>
@@ -363,7 +359,7 @@ export default function ObserveScreen({ village, detail, events, art, dayEnd: en
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           <IconButton onClick={() => void p.jumpScene(-1)}>← 앞 장면</IconButton>
           <IconButton onClick={() => void p.jumpScene(1)}>다음 장면 →</IconButton>
-          <IconButton onClick={() => void p.restart()}>처음으로</IconButton>
+          <IconButton onClick={() => void p.restart()}>하루 다시 보기</IconButton>
         </div>
         <Sub as="span">
           장면 {reel ? new Set(reel.segments.flatMap((x) => (x.kind === 'map' ? [] : [x.episode]))).size : 0}개 재생 · 요청 {reel?.episodes.length ?? 0}건 · {village.isSynthetic ? '합성 지도' : '원자료 지형'}

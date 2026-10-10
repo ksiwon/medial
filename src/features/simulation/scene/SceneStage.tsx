@@ -8,7 +8,7 @@ import JudgmentPanel from './JudgmentPanel';
 import { nameOf, type Judgment } from './judgment';
 import type { Beat, Frame, SceneLine } from './types';
 import { api } from '../api/client';
-import { night, px } from '../ui/theme';
+import { night, px, radius, shadeA } from '../ui/theme';
 import { pill } from '../ui/primitives';
 
 // One beat, filmed at eye level: a frame per place, the people there, and their
@@ -39,7 +39,7 @@ function xs(fits: Fit[]): number[] {
 const Box = styled.div`
   position: absolute;
   inset: 0;
-  border-radius: 12px;
+  border-radius: ${radius.panel};
   background: #1b1c1a;
   overflow: hidden;
   --panel-w: clamp(300px, 26%, 420px);
@@ -52,8 +52,8 @@ const Frames = styled.div`
   bottom: 0;
   right: var(--panel-w);
   display: flex;
-  gap: 6px;
-  padding: 6px;
+  gap: 8px;
+  padding: 8px;
 `;
 
 const open = keyframes`from { flex-grow: 0.0001; } to { flex-grow: 1; }`;
@@ -68,14 +68,14 @@ const FrameBox = styled.div`
   flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: ${radius.control};
   animation: ${open} 0.5s cubic-bezier(0.65, 0, 0.35, 1);
 `;
 
 const Cam = styled.div`
   position: absolute;
   inset: 0;
-  border-radius: 8px;
+  border-radius: ${radius.control};
   overflow: hidden;
   transform-origin: 50% 62%;
   background: #2a2b28;
@@ -104,19 +104,19 @@ const Person = styled.div<{ $soft: boolean }>`
   position: absolute;
   transform: translateX(-50%);
   transition: filter 0.35s ease;
-  filter: ${(p) => (p.$soft ? 'blur(2.5px) brightness(0.85) ' : '')}drop-shadow(0 16px 12px rgba(0, 0, 0, 0.3));
+  filter: ${(p) => (p.$soft ? 'blur(2px) brightness(0.85) ' : '')}drop-shadow(0 16px 12px ${shadeA(0.3)});
   > img, > svg { width: 100%; height: 100%; object-fit: contain; }
 `;
 
 const Label = styled.div`
   ${pill('sm')}
   position: absolute;
-  left: 10px;
-  bottom: 10px;
+  left: 12px;
+  bottom: 12px;
   font-weight: 800;
   color: #ffffff;
   background: rgba(21, 21, 15, 0.62);
-  > i { font-style: normal; font-weight: 700; opacity: 0.72; margin-left: 6px; }
+  > i { font-style: normal; font-weight: 700; opacity: 0.72; margin-left: 8px; }
 `;
 
 const Tag = styled.span`
@@ -127,7 +127,7 @@ const Tag = styled.span`
   font-weight: 800;
   color: ${night.deep};
   background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 2px 8px ${shadeA(0.18)};
 `;
 
 /** A frame's bubbles, one column so they never overlap; each leans toward its speaker. */
@@ -144,7 +144,7 @@ const Column = styled.div`
 
 const MedColumn = styled(Column)`
   left: auto;
-  right: calc(var(--panel-w) + 14px);
+  right: calc(var(--panel-w) + 16px);
   bottom: 13%;
   width: 44%;
   align-items: flex-end;
@@ -155,29 +155,29 @@ const Bubble = styled.div<{ $side: 'r' | 'l' | 'med'; $old: boolean; $typing: bo
   max-width: ${(p) => (p.$side === 'med' ? '100%' : 'min(46%, 440px)')};
   align-self: ${(p) => (p.$side === 'r' ? 'flex-start' : 'flex-end')};
   background: ${(p) => (p.$side === 'med' ? '#fff6f2' : '#ffffff')};
-  border: ${(p) => (p.$side === 'med' ? `1.5px solid ${night.accent}` : 'none')};
+  border: ${(p) => (p.$side === 'med' ? `2px solid ${night.accent}` : 'none')};
   color: ${night.deep};
-  border-radius: 14px;
+  border-radius: ${radius.panel};
   ${(p) => (p.$side === 'r' ? 'border-bottom-left-radius: 4px;' : 'border-bottom-right-radius: 4px;')}
-  padding: ${(p) => (p.$typing ? '10px 14px' : '9px 13px 10px')};
+  padding: ${(p) => (p.$typing ? '12px 16px' : '8px 12px 12px')};
   font-size: ${(p) => px(p.$typing ? 18 : 16)};
   letter-spacing: ${(p) => (p.$typing ? '0.2em' : '-0.01em')};
   line-height: 1.45;
   font-weight: 600;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 8px 24px ${shadeA(0.28)};
   opacity: ${(p) => (p.$old ? 0.4 : 1)};
-  transform: ${(p) => (p.$old ? 'translateY(-6px) scale(0.97)' : 'none')};
+  transform: ${(p) => (p.$old ? 'translateY(-8px) scale(0.97)' : 'none')};
   transition: opacity 0.35s ease, transform 0.35s ease;
   animation: ${pop} 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2);
-  > b { display: block; font-size: calc(11px * var(--k, 1)); font-weight: 800; color: ${(p) => (p.$side === 'med' ? night.accent : '#6b675f')}; margin-bottom: 2px; }
+  > b { display: block; font-size: calc(12px * var(--k, 1)); font-weight: 800; color: ${(p) => (p.$side === 'med' ? night.accent : '#6b675f')}; margin-bottom: 2px; }
 `;
 
 /** An act the log recorded without words. A subtitle, never a speech bubble. */
 const Caption = styled.div`
   position: absolute;
-  left: 6px;
-  right: calc(var(--panel-w) + 6px);
-  bottom: 74px;
+  left: 8px;
+  right: calc(var(--panel-w) + 8px);
+  bottom: 76px;
   display: flex;
   justify-content: center;
   pointer-events: none;
@@ -185,13 +185,13 @@ const Caption = styled.div`
   > span {
     max-width: 70%;
     text-align: center;
-    font-size: calc(15px * var(--k, 1));
+    font-size: calc(16px * var(--k, 1));
     font-weight: 700;
     line-height: 1.45;
     color: #ffffff;
     background: rgba(21, 21, 15, 0.72);
-    border-radius: 8px;
-    padding: 6px 14px;
+    border-radius: ${radius.control};
+    padding: 8px 16px;
     animation: ${pop} 0.28s ease;
   }
 `;

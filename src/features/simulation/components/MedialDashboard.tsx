@@ -2,7 +2,7 @@ import styled from 'styled-components';
 import { formatClock } from '../positions';
 import type { Ledger, Routine } from '../selectors/dayLedger';
 import { personName } from '../selectors/story';
-import { font, night } from '../ui/theme';
+import { accentA, font, night, radius } from '../ui/theme';
 import { FaceChip } from './Marks';
 
 // The stage between scenes (2026-10-07 redesign for the exhibition wall).
@@ -27,24 +27,24 @@ import { FaceChip } from './Marks';
 const Box = styled.div`
   position: absolute;
   inset: 0;
-  border-radius: 14px;
+  border-radius: ${radius.panel};
   background: ${night.panel};
   color: ${night.ink};
-  padding: 28px 32px 26px;
+  padding: 28px 32px 28px;
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: 28px;
   overflow: hidden;
 `;
 
 const Top = styled.header`
   flex: none;
   > small { display: block; font-size: calc(12px * var(--k, 1)); font-weight: 800; letter-spacing: 0.14em; color: ${night.accent}; }
-  > h2 { margin: 10px 0 0; font-size: calc(clamp(22px, 2.1vw, 32px) * var(--k, 1)); line-height: 1.3; font-weight: 800;
+  > h2 { margin: 12px 0 0; font-size: calc(clamp(24px, 2.1vw, 32px) * var(--k, 1)); line-height: 1.3; font-weight: 800;
          letter-spacing: -0.03em; word-break: keep-all; }
-  > p { margin: 10px 0 0; font-size: calc(15px * var(--k, 1)); color: ${night.mute}; font-variant-numeric: tabular-nums; }
+  > p { margin: 12px 0 0; font-size: calc(16px * var(--k, 1)); color: ${night.mute}; font-variant-numeric: tabular-nums; }
   > p > b { color: ${night.ink}; font-weight: 800; }
-  > p > i { font-style: normal; margin: 0 10px; color: ${night.faint}; }
+  > p > i { font-style: normal; margin: 0 12px; color: ${night.faint}; }
 `;
 
 const Body = styled.div`
@@ -71,19 +71,19 @@ const Col = styled.section`
 const Places = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
-  gap: 10px;
+  gap: 12px;
   overflow-y: auto;
   align-content: start;
 `;
 
 const Place = styled.div`
-  padding: 12px 14px 14px;
-  border-radius: 12px;
+  padding: 12px 16px 16px;
+  border-radius: ${radius.panel};
   background: ${night.raised};
   > header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
   > header > b { font-size: calc(16px * var(--k, 1)); font-weight: 800; letter-spacing: -0.02em; }
-  > header > em { font-style: normal; font-size: calc(22px * var(--k, 1)); font-weight: 800; font-variant-numeric: tabular-nums; }
-  > ul { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+  > header > em { font-style: normal; font-size: calc(24px * var(--k, 1)); font-weight: 800; font-variant-numeric: tabular-nums; }
+  > ul { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 `;
 
 /** A face and its P-number. Off their ordinary day: an accent ring. */
@@ -91,8 +91,8 @@ const Person = styled.li<{ $off: boolean }>`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  font-size: calc(11px * var(--k, 1));
+  gap: 4px;
+  font-size: calc(12px * var(--k, 1));
   font-weight: 700;
   color: ${night.mute};
   > span { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
@@ -103,17 +103,17 @@ const Legend = styled.p`
   margin: 0;
   font-size: calc(12px * var(--k, 1));
   color: ${night.faint};
-  > i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px;
+  > i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px;
         box-shadow: inset 0 0 0 2px ${night.accent}; vertical-align: -1px; }
 `;
 
 const Card = styled.div`
-  padding: 14px 16px;
-  border-radius: 12px;
+  padding: 16px 16px;
+  border-radius: ${radius.panel};
   background: ${night.accentSoft};
-  box-shadow: inset 0 0 0 1px rgba(226, 84, 44, 0.45);
-  > b { display: block; font-size: calc(17px * var(--k, 1)); font-weight: 800; letter-spacing: -0.01em; }
-  > em { display: block; margin-top: 10px; font-style: normal; font-size: calc(11px * var(--k, 1)); font-weight: 800;
+  box-shadow: inset 0 0 0 1px ${accentA(0.45)};
+  > b { display: block; font-size: calc(16px * var(--k, 1)); font-weight: 800; letter-spacing: -0.01em; }
+  > em { display: block; margin-top: 12px; font-style: normal; font-size: calc(12px * var(--k, 1)); font-weight: 800;
          letter-spacing: 0.08em; color: ${night.accent}; }
   > em[data-unknown='true'] { color: ${night.faint}; }
   > ul { margin: 4px 0 0; padding-left: 16px; font-size: ${font.small}; line-height: 1.6; color: ${night.mute}; }
@@ -125,15 +125,15 @@ const Bars = styled.ul`
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 9px;
-  > li { display: grid; grid-template-columns: 92px 1fr 22px; align-items: center; gap: 10px; font-size: calc(13px * var(--k, 1)); }
-  > li > i { display: block; height: 8px; border-radius: 999px; background: ${night.accent}; min-width: 6px; }
+  gap: 8px;
+  > li { display: grid; grid-template-columns: 92px 1fr 24px; align-items: center; gap: 12px; font-size: calc(12px * var(--k, 1)); }
+  > li > i { display: block; height: 8px; border-radius: ${radius.pill}; background: ${night.accent}; min-width: 8px; }
   > li > em { font-style: normal; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
 `;
 
 const Quiet = styled.p`
   margin: 0;
-  font-size: calc(15px * var(--k, 1));
+  font-size: calc(16px * var(--k, 1));
   line-height: 1.6;
   color: ${night.mute};
   word-break: keep-all;
@@ -235,7 +235,7 @@ export default function MedialDashboard({ ledger, next, holdsOf, routine }: Prop
             })
           )}
 
-          <h3 style={{ marginTop: 14 }}>오늘 부탁을 받은 사람</h3>
+          <h3 style={{ marginTop: 16 }}>오늘 부탁을 받은 사람</h3>
           {ledger.load.length === 0 ? (
             <Quiet>아직 누구에게도 부탁하지 않았습니다.</Quiet>
           ) : (

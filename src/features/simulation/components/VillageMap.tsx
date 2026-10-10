@@ -14,7 +14,7 @@ import {
 } from '../positions';
 import { mapFrame } from '../mapFrame';
 import { personName } from '../selectors/story';
-import { colour, font, night, radius } from '../ui/theme';
+import { colour, font, inkA, night, radius } from '../ui/theme';
 import { ActivityIcon, FaceChip, FaceMark, VehicleMark } from './Marks';
 import PillText, { plateSize } from '../ui/PillText';
 import { pill } from '../ui/primitives';
@@ -108,11 +108,11 @@ const Corner = styled.div`
 
 const Tools = styled(Corner)`
   right: 12px;
-  bottom: 30px;
+  bottom: 32px;
   flex-direction: row;
   background: rgba(18, 19, 16, 0.82);
-  border-radius: 999px;
-  padding: 3px 6px;
+  border-radius: ${radius.pill};
+  padding: 4px 8px;
 `;
 
 const ToolButton = styled.button`
@@ -124,7 +124,7 @@ const ToolButton = styled.button`
   font-weight: 700;
   cursor: pointer;
   &:hover {
-    background: rgba(246, 241, 232, 0.14);
+    background: ${inkA(0.14)};
   }
   &:focus-visible {
     outline: 2px solid ${colour.primary};
@@ -135,17 +135,17 @@ const ToolButton = styled.button`
 const Compass = styled.div`
   position: absolute;
   right: 12px;
-  top: 10px;
+  top: 12px;
   box-sizing: border-box;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  border-radius: ${radius.round};
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 1px;
-  font-size: calc(10px * var(--k, 1));
+  font-size: calc(12px * var(--k, 1));
   font-weight: 800;
   line-height: 1;
   color: ${night.ink};
@@ -157,7 +157,7 @@ const ModeBadge = styled.div`
   ${pill('sm')}
   position: absolute;
   left: 12px;
-  top: 10px;
+  top: 12px;
   background: rgba(18, 19, 16, 0.82);
   color: ${night.mute};
   pointer-events: none;
@@ -170,14 +170,14 @@ const ModeBadge = styled.div`
 const Credit = styled.div`
   position: absolute;
   right: 12px;
-  bottom: 6px;
+  bottom: 8px;
   max-width: 60%;
   text-align: right;
-  font-size: calc(9px * var(--k, 1));
+  font-size: calc(8px * var(--k, 1));
   line-height: 1.3;
   color: ${night.mute};
   background: rgba(18, 19, 16, 0.6);
-  border-radius: 3px;
+  border-radius: ${radius.xs};
   padding: 0 4px;
   pointer-events: none;
   white-space: nowrap;
@@ -192,12 +192,12 @@ const Popover = styled.div<{ $left: number; $top: number; $below: boolean }>`
   left: ${(p) => p.$left}px;
   top: ${(p) => p.$top}px;
 
-  width: 250px;
+  width: 252px;
   max-width: calc(100% - 16px);
   background: ${colour.surface};
   border: 1px solid ${colour.border};
   border-radius: ${radius.panel};
-  box-shadow: 0 4px 14px rgba(29, 41, 53, 0.14);
+  box-shadow: 0 4px 16px rgba(29, 41, 53, 0.14);
   z-index: 5;
   overflow: hidden;
 `;
@@ -208,7 +208,7 @@ const PopPeople = styled.div`
   display: flex;
   gap: 4px;
   overflow-x: auto;
-  padding: 8px 34px 8px 10px;
+  padding: 8px 36px 8px 12px;
   border-bottom: 1px solid ${colour.border};
 `;
 
@@ -220,7 +220,7 @@ const PersonPick = styled.button<{ $active: boolean }>`
   border: 1px solid ${(p) => (p.$active ? colour.primary : 'transparent')};
   background: ${(p) => (p.$active ? colour.selected : 'transparent')};
   border-radius: ${radius.control};
-  padding: 4px 6px;
+  padding: 4px 8px;
   cursor: pointer;
   font-size: ${font.small};
   color: ${colour.text};
@@ -231,7 +231,7 @@ const PersonPick = styled.button<{ $active: boolean }>`
 `;
 
 const PopBody = styled.div`
-  padding: 8px 12px 10px;
+  padding: 8px 12px 12px;
   font-size: ${font.small};
   line-height: 1.5;
   color: ${colour.text};
@@ -268,11 +268,11 @@ const Outside = styled.div`
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px 14px;
+  gap: 8px;
+  padding: 12px 16px;
   font-size: ${font.small};
   color: ${night.mute};
-  > strong { font-size: calc(11px * var(--k, 1)); font-weight: 800; letter-spacing: 0.08em; color: ${night.faint}; }
+  > strong { font-size: calc(12px * var(--k, 1)); font-weight: 800; letter-spacing: 0.08em; color: ${night.faint}; }
   /* One line a place: "읍내: P2, P3". */
   > p { margin: 0; line-height: 1.45; word-break: keep-all; }
   > p > b { color: ${night.ink}; font-weight: 800; }
@@ -353,7 +353,7 @@ export default function VillageMap({
   const [mapBroken, setMapBroken] = useState(false);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const popRef = useRef<HTMLDivElement | null>(null);
-  const [popSize, setPopSize] = useState({ width: 250, height: 138 });
+  const [popSize, setPopSize] = useState({ width: 252, height: 140 });
   useEffect(() => () => { if (hoverTimer.current) clearTimeout(hoverTimer.current); }, []);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const drag = useRef<{ px: number; py: number; view: View } | null>(null);
@@ -778,7 +778,7 @@ export default function VillageMap({
         {medial && <ModeBadge>MEDial이 보고받은 위치만 표시 중</ModeBadge>}
 
         <Compass>
-          <div style={{ fontSize: `calc(10px * var(--k, 1))`, lineHeight: 1, transform: `rotate(${frame.northDeg}deg)` }}>▲</div>
+          <div style={{ fontSize: `calc(12px * var(--k, 1))`, lineHeight: 1, transform: `rotate(${frame.northDeg}deg)` }}>▲</div>
           <div>북</div>
         </Compass>
 

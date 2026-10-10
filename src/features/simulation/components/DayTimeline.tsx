@@ -3,7 +3,7 @@ import styled, { keyframes } from 'styled-components';
 import { formatClock } from '../positions';
 import type { TimelineItem } from '../selectors/dayLedger';
 import { personName } from '../selectors/story';
-import { font, night, px } from '../ui/theme';
+import { accentA, font, inkA, night, px, radius, shadeA } from '../ui/theme';
 import { pill } from '../ui/primitives';
 
 // 오늘의 타임라인: the right-hand column of the observe screen, and the day's
@@ -38,7 +38,7 @@ const DOT_Y = 23;
 const TITLE_H = 24;
 const PAD_Y = DOT_Y - TITLE_H / 2;
 
-const glow = keyframes`0%, 100% { box-shadow: 0 0 0 0 rgba(226, 84, 44, 0.55) } 50% { box-shadow: 0 0 0 7px rgba(226, 84, 44, 0) }`;
+const glow = keyframes`0%, 100% { box-shadow: 0 0 0 0 ${accentA(0.55)} } 50% { box-shadow: 0 0 0 8px ${accentA(0)} }`;
 
 const Box = styled.section`
   min-height: 0;
@@ -46,7 +46,7 @@ const Box = styled.section`
   flex-direction: column;
   background: ${INK};
   color: ${PAPER};
-  border-radius: 14px;
+  border-radius: ${radius.panel};
   overflow: hidden;
 `;
 
@@ -55,7 +55,7 @@ const Hour = styled.span`
   position: absolute;
   left: ${RAIL_X + 12}px;
   transform: translateY(-50%);
-  font-size: calc(11px * var(--k, 1));
+  font-size: calc(12px * var(--k, 1));
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: ${night.faint};
@@ -72,17 +72,17 @@ const Hour = styled.span`
 
 const Head = styled.header`
   flex: none;
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid rgba(246, 241, 232, 0.1);
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid ${inkA(0.1)};
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 `;
 
 const Row = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 `;
 
 const Play = styled.button`
@@ -100,7 +100,7 @@ const Play = styled.button`
 const Clock = styled.time`
   flex: 1;
   text-align: right;
-  font-size: calc(34px * var(--k, 1));
+  font-size: calc(36px * var(--k, 1));
   line-height: 1;
   font-weight: 800;
   letter-spacing: -0.03em;
@@ -130,26 +130,26 @@ const Settings = styled.details`
   > summary {
     cursor: pointer;
     list-style: none;
-    color: rgba(246, 241, 232, 0.75);
+    color: ${inkA(0.75)};
     font-size: calc(16px * var(--k, 1));
-    padding: 4px 6px;
-    border-radius: 6px;
+    padding: 4px 8px;
+    border-radius: ${radius.control};
   }
   > summary::-webkit-details-marker { display: none; }
   > summary:focus-visible { outline: 2px solid ${PAPER}; }
   > div {
     position: absolute;
     right: 0;
-    top: 34px;
+    top: 36px;
     width: 240px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
     background: #fff;
     color: #1d2935;
-    border-radius: 8px;
+    border-radius: ${radius.control};
     padding: 12px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 8px 20px ${shadeA(0.35)};
     z-index: 8;
     font-size: ${font.small};
   }
@@ -157,8 +157,8 @@ const Settings = styled.details`
 
 const Note = styled.p`
   margin: 0;
-  font-size: calc(11.5px * var(--k, 1));
-  color: rgba(246, 241, 232, 0.55);
+  font-size: calc(12px * var(--k, 1));
+  color: ${inkA(0.55)};
 `;
 
 const Scroll = styled.div`
@@ -176,7 +176,7 @@ const Track = styled.ol`
   position: relative;
   list-style: none;
   margin: 0;
-  padding: 0 14px 0 0;
+  padding: 0 16px 0 0;
   min-height: 100%;
   display: flex;
   flex-direction: column;
@@ -196,15 +196,15 @@ const Rail = styled.div`
   &::before {
     content: '';
     position: absolute;
-    left: 13px;
+    left: 12px;
     top: 0;
     bottom: 0;
     width: 2px;
-    background: rgba(246, 241, 232, 0.16);
+    background: ${inkA(0.16)};
   }
   > i {
     position: absolute;
-    left: 13px;
+    left: 12px;
     top: 0;
     width: 2px;
     background: ${LIVE};
@@ -227,9 +227,9 @@ const Playhead = styled.div`
     width: 20px;
     height: 20px;
     transform: translate(-50%, -50%);
-    border-radius: 50%;
+    border-radius: ${radius.round};
     background: ${PAPER};
-    border: 3px solid ${LIVE};
+    border: 4px solid ${LIVE};
     pointer-events: auto;
     cursor: grab;
   }
@@ -239,16 +239,16 @@ const Item = styled.li<{ $state: TimelineItem['state'] | 'edge' }>`
   position: relative;
   padding: ${PAD_Y}px 0 ${PAD_Y}px 40px;
   cursor: pointer;
-  border-bottom: 1px solid rgba(246, 241, 232, 0.08);
+  border-bottom: 1px solid ${inkA(0.08)};
   > i {
     position: absolute;
     left: ${RAIL_X}px;
     top: ${DOT_Y}px;
     box-sizing: border-box;
-    width: 11px;
-    height: 11px;
+    width: 12px;
+    height: 12px;
     transform: translate(-50%, -50%);
-    border-radius: 50%;
+    border-radius: ${radius.round};
     z-index: 2;
     background: ${(p) => (p.$state === 'now' ? LIVE : p.$state === 'done' ? 'rgba(246, 241, 232, 0.55)' : INK)};
     border: 1px ${(p) => (p.$state === 'planned' ? 'dashed' : 'solid')} ${(p) => (p.$state === 'now' ? LIVE : 'rgba(246, 241, 232, 0.55)')};
@@ -258,7 +258,7 @@ const Item = styled.li<{ $state: TimelineItem['state'] | 'edge' }>`
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 10px;
+    gap: 12px;
   }
   > div > b {
     font-size: ${(p) => px(p.$state === 'now' ? 20 : p.$state === 'edge' ? 13 : 16)};
@@ -281,17 +281,17 @@ const Item = styled.li<{ $state: TimelineItem['state'] | 'edge' }>`
 `;
 
 const Detail = styled.p`
-  margin: 6px 0 0;
-  font-size: calc(13.5px * var(--k, 1));
+  margin: 8px 0 0;
+  font-size: calc(12px * var(--k, 1));
   line-height: 1.55;
-  color: rgba(246, 241, 232, 0.88);
+  color: ${inkA(0.88)};
   word-break: keep-all;
-  > span { display: block; color: rgba(246, 241, 232, 0.6); }
+  > span { display: block; color: ${inkA(0.6)}; }
 `;
 
 const Tag = styled.u<{ $kind: 'planned' | 'unseen' }>`
   ${pill('xs')}
-  margin-top: 6px;
+  margin-top: 8px;
   text-decoration: none;
   font-weight: 800;
   letter-spacing: 0.04em;
@@ -469,7 +469,7 @@ export default function DayTimeline({
             </Item>
           ))}
           <Item $state="edge" data-ms={dayEndMs} onClick={() => { onSeek(dayEndMs); onCommit(); }}
-            style={{ borderBottom: 'none', borderTop: '1px solid rgba(246, 241, 232, 0.08)' }}>
+            style={{ borderBottom: 'none', borderTop: '1px solid ${inkA(0.08)}' }}>
             <i aria-hidden />
             <div><b>하루 끝 · 주민 평가</b><time>{formatClock(dayEndMs)}</time></div>
           </Item>

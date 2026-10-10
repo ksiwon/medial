@@ -12,21 +12,21 @@ import { colour, font, px, radius } from './theme';
  * below the letters is always equal and the space at the sides follows from the
  * height (about 0.44 of it) instead of being picked per label.
  *
- *   xs 20 - a status tag inside a line       sm 26 - a chip, a badge, a choice
+ *   xs 20 - a status tag inside a line       sm 28 - a chip, a badge, a choice
  *   md 32 - a control                        lg 40 - the one thing to press next
  */
 const PILL = {
-  xs: { h: 20, x: 9, f: 11 },
-  sm: { h: 26, x: 11, f: 12 },
-  md: { h: 32, x: 14, f: 13 },
-  lg: { h: 40, x: 18, f: 15 },
+  xs: { h: 20, x: 8, f: 12 },
+  sm: { h: 28, x: 12, f: 12 },
+  md: { h: 32, x: 16, f: 16 },
+  lg: { h: 40, x: 20, f: 16 },
 } as const;
 
 export const pill = (size: keyof typeof PILL) => css`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   box-sizing: border-box;
   height: ${px(PILL[size].h)};
   padding: 0 ${px(PILL[size].x)};
@@ -34,7 +34,7 @@ export const pill = (size: keyof typeof PILL) => css`
   line-height: 1;
   white-space: nowrap;
   vertical-align: middle;
-  border-radius: 999px;
+  border-radius: ${radius.pill};
 `;
 
 export const Body = styled.p`
@@ -66,8 +66,8 @@ const control = css`
   background: ${colour.surface};
   border: 1px solid ${colour.border};
   border-radius: ${radius.control};
-  min-height: 38px;
-  padding: 8px 10px;
+  min-height: 40px;
+  padding: 8px 12px;
   box-sizing: border-box;
   &:focus-visible {
     outline: 2px solid ${colour.primary};
@@ -100,7 +100,7 @@ export const TextLink = styled.button`
   }
 `;
 
-/** A small control (zoom, step). 6px radius per the token list. */
+/** A small control (zoom, step). 8px radius per the token list. */
 export const IconButton = styled.button`
   font-family: inherit;
   font-size: ${font.small};
@@ -193,7 +193,7 @@ export const Disclosure = styled.details`
   color: ${colour.secondary};
   > summary {
     cursor: pointer;
-    padding: 6px 0;
+    padding: 8px 0;
     color: ${colour.primary};
     list-style: none;
   }
@@ -214,7 +214,7 @@ export const Disclosure = styled.details`
 export const Mono = styled.code`
   font-size: ${font.small};
   background: #f2f4f6;
-  border-radius: 4px;
+  border-radius: ${radius.xs};
   padding: 0 4px;
   color: ${colour.secondary};
   word-break: break-all;
@@ -222,14 +222,14 @@ export const Mono = styled.code`
 
 const HintButton = styled.button`
   font-family: inherit;
-  font-size: calc(11px * var(--k, 1));
+  font-size: calc(12px * var(--k, 1));
   line-height: 1;
   width: 16px;
   height: 16px;
   flex: none;
   margin-left: 4px;
   padding: 0;
-  border-radius: 999px;
+  border-radius: ${radius.pill};
   border: 1px solid ${colour.border};
   background: ${colour.surface};
   color: ${colour.secondary};
@@ -250,7 +250,7 @@ const Bubble = styled.div`
   position: fixed;
   z-index: 60;
   max-width: min(320px, 90vw);
-  padding: 8px 10px;
+  padding: 8px 12px;
   border-radius: ${radius.control};
   border: 1px solid ${colour.border};
   background: ${colour.surface};

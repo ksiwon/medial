@@ -3,7 +3,7 @@ import styled, { css, keyframes } from 'styled-components';
 import { api } from '../api/client';
 import { EUNJEOM, KAIST, KOREA, NAMHAE, NAMHAE_TOWN, NEAR } from '../intro/koreaMap';
 import PillText from '../ui/PillText';
-import { font, night } from '../ui/theme';
+import { accentA, font, inkA, night, radius } from '../ui/theme';
 
 // The exhibition's opening: a film, not a screen. Nobody touches it.
 //
@@ -32,7 +32,7 @@ const SCENE_MS = [5500, 5500, 5500, 11500, 9000, 9000];
 const INTRO_TOTAL_MS = SCENE_MS.reduce((a, b) => a + b, 0);
 
 const fade = keyframes`from { opacity: 0 } to { opacity: 1 }`;
-const rise = keyframes`from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none }`;
+const rise = keyframes`from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: none }`;
 const drift = keyframes`from { transform: scale(1.04) translate3d(0, 0, 0) } to { transform: scale(1.14) translate3d(-1.5%, -1%, 0) }`;
 const lamp = keyframes`from { opacity: 0 } to { opacity: 1 }`;
 const draw = keyframes`from { stroke-dashoffset: 1 } to { stroke-dashoffset: 0 }`;
@@ -115,7 +115,7 @@ const Eyebrow = styled.div<{ $on: boolean }>`
   display: inline-block;
   margin-left: -0.9em;
   padding: 0.4em 0.9em;
-  border-radius: 999px;
+  border-radius: ${radius.pill};
   background: rgba(21, 21, 15, 0.62);
   font-size: clamp(12px, 1.1vw, 56px);
   font-weight: 800;
@@ -126,8 +126,8 @@ const Eyebrow = styled.div<{ $on: boolean }>`
 `;
 
 const Line = styled.h1<{ $on: boolean; $delay?: number }>`
-  margin: 14px 0 0;
-  font-size: clamp(28px, 3.6vw, 190px);
+  margin: 16px 0 0;
+  font-size: clamp(28px, 3.6vw, 192px);
   line-height: 1.24;
   font-weight: 800;
   letter-spacing: -0.035em;
@@ -143,12 +143,12 @@ const Em = styled.span`
 `;
 
 const Sub = styled.p<{ $on: boolean; $delay?: number }>`
-  margin: 18px 0 0;
+  margin: 20px 0 0;
   max-width: 53vw;
-  font-size: clamp(15px, 1.4vw, 74px);
+  font-size: clamp(16px, 1.4vw, 76px);
   line-height: 1.6;
   word-break: keep-all;
-  color: rgba(246, 241, 232, 0.86);
+  color: ${inkA(0.86)};
   opacity: 0;
   ${(p) => p.$on && css`animation: ${rise} 0.5s ease ${p.$delay ?? 0.9}s forwards;`}
 `;
@@ -158,8 +158,8 @@ const Progress = styled.div<{ $ms: number }>`
   left: 0;
   right: 0;
   bottom: 0;
-  height: clamp(3px, 0.25vw, 12px);
-  background: rgba(246, 241, 232, 0.12);
+  height: clamp(4px, 0.25vw, 12px);
+  background: ${inkA(0.12)};
   &::after {
     content: '';
     display: block;
@@ -174,14 +174,14 @@ const Progress = styled.div<{ $ms: number }>`
 
 const Disclaimer = styled.div`
   position: absolute;
-  top: clamp(22px, 1.6vw, 64px);
+  top: clamp(24px, 1.6vw, 64px);
   right: clamp(24px, 4vw, 120px);
   padding: 0.4em 1em;
-  border-radius: 999px;
+  border-radius: ${radius.pill};
   background: rgba(21, 21, 15, 0.55);
-  font-size: clamp(12px, 0.85vw, 42px);
+  font-size: clamp(12px, 0.85vw, 44px);
   letter-spacing: 0.02em;
-  color: rgba(246, 241, 232, 0.82);
+  color: ${inkA(0.82)};
   z-index: 2;
 `;
 
@@ -189,7 +189,7 @@ const Brand = styled.div`
   position: absolute;
   top: clamp(20px, 1.5vw, 60px);
   left: clamp(24px, 4vw, 120px);
-  font-size: clamp(15px, 1.05vw, 52px);
+  font-size: clamp(16px, 1.05vw, 52px);
   font-weight: 800;
   letter-spacing: 0.04em;
   color: ${PAPER};
@@ -368,11 +368,11 @@ const Houses = styled.div<{ $on: boolean }>`
   pointer-events: none;
   > i {
     position: absolute;
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
+    width: 8px;
+    height: 8px;
+    border-radius: ${radius.round};
     background: #ffd98a;
-    box-shadow: 0 0 18px 6px rgba(255, 200, 100, 0.55);
+    box-shadow: 0 0 20px 8px rgba(255, 200, 100, 0.55);
     opacity: 0;
     ${(p) => p.$on && css`animation: ${lamp} 1.2s ease forwards;`}
   }
@@ -385,20 +385,20 @@ const WINDOWS: [number, number][] = [
 ];
 
 const Chain = styled.div<{ $on: boolean; $delay: number }>`
-  margin-top: 26px;
+  margin-top: 28px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px 14px;
-  font-size: clamp(14px, 1.4vw, 74px);
+  gap: 12px 16px;
+  font-size: clamp(16px, 1.4vw, 76px);
   font-weight: 700;
   opacity: 0;
   ${(p) => p.$on && css`animation: ${rise} 0.6s ease ${p.$delay}s forwards;`}
   /* Sized in em so the chain scales with the screen; the height is fixed and the
      text centred in it, like every other pill (ui/primitives pill). */
   > span { display: inline-flex; align-items: center; box-sizing: border-box; height: 2.2em; padding: 0 0.95em;
-           line-height: 1; white-space: nowrap; border: 1px solid rgba(246, 241, 232, 0.5); border-radius: 999px; }
-  > span.real { border-color: ${ACCENT}; background: rgba(226, 84, 44, 0.18); }
+           line-height: 1; white-space: nowrap; border: 1px solid ${inkA(0.5)}; border-radius: ${radius.pill}; }
+  > span.real { border-color: ${ACCENT}; background: ${accentA(0.18)}; }
   > i { font-style: normal; color: ${ACCENT}; }
 `;
 
@@ -445,7 +445,7 @@ const Route = styled.svg<{ $on: boolean }>`
     stroke-width: 6;
     stroke-linecap: round;
     stroke-dasharray: 1 13;
-    filter: drop-shadow(0 0 6px rgba(226, 84, 44, 0.7));
+    filter: drop-shadow(0 0 8px ${accentA(0.7)});
   }
   /* The mask the dots appear through: a fat line that draws itself along the road. */
   .sweep {
@@ -457,7 +457,7 @@ const Route = styled.svg<{ $on: boolean }>`
     stroke-dashoffset: 1;
     animation: ${draw} 2.6s ease-in-out 0.3s forwards;
   }
-  .hospital { opacity: 0; animation: ${keyframes`from { opacity: 0; transform: translateY(-18px) } to { opacity: 1; transform: none }`} 0.5s ease 2.7s forwards; }
+  .hospital { opacity: 0; animation: ${keyframes`from { opacity: 0; transform: translateY(-20px) } to { opacity: 1; transform: none }`} 0.5s ease 2.7s forwards; }
   .pulse { fill: none; stroke: ${PAPER}; stroke-width: 3; opacity: 0; animation: ${pulse} 1.8s ease-out 3.2s infinite; transform-box: fill-box; transform-origin: center; }
 `;
 

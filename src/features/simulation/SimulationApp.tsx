@@ -8,8 +8,9 @@ import { useIterationStore } from './iterationStore';
 import { usePlayback } from './scene/playback';
 import { dayFacts, dayLine, dayName, openingOf } from './selectors/tree';
 import { useSimStore } from './store';
+import HomeButton from './ui/HomeButton';
 import { Callout, Mono } from './ui/primitives';
-import { colour, font, night } from './ui/theme';
+import { font, night } from './ui/theme';
 import { useUiScale } from './ui/uiScale';
 
 // The walk, and the shell that holds it:
@@ -25,9 +26,7 @@ import { useUiScale } from './ui/uiScale';
 // run, comparing versions, the field sheet - was removed on 2026-10-10 with the
 // rest of the interface that created runs; one path is left to read.
 
-/** `$night`: the film's and the observe screen's ground, so the page around
- *  them is not a light frame. */
-const Root = styled.div<{ $night?: boolean }>`
+const Root = styled.div`
   position: relative;
   /* 100% rather than 100vw: with a scrollbar present 100vw is wider than the
      content box, which is its own horizontal overflow. */
@@ -35,8 +34,8 @@ const Root = styled.div<{ $night?: boolean }>`
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: ${(p) => (p.$night ? night.ground : colour.app)};
-  color: ${(p) => (p.$night ? night.ink : colour.text)};
+  background: ${night.ground};
+  color: ${night.ink};
   font-family: ${font.family};
   font-size: ${font.body};
   overflow: hidden;
@@ -48,10 +47,14 @@ const Root = styled.div<{ $night?: boolean }>`
  *  which says the same in its own corner. */
 const Foot = styled.footer`
   flex: none;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
   padding: 0 16px 8px;
   font-size: ${font.small};
-  opacity: 0.6;
-  text-align: center;
+  > span { grid-column: 2; opacity: 0.6; text-align: center; }
+  > button { grid-column: 3; justify-self: end; }
 `;
 
 const Notices = styled.div`
@@ -128,7 +131,7 @@ export default function SimulationApp() {
           <Callout $tone="error">
             <div>
               <strong>시뮬레이션 서버에 연결하지 못했습니다.</strong>
-              <div style={{ marginTop: 6 }}>{s.error}</div>
+              <div style={{ marginTop: 8 }}>{s.error}</div>
               <div style={{ marginTop: 8 }}>
                 <Mono>python server/sim_main.py --mode sim</Mono> 를 실행한 뒤 새로고침하세요. API 키는 필요
                 없습니다.
@@ -157,7 +160,7 @@ export default function SimulationApp() {
           <Callout>
             <div>
               <strong>읽을 기록이 없습니다.</strong>
-              <div style={{ marginTop: 6 }}>
+              <div style={{ marginTop: 8 }}>
                 전시 기록을 가져오려면 <Mono>python scripts/import_exhibition.py --replace</Mono> 를 실행한 뒤
                 다시 여세요.
               </div>
@@ -172,7 +175,7 @@ export default function SimulationApp() {
   const current = it.pathStarted ? viewGeneration : null;
   const screen = it.screen;
   return (
-    <Root $night={!current || screen === 'case'}>
+    <Root>
       {(playbackError || s.error || it.error) && (
         <Notices>
           <Callout $tone="error">
@@ -192,10 +195,10 @@ export default function SimulationApp() {
           detail={loaded.detail}
           events={loaded.events}
           art={s.art}
-          dayEnd={{ text: `${dayName(current)}가 끝났습니다`, action: '주민 리뷰를 보시겠습니까',
+          dayEnd={{ text: `${dayName(current)}가 끝났습니다`, action: '주민 평가를 보시겠습니까',
                     note: dayFacts(current) ? dayLine(dayFacts(current)!) : null }}
           onReadEvaluations={() => it.setScreen('evaluations')}
-          strip={{ day: dayName(current), onRestart: it.restartPath }}
+          strip={{ day: dayName(current) }}
         />
       )}
 
@@ -208,15 +211,20 @@ export default function SimulationApp() {
           onOpenScene={(attemptId, eventId) => void it.openScene(attemptId, eventId)}
           onGoToImprove={() => it.setScreen('improve')}
           events={loaded ? { attemptId: loaded.detail.attempt.id, list: loaded.events } : null}
+          art={s.art}
         />
       )}
 
       {current && screen === 'improve' && (
-        <ChoiceScreen detail={detail} current={current} onChoose={(id) => void it.choose(id)}
+        <ChoiceScreen detail={detail} current={current} art={s.art} onChoose={(id) => void it.choose(id)}
           onRestart={it.restartPath} />
       )}
       {current && (
-        <Foot>화면 속 사람과 대화는 전부 시뮬레이션입니다 · 이름은 가명, 모습은 지어낸 그림입니다</Foot>
+        <Foot>
+          <span>화면 속 사람과 대화는 전부 시뮬레이션입니다 · 이름은 가명, 모습은 지어낸 그림입니다</span>
+          {/* The ending has its own way back (and goes by itself); every other screen of the walk has this one. */}
+          {!(screen === 'improve' && current.changeSets.length === 0) && <HomeButton onHome={it.restartPath} />}
+        </Foot>
       )}
     </Root>
   );

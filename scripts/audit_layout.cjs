@@ -182,7 +182,7 @@ const AUDIT = () => {
     await p.mouse.move(box.x + 14, box.y + box.height - 2, { steps: 5 }); await p.mouse.up();
     await p.waitForTimeout(800);
     await shot('day1-end');
-    await p.getByRole('button', { name: /주민 리뷰/ }).click();
+    await p.getByRole('button', { name: /주민 평가/ }).click();
     await p.waitForTimeout(1200);
     await shot('evaluations');
     const next = p.getByRole('button', { name: /무엇을 고칠지/ }).first();

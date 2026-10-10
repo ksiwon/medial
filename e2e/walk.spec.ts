@@ -62,12 +62,12 @@ test('소개 → 1일차 → 주민 평가 → 수정안 고르기를 걷는다'
   await expect(page.getByRole('button')).toHaveCount(0);
 
   // The film ends by opening day one, which plays by itself.
-  await expect(page.getByText('↺ 처음부터')).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByRole('button', { name: '↺ 처음으로' })).toBeVisible({ timeout: 90_000 });
   await expect(page.getByRole('button', { name: /정지|재생/ })).toBeVisible();
   await page.getByRole('button', { name: '빠르게' }).click();
 
   // At the day's end the evaluations are one press away.
-  const toEvaluations = page.getByRole('button', { name: /주민 (평가|리뷰)/ }).first();
+  const toEvaluations = page.getByRole('button', { name: /주민 평가/ }).first();
   await expect(toEvaluations).toBeVisible({ timeout: 240_000 });
   await toEvaluations.click();
 

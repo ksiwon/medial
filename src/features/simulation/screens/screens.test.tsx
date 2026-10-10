@@ -248,6 +248,16 @@ describe('EvaluationsScreen', () => {
     expect(screen.queryByText('그 장면 열기')).toBeNull();
   });
 
+  it('leads to the choice while there is something to change, and to the result on the last day', () => {
+    const day = ordered()[0];
+    const { unmount } = evaluations({ generation: { ...day, changeSets: [day.changeSets[0] ?? ({} as never)] } });
+    expect(screen.getByText('이 평가를 보고 무엇을 고칠지 고른다')).toBeDefined();
+    unmount();
+    evaluations({ generation: { ...day, changeSets: [] } });
+    expect(screen.getByText('결과 보러 가기')).toBeDefined();
+    expect(screen.queryByText('이 평가를 보고 무엇을 고칠지 고른다')).toBeNull();
+  });
+
   it('keeps the issue groups, with the original items they were made of', () => {
     if ((ordered()[0].synthesis?.issueGroups.length ?? 0) === 0) return;
     const { container } = evaluations();

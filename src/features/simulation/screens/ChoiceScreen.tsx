@@ -3,8 +3,9 @@ import styled from 'styled-components';
 import type { GenerationDetail, SessionDetail } from '../api/iteration';
 import { childFor, dayFacts, dayName, pathCount, pathTo } from '../selectors/tree';
 import { nameList, withParticle } from '../selectors/story';
-import { colour, font, night } from '../ui/theme';
+import { accentA, cardGround, inkA, night, px, radius, shadow, space } from '../ui/theme';
 import { Inner, PageHead, Sheet } from '../ui/page';
+import Portrait from '../ui/Portrait';
 import { pill } from '../ui/primitives';
 
 // Choosing the next version, in a record whose versions branch (selectors/tree).
@@ -17,41 +18,76 @@ import { pill } from '../ui/primitives';
 // and cannot be chosen.
 
 /* The cards share their rows (subgrid): the kind, the request, its purpose, the
-   reason, whose experience it came from and the rule start at one height across
-   all three, however long any one card's title runs. */
+   reason, whose experience it came from, the rule and the way to take it start at
+   one height across all three, however long any one card's title runs. */
 const Cards = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  column-gap: 14px;
-  row-gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(380px * var(--k, 1))), 1fr));
+  column-gap: ${space.lg};
+  row-gap: ${space.lg};
+`;
+
+const Take = styled.span`
+  ${pill('lg')}
+  align-self: end;
+  justify-self: start;
+  height: ${px(48)};
+  padding: 0 ${space.lg};
+  font-size: ${px(16)};
+  font-weight: 800;
+  color: ${night.ink};
+  background: ${inkA(0.1)};
+  transition: background 0.15s ease, color 0.15s ease;
+  &::after { content: '→'; margin-left: ${px(8)}; }
 `;
 
 const Card = styled.button`
+  position: relative;
   font: inherit;
   text-align: left;
   cursor: pointer;
-  background: ${colour.surface};
-  border: 1px solid ${colour.border};
-  border-radius: 12px;
-  padding: 20px 20px 22px;
+  color: ${night.ink};
+  background: ${cardGround};
+  border: 1px solid ${night.line};
+  border-radius: ${radius.card};
+  padding: ${space.xl} ${space.xl} ${space.xl};
   display: grid;
-  grid-row: span 6;
+  grid-row: span 7;
   grid-template-rows: subgrid;
-  row-gap: 8px;
+  row-gap: ${space.md};
   align-content: start;
   word-break: keep-all;
-  color: ${colour.text};
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
-  &:hover:not(:disabled) {
+  box-shadow: ${shadow.card};
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  &:hover:not(:disabled), &:focus-visible {
     border-color: ${night.accent};
-    box-shadow: 0 6px 18px rgba(29, 41, 53, 0.1);
-    transform: translateY(-1px);
+    box-shadow: ${shadow.cardLit};
+    transform: translateY(-4px);
   }
-  &:focus-visible { outline: 2px solid ${night.accent}; outline-offset: 2px; }
-  &:disabled { cursor: default; opacity: 0.55; }
-  > small { font-size: calc(11.5px * var(--k, 1)); font-weight: 800; color: ${colour.secondary}; }
-  > strong { font-size: calc(18px * var(--k, 1)); font-weight: 800; letter-spacing: -0.02em; }
-  > p { margin: 0; font-size: ${font.small}; line-height: 1.65; color: ${colour.secondary}; }
+  &:hover:not(:disabled) ${Take}, &:focus-visible ${Take} { background: ${night.accent}; color: #fff; }
+  &:focus-visible { outline: 2px solid ${night.ink}; outline-offset: 4px; }
+  &:disabled { cursor: default; opacity: 0.5; }
+  > strong { font-size: ${px(28)}; font-weight: 800; letter-spacing: -0.03em; line-height: 1.3; }
+  > p { margin: 0; font-size: ${px(16)}; line-height: 1.7; color: ${night.mute}; }
+`;
+
+/** Which of the choices this is, and what kind of rule it changes. */
+const Kind = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${space.md};
+  > b {
+    display: grid;
+    place-items: center;
+    width: ${px(36)};
+    height: ${px(36)};
+    border-radius: ${radius.round};
+    background: ${night.accent};
+    color: #fff;
+    font-size: ${px(16)};
+    font-weight: 800;
+  }
+  > small { font-size: ${px(12)}; font-weight: 800; letter-spacing: 0.06em; color: ${night.mute}; }
 `;
 
 /** 무엇을 이루려는 요청인가. 제목이 부탁이면 이것은 그 부탁의 이유가 아니라 *목적*이다. */
@@ -61,60 +97,100 @@ const Goal = styled.p`
      sentence sits in the middle of that height, not at its top. */
   display: flex;
   align-items: center;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: ${colour.selected};
-  color: ${colour.primary} !important;
-  font-weight: 600;
+  padding: ${space.md} ${space.lg};
+  border-radius: ${radius.card};
+  background: ${night.accentSoft};
+  border: 1px solid ${accentA(0.4)};
+  color: ${night.ink} !important;
+  font-size: ${px(16)} !important;
+  font-weight: 700;
+  &::before { content: '목적'; margin-right: ${px(12)}; font-size: ${px(12)}; font-weight: 800; letter-spacing: 0.08em; color: ${night.accent}; }
 `;
 
 /** 이 요청이 어느 주민이 겪은 일에서 나왔는가 - 평가가 수정에 쓰인다는 연구의 연결 고리. */
 const From = styled.div`
-  font-size: calc(11.5px * var(--k, 1));
-  font-weight: 800;
-  color: ${colour.secondary};
-  > b { color: ${colour.text}; }
+  display: flex;
+  align-items: center;
+  gap: ${space.md};
+  font-size: ${px(16)};
+  font-weight: 700;
+  color: ${night.mute};
+  > b { color: ${night.ink}; }
+  > span { display: flex; }
+  > span > div + div { margin-left: calc(-12px * var(--k, 1)); }
 `;
 
+/** The rule, as it was and as it would be: what the next day is run under. */
 const Rule = styled.div`
-  margin-top: 6px;
-  padding-top: 10px;
-  border-top: 1px solid ${colour.border};
-  font-size: ${font.small};
+  display: flex;
+  flex-direction: column;
+  gap: ${space.sm};
+  padding-top: ${px(16)};
+  border-top: 1px solid ${night.line};
+  font-size: ${px(16)};
   line-height: 1.6;
-  > s { display: block; color: ${colour.unknown}; }
-  > b { display: block; font-weight: 700; color: ${colour.text}; }
+  > small { font-size: ${px(12)}; font-weight: 800; letter-spacing: 0.1em; color: ${night.faint}; }
+  > s { color: ${night.faint}; text-decoration-color: ${inkA(0.35)}; }
+  > i { font-style: normal; color: ${night.accent}; font-weight: 800; line-height: 1; }
+  > b { font-weight: 700; color: ${night.ink}; }
 `;
 
-/** The three days side by side - the wall's closing table. */
-const Summary = styled.table`
-  width: 100%;
-  margin: 0 0 24px;
-  border-collapse: collapse;
-  background: ${colour.surface};
-  border: 1px solid ${colour.border};
-  border-radius: 12px;
-  overflow: hidden;
-  font-size: ${font.small};
-  th { text-align: left; font-weight: 700; color: ${colour.secondary}; padding: 10px 14px; background: #f4f3f0; }
-  td { padding: 12px 14px; border-top: 1px solid ${colour.border}; vertical-align: top; }
-  td > div { color: ${colour.secondary}; margin-top: 2px; }
+/** The three days, one beside the next: the wall's closing page. */
+const Days = styled.ol`
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(340px * var(--k, 1))), 1fr));
+  gap: ${space.lg};
+`;
+
+const Day = styled.li`
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: ${space.lg};
+  padding: ${space.xl} ${space.xl};
+  border-radius: ${radius.card};
+  border: 1px solid ${night.line};
+  background: ${cardGround};
+  box-shadow: ${shadow.card};
+  > small { font-size: ${px(12)}; font-weight: 800; letter-spacing: 0.08em; color: ${night.accent}; }
+  > strong { font-size: ${px(28)}; font-weight: 800; letter-spacing: -0.03em; line-height: 1.3; word-break: keep-all; }
+  > p { margin: 0; font-size: ${px(16)}; line-height: 1.6; color: ${night.mute}; word-break: keep-all; }
+`;
+
+const Facts = styled.dl`
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: ${space.sm} ${space.lg};
+  padding-top: ${px(16)};
+  border-top: 1px solid ${night.line};
+  font-size: ${px(16)};
+  > dt { color: ${night.mute}; }
+  > dd { margin: 0; font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; color: ${night.ink}; }
 `;
 
 const Again = styled.button`
   ${pill('lg')}
+  align-self: flex-start;
+  height: ${px(56)};
+  padding: 0 ${space.xl};
   font: inherit;
+  font-size: ${px(20)};
   font-weight: 800;
   cursor: pointer;
   border: none;
-  background: ${night.deep};
+  background: ${night.accent};
   color: #ffffff;
+  box-shadow: ${shadow.button};
 `;
 
 const Idle = styled.span`
-  margin-left: 14px;
-  font-size: ${font.small};
-  color: ${colour.unknown};
+  margin-left: ${px(20)};
+  font-size: ${px(16)};
+  color: ${night.faint};
   font-variant-numeric: tabular-nums;
 `;
 
@@ -124,7 +200,11 @@ interface Props {
   current: GenerationDetail;
   onChoose: (generationId: string) => void;
   onRestart: () => void;
+  /** Which pictures were drawn, for the faces on the cards. */
+  art?: ReadonlySet<string>;
 }
+
+const NO_ART: ReadonlySet<string> = new Set();
 
 /**
  * How long the three days' summary stays when nobody touches it, in seconds. In a hall the
@@ -156,36 +236,35 @@ function Ending({ detail, current, onRestart }: { detail: SessionDetail; current
         <PageHead eyebrow="사흘이 끝났습니다" title="고른 것과, 마을이 어떻게 됐는지">
           첫 설정에서 갈라지는 {pathCount(detail, pathTo(detail, current.id)[0]?.id ?? '')}가지 경로 가운데 하나입니다. 이 결과는 미리 계산해 둔 것이고, 실시간 모델 호출은 없습니다.
         </PageHead>
-        <Summary>
-          <thead>
-            <tr><th>날</th><th>그날 고른 것</th><th>확인까지</th><th>이장이 받은 부탁</th><th>거절</th>
-              <th>기관 인계</th><th>동승 주선</th></tr>
-          </thead>
-          <tbody>
-            {pathTo(detail, current.id).map((g) => {
-              const facts = dayFacts(g);
-              return (
-                <tr key={g.id}>
-                  <td><b>{dayName(g)}</b>{facts && <div>{facts.dayTitle}</div>}</td>
-                  <td>{g.label}</td>
-                  <td>{facts?.resolveMinutes != null ? `${facts.resolveMinutes}분` : '—'}</td>
-                  <td>{facts ? `${facts.headAsks}번` : '—'}</td>
-                  <td>{facts ? `${facts.refusals}번` : '—'}</td>
-                  <td>{facts?.handoff ?? '—'}</td>
-                  <td>{facts?.rideRefused ? '실패' : '—'}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </Summary>
-        <Again onClick={onRestart}>처음부터 다른 길로</Again>
-        <Idle aria-live="off">{left}초 뒤 처음으로 돌아갑니다</Idle>
+        <Days>
+          {pathTo(detail, current.id).map((g) => {
+            const facts = dayFacts(g);
+            return (
+              <Day key={g.id}>
+                <small>{dayName(g)}</small>
+                <strong>{g.label}</strong>
+                {facts && <p>{facts.dayTitle}</p>}
+                <Facts>
+                  <dt>확인까지</dt><dd>{facts?.resolveMinutes != null ? `${facts.resolveMinutes}분` : '—'}</dd>
+                  <dt>이장이 받은 부탁</dt><dd>{facts ? `${facts.headAsks}번` : '—'}</dd>
+                  <dt>거절</dt><dd>{facts ? `${facts.refusals}번` : '—'}</dd>
+                  <dt>기관 인계</dt><dd>{facts?.handoff ?? '—'}</dd>
+                  <dt>동승 주선</dt><dd>{facts?.rideRefused ? '실패' : '—'}</dd>
+                </Facts>
+              </Day>
+            );
+          })}
+        </Days>
+        <div>
+          <Again onClick={onRestart}>처음부터 다른 길로</Again>
+          <Idle aria-live="off">{left}초 뒤 처음으로 돌아갑니다</Idle>
+        </div>
       </Inner>
     </Sheet>
   );
 }
 
-export default function ChoiceScreen({ detail, current, onChoose, onRestart }: Props) {
+export default function ChoiceScreen({ detail, current, onChoose, onRestart, art = NO_ART }: Props) {
   if (current.changeSets.length === 0) return <Ending detail={detail} current={current} onRestart={onRestart} />;
 
   const labels = new Map(current.ruleCatalog.map((r) => [r.ruleType, r.label]));
@@ -197,26 +276,40 @@ export default function ChoiceScreen({ detail, current, onChoose, onRestart }: P
           되어 내일의 시뮬레이션이 여러분의 선택대로 달라집니다. 나머지 조건은 그대로 둡니다.
         </PageHead>
         <Cards>
-          {current.changeSets.map((changeSet) => {
+          {current.changeSets.map((changeSet, index) => {
             const child = childFor(detail, changeSet.id);
             const rule = changeSet.changes[0];
             return (
               <Card key={changeSet.id} disabled={!child} onClick={() => child && onChoose(child.id)}
                 title={child ? undefined : '이 기록에서는 실행하지 않은 안입니다'}>
-                <small>{(rule?.semantic && labels.get(rule.semantic.ruleType)) ?? rule?.field ?? '수정안'}</small>
+                <Kind>
+                  <b>{index + 1}</b>
+                  <small>{(rule?.semantic && labels.get(rule.semantic.ruleType)) ?? rule?.field ?? '수정안'}</small>
+                </Kind>
                 <strong>{changeSet.label}</strong>
-                {/* Every card keeps all six rows, empty or not, so the rows line up. */}
+                {/* Every card keeps all seven rows, empty or not, so the rows line up. */}
                 {changeSet.expectedEffects[0] ? <Goal>{changeSet.expectedEffects[0]}</Goal> : <span />}
                 <p>{changeSet.mechanism}</p>
                 {changeSet.affectedActors.length > 0 ? (
-                  <From><b>{withParticle(nameList(changeSet.affectedActors), 'subject')}</b> 겪은 일에서 나온 요청</From>
+                  <From>
+                    <span>
+                      {changeSet.affectedActors.slice(0, 3).map((id) => (
+                        <Portrait key={id} actorId={id} art={art} size={36} />
+                      ))}
+                    </span>
+                    <div><b>{withParticle(nameList(changeSet.affectedActors), 'subject')}</b> 겪은 일에서 나온 요청</div>
+                  </From>
                 ) : <span />}
                 {rule ? (
                   <Rule>
+                    <small>지금</small>
                     <s>{rule.beforeRule}</s>
+                    <i>↓</i>
+                    <small>고치면</small>
                     <b>{rule.afterRule}</b>
                   </Rule>
                 ) : <span />}
+                <Take as="span">{child ? '이걸로 내일을 돌린다' : '이 기록에서는 돌리지 않은 안'}</Take>
               </Card>
             );
           })}
