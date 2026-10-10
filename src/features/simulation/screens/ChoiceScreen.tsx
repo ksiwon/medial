@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import type { GenerationDetail, SessionDetail } from '../api/iteration';
 import { childFor, dayFacts, dayName, pathCount, pathTo } from '../selectors/tree';
 import { nameList, withParticle } from '../selectors/story';
-import { accentA, cardGround, inkA, night, px, radius, shadow, space } from '../ui/theme';
+import { accentA, inkA, night, px, radius, space } from '../ui/theme';
 import { Inner, PageHead, Sheet } from '../ui/page';
 import Portrait from '../ui/Portrait';
 import { pill } from '../ui/primitives';
@@ -47,7 +47,7 @@ const Card = styled.button`
   text-align: left;
   cursor: pointer;
   color: ${night.ink};
-  background: ${cardGround};
+  background: ${night.panel};
   border: 1px solid ${night.line};
   border-radius: ${radius.card};
   padding: ${space.xl} ${space.xl} ${space.xl};
@@ -57,11 +57,9 @@ const Card = styled.button`
   row-gap: ${space.md};
   align-content: start;
   word-break: keep-all;
-  box-shadow: ${shadow.card};
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  transition: border-color 0.18s ease, transform 0.18s ease;
   &:hover:not(:disabled), &:focus-visible {
     border-color: ${night.accent};
-    box-shadow: ${shadow.cardLit};
     transform: translateY(-4px);
   }
   &:hover:not(:disabled) ${Take}, &:focus-visible ${Take} { background: ${night.accent}; color: #fff; }
@@ -153,8 +151,7 @@ const Day = styled.li`
   padding: ${space.xl} ${space.xl};
   border-radius: ${radius.card};
   border: 1px solid ${night.line};
-  background: ${cardGround};
-  box-shadow: ${shadow.card};
+  background: ${night.panel};
   > small { font-size: ${px(12)}; font-weight: 800; letter-spacing: 0.08em; color: ${night.accent}; }
   > strong { font-size: ${px(28)}; font-weight: 800; letter-spacing: -0.03em; line-height: 1.3; word-break: keep-all; }
   > p { margin: 0; font-size: ${px(16)}; line-height: 1.6; color: ${night.mute}; word-break: keep-all; }
@@ -184,7 +181,6 @@ const Again = styled.button`
   border: none;
   background: ${night.accent};
   color: #ffffff;
-  box-shadow: ${shadow.button};
 `;
 
 const Idle = styled.span`

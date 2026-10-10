@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import styled from 'styled-components';
 import { api } from '../api/client';
 import { artIdOf } from '../scene/art';
@@ -10,7 +11,7 @@ import { inkA, night, px, radius } from './theme';
 
 const POSES = ['stand', 'phone', 'seated', 'drive'];
 
-function pictureOf(actorId: string, art: ReadonlySet<string>): string | null {
+export function portraitOf(actorId: string, art: ReadonlySet<string>): string | null {
   const id = artIdOf(actorId);
   const named = POSES.map((pose) => `${id}.${pose}`).find((name) => art.has(name));
   if (named) return named;
@@ -25,8 +26,8 @@ const Disc = styled.div<{ $size: number }>`
   height: ${(p) => px(p.$size)};
   border-radius: ${radius.round};
   overflow: hidden;
-  background: radial-gradient(circle at 50% 30%, #f1d9b8, #c98d5a 78%);
-  box-shadow: 0 0 0 ${px(4)} ${night.panel}, 0 0 0 ${px(4)} ${inkA(0.2)};
+  background: #d9a877;
+  box-shadow: 0 0 0 ${px(2)} ${inkA(0.3)};
   display: grid;
   place-items: center;
   font-weight: 800;
@@ -45,11 +46,24 @@ const Disc = styled.div<{ $size: number }>`
   }
 `;
 
+/** Starts loading the faces of these people, so a reading page that shows them finds
+ *  them already there instead of an empty disc while a large picture arrives. */
+export function preloadPortraits(actorIds: readonly string[], art: ReadonlySet<string>) {
+  for (const id of actorIds) {
+    const picture = portraitOf(id, art);
+    if (picture) new Image().src = api.artUrl(picture);
+  }
+}
+
 export default function Portrait({ actorId, art, size = 72 }: { actorId: string; art: ReadonlySet<string>; size?: number }) {
-  const picture = pictureOf(actorId, art);
+  const picture = portraitOf(actorId, art);
+  const [shown, setShown] = useState(false);
   return (
     <Disc $size={size} role="img" aria-label={personName(actorId)}>
-      {picture ? <img src={api.artUrl(picture)} alt="" draggable={false} /> : actorId}
+      {/* The number stays until the picture is in: never an empty disc. */}
+      {(!picture || !shown) && actorId}
+      {picture && <img src={api.artUrl(picture)} alt="" draggable={false} onLoad={() => setShown(true)}
+        style={{ opacity: shown ? 1 : 0 }} />}
     </Disc>
   );
 }

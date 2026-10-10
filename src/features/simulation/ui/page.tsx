@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { accentA, night, px, space } from './theme';
+import { night, px, space } from './theme';
 
 // The frame of a reading page: the evaluations and the choice of what to change
 // (and the end of the three days) are one kind of page, so they share one frame.
@@ -13,9 +13,7 @@ export const Sheet = styled.div`
   min-height: 0;
   overflow-y: auto;
   padding: ${space.huge} ${space.xl} ${space.huge};
-  background:
-    radial-gradient(ellipse 70% 46% at 50% -8%, ${accentA(0.13)}, transparent 70%),
-    ${night.ground};
+  background: ${night.ground};
   color: ${night.ink};
   scrollbar-color: ${night.raised} transparent;
 `;

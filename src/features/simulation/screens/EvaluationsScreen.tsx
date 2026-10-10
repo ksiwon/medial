@@ -15,7 +15,7 @@ import { personName, sentenceFor } from '../selectors/story';
 import { Inner, PageHead, Sheet } from '../ui/page';
 import Portrait from '../ui/Portrait';
 import { beckon, pill } from '../ui/primitives';
-import { accentA, cardGround, font, inkA, night, px, radius, shadow, space } from '../ui/theme';
+import { accentA, font, inkA, night, px, radius, space } from '../ui/theme';
 
 // Screen B: the resident evaluations, as the screen the loop arrives at.
 //
@@ -79,8 +79,7 @@ const Card = styled.article`
   padding: ${space.xl} ${space.xl} ${space.xl};
   border: 1px solid ${night.line};
   border-radius: ${radius.card};
-  background: ${cardGround};
-  box-shadow: ${shadow.card};
+  background: ${night.panel};
 `;
 
 const Who = styled.header`
@@ -278,10 +277,9 @@ const Next = styled.button`
   border: none;
   background: ${night.accent};
   color: #ffffff;
-  box-shadow: ${shadow.button};
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease;
   &::after { content: '→'; margin-left: ${px(4)}; }
-  &:hover { transform: translateY(-2px); box-shadow: ${shadow.buttonLit}; }
+  &:hover { transform: translateY(-2px); }
   &:focus-visible { outline: 2px solid ${night.ink}; outline-offset: 4px; }
 `;
 

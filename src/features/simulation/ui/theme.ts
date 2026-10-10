@@ -96,14 +96,3 @@ export const radius = {
 export const inkA = (a: number) => `rgba(246, 241, 232, ${a})`;
 export const accentA = (a: number) => `rgba(226, 84, 44, ${a})`;
 export const shadeA = (a: number) => `rgba(0, 0, 0, ${a})`;
-
-/** What a raised card and the one thing to press sit on. */
-export const shadow = {
-  card: `0 ${px(20)} ${px(40)} ${shadeA(0.35)}`,
-  cardLit: `0 ${px(24)} ${px(48)} ${accentA(0.22)}`,
-  button: `0 ${px(12)} ${px(28)} ${accentA(0.35)}`,
-  buttonLit: `0 ${px(16)} ${px(32)} ${accentA(0.45)}`,
-} as const;
-
-/** A card of the reading pages: raised at the top, settling into the panel. */
-export const cardGround = `linear-gradient(180deg, ${night.raised} 0%, ${night.panel} 50%)`;

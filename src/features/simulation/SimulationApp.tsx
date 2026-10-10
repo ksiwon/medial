@@ -9,6 +9,7 @@ import { usePlayback } from './scene/playback';
 import { dayFacts, dayLine, dayName, openingOf } from './selectors/tree';
 import { useSimStore } from './store';
 import HomeButton from './ui/HomeButton';
+import { preloadPortraits } from './ui/Portrait';
 import { Callout, Mono } from './ui/primitives';
 import { font, night } from './ui/theme';
 import { useUiScale } from './ui/uiScale';
@@ -118,6 +119,11 @@ export default function SimulationApp() {
     const owner = it.detail?.generations.find((g) => s.activeId && g.attemptIds.includes(s.activeId));
     if (owner && owner.id !== it.viewGenerationId) setViewGeneration(owner.id);
   }, [s.activeId, it.detail, it.viewGenerationId, setViewGeneration]);
+
+  // The faces the evaluation cards will show, fetched while the day plays.
+  useEffect(() => {
+    if (s.village && s.art.size > 0) preloadPortraits(s.village.residents.map((r) => r.id), s.art);
+  }, [s.art, s.village]);
 
   const viewGeneration = useMemo(
     () => it.detail?.generations.find((g) => g.id === it.viewGenerationId) ?? null,

@@ -73,8 +73,7 @@ const Picture = styled.div<{ $src: string | null; $on: boolean; $dim?: boolean }
     inset: 0;
     background: ${(p) => (p.$dim
       ? 'rgba(21, 21, 15, 0.8)'
-      : `linear-gradient(180deg, rgba(21, 21, 15, 0.1) 0%, rgba(21, 21, 15, 0) 38%, rgba(21, 21, 15, 0.55) 66%, rgba(21, 21, 15, 0.82) 100%),
-         radial-gradient(ellipse at 50% 40%, transparent 55%, rgba(21, 21, 15, 0.55) 100%)`)};
+      : `linear-gradient(180deg, rgba(21, 21, 15, 0.1) 0%, rgba(21, 21, 15, 0) 38%, rgba(21, 21, 15, 0.55) 66%, rgba(21, 21, 15, 0.82) 100%)`)};
   }
 `;
 
@@ -82,7 +81,7 @@ const Picture = styled.div<{ $src: string | null; $on: boolean; $dim?: boolean }
 const Ground = styled.div`
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 60% 40%, #22231c 0%, ${INK} 70%);
+  background: ${INK};
 `;
 
 /** Under the captions of the scenes that draw their own picture: the map's shapes
