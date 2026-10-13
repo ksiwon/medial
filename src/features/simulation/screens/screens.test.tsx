@@ -10,7 +10,7 @@ import type { GenerationDetail, SessionDetail } from '../api/iteration';
 import type { AttemptDetail, DomainEvent, StoredScenes, VillagePayload } from '../api/types';
 import { usePlayback } from '../scene/playback';
 import { learnPeople, personName, sentenceFor } from '../selectors/story';
-import ChoiceScreen, { SUMMARY_IDLE_S } from './ChoiceScreen';
+import ChoiceScreen, { RESULT_S, SUMMARY_IDLE_S } from './ChoiceScreen';
 import IntroScreen from './IntroScreen';
 import JudgmentPanel, { foldAsking } from '../scene/JudgmentPanel';
 import DayTimeline from '../components/DayTimeline';
@@ -398,6 +398,15 @@ describe('the end of the three days, in a hall', () => {
   const detailOf = { ...session, generations: [last] } as SessionDetail;
   const wait = (s: number) => act(() => { vi.advanceTimersByTime(s * 1000); });
 
+  it('moves on to the closing words by itself after the days are read', () => {
+    vi.useFakeTimers();
+    render(<ChoiceScreen detail={detailOf} current={last} onChoose={noop} onRestart={noop} />);
+    expect(screen.queryByText('서비스 디자이너의 일은 선택의 연속입니다.')).toBeNull();
+    wait(RESULT_S + 1);
+    expect(screen.getByText('서비스 디자이너의 일은 선택의 연속입니다.')).toBeDefined();
+    vi.useRealTimers();
+  });
+
   it('goes back to the start by itself when nobody touches it', () => {
     vi.useFakeTimers();
     let restarted = 0;
@@ -507,6 +516,9 @@ describe('ChoiceScreen', () => {
     render(<ChoiceScreen detail={tree} current={tree.generations[2]} onChoose={noop} onRestart={noop} />);
     expect(screen.getByText('사흘이 끝났습니다')).toBeDefined();
     expect(screen.getByText('처음부터 다른 길로')).toBeDefined();
+    // The closing words take the page after the days have been read, or when the visitor asks.
+    expect(screen.queryByText('서비스 디자이너의 일은 선택의 연속입니다.')).toBeNull();
+    fireEvent.click(screen.getByText('마무리 보기 →'));
     expect(screen.getByText('서비스 디자이너의 일은 선택의 연속입니다.')).toBeDefined();
     expect(screen.getByText(/Resident Simulator는 현장에 가기 전에/)).toBeDefined();
   });

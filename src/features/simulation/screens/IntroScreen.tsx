@@ -28,7 +28,7 @@ const PAPER = '#f6f1e8';
 const ACCENT = night.accent;
 
 /** Scene lengths in ms. They add up to the film. */
-const SCENE_MS = [5500, 5500, 5500, 11500, 9000, 9000];
+const SCENE_MS = [5500, 5500, 12000, 11500, 9000, 15000];
 const INTRO_TOTAL_MS = SCENE_MS.reduce((a, b) => a + b, 0);
 
 const fade = keyframes`from { opacity: 0 } to { opacity: 1 }`;
@@ -532,13 +532,21 @@ export default function IntroScreen({ onFinish }: Props) {
       <Scene $on={on(2)}>
         <Picture $src={src('HOME')} $on={on(2)} />
         <Caption>
-          <Eyebrow $on={on(2)}>AI CARE ORCHESTRATOR</Eyebrow>
-          <Line $on={on(2)}>안부를 살피고 사람을 이어 줄 AI, MEDial이 필요합니다.</Line>
-          <Chain $on={on(2)} $delay={1}>
-            <span>안부 확인</span><i>→</i>
-            <span>이웃 연결</span><i>→</i>
-            <span>병원 동행</span>
-          </Chain>
+          <Timed $on={on(2)} $at={0.2} $until={5.2}>
+            <Eyebrow $on={on(2)}>조율할 사람이 없다</Eyebrow>
+            <Line $on={on(2)} $delay={0.3}>병원과 이웃 사이를 이어 줄 사람이 마을엔 없고, 그 일은 이장님 한 분께 몰려 이미 가득 찼습니다.</Line>
+          </Timed>
+        </Caption>
+        <Caption>
+          <Timed $on={on(2)} $at={5.9}>
+            <Eyebrow $on={on(2)}>AI CARE ORCHESTRATOR</Eyebrow>
+            <Line $on={on(2)} $delay={6}>그 조율을 맡아 안부를 살피고 사람을 이어 줄 AI, MEDial이 필요합니다.</Line>
+            <Chain $on={on(2)} $delay={6.9}>
+              <span>안부 확인</span><i>→</i>
+              <span>이웃 연결</span><i>→</i>
+              <span>병원 동행</span>
+            </Chain>
+          </Timed>
         </Caption>
       </Scene>
 
@@ -590,6 +598,7 @@ export default function IntroScreen({ onFinish }: Props) {
             <span>다시 돌린다</span>
           </Chain>
           <Sub $on={on(5)} $delay={2.2}>하루를 지켜보고, 주민의 평가를 읽고, 요청 하나로 MEDial의 규칙을 고칩니다. 주민과 마을은 바꿀 수 없습니다.</Sub>
+          <Sub $on={on(5)} $delay={7}>현장에 가기 전에 얻는 것: 이 규칙에서 어느 어르신이 어디서 막히는지, 고치면 무엇이 달라지는지를 주민의 근거 있는 평가로 미리 봅니다.</Sub>
         </Caption>
       </Scene>
 

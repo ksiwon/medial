@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
+import { api } from '../api/client';
 import type { GenerationDetail, SessionDetail } from '../api/iteration';
 import { childFor, dayFacts, dayName, pathCount, pathTo } from '../selectors/tree';
 import { nameList, personName, withParticle } from '../selectors/story';
@@ -177,15 +178,42 @@ const Rule2 = styled.div`
   > b { display: block; margin-bottom: ${space.xs}; font-size: ${px(12)}; letter-spacing: 0.08em; color: ${night.accent}; }
 `;
 
+const rise = keyframes`from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: none }`;
+
+/** The end is the film's tone again: the desk painting under a dark veil, the three days on glass panels,
+ *  then the closing words rising line by line, as the opening's captions do. */
+const Film = styled.div<{ $src: string | null }>`
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  background: ${night.deep} ${(p) => (p.$src ? `url(${p.$src})` : 'none')} center / cover no-repeat;
+  &::before { content: ''; position: absolute; inset: 0; background: rgba(21, 21, 15, 0.88); }
+  > * { position: relative; }
+`;
+
+const Glass = styled.div`
+  display: contents;
+  ${Day} { background: rgba(21, 21, 15, 0.66); animation: ${rise} 0.8s ease both; }
+  ${Day}:nth-child(2) { animation-delay: 0.6s; }
+  ${Day}:nth-child(3) { animation-delay: 1.2s; }
+`;
+
 /** The last thing said, to the visitor as a designer: what the walk was for. */
 const Close = styled.div`
-  max-width: ${px(960)};
+  max-width: ${px(1080)};
+  min-height: 60vh;
+  justify-content: center;
   display: flex;
   flex-direction: column;
-  gap: ${space.sm};
+  gap: ${space.lg};
   word-break: keep-all;
-  > strong { font-size: ${px(28)}; font-weight: 800; letter-spacing: -0.02em; line-height: 1.3; color: ${night.ink}; }
-  > p { margin: 0; font-size: ${px(20)}; line-height: 1.6; color: ${night.mute}; }
+  > * { opacity: 0; animation: ${rise} 0.8s ease forwards; }
+  > strong { font-size: ${px(48)}; font-weight: 800; letter-spacing: -0.035em; line-height: 1.25; color: ${night.ink}; animation-delay: 0.4s; }
+  > p { margin: 0; font-size: ${px(24)}; line-height: 1.7; color: ${inkA(0.86)}; }
+  > p:nth-of-type(1) { animation-delay: 3.4s; }
+  > p:nth-of-type(2) { animation-delay: 8.4s; }
+  > p:nth-of-type(3) { animation-delay: 13.4s; }
 `;
 
 const Again = styled.button`
@@ -200,6 +228,18 @@ const Again = styled.button`
   border: none;
   background: ${night.accent};
   color: #ffffff;
+`;
+
+const More = styled.button`
+  margin-left: ${px(20)};
+  font: inherit;
+  font-size: ${px(16)};
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: ${night.mute};
+  &:hover { color: ${night.ink}; }
 `;
 
 const Idle = styled.span`
@@ -227,11 +267,19 @@ const NO_ART: ReadonlySet<string> = new Set();
  * film by itself. Long enough to read a three-row table, short enough that a visitor who
  * walks up to a screen that has been left does not find the end of someone else's story.
  */
-export const SUMMARY_IDLE_S = 60;
+export const SUMMARY_IDLE_S = 90;
+
+/** How long the three days stay on the page before the closing words take it, in seconds. */
+export const RESULT_S = 24;
 
 /** The end of the walk: the days taken, and the way back - by itself, if nobody takes it. */
-function Ending({ detail, current, onRestart }: { detail: SessionDetail; current: GenerationDetail; onRestart: () => void }) {
+function Ending({ detail, current, onRestart, art }: { detail: SessionDetail; current: GenerationDetail; onRestart: () => void; art: ReadonlySet<string> }) {
   const [left, setLeft] = useState(SUMMARY_IDLE_S);
+  const [closing, setClosing] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setClosing(true), RESULT_S * 1000);
+    return () => window.clearTimeout(timer);
+  }, []);
   useEffect(() => {
     // Any touch or key starts the wait over: someone is still reading.
     const reset = () => setLeft(SUMMARY_IDLE_S);
@@ -246,12 +294,22 @@ function Ending({ detail, current, onRestart }: { detail: SessionDetail; current
   }, []);
   useEffect(() => { if (left <= 0) onRestart(); }, [left, onRestart]);
   return (
-    <Sheet>
+    <Film $src={art.has('INTRO.desk') ? api.artUrl('INTRO.desk') : null}>
+    <Sheet style={{ background: 'transparent' }}>
       <Inner>
+        {closing ? (
+          <Close>
+          <strong>서비스 디자이너의 일은 선택의 연속입니다.</strong>
+          <p>어떤 규칙을 고르느냐에 따라, 같은 마을의 같은 하루가 어르신께 전혀 다르게 겪힙니다.</p>
+          <p>하지만 멀고 사람이 드문 마을에서는 오래 지켜보며 연구하기 어렵고, 선택의 결과를 기다릴 시간도 없습니다.</p>
+          <p>Resident Simulator는 현장에 가기 전에 그 선택을 먼저 살펴보게 하는 도구입니다. 사람을 대신하지 않고, 사람을 만나러 가기 전의 준비를 돕습니다.</p>
+        </Close>
+        ) : (
+          <>
         <PageHead eyebrow="사흘이 끝났습니다" title="고른 것과, 마을이 어떻게 됐는지">
           첫 설정에서 갈라지는 {pathCount(detail, pathTo(detail, current.id)[0]?.id ?? '')}가지 경로 가운데 하나입니다. 날마다 마을에서 일어난 일이 다르니 숫자로 견주지 말고, 그날 주민의 말과 여러분이 바꾼 규칙을 읽어 주세요. 이 결과는 미리 계산해 둔 것이고, 실시간 모델 호출은 없습니다.
         </PageHead>
-        <Days>
+        <Glass><Days>
           {pathTo(detail, current.id).map((g) => {
             const facts = dayFacts(g);
             const parent = detail.generations.find((x) => x.id === g.parentGenerationId);
@@ -273,26 +331,22 @@ function Ending({ detail, current, onRestart }: { detail: SessionDetail; current
               </Day>
             );
           })}
-        </Days>
-        <Close>
-          <strong>서비스 디자이너의 일은 선택의 연속입니다.</strong>
-          <p>
-            오래 지켜보며 연구하기 어려운 마을에서는, 선택의 결과를 기다려 볼 시간이 없습니다.
-            Resident Simulator는 현장에 가기 전에 그 선택을 먼저 살펴보게 하는 도구입니다.
-            사람을 대신하지 않고, 사람을 만나러 가기 전의 준비를 돕습니다.
-          </p>
-        </Close>
+        </Days></Glass>
+          </>
+        )}
         <div>
           <Again onClick={onRestart}>처음부터 다른 길로</Again>
+          {!closing && <More onClick={() => setClosing(true)}>마무리 보기 →</More>}
           <Idle aria-live="off">{left}초 뒤 처음으로 돌아갑니다</Idle>
         </div>
       </Inner>
     </Sheet>
+    </Film>
   );
 }
 
 export default function ChoiceScreen({ detail, current, onChoose, onRestart, art = NO_ART }: Props) {
-  if (current.changeSets.length === 0) return <Ending detail={detail} current={current} onRestart={onRestart} />;
+  if (current.changeSets.length === 0) return <Ending detail={detail} current={current} onRestart={onRestart} art={art} />;
 
   const labels = new Map(current.ruleCatalog.map((r) => [r.ruleType, r.label]));
   return (

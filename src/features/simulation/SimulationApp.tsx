@@ -9,6 +9,7 @@ import { usePlayback } from './scene/playback';
 import { changedRuleNames, dayFacts, dayLine, dayName, openingOf } from './selectors/tree';
 import { useSimStore } from './store';
 import HomeButton from './ui/HomeButton';
+import { useAmbient } from './ui/ambient';
 import { preloadArt } from './ui/Portrait';
 import { Callout, Mono } from './ui/primitives';
 import { font, night } from './ui/theme';
@@ -68,6 +69,7 @@ const Notices = styled.div`
 
 export default function SimulationApp() {
   useUiScale();
+  useAmbient();
   const s = useSimStore();
   const it = useIterationStore();
   const playing = usePlayback((state) => state.playing);
