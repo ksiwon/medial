@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import type { AttemptDetail, DomainEvent, VillagePayload } from '../api/types';
 import DayTimeline from '../components/DayTimeline';
@@ -166,7 +166,11 @@ const DayEnd = styled.div`
   > div > p > span { white-space: nowrap; }
   > button { flex: none; font: inherit; ${pill('md')} ${beckon} font-weight: 800; cursor: pointer; border: none;
              background: ${night.accent}; color: #fff; }
+  > small { flex: none; margin-left: auto; font-size: calc(12px * var(--k, 1)); color: ${night.mute}; font-variant-numeric: tabular-nums; }
 `;
+
+/** How long the end of a day waits before it goes on to the residents' evaluations by itself, in seconds. A touch goes at once. */
+export const DAYEND_WAIT_S = 5;
 
 interface Props {
   village: VillagePayload;
@@ -260,6 +264,16 @@ export default function ObserveScreen({ village, detail, events, art, dayEnd: en
     : REVEAL_STEPS;
   const dayEnd = reel?.dayEndMs ?? DAY_START_MS;
   const dayOver = reel !== null && p.rt >= reel.total;
+  // The day is over: the way on is one touch, or it goes by itself after a few seconds.
+  const [wait, setWait] = useState(DAYEND_WAIT_S);
+  const goOn = useRef(onReadEvaluations);
+  goOn.current = onReadEvaluations;
+  useEffect(() => {
+    if (!dayOver) { setWait(DAYEND_WAIT_S); return undefined; }
+    const tick = window.setInterval(() => setWait((n) => n - 1), 1000);
+    return () => window.clearInterval(tick);
+  }, [dayOver]);
+  useEffect(() => { if (dayOver && wait <= 0) goOn.current(); }, [dayOver, wait]);
   const tint = scene ? (requestColour(reel?.episodes ?? []).get(scene.episode.requestId) ?? night.accent) : night.accent;
 
   // What the stage says between scenes: the day so far, read off the playhead.
@@ -369,6 +383,7 @@ export default function ObserveScreen({ village, detail, events, art, dayEnd: en
             <strong>{formatClock(dayEnd)} · {ending.text}</strong>
             {ending.note && <p>{ending.note.split(' · ').map((fact) => <span key={fact}>{fact}</span>)}</p>}
           </div>
+          <small aria-live="off">{Math.max(wait, 0)}초 뒤 자동으로 넘어갑니다</small>
           <button type="button" onClick={onReadEvaluations}>{ending.action} →</button>
         </DayEnd>
       )}

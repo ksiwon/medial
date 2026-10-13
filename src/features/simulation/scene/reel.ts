@@ -22,16 +22,18 @@ import type { Episode, Position, Segment } from './types';
 //     scene; at least 1 s between two scenes so the transition can be seen
 //   · 2026-10-07: everything but the reading times above made faster after
 //     visitors found the playback too slow. The reading times did not change.
-//   · a line that has a recording lasts as long as the voice: the dots 0.5 s, the clip, 0.35 s of air
+//   · a line that has a recording lasts as long as the voice: the dots 0.3 s, the clip, 0.2 s of air
 //     after it (2026-10-13; the lines of the played scenes were all spoken ahead of time)
+//   · 2026-10-14, to fit the hall's five-to-six minutes: the dots 0.5 -> 0.3 s, the air after a clip 0.35 -> 0.2 s,
+//     entering a scene 0.5 -> 0.3 s, the judgement steps of a new request 0.35 -> 0.2 s apart
 //   · pace multiplies the reading times only; the exhibition fixes it at 1 (2026-10-10:
 //     the speed buttons were removed, a visitor skips to the next scene instead)
 
-const TYPING_S = 0.5;
-const ENTER_S = 0.5;
+const TYPING_S = 0.3;
+const ENTER_S = 0.3;
 const CUT_S = 0.3;
-const VOICE_GAP_S = 0.35;
-export const REVEAL_STEP_S = 0.35;
+const VOICE_GAP_S = 0.2;
+export const REVEAL_STEP_S = 0.2;
 export const REVEAL_STEPS = 4;
 
 const MINUTE = 60_000;
@@ -170,7 +172,8 @@ export function buildReel({ episodes, events, timeline, dayStartMs, dayEndMs, pa
   const atSeq = (seq: number) => {
     const line = segments.find((s) => s.kind === 'line' && s.seq >= seq
       && episodes[s.episode].beats[s.beat].firstSeq <= seq);
-    if (line) return line.r0 + (line.kind === 'line' ? line.typing : 0);
+    // A hair past the dots: r0 + 0.3 - r0 can come out below 0.3, which would still read as typing.
+    if (line) return line.r0 + (line.kind === 'line' ? line.typing + 1e-6 : 0);
     const event = events.find((x) => x.seq === seq);
     return event ? atTime(event.simTimeMs) : 0;
   };

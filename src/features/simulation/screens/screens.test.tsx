@@ -246,19 +246,19 @@ describe('EvaluationsScreen', () => {
     expect(screen.queryByText('이 평가를 보고 무엇을 고칠지 고른다')).toBeNull();
   });
 
-  it('pages the residents by four and leads on with a button until the last page', () => {
+  it('pages the residents by five and leads on with a button until the last page', () => {
     const day = ordered()[0];
     const asked = day.reviews.filter((r) => r.usageStatus !== 'no_experience');
     if (asked.length === 0) return;
-    const many = Array.from({ length: 5 }, (_, i) => ({ ...asked[0], id: `r${i}`, actorId: `P${i + 1}` }));
+    const many = Array.from({ length: 6 }, (_, i) => ({ ...asked[0], id: `r${i}`, actorId: `P${i + 1}` }));
     const { container } = evaluations({ generation: { ...day, reviews: many } });
-    expect(container.querySelectorAll('article')).toHaveLength(4);
+    expect(container.querySelectorAll('article')).toHaveLength(5);
     expect(screen.queryByText('이 평가를 보고 무엇을 고칠지 고른다')).toBeNull();
     fireEvent.click(screen.getByText('다음 주민 보기'));
     expect(container.querySelectorAll('article')).toHaveLength(1);
     expect(screen.getByText('이 평가를 보고 무엇을 고칠지 고른다')).toBeDefined();
     fireEvent.click(screen.getByText('← 앞 주민'));
-    expect(container.querySelectorAll('article')).toHaveLength(4);
+    expect(container.querySelectorAll('article')).toHaveLength(5);
   });
 
   it('keeps the issue groups, with the original items they were made of', () => {

@@ -161,7 +161,7 @@ describe('a line with a recorded voice', () => {
     const voices = { [`${line.speaker}|${line.text}`]: { file: 'a.wav', seconds: 4.2 } };
     const withVoice = buildReel({ episodes: episodes(), events, timeline, pace: 1, voices, ...DAY });
     const segment = withVoice.segments.find((s) => s.kind === 'line' && s.audio === 'a.wav');
-    expect(segment?.dur).toBeCloseTo(0.5 + 4.2 + 0.35, 5);
+    expect(segment?.dur).toBeCloseTo(0.3 + 4.2 + 0.2, 5);
     // The same reel without any recording has no audio on that line.
     expect(reel().segments.some((s) => s.kind === 'line' && s.audio)).toBe(false);
   });

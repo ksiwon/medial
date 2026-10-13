@@ -71,9 +71,10 @@ const Cards = styled.div`
   align-items: start;
   /* A wall screen has the width for every resident of the day side by side. */
   @media (min-width: 2000px) {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(300px * var(--k, 1))), 1fr));
+    /* A page holds five residents (PER_PAGE): five columns, so none drops to a second row. */
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     > article { padding: ${space.lg} ${space.lg} ${space.lg}; gap: ${space.lg}; }
-    > article blockquote { font-size: ${px(20)}; padding-top: ${space.xl}; }
+    > article blockquote { font-size: ${px(16)}; line-height: 1.6; padding-top: ${space.lg}; }
   }
 `;
 
@@ -386,8 +387,8 @@ interface Props {
 
 const NO_ART: ReadonlySet<string> = new Set();
 
-/** How many residents a page holds: what fits side by side on a wall screen. More are a button away. */
-const PER_PAGE = 4;
+/** How many residents a page holds: what fits side by side on a wall screen (five columns). More are a button away. */
+const PER_PAGE = 5;
 
 export default function EvaluationsScreen({
   detail,
