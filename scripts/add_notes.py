@@ -64,6 +64,7 @@ def main():
         eps = scenes["episodes"]
         for e in eps:
             e.pop("note", None)
+            e.pop("noteTitle", None)
         i = 0
         while i < len(eps):
             e = eps[i]
@@ -77,6 +78,9 @@ def main():
             note = note_for(e, group)
             if note:
                 e["note"] = note
+                # A later stretch of a request that already has its row (the medicine arriving) gets a row of its own.
+                if e["requestId"] == "m2":
+                    e["noteTitle"] = "약이 도착했다"
             i += len(group)
         conn.execute("update attempts set scenes_json=? where id=?", (json.dumps(scenes, ensure_ascii=False), attempt_id))
         print(attempt_id, [e["note"][:12] for e in eps if e.get("note")])

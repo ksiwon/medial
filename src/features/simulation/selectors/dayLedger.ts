@@ -120,6 +120,8 @@ export function ledgerAt(
 /** One Task on the day's timeline. */
 export interface TimelineItem {
   requestId: string;
+  /** Unique among the rows: the request, and the minute when it has a later row of its own. */
+  key: string;
   title: string;
   /** The request it belongs to, said once it has begun ("응답 없는 안부 확인"). */
   need: string | null;
@@ -168,10 +170,22 @@ export function timelineAt(
     if (!begun && !scheduled.has(requestId)) continue;
     if (!medial && !showUnseen) continue;
     items.push({
-      requestId, title: first.title, subjectId: first.subjectId, startMs, endMs, medial,
+      requestId, key: requestId, title: first.title, subjectId: first.subjectId, startMs, endMs, medial,
       need: begun ? needOf(subtitleOf(requestId), first.title) : null,
       // Over at its end: the call that ends at 09:40 is not still lit when the next begins at 09:40.
       state: !begun ? 'planned' : atMs < Math.max(endMs, startMs + 60_000) ? 'now' : 'done',
+    });
+  }
+  // A later stretch of a request that the day tells with a note of its own (the medicine arriving at 18:30)
+  // is a row too: whatever the middle of the screen says, the timeline lists.
+  for (const episode of episodes) {
+    if (!episode.noteTitle || atMs < episode.startMs) continue;
+    const parent = items.find((item) => item.requestId === episode.requestId);
+    if (!parent) continue;
+    items.push({
+      requestId: episode.requestId, key: `${episode.requestId}@${Math.floor(episode.startMs / 60_000)}`, title: episode.noteTitle,
+      subjectId: episode.subjectId, startMs: episode.startMs, endMs: episode.endMs, medial: parent.medial, need: parent.need,
+      state: atMs < Math.max(episode.endMs, episode.startMs + 60_000) ? 'now' : 'done',
     });
   }
   return items.sort((a, b) => a.startMs - b.startMs);

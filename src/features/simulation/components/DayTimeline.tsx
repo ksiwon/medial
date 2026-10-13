@@ -404,7 +404,7 @@ export default function DayTimeline({
             <div><b>하루 시작</b><time>{formatClock(dayStartMs)}</time></div>
           </Item>
           {items.map((item) => (
-            <Item key={item.requestId} $state={item.state} data-state={item.state} data-ms={item.startMs}
+            <Item key={item.key} $state={item.state} data-state={item.state} data-ms={item.startMs}
               onClick={() => { onSeek(item.startMs); onCommit(); }} title={`${formatClock(item.startMs)}로 이동`}>
               <i aria-hidden />
               <div>

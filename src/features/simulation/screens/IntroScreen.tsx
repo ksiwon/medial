@@ -171,25 +171,28 @@ const Progress = styled.div<{ $ms: number }>`
   }
 `;
 
-const Disclaimer = styled.div`
+/** The film's top right: what the pictures are, and the one way out, on one row. */
+const Corner = styled.div`
   position: absolute;
   top: clamp(24px, 1.6vw, 64px);
   right: clamp(24px, 4vw, 120px);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 1vw, 40px);
+`;
+
+const Disclaimer = styled.div`
   padding: 0.4em 1em;
   border-radius: ${radius.pill};
   background: rgba(21, 21, 15, 0.55);
   font-size: clamp(12px, 0.85vw, 44px);
   letter-spacing: 0.02em;
   color: ${inkA(0.82)};
-  z-index: 2;
 `;
 
 /** The one control of the film: small, in the corner, for a visitor who has seen it. */
 const Skip = styled.button`
-  position: absolute;
-  top: clamp(64px, 4.8vw, 172px);
-  right: clamp(24px, 4vw, 120px);
-  z-index: 2;
   padding: 0.45em 1.1em;
   border: 1px solid ${inkA(0.35)};
   border-radius: ${radius.pill};
@@ -509,8 +512,10 @@ export default function IntroScreen({ onFinish }: Props) {
   return (
     <Stage aria-label="MEDial 소개">
       <Brand>MEDial</Brand>
-      <Disclaimer>그림과 대화는 모두 시뮬레이션입니다 · 이름은 가명입니다</Disclaimer>
-      <Skip type="button" onClick={() => finish.current()}>건너뛰기</Skip>
+      <Corner>
+        <Disclaimer>그림과 대화는 모두 시뮬레이션입니다 · 이름은 가명입니다</Disclaimer>
+        <Skip type="button" onClick={() => finish.current()}>건너뛰기</Skip>
+      </Corner>
 
       <Scene $on={on(0)}>
         <Picture $src={src('FARM')} $on={on(0)} />
