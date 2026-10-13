@@ -427,21 +427,21 @@ describe('the narrator of the film and of the closing page', () => {
 
   it('runs the film as it was with no recordings', () => {
     const l = layoutOf(null);
-    expect(l.ms).toEqual([5500, 5500, 12000, 11500, 9000, 15000]);
-    expect(l.two).toEqual([{ until: 5.2, next: 5.9 }, { until: 4.8, next: 7.6 }]);
+    expect(l.ms).toEqual([5500, 5500, 12000, 11500, 11000, 13000]);
+    expect(l.two).toEqual({ until: 5.2, next: 5.9 });
     expect(l.cues.flat()).toEqual([]);
   });
 
   it('lasts as long as the voice, and the second caption waits for the first to be said', () => {
     const l = layoutOf(clips(9));
-    expect(l.two[0].next).toBeGreaterThan(9);
+    expect(l.two.next).toBeGreaterThan(9);
     expect(l.ms.every((ms, i) => ms >= layoutOf(null).ms[i])).toBe(true);
     expect(l.ms[0]).toBeGreaterThanOrEqual((0.5 + 9) * 1000);
-    expect(l.cues.flat().length).toBe(8);
+    expect(l.cues.flat().length).toBe(7);
   });
 
   it('brings the closing lines up one after another, each after the one before is said', () => {
-    expect(closingAt(null)).toEqual([0.4, 3.4, 8.4, 13.4]);
+    expect(closingAt(null)).toEqual([0.4, 3.4, 8.4, 12.4, 16.4]);
     const at = closingAt(clips(6));
     expect(at[1] - at[0]).toBeGreaterThanOrEqual(6.7);
   });
@@ -577,6 +577,6 @@ describe('ChoiceScreen', () => {
     fireEvent.click(screen.getByText('마무리 보기 →'));
     expect(screen.getByText('서비스 디자이너의 일은 선택의 연속입니다.')).toBeDefined();
     expect(screen.getByText('처음으로')).toBeDefined();
-    expect(screen.getByText(/Resident Simulator는 현장에 가기 전에/)).toBeDefined();
+    expect(screen.getByText(/갈 수 없는 현장을 대신해/)).toBeDefined();
   });
 });

@@ -219,14 +219,15 @@ const Close = styled.div`
 /** The closing words, which the narrator reads (fixtures/exhibition/narration.json). A test keeps the two the same. */
 export const CLOSE_SAY = [
   '서비스 디자이너의 일은 선택의 연속입니다.',
-  '어떤 규칙을 고르느냐에 따라, 같은 마을의 같은 하루가 어르신께는 전혀 다른 하루가 됩니다.',
-  '하지만 멀고 사람이 드문 마을에서는 오래 지켜보며 연구하기 어렵고, 선택의 결과를 기다릴 시간도 없습니다.',
-  'Resident Simulator는 현장에 가기 전에 그 선택을 먼저 살펴보게 하는 도구입니다. 사람을 대신하지 않고, 사람을 만나러 가기 전의 준비를 돕습니다.',
+  '어떤 규칙을 고르느냐에 따라, 같은 마을의 같은 하루도 어르신께는 다른 하루가 됩니다.',
+  '그런데 멀고 사람이 드문 마을에서는, 그 선택의 결과를 현장에서 오래 지켜볼 수 없습니다.',
+  '그래서 Resident Simulator는, 갈 수 없는 현장을 대신해 그 선택의 결과를 보여 주는 도구입니다.',
+  '멀고 어려운 현장 연구의 부담을 덜어, 서비스 디자이너가 더 나은 서비스를 마을에 들이도록 돕습니다.',
 ] as const;
 
 /** When each closing line comes up (s): as before with no voice, else when the narrator is done with the one before. */
 export function closingAt(voices: Record<string, VoiceClip> | null | undefined): number[] {
-  const base = [0.4, 3.4, 8.4, 13.4];
+  const base = [0.4, 3.4, 8.4, 12.4, 16.4];
   const at = [base[0]];
   for (let i = 1; i < base.length; i += 1) {
     const clip = narrationOf(voices, CLOSE_SAY[i - 1]);
@@ -280,7 +281,7 @@ const NO_ART: ReadonlySet<string> = new Set();
 export const SUMMARY_IDLE_S = 90;
 
 /** How long the three days stay on the page before the closing words take it, in seconds. */
-export const RESULT_S = 24;
+export const RESULT_S = 14;
 
 /** The end of the walk: the days taken, and the way back - by itself, if nobody takes it. */
 function Ending({ detail, current, onRestart, art, voices }: { detail: SessionDetail; current: GenerationDetail; onRestart: () => void; art: ReadonlySet<string>; voices: Record<string, VoiceClip> | null }) {
@@ -320,11 +321,12 @@ function Ending({ detail, current, onRestart, art, voices }: { detail: SessionDe
       <Inner>
         {closing ? (
           <Close>
-          <strong style={{ animationDelay: `${closeAt[0]}s` }}>{CLOSE_SAY[0]}</strong>
-          <p style={{ animationDelay: `${closeAt[1]}s` }}>{CLOSE_SAY[1]}</p>
-          <p style={{ animationDelay: `${closeAt[2]}s` }}>{CLOSE_SAY[2]}</p>
-          <p style={{ animationDelay: `${closeAt[3]}s` }}>{CLOSE_SAY[3]}</p>
-        </Close>
+            <strong style={{ animationDelay: `${closeAt[0]}s` }}>{CLOSE_SAY[0]}</strong>
+            <p style={{ animationDelay: `${closeAt[1]}s` }}>{CLOSE_SAY[1]}</p>
+            <p style={{ animationDelay: `${closeAt[2]}s` }}>{CLOSE_SAY[2]}</p>
+            <p style={{ animationDelay: `${closeAt[3]}s` }}>{CLOSE_SAY[3]}</p>
+            <p style={{ animationDelay: `${closeAt[4]}s` }}>{CLOSE_SAY[4]}</p>
+          </Close>
         ) : (
           <>
         <PageHead eyebrow="사흘이 끝났습니다" title="고른 것과, 마을이 어떻게 됐는지">

@@ -34,18 +34,17 @@ const ACCENT = night.accent;
  * The sub-lines and the chips are not read. A test keeps these and the fixture the same.
  */
 export const INTRO_SAY = [
-  '병원은 읍내에, 주민은 낮이면 밭과 바다에 있습니다.',
-  '병원은 멀고, 아파도 참습니다.',
-  '병원과 이웃 사이를 이어 줄 사람이 마을엔 없고, 그 일은 이장님 한 분께 몰려 이미 가득 찼습니다.',
-  '그 조율을 맡아 안부를 살피고 사람을 이어 줄 AI, MEDial이 필요합니다.',
-  '이런 서비스를 들이려면 주민 대상 실증 연구가 중요합니다.',
-  '하지만 멀어서 자주 가기 어렵고, 어르신께 오래 묻기도 어렵습니다.',
-  '시뮬레이션으로 은점마을을 먼저 만들었습니다. 실제 인터뷰로 서로 다른 주민 12명을 세웠습니다.',
-  '여러분은 이 마을의 서비스 디자이너입니다.',
+  '시골의 낮입니다. 병원은 읍내에 있고, 주민들은 밭과 바다에 계시죠.',
+  '어르신들은 병원에 가야 할 일이 잦지만, 병원은 멀어서 웬만하면 참으십니다.',
+  '문제는, 어르신을 살펴 줄 사람이 마을에 없다는 겁니다. 그 일은 이장님 한 분께 이미 몰려 있습니다.',
+  '그래서 안부를 살피고 이웃과 병원을 이어 줄 조율자 AI, MEDial을 도입하려고 합니다.',
+  '서비스 디자이너는 도입에 앞서 주민 대상 실증 연구를 해야 하지만, 마을이 멀어 자주 찾아가기도, 오래 묻기도 어렵습니다.',
+  '그래서 가기 어려운 한 시골마을을 시뮬레이션, Resident Simulator로 대신 만들었습니다. 실제 인터뷰를 바탕으로, 주민 열두 분을 세웠습니다.',
+  '이제 여러분이, 이 시뮬레이션 속 서비스 디자이너가 되어 봅니다. 하루를 지켜보고, 주민의 평가를 읽고, 수정안 하나를 골라 MEDial의 규칙을 고칩니다. 직접 가지 못해도, 어느 어르신이 어디서 막히는지 볼 수 있습니다.',
 ] as const;
 
 /** Scene lengths in ms with no voice: they are the least a scene runs. */
-const BASE_MS = [5500, 5500, 12000, 11500, 9000, 15000];
+const BASE_MS = [5500, 5500, 12000, 11500, 11000, 13000];
 
 /** A caption is spoken from just after it appears; the next one appears when the narrator is done. */
 const LEAD_S = 0.5;
@@ -56,16 +55,15 @@ interface Layout {
   /** Each scene's length, ms. */
   ms: number[];
   total: number;
-  /** When the two captions of scenes 2 and 3 are on: the first is gone at `until`, the second arrives at `next`. */
-  two: { until: number; next: number }[];
+  /** Scene 2 has two captions: the first is gone at `until`, the second arrives at `next`. */
+  two: { until: number; next: number };
   /** The narration of each scene: the clip and the second it starts. */
   cues: { file: string; at: number }[][];
 }
 
 /**
- * The film is paced by its narrator: a scene lasts as long as the voice reading it, and the second caption of a
- * scene waits for the first to be said. With no recordings the clip lengths are 0 and this is the film as it was
- * (5.2 s / 5.9 s in scene 2, 4.8 s / 7.6 s in scene 3, the lengths in BASE_MS).
+ * The film is paced by its narrator: a scene lasts as long as the voice reading it, and a second caption waits for
+ * the first to be said. With no recordings the clip lengths are 0 and this is the film at its base lengths.
  */
 export function layoutOf(voices: Record<string, VoiceClip> | null | undefined): Layout {
   const clip = (i: number) => narrationOf(voices, INTRO_SAY[i]);
@@ -73,30 +71,27 @@ export function layoutOf(voices: Record<string, VoiceClip> | null | undefined): 
   const cue = (i: number, at: number) => { const c = clip(i); return c ? [{ file: c.file, at }] : []; };
   const end = (at: number, i: number) => at + sec(i) + TAIL_S;
 
-  const u2 = Math.max(5.2, LEAD_S + sec(2) + 0.4);
-  const n2 = u2 + 0.7;
-  const u3 = Math.max(4.8, LEAD_S + sec(4) + 0.4);
-  const n3 = Math.max(7.6, u3 + 0.8);
+  const until = Math.max(5.2, LEAD_S + sec(2) + 0.4);
+  const next = until + GAP_S;
   const ms = [
     Math.max(BASE_MS[0], end(LEAD_S, 0) * 1000),
     Math.max(BASE_MS[1], end(LEAD_S, 1) * 1000),
-    Math.max(BASE_MS[2], end(n2 + 0.3, 3) * 1000),
-    Math.max(BASE_MS[3], end(n3 + 0.3, 5) * 1000),
-    Math.max(BASE_MS[4], end(LEAD_S, 6) * 1000),
-    Math.max(BASE_MS[5], end(LEAD_S, 7) * 1000),
+    Math.max(BASE_MS[2], end(next + 0.3, 3) * 1000),
+    Math.max(BASE_MS[3], end(LEAD_S, 4) * 1000),
+    Math.max(BASE_MS[4], end(LEAD_S, 5) * 1000),
+    Math.max(BASE_MS[5], end(LEAD_S, 6) * 1000),
   ];
   return {
     ms,
-    total: ms.reduce((a, b) => a + b, 0),
-    two: [{ until: u2, next: n2 }, { until: u3, next: n3 }],
-    cues: [cue(0, LEAD_S), cue(1, LEAD_S), [...cue(2, LEAD_S), ...cue(3, n2 + 0.3)], [...cue(4, LEAD_S), ...cue(5, n3 + 0.3)], cue(6, LEAD_S), cue(7, LEAD_S)],
+    total: ms.reduce((x, y) => x + y, 0),
+    two: { until, next },
+    cues: [cue(0, LEAD_S), cue(1, LEAD_S), [...cue(2, LEAD_S), ...cue(3, next + 0.3)], cue(4, LEAD_S), cue(5, LEAD_S), cue(6, LEAD_S)],
   };
 }
 
 const fade = keyframes`from { opacity: 0 } to { opacity: 1 }`;
 const rise = keyframes`from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: none }`;
 const drift = keyframes`from { transform: scale(1.04) translate3d(0, 0, 0) } to { transform: scale(1.14) translate3d(-1.5%, -1%, 0) }`;
-const lamp = keyframes`from { opacity: 0 } to { opacity: 1 }`;
 const draw = keyframes`from { stroke-dashoffset: 1 } to { stroke-dashoffset: 0 }`;
 const pulse = keyframes`0% { transform: scale(0.6); opacity: 0.9 } 100% { transform: scale(2.6); opacity: 0 }`;
 
@@ -186,9 +181,9 @@ const Eyebrow = styled.div<{ $on: boolean }>`
   ${(p) => p.$on && css`animation: ${rise} 0.5s ease 0.1s forwards;`}
 `;
 
-const Line = styled.h1<{ $on: boolean; $delay?: number }>`
+const Line = styled.h1<{ $on: boolean; $delay?: number; $long?: boolean }>`
   margin: 16px 0 0;
-  font-size: clamp(28px, 3.6vw, 192px);
+  font-size: ${(p) => (p.$long ? 'clamp(24px, 2.9vw, 152px)' : 'clamp(28px, 3.6vw, 192px)')};
   line-height: 1.24;
   font-weight: 800;
   letter-spacing: -0.035em;
@@ -444,29 +439,82 @@ function PlaceFilm() {
   );
 }
 
-// ---- Scene 5: twelve people, all interviewed ----------------------------------
+// ---- Scene 4: the Resident Simulator, as the people around it ---------------------
 
-const Houses = styled.div<{ $on: boolean }>`
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  > i {
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    border-radius: ${radius.round};
-    background: #ffd98a;
-    box-shadow: 0 0 20px 8px rgba(255, 200, 100, 0.55);
-    opacity: 0;
-    ${(p) => p.$on && css`animation: ${lamp} 1.2s ease forwards;`}
-  }
-`;
+/**
+ * Drawn when the Resident Simulator is first named: the designer changes MEDial's rule, MEDial looks after the
+ * village (residents, the village head, the health centre), the residents' evaluation comes back to the designer,
+ * and the village stands on real interviews. It builds on the narrator's words: the village, its people, MEDial,
+ * the designer, the interviews, then the way back.
+ */
+function Diagram() {
+  const label = (x: number, y: number, size: number, fill: string, text: string, weight = 800) => (
+    <text x={x} y={y} fontSize={size} fontWeight={weight} fill={fill} textAnchor="middle">{text}</text>
+  );
+  return (
+    <Drawn viewBox="0 0 1200 540" aria-hidden style={{ left: '7vw', top: '8vh', width: '66vw', height: 'auto' }}>
+      <defs>
+        <marker id="arrow-paper" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill={PAPER} />
+        </marker>
+        <marker id="arrow-accent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill={ACCENT} />
+        </marker>
+      </defs>
 
-/** Twelve windows, lit one by one: the village's twelve. */
-const WINDOWS: [number, number][] = [
-  [27, 56], [31, 60], [35, 52], [41, 58], [47, 55], [52, 62],
-  [58, 57], [63, 64], [69, 60], [74, 66], [38, 66], [56, 70],
-];
+      {/* The village, and who lives in it. */}
+      <g className="in" style={at(0.5)}>
+        <rect x={860} y={20} width={330} height={400} rx={32} fill="rgba(21,21,15,0.62)" stroke="rgba(246,241,232,0.55)"
+          strokeWidth={2} strokeDasharray="10 10" />
+        {label(1025, 66, 28, PAPER, '시뮬레이션 마을')}
+        {label(1025, 98, 19, ACCENT, 'Resident Simulator', 700)}
+      </g>
+      {['주민 12', '이장', '보건소'].map((who, i) => (
+        <g key={who} className="in" style={at(1.8 + i * 0.3)}>
+          <rect x={900} y={130 + i * 88} width={250} height={64} rx={32} fill="rgba(246,241,232,0.12)"
+            stroke="rgba(246,241,232,0.45)" strokeWidth={1.5} />
+          {label(1025, 172 + i * 88, 26, PAPER, who, 700)}
+        </g>
+      ))}
+
+      {/* MEDial, and what it does for the village. */}
+      <g className="in" style={at(3.4)}>
+        <rect x={420} y={150} width={240} height={120} rx={30} fill={accentA(0.22)} stroke={ACCENT} strokeWidth={3} />
+        {label(540, 204, 34, PAPER, 'MEDial')}
+        {label(540, 242, 21, 'rgba(246,241,232,0.8)', 'AI 조율자', 700)}
+      </g>
+      <g className="in" style={at(3.8)}>
+        <line x1={668} y1={210} x2={852} y2={210} stroke={PAPER} strokeWidth={2.5} markerEnd="url(#arrow-paper)" />
+        {label(760, 188, 21, PAPER, '안부 · 연결 · 동행', 700)}
+      </g>
+
+      {/* The designer, and the rule they change. */}
+      <g className="in" style={at(4.4)}>
+        <rect x={10} y={150} width={240} height={120} rx={30} fill={PAPER} />
+        {label(130, 204, 30, INK, '서비스 디자이너')}
+        {label(130, 242, 21, '#55574b', '여러분', 700)}
+      </g>
+      <g className="in" style={at(4.8)}>
+        <line x1={258} y1={210} x2={412} y2={210} stroke={PAPER} strokeWidth={2.5} markerEnd="url(#arrow-paper)" />
+        {label(335, 188, 21, PAPER, '규칙을 고친다', 700)}
+      </g>
+
+      {/* What the village stands on. */}
+      <g className="in" style={at(5.8)}>
+        <rect x={860} y={470} width={330} height={58} rx={29} fill="none" stroke={ACCENT} strokeWidth={2.5} />
+        {label(1025, 508, 22, PAPER, '실제 인터뷰 12 · 근거', 700)}
+        <line x1={1025} y1={466} x2={1025} y2={430} stroke={ACCENT} strokeWidth={2.5} markerEnd="url(#arrow-accent)" />
+      </g>
+
+      {/* The way back: the residents' evaluation. */}
+      <path className="draw" d="M 860 360 C 700 490, 300 490, 130 280" pathLength={1} fill="none" stroke={ACCENT} strokeWidth={4}
+        strokeLinecap="round" markerEnd="url(#arrow-accent)" style={{ ...at(7), animationDuration: '1.2s' }} />
+      <g className="in" style={at(7.6)}>
+        {label(490, 470, 22, PAPER, '주민이 평가한다', 700)}
+      </g>
+    </Drawn>
+  );
+}
 
 const Chain = styled.div<{ $on: boolean; $delay: number }>`
   margin-top: 28px;
@@ -592,8 +640,8 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
       <Scene $on={on(0)}>
         <Picture $src={src('FARM')} $on={on(0)} />
         <Caption>
-          <Eyebrow $on={on(0)}>시골의 낮</Eyebrow>
-          <Line $on={on(0)}>병원은 읍내에, 주민은 낮이면 밭과 바다에 있습니다.</Line>
+          <Eyebrow $on={on(0)}>하루의 풍경</Eyebrow>
+          <Line $on={on(0)}>시골의 낮입니다. 병원은 읍내에 있고, 주민들은 밭과 바다에 계시죠.</Line>
         </Caption>
       </Scene>
 
@@ -623,23 +671,23 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
         </Route>
         <Caption>
           <Eyebrow $on={on(1)}>의료는 멀다</Eyebrow>
-          <Line $on={on(1)}>병원은 멀고, 아파도 참습니다.</Line>
+          <Line $on={on(1)}>어르신들은 병원에 가야 할 일이 잦지만, 병원은 멀어서 웬만하면 참으십니다.</Line>
         </Caption>
       </Scene>
 
       <Scene $on={on(2)}>
         <Picture $src={src('HOME')} $on={on(2)} />
         <Caption>
-          <Timed $on={on(2)} $at={0.2} $until={layout.two[0].until}>
-            <Eyebrow $on={on(2)}>조율할 사람이 없다</Eyebrow>
-            <Line $on={on(2)} $delay={0.3}>병원과 이웃 사이를 이어 줄 사람이 마을엔 없고, 그 일은 이장님 한 분께 몰려 이미 가득 찼습니다.</Line>
+          <Timed $on={on(2)} $at={0.2} $until={layout.two.until}>
+            <Eyebrow $on={on(2)}>살펴 줄 사람이 없다</Eyebrow>
+            <Line $on={on(2)} $delay={0.3}>문제는, 어르신을 살펴 줄 사람이 마을에 없다는 겁니다. 그 일은 이장님 한 분께 이미 몰려 있습니다.</Line>
           </Timed>
         </Caption>
         <Caption>
-          <Timed $on={on(2)} $at={layout.two[0].next - 0.1}>
+          <Timed $on={on(2)} $at={layout.two.next - 0.1}>
             <Eyebrow $on={on(2)}>AI CARE ORCHESTRATOR</Eyebrow>
-            <Line $on={on(2)} $delay={layout.two[0].next}>그 조율을 맡아 안부를 살피고 사람을 이어 줄 AI, MEDial이 필요합니다.</Line>
-            <Chain $on={on(2)} $delay={layout.two[0].next + 0.9}>
+            <Line $on={on(2)} $delay={layout.two.next}>그래서 안부를 살피고 이웃과 병원을 이어 줄 조율자 AI, MEDial을 도입하려고 합니다.</Line>
+            <Chain $on={on(2)} $delay={layout.two.next + 0.9}>
               <span>안부 확인</span><i>→</i>
               <span>이웃 연결</span><i>→</i>
               <span>병원 동행</span>
@@ -653,50 +701,31 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
         {on(3) && <PlaceFilm />}
         <Fog />
         <Caption>
-          <Timed $on={on(3)} $at={0.2} $until={layout.two[1].until}>
-            <Eyebrow $on={on(3)}>실증 연구가 먼저</Eyebrow>
-            <Line $on={on(3)} $delay={0.3}>이런 서비스를 들이려면 주민 대상 실증 연구가 중요합니다.</Line>
-          </Timed>
-        </Caption>
-        <Caption>
-          <Timed $on={on(3)} $at={layout.two[1].next}>
-            <Eyebrow $on={on(3)}>하지만</Eyebrow>
-            <Line $on={on(3)} $delay={layout.two[1].next + 0.1}>멀어서 자주 가기 어렵고, 어르신께 오래 묻기도 어렵습니다.</Line>
-          </Timed>
+          <Eyebrow $on={on(3)}>서비스 디자이너의 고충</Eyebrow>
+          <Line $on={on(3)} $long>서비스 디자이너는 도입에 앞서 주민 대상 실증 연구를 해야 하지만, 마을이 멀어 자주 찾아가기도, 오래 묻기도 어렵습니다.</Line>
         </Caption>
       </Scene>
 
       <Scene $on={on(4)}>
-        <Picture $src={src('INTRO.village')} $on={on(4)} />
-        <Houses $on={on(4)}>
-          {WINDOWS.map(([x, y], i) => (
-            <i key={i} style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${0.2 + i * 0.12}s` }} />
-          ))}
-        </Houses>
+        <Picture $src={src('INTRO.village')} $on={on(4)} $dim />
+        {on(4) && <Diagram />}
         <Caption>
-          <Eyebrow $on={on(4)}>그래서 제안합니다</Eyebrow>
-          <Line $on={on(4)}><Em>시뮬레이션</Em>으로 은점마을을 먼저 만들었습니다. 실제 인터뷰로 서로 다른 주민 12명을 세웠습니다.</Line>
-          <Chain $on={on(4)} $delay={1}>
-            <span className="real">실제 인터뷰 12</span><i>→</i>
-            <span>서로 다른 페르소나 12</span><i>→</i>
-            <span>움직이는 에이전트 12</span>
-          </Chain>
-          <Sub $on={on(4)} $delay={2}>일과도 관계도 제각각인 이분들이 시뮬레이션 속에서 직접 움직입니다.</Sub>
+          <Eyebrow $on={on(4)}>Resident Simulator</Eyebrow>
+          <Line $on={on(4)} $long>그래서 가기 어려운 한 시골마을을 시뮬레이션, Resident Simulator로 대신 만들었습니다. 실제 인터뷰를 바탕으로, 주민 열두 분을 세웠습니다.</Line>
         </Caption>
       </Scene>
 
       <Scene $on={on(5)}>
         <Picture $src={src('INTRO.desk')} $on={on(5)} />
         <Caption>
-          <Line $on={on(5)}>여러분은 이 마을의 서비스 디자이너입니다.</Line>
-          <Chain $on={on(5)} $delay={1}>
+          <Eyebrow $on={on(5)}>서비스 디자이너가 되어 보기</Eyebrow>
+          <Line $on={on(5)} $long>이제 여러분이, 이 시뮬레이션 속 서비스 디자이너가 되어 봅니다. 하루를 지켜보고, 주민의 평가를 읽고, 수정안 하나를 골라 MEDial의 규칙을 고칩니다. 직접 가지 못해도, 어느 어르신이 어디서 막히는지 볼 수 있습니다.</Line>
+          <Chain $on={on(5)} $delay={4}>
             <span>하루를 겪는다</span><i>→</i>
             <span>주민이 평가한다</span><i>→</i>
             <span>요청 하나로 고친다</span><i>→</i>
             <span>다시 돌린다</span>
           </Chain>
-          <Sub $on={on(5)} $delay={2.2}>하루를 지켜보고, 주민의 평가를 읽고, 요청 하나로 MEDial의 규칙을 고칩니다. 주민과 마을은 바꿀 수 없습니다.</Sub>
-          <Sub $on={on(5)} $delay={7}>현장에 가기 전에 얻는 것: 이 규칙에서 어느 어르신이 어디서 막히는지, 고치면 무엇이 달라지는지를 주민의 근거 있는 평가로 미리 봅니다.</Sub>
         </Caption>
       </Scene>
 

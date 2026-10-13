@@ -41,8 +41,9 @@ const MINUTE = 60_000;
 /** What the record's `featured` list holds: one episode, by its request and the minute it starts. */
 export const episodeKey = (e: Pick<Episode, 'requestId' | 'startMs'>) => `${e.requestId}@${Math.floor(e.startMs / MINUTE)}`;
 
-/** How long a note of the skipped stretch stays: long enough to read it whole. */
-const noteDuration = (text: string, pace: number) => clamp(2.2 + 0.06 * text.length, 3.5, 6.5) * pace;
+/** How long a note of the skipped stretch stays: 4.5 s, enough for the 28 characters its sentence is held to (scripts/add_notes.py). */
+const NOTE_S = 4.5;
+const noteDuration = (_text: string, pace: number) => NOTE_S * pace;
 /** A segment before it is placed on the reel. */
 type Draft = Segment extends infer S ? (S extends Segment ? Omit<S, 'r0'> : never) : never;
 const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x));
