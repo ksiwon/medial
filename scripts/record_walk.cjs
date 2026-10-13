@@ -48,7 +48,7 @@ fs.mkdirSync(`${out}/run/frames`, { recursive: true });
     else if (await vis(/정지|재생/)) state = 'day';
     if (false && state === 'day' && choices >= 2 && !fast) { await p.getByRole('button', { name: '빠르게' }).click().catch(() => {}); fast = true; }
     if (state !== last) { stamp(state); last = state; await shot(state); }
-    if (state === 'ending') { await p.waitForTimeout(45000); await shot('ending'); break; }
+    if (state === 'ending') { await p.waitForTimeout(60000); await shot('ending'); break; }
     if (state === 'dayend') { await p.waitForTimeout(2500); await shot('dayend-wait'); await p.getByRole('button', { name: /주민 평가를 보시겠습니까/ }).click().catch(() => {}); }
     else if (state === 'eval-page') { await p.waitForTimeout(6000); await shot('eval-page-read'); await p.getByRole('button', { name: /다음 주민 보기/ }).click().catch(() => {}); }
     else if (state === 'eval' || state === 'eval-last') { await p.waitForTimeout(4000); await shot('eval-read'); await p.getByRole('button', { name: /이 평가를 보고 무엇을 고칠지|결과 보러 가기/ }).click().catch(() => {}); }

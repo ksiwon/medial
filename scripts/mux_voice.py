@@ -15,6 +15,10 @@ AUDIO = Path(__file__).resolve().parents[1] / "local-data" / "audio" / "gemini-3
 data = json.load(open(f"{run}/plays.json", encoding="utf-8"))
 t_page = data["tPage"]
 plays = [p for p in data["plays"] if p["file"].endswith(".wav")]
+# A clip the page started before it had read its length reports 0: the manifest has it.
+length = {v["file"]: v["seconds"] for v in json.load(open(AUDIO / "manifest.json", encoding="utf-8")).values()}
+for p in plays:
+    p["dur"] = p["dur"] or length.get(p["file"], 0)
 video = glob.glob(f"{run}/*.webm")[0]
 print("clips:", len(plays), "first at %.2fs" % ((plays[0]["at"] - t_page) / 1000))
 
