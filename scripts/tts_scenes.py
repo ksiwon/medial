@@ -1,7 +1,7 @@
 """Speaks the exhibition scenes' lines with Gemini TTS, once, ahead of time (never live).
 
     python scripts/tts_scenes.py list              # the lines and what is sent for each (no calls)
-    python scripts/tts_scenes.py make              # missing audio only -> local-data/audio/<hash>.wav
+    python scripts/tts_scenes.py make              # missing audio only -> local-data/audio/<model>/<hash>.wav
     python scripts/tts_scenes.py make --limit 40   # stop after this many calls (the daily quota is 100)
     python scripts/tts_scenes.py styles            # each line's acting note -> local-data/tts-styles.json
 
@@ -36,8 +36,8 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 DB = ROOT / "local-data" / "runs" / "sim.sqlite3"
 VOICES = ROOT / "local-data" / "tts-voices.json"
-AUDIO = ROOT / "local-data" / "audio"
-MODEL = "gemini-3.8-flash-tts"
+AUDIO_ROOT = ROOT / "local-data" / "audio"
+MODEL = "gemini-3.8-flash-tts"  # --model gemini-3.8-flash-lite-tts for a cheaper, separately-metered try
 #: MEDial's lines are delivered brisk; the residents' voices carry their own manner.
 STYLE = {"MEDial": "brisk and efficient, natural pace"}
 VOICE_KEY = {"MEDial": "MEDIAL"}
@@ -142,11 +142,11 @@ def api_key() -> str:
     raise SystemExit("server/.env 에 GEMINI_API_KEY 가 없다")
 
 
-def speak(key: str, voice: str, text: str, style: str) -> bytes:
+def speak(key: str, voice: str, text: str, style: str, model: str = MODEL) -> bytes:
     item = {"type": "text", "text": text}
     if style:
         item["annotations"] = [{"type": "speech_metadata", "style": style}]
-    body = {"model": MODEL, "input": [{"type": "user_input", "content": [item]}],
+    body = {"model": model, "input": [{"type": "user_input", "content": [item]}],
             "response_format": {"type": "audio"},
             "generation_config": {"speech_config": [{"voice": voice}]}}
     req = urllib.request.Request("https://generativelanguage.googleapis.com/v1beta/interactions",
@@ -172,6 +172,7 @@ def main():
     sub.add_parser("styles")
     mk = sub.add_parser("make")
     mk.add_argument("--limit", type=int, default=90)
+    mk.add_argument("--model", default=MODEL)
     args = ap.parse_args()
     if args.cmd == "styles":
         write_styles()
@@ -190,6 +191,7 @@ def main():
             print("%-9s %s  %s%s" % (speaker, key, text, "" if say == text else "\n%s -> %s" % (" " * 20, say)))
         print(len(todo), "lines")
         return
+    AUDIO = AUDIO_ROOT / args.model
     AUDIO.mkdir(parents=True, exist_ok=True)
     key, made, manifest = api_key(), 0, {}
     for speaker, text, voice, say, style, name in todo:
@@ -199,7 +201,7 @@ def main():
                 print("stopped at the limit (%d calls); run again later" % made)
                 break
             try:
-                path.write_bytes(speak(key, voice, say, style))
+                path.write_bytes(speak(key, voice, say, style, args.model))
             except urllib.error.HTTPError as e:
                 print("HTTP", e.code, e.read()[:200].decode("utf-8", "ignore"))
                 break

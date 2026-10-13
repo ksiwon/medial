@@ -331,6 +331,8 @@ npm run e2e                            # 6 passed (Chromium, 합성 마을, .run
   위급 장면(CPR)만 8줄(안내를 또렷하게), 나머지는 5–6줄. 1일차 방문은 "얼굴 봤으니 간다"로 끝나고, 보건소 장면은 "네, 접수했습니다."로 끝난다. TTS 고유 줄 54개.
   **줄별 연기 지시:** `tts_scenes.py styles` — 모델이 장면 설명을 보고 줄마다 2–6단어 영어 지시(감정 · 속도, 예 "frightened, a little hurried")를 써서
   `local-data/tts-styles.json`에 둔다. 나이 · 사투리 · 음색은 목소리(Voice design)가 정하므로 지시에 넣지 않는다. `make`가 이 지시를 `speech_metadata.style`로 보낸다.
+  **임시 음성(lite):** `tts_scenes.py make --model gemini-3.8-flash-lite-tts` 로 54줄(고유 243초)을 별도 한도로 먼저 만들었다(`local-data/audio/gemini-3.8-flash-lite-tts/`). 청취 평가상 P9은
+  사투리가 뚜렷하지만 P6 · P1 · P7은 표준어에 가깝게 들린다(full 모델이 낫다). 한도가 풀리면 full 모델로 다시 만들어 비교한다.
   **음성(TTS) 준비:** `scripts/tts_scenes.py` — 화면에 나오는 글과 소리 내어 읽는 글을 나눴다. "MEDial"은 항상 **메디얼**로 읽히게 하고(안 그러면 엠이디얼 ·
   미디알 등으로 흔들렸다), 시각은 사람이 말하는 대로(08:00 → 여덟 시, 20:56 → 여덟 시 오십육 분, 60분 → 육십 분) 풀어서 보낸다. 오디오는 (목소리, 읽는 글, style)의
   해시로 `local-data/audio/`에 한 번만 만들고 `manifest.json`이 줄과 파일을 잇는다. 고유한 줄 69개라 하루 한도(100회) 안이지만, 오늘은 시험으로 한도를 다 써서
