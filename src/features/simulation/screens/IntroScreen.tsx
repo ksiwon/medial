@@ -43,6 +43,14 @@ export const INTRO_SAY = [
   '이제 여러분이, 이 시뮬레이션 속 서비스 디자이너가 되어 봅니다. 하루를 지켜보고, 주민의 평가를 읽고, 수정안 하나를 골라 MEDial의 규칙을 고칩니다. 직접 가지 못해도, 어느 어르신이 어디서 막히는지 볼 수 있습니다.',
 ] as const;
 
+/** Scenes 4 and 5 are said in one go but shown a sentence at a time (INTRO_SAY joined). */
+const SAY_FOUR = ['그래서 가기 어려운 한 시골마을을 시뮬레이션, Resident Simulator로 대신 만들었습니다.', '실제 인터뷰를 바탕으로, 주민 열두 분을 세웠습니다.'] as const;
+const SAY_FIVE = [
+  '이제 여러분이, 이 시뮬레이션 속 서비스 디자이너가 되어 봅니다.',
+  '하루를 지켜보고, 주민의 평가를 읽고, 수정안 하나를 골라 MEDial의 규칙을 고칩니다.',
+  '직접 가지 못해도, 어느 어르신이 어디서 막히는지 볼 수 있습니다.',
+] as const;
+
 /** Scene lengths in ms with no voice: they are the least a scene runs. */
 const BASE_MS = [5500, 5500, 12000, 11500, 11000, 13000];
 
@@ -57,6 +65,8 @@ interface Layout {
   total: number;
   /** Scene 2 has two captions: the first is gone at `until`, the second arrives at `next`. */
   two: { until: number; next: number };
+  /** Scenes 4 and 5 show their narration a sentence at a time: the second each sentence's caption arrives. */
+  said: { four: number[]; five: number[] };
   /** The narration of each scene: the clip and the second it starts. */
   cues: { file: string; at: number }[][];
 }
@@ -81,10 +91,18 @@ export function layoutOf(voices: Record<string, VoiceClip> | null | undefined): 
     Math.max(BASE_MS[4], end(LEAD_S, 5) * 1000),
     Math.max(BASE_MS[5], end(LEAD_S, 6) * 1000),
   ];
+  /** Where each sentence of a clip begins, by its share of the characters (the clip is one recording). */
+  const starts = (i: number, sentences: readonly string[]) => {
+    const all = sentences.reduce((n, t) => n + t.length, 0);
+    const span = sec(i) || 9;
+    let used = 0;
+    return sentences.map((t) => { const at = LEAD_S + (span * used) / all; used += t.length; return at; });
+  };
   return {
     ms,
     total: ms.reduce((x, y) => x + y, 0),
     two: { until, next },
+    said: { four: starts(5, SAY_FOUR), five: starts(6, SAY_FIVE) },
     cues: [cue(0, LEAD_S), cue(1, LEAD_S), [...cue(2, LEAD_S), ...cue(3, next + 0.3)], cue(4, LEAD_S), cue(5, LEAD_S), cue(6, LEAD_S)],
   };
 }
@@ -442,76 +460,75 @@ function PlaceFilm() {
 // ---- Scene 4: the Resident Simulator, as the people around it ---------------------
 
 /**
- * Drawn when the Resident Simulator is first named: the designer changes MEDial's rule, MEDial looks after the
- * village (residents, the village head, the health centre), the residents' evaluation comes back to the designer,
- * and the village stands on real interviews. It builds on the narrator's words: the village, its people, MEDial,
- * the designer, the interviews, then the way back.
+ * Drawn while the narrator says the Resident Simulator was built (scene 4), in the order of the work it stands for:
+ * the designer conceives MEDial, the simulated village is built to apply it to, the real interviews raise its twelve
+ * residents (from `after`, when that sentence begins), and last the residents' evaluation travels back to the
+ * designer. Every arrow is drawn after the thing it leaves and before the thing it reaches.
  */
-function Diagram() {
+function Diagram({ after }: { after: number }) {
   const label = (x: number, y: number, size: number, fill: string, text: string, weight = 800) => (
     <text x={x} y={y} fontSize={size} fontWeight={weight} fill={fill} textAnchor="middle">{text}</text>
   );
+  /** A line that draws itself, its head appearing only when it arrives (a marker would show before the line is drawn). */
+  const arrow = (d: string, delay: number, color: string, head: [number, number, number], dur = 0.7) => (
+    <>
+      <path className="draw" d={d} pathLength={1} fill="none" stroke={color} strokeWidth={4} strokeLinecap="round"
+        style={{ ...at(delay), animationDuration: `${dur}s` }} />
+      <path className="in" d="M 0 0 L -22 -12 L -22 12 z" fill={color} transform={`translate(${head[0]} ${head[1]}) rotate(${head[2]})`}
+        style={at(delay + dur * 0.85)} />
+    </>
+  );
   return (
     <Drawn viewBox="0 0 1200 540" aria-hidden style={{ left: '7vw', top: '8vh', width: '66vw', height: 'auto' }}>
-      <defs>
-        <marker id="arrow-paper" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill={PAPER} />
-        </marker>
-        <marker id="arrow-accent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill={ACCENT} />
-        </marker>
-      </defs>
 
-      {/* The village, and who lives in it. */}
-      <g className="in" style={at(0.5)}>
-        <rect x={860} y={20} width={330} height={400} rx={32} fill="rgba(21,21,15,0.62)" stroke="rgba(246,241,232,0.55)"
-          strokeWidth={2} strokeDasharray="10 10" />
-        {label(1025, 66, 28, PAPER, '시뮬레이션 마을')}
-        {label(1025, 98, 19, ACCENT, 'Resident Simulator', 700)}
+      {/* 1. The designer conceives MEDial. */}
+      <g className="in" style={at(0.4)}>
+        <rect x={10} y={185} width={210} height={120} rx={30} fill={PAPER} />
+        {label(115, 240, 28, INK, '서비스 디자이너', 800)}
+        {label(115, 278, 21, '#55574b', '여러분', 700)}
       </g>
-      {['주민 12', '이장', '보건소'].map((who, i) => (
-        <g key={who} className="in" style={at(1.8 + i * 0.3)}>
-          <rect x={900} y={130 + i * 88} width={250} height={64} rx={32} fill="rgba(246,241,232,0.12)"
-            stroke="rgba(246,241,232,0.45)" strokeWidth={1.5} />
-          {label(1025, 172 + i * 88, 26, PAPER, who, 700)}
+      {arrow('M 228 245 L 292 245', 1.1, PAPER, [296, 245, 0], 0.5)}
+      <g className="in" style={at(1.3)}>{label(260, 222, 20, PAPER, '구상', 700)}</g>
+      <g className="in" style={at(1.6)}>
+        <rect x={300} y={185} width={210} height={120} rx={30} fill={accentA(0.22)} stroke={ACCENT} strokeWidth={3} />
+        {label(405, 240, 34, PAPER, 'MEDial', 800)}
+        {label(405, 278, 21, 'rgba(246,241,232,0.8)', 'AI 조율자', 700)}
+      </g>
+
+      {/* 2. The village it will be applied to is built. */}
+      {arrow('M 518 245 L 632 245', 2.3, PAPER, [636, 245, 0], 0.6)}
+      <g className="in" style={at(2.6)}>{label(575, 222, 20, PAPER, '적용', 700)}</g>
+      <g className="in" style={at(2.9)}>
+        <rect x={640} y={10} width={550} height={390} rx={36} fill="rgba(21,21,15,0.62)" stroke="rgba(246,241,232,0.55)"
+          strokeWidth={2} strokeDasharray="10 10" />
+        {label(915, 64, 32, PAPER, '시뮬레이션 마을', 800)}
+        {label(915, 98, 20, ACCENT, 'Resident Simulator', 700)}
+      </g>
+
+      {/* 3. The interviews it stands on, and the residents raised from them. */}
+      <g className="in" style={at(after + 0.2)}>
+        <rect x={700} y={450} width={430} height={66} rx={33} fill="none" stroke={ACCENT} strokeWidth={2.5} />
+        {label(915, 492, 24, PAPER, '실제 인터뷰 12 · 근거', 700)}
+      </g>
+      {arrow('M 915 444 L 915 416', after + 0.9, ACCENT, [915, 412, -90], 0.4)}
+      {Array.from({ length: 12 }, (_, i) => (
+        <g key={i} className="in" style={at(after + 1.4 + i * 0.1)}>
+          <circle cx={705 + (i % 6) * 84} cy={160 + Math.floor(i / 6) * 76} r={30} fill="rgba(246,241,232,0.14)"
+            stroke={PAPER} strokeWidth={2} />
+          {label(705 + (i % 6) * 84, 169 + Math.floor(i / 6) * 76, 22, PAPER, String(i + 1), 700)}
+        </g>
+      ))}
+      {['이장', '보건소'].map((who, i) => (
+        <g key={who} className="in" style={at(after + 2.7 + i * 0.25)}>
+          <rect x={680 + i * 240} y={300} width={220} height={60} rx={30} fill="rgba(246,241,232,0.12)"
+            stroke="rgba(246,241,232,0.5)" strokeWidth={1.5} />
+          {label(790 + i * 240, 340, 26, PAPER, who, 700)}
         </g>
       ))}
 
-      {/* MEDial, and what it does for the village. */}
-      <g className="in" style={at(3.4)}>
-        <rect x={420} y={150} width={240} height={120} rx={30} fill={accentA(0.22)} stroke={ACCENT} strokeWidth={3} />
-        {label(540, 204, 34, PAPER, 'MEDial')}
-        {label(540, 242, 21, 'rgba(246,241,232,0.8)', 'AI 조율자', 700)}
-      </g>
-      <g className="in" style={at(3.8)}>
-        <line x1={668} y1={210} x2={852} y2={210} stroke={PAPER} strokeWidth={2.5} markerEnd="url(#arrow-paper)" />
-        {label(760, 188, 21, PAPER, '안부 · 연결 · 동행', 700)}
-      </g>
-
-      {/* The designer, and the rule they change. */}
-      <g className="in" style={at(4.4)}>
-        <rect x={10} y={150} width={240} height={120} rx={30} fill={PAPER} />
-        {label(130, 204, 30, INK, '서비스 디자이너')}
-        {label(130, 242, 21, '#55574b', '여러분', 700)}
-      </g>
-      <g className="in" style={at(4.8)}>
-        <line x1={258} y1={210} x2={412} y2={210} stroke={PAPER} strokeWidth={2.5} markerEnd="url(#arrow-paper)" />
-        {label(335, 188, 21, PAPER, '규칙을 고친다', 700)}
-      </g>
-
-      {/* What the village stands on. */}
-      <g className="in" style={at(5.8)}>
-        <rect x={860} y={470} width={330} height={58} rx={29} fill="none" stroke={ACCENT} strokeWidth={2.5} />
-        {label(1025, 508, 22, PAPER, '실제 인터뷰 12 · 근거', 700)}
-        <line x1={1025} y1={466} x2={1025} y2={430} stroke={ACCENT} strokeWidth={2.5} markerEnd="url(#arrow-accent)" />
-      </g>
-
-      {/* The way back: the residents' evaluation. */}
-      <path className="draw" d="M 860 360 C 700 490, 300 490, 130 280" pathLength={1} fill="none" stroke={ACCENT} strokeWidth={4}
-        strokeLinecap="round" markerEnd="url(#arrow-accent)" style={{ ...at(7), animationDuration: '1.2s' }} />
-      <g className="in" style={at(7.6)}>
-        {label(490, 470, 22, PAPER, '주민이 평가한다', 700)}
-      </g>
+      {/* 4. The residents' evaluation travels back to the designer. */}
+      {arrow('M 640 340 C 520 500, 240 500, 115 313', after + 3.3, ACCENT, [115, 313, -124], 1)}
+      <g className="in" style={at(after + 3.9)}>{label(380, 470, 22, PAPER, '주민이 평가한다', 700)}</g>
     </Drawn>
   );
 }
@@ -708,25 +725,39 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
 
       <Scene $on={on(4)}>
         <Picture $src={src('INTRO.village')} $on={on(4)} $dim />
-        {on(4) && <Diagram />}
-        <Caption>
-          <Eyebrow $on={on(4)}>Resident Simulator</Eyebrow>
-          <Line $on={on(4)} $long>그래서 가기 어려운 한 시골마을을 시뮬레이션, Resident Simulator로 대신 만들었습니다. 실제 인터뷰를 바탕으로, 주민 열두 분을 세웠습니다.</Line>
-        </Caption>
+        {on(4) && <Diagram after={layout.said.four[1]} />}
+        {SAY_FOUR.map((text, k) => (
+          <Caption key={k}>
+            <Timed $on={on(4)} $at={k === 0 ? 0.2 : layout.said.four[1] - 0.1} $until={k === 0 ? layout.said.four[1] - 0.2 : undefined}>
+              <Eyebrow $on={on(4)}>Resident Simulator</Eyebrow>
+              <Line $on={on(4)} $delay={k === 0 ? 0.3 : layout.said.four[1]}>{text}</Line>
+            </Timed>
+          </Caption>
+        ))}
       </Scene>
 
       <Scene $on={on(5)}>
         <Picture $src={src('INTRO.desk')} $on={on(5)} />
-        <Caption>
-          <Eyebrow $on={on(5)}>서비스 디자이너가 되어 보기</Eyebrow>
-          <Line $on={on(5)} $long>이제 여러분이, 이 시뮬레이션 속 서비스 디자이너가 되어 봅니다. 하루를 지켜보고, 주민의 평가를 읽고, 수정안 하나를 골라 MEDial의 규칙을 고칩니다. 직접 가지 못해도, 어느 어르신이 어디서 막히는지 볼 수 있습니다.</Line>
-          <Chain $on={on(5)} $delay={4}>
-            <span>하루를 겪는다</span><i>→</i>
-            <span>주민이 평가한다</span><i>→</i>
-            <span>요청 하나로 고친다</span><i>→</i>
-            <span>다시 돌린다</span>
-          </Chain>
-        </Caption>
+        {SAY_FIVE.map((text, k) => {
+          const at = layout.said.five[k];
+          const next = layout.said.five[k + 1];
+          return (
+            <Caption key={k}>
+              <Timed $on={on(5)} $at={k === 0 ? 0.2 : at - 0.1} $until={next === undefined ? undefined : next - 0.2}>
+                <Eyebrow $on={on(5)}>서비스 디자이너가 되어 보기</Eyebrow>
+                <Line $on={on(5)} $delay={k === 0 ? 0.3 : at}>{text}</Line>
+                {k === 1 && (
+                  <Chain $on={on(5)} $delay={at + 0.9}>
+                    <span>하루를 겪는다</span><i>→</i>
+                    <span>주민이 평가한다</span><i>→</i>
+                    <span>요청 하나로 고친다</span><i>→</i>
+                    <span>다시 돌린다</span>
+                  </Chain>
+                )}
+              </Timed>
+            </Caption>
+          );
+        })}
       </Scene>
 
       <Progress $ms={layout.total} />
