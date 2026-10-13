@@ -270,7 +270,7 @@ describe('EvaluationsScreen', () => {
 describe('a record that carries its scenes (the exhibition record)', () => {
   const at = events[0];
   const scenes: StoredScenes = {
-    source: 'exhibition-record', model: 'gpt-6-sol', day: 1, title: '응답 없는 안부 확인', summary: '',
+    source: 'exhibition-record', model: 'gpt-6.1-sol', day: 1, title: '응답 없는 안부 확인', summary: '',
     people: { P1: '가명일' },
     episodes: [{
       requestId: 'w1', subjectId: 'P1', title: '본인에게 연락', firstOfRequest: true,

@@ -40,13 +40,13 @@ PROVIDER = "openai"
 #: health endpoint reports whichever one is actually configured. Checked against
 #: OpenAI's model list on 2026-09-28.
 #:
-#: Two tiers are used across the project: ``gpt-6-sol`` where the judgement is
+#: Two tiers are used across the project: ``gpt-6.1-sol`` where the judgement is
 #: the result, ``gpt-6-luna`` where a lighter model is enough. Reviews are the
 #: research's evaluations - a resident's grade and the events it cites are what
 #: the whole study reads - and a proposal round reasons over all of them, so this
 #: role takes the higher tier. A cycle is tens of calls (13 reviews, a synthesis,
 #: a proposal round), which is affordable at that tier.
-DEFAULT_MODEL = "gpt-6-sol"
+DEFAULT_MODEL = "gpt-6.1-sol"
 
 OPENAI_BASE_URL = "https://api.openai.com/v1"
 

@@ -86,8 +86,8 @@ python scripts/freeze_sim.py --replace   # 이미 있는 sim 기록을 덮어쓸
 real 버전에만 필요합니다. 키는 **`server/.env` 에 두며 real 서버 프로세스만 읽습니다**
 (실행 스크립트는 키가 적혀 있는지만 보고 값은 읽지 않습니다). 양식은 `server/.env.example`.
 
-공급자는 OpenAI 하나입니다 (`OPENAI_API_KEY`). 판단이 결과인 자리는 `gpt-6-sol`, 가벼운 모델로
-충분한 자리는 `gpt-6-luna` — 리뷰·개선과 MEDial 머리·기관은 `gpt-6-sol`, 주민은 `gpt-6-luna`.
+공급자는 OpenAI 하나입니다 (`OPENAI_API_KEY`). 판단이 결과인 자리는 `gpt-6.1-sol`, 가벼운 모델로
+충분한 자리는 `gpt-6-luna` — 리뷰·개선과 MEDial 머리·기관은 `gpt-6.1-sol`, 주민은 `gpt-6-luna`.
 고르는 기준은 [DEVELOPMENT.md](DEVELOPMENT.md) 의 "모델 키는 `server/.env` 에 있습니다".
 
 real의 준비 화면은 키가 있으면 네 층(마을·기관·리뷰·개선)을 모두 모델로 두고 호출 상한 300회로

@@ -714,7 +714,7 @@ def test_an_openai_key_alone_configures_the_client_and_nothing_else_does():
     OPENAI_API_KEY is the whole configuration; reviews take the higher tier."""
     client = LlmClient.from_env({"OPENAI_API_KEY": "k"})
     assert client.provider == "openai"
-    assert client.model == "gpt-6-sol"
+    assert client.model == "gpt-6.1-sol"
     assert client.base_url.startswith("https://api.openai.com/")
     assert client.available
     # Keys for providers this code no longer knows do nothing.

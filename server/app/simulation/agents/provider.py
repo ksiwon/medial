@@ -30,7 +30,7 @@ from ..iteration.llm import LlmClient, ModelNotConfigured, _retryable
 #: override them. The head reads the whole situation and chooses among
 #: candidates, so it takes the higher tier; a resident gives one person's one
 #: answer, so the lighter tier is enough.
-DEFAULT_HEAD_MODEL = "gpt-6-sol"
+DEFAULT_HEAD_MODEL = "gpt-6.1-sol"
 DEFAULT_RESIDENT_MODEL = "gpt-6-luna"
 
 

@@ -117,7 +117,7 @@ Python을 강제하려면 `MEDIAL_PYTHON`을 지정합니다.
 이유는 그대로입니다 — 둘은 헷갈리기만 했습니다. 요청 형태는 `iteration/llm.py` 의 `_post`
 하나이고, chat completions 에 `response_format: json_schema` 로 구조화 출력을 받습니다.
 
-**어느 모델을 쓰는가 — 두 층.** 판단 자체가 결과인 자리는 높은 층 `gpt-6-sol`, 가벼운 모델로
+**어느 모델을 쓰는가 — 두 층.** 판단 자체가 결과인 자리는 높은 층 `gpt-6.1-sol`, 가벼운 모델로
 충분한 자리는 낮은 층 `gpt-6-luna` 입니다.
 - 리뷰·종합·개선은 **높은 층**입니다. 주민 평가는 이 연구가 읽는 결과이고(등급과 인용한 사건 id),
   개선 후보는 그 평가 전체를 놓고 추론합니다. 한 세대가 리뷰 13건 + 종합 + 개선이라 수십 번의
@@ -131,8 +131,8 @@ Python을 강제하려면 `MEDIAL_PYTHON`을 지정합니다.
 | 변수 | 기본값 | 쓰임 |
 |---|---|---|
 | `OPENAI_API_KEY` | — | 유일한 키. 없으면 온라인 어댑터를 고를 수 없습니다 |
-| `MEDIAL_LLM_MODEL` | `gpt-6-sol` | 리뷰·종합·개선 |
-| `MEDIAL_LLM_HEAD_MODEL` · `MEDIAL_LLM_RESIDENT_MODEL` | `gpt-6-sol` · `gpt-6-luna` | MEDial 머리 · 주민 |
+| `MEDIAL_LLM_MODEL` | `gpt-6.1-sol` | 리뷰·종합·개선 |
+| `MEDIAL_LLM_HEAD_MODEL` · `MEDIAL_LLM_RESIDENT_MODEL` | `gpt-6.1-sol` · `gpt-6-luna` | MEDial 머리 · 주민 |
 | `MEDIAL_LLM_BASE_URL` · `MEDIAL_LLM_TIMEOUT_S` · `MEDIAL_LLM_TEMPERATURE` · `MEDIAL_LLM_MAX_RETRIES` | OpenAI 엔드포인트 · 60s · 0.2 · 6 | |
 
 **모델 id는 코드보다 자주 바뀌므로** 기본값은 기본값일 뿐이고, health 응답은 실제로 설정된 id를
@@ -940,7 +940,7 @@ npm run e2e       # 6 passed (표를 연 뒤 행을 확인하도록 고침)
 ## 2026-09-28 · 전시를 앱으로 합침 · 저장소 정리 (D111)
 
 **전시 벽 화면은 이제 앱의 sim 버전입니다.** 따로 돌던 전시 데모(`exhibition/`: 사흘·27경로를
-자바스크립트로 다시 구현한 규칙, gpt-6-sol 대화록 생성, HTML 벽 화면, 보고용 대화록 뷰어, 점검
+자바스크립트로 다시 구현한 규칙, gpt-6.1-sol 대화록 생성, HTML 벽 화면, 보고용 대화록 뷰어, 점검
 스크립트)는 저장소에서 지웠습니다. 시뮬레이터가 두 벌이면 같은 마을이 두 화면에서 다르게 움직일 수
 있고, 앱의 장면 연출(D109)이 벽 화면의 연출(D108)을 이미 그대로 옮겼기 때문입니다. 전시에서
 보여 줄 하루는 real에서 돌리고 얼려(`freeze_sim.py`) sim으로 재생합니다.
