@@ -6,7 +6,7 @@ import type { AttemptDetail, DecisionRecord, DomainEvent, RuleTraceRecord, Villa
 import { sentenceFor } from '../selectors/story';
 import { buildEpisodes, MAP_GAP_MS } from './beats';
 import { judgmentOf } from './judgment';
-import { buildReel } from './reel';
+import { buildReel, episodeKey } from './reel';
 
 // What the observe screen claims, checked against a real run of the synthetic
 // village (fixtures/ui/) and against small hand-made logs for the cases that
@@ -227,11 +227,30 @@ describe('judgmentOf', () => {
   });
 });
 
+describe('a skipped stretch that carries a note', () => {
+  const all = () => episodes();
+  const keys = (rid: string) => new Set(all().filter((e) => e.requestId === rid).map(episodeKey));
+  it('stands the map still for as long as the note takes to read, and the clock does not move', () => {
+    const [first, second] = [...new Set(all().map((e) => e.requestId))];
+    const eps = all().map((e) => (e.requestId === second && e.firstOfRequest ? { ...e, note: '09:30 · 안내 시계로 불렀지만 응답이 없었습니다' } : e));
+    const reel = buildReel({ episodes: eps, events, timeline, pace: 1, featured: keys(first), ...DAY });
+    const notes = reel.segments.filter((s) => s.kind === 'map' && s.note);
+    expect(notes.length).toBe(1);
+    const note = notes[0] as Extract<typeof notes[0], { kind: 'map' }>;
+    expect(note.w0).toBe(note.w1);
+    expect(note.dur).toBeGreaterThanOrEqual(3.5);
+    // A request without a note leaves no mark.
+    const bare = buildReel({ episodes: all(), events, timeline, pace: 1, featured: keys(first), ...DAY });
+    expect(bare.segments.some((s) => s.kind === 'map' && s.note)).toBe(false);
+  });
+});
+
 describe('playing only the scenes that tell the story', () => {
   const all = () => episodes();
   const ids = () => [...new Set(all().map((e) => e.requestId))];
   const play = (featured: string[] | null) =>
-    buildReel({ episodes: all(), events, timeline, pace: 1, featured: featured && new Set(featured), ...DAY });
+    buildReel({ episodes: all(), events, timeline, pace: 1, ...DAY,
+      featured: featured && new Set(all().filter((e) => featured.includes(e.requestId)).map(episodeKey)) });
 
   it('is shorter, and the requests left out are still in the record', () => {
     const [first] = ids();

@@ -52,5 +52,17 @@
  "P7|가슴이 안 움직이는 것 같아 겁이 납니더.": "frightened, a little hurried",
  "MEDial|구급대는 20:56에 와요. 가슴 한가운데에 두 손을 포개 올려 주세요.": "reassuring, calm and steady",
  "P7|예, 손을 올렸습니더. 이제 우짭니꺼?": "anxious, a little hurried",
- "MEDial|팔을 곧게 펴고 가슴을 빠르고 세게 눌러 주세요. 전화로 계속 안내할게요.": "reassuring, calm and steady"
+ "MEDial|팔을 곧게 펴고 가슴을 빠르고 세게 눌러 주세요. 전화로 계속 안내할게요.": "reassuring, calm and steady",
+ "MEDial|남대현 어르신, 조기범 어르신 약이 떨어졌는데 가게를 못 비우세요.": "brisk, explaining, a little concerned",
+ "P12|읍내에 있긴 한데, 내가 뭘 해 주면 되노?": "quick, businesslike",
+ "MEDial|세 분께 부탁했는데 어려우시대요. 진통제랑 파스를 가게로 가져다주세요.": "brisk and clear, a little apologetic",
+ "P12|여섯 시쯤 읍내서 출발하니까 오는 길에 약국 들르께.": "easygoing, agreeing",
+ "MEDial|감사해요. 18:30쯤 도착한다고 조기범 어르신께 전할게요.": "brisk, warm, relieved",
+ "P12|그래, 알았다. 그리 전해 주라.": "casual, brief",
+ "MEDial|이장님, 조기범 어르신 약이 떨어졌는데 가게를 못 비우세요.": "brisk, explaining, a little concerned",
+ "P6|그래서 날 불렀나? 지금은 순찰 중이다 아이가.": "friendly, a bit hurried",
+ "MEDial|순찰 마치신 뒤에 읍내 약국에서 약과 파스를 받아다 주실 수 있나요?": "brisk and polite, asking",
+ "P6|그라믄 두 시쯤 차로 나가서 다녀오꾸마.": "warm, agreeing",
+ "MEDial|고맙습니다. 15:09쯤 가게에 도착한다고 조기범 어르신께 전할게요.": "brisk, warm, relieved",
+ "P6|그래, 그리 전해 주라.": "casual, brief"
 }

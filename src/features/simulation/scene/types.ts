@@ -56,13 +56,18 @@ export interface Episode {
   subjectId: string | null;
   title: string;
   firstOfRequest: boolean;
+  /** One sentence of what this stretch was, shown over the map when the scene itself is not played
+   *  ("09:30 · 안내 시계로 …"). Only the stored record writes it (scripts/add_notes.py). */
+  note?: string;
   startMs: number;
   endMs: number;
   beats: Beat[];
 }
 
 export type Segment =
-  | { kind: 'map'; r0: number; dur: number; w0: number; w1: number; cum: number[] }
+  | { kind: 'map'; r0: number; dur: number; w0: number; w1: number; cum: number[];
+      /** The clock stands still at w0 while this sentence of the skipped stretch is read. */
+      note?: string }
   | { kind: 'lead'; r0: number; dur: number; episode: number; beat: number; enter: number; reveal: boolean; seq: number; w0: number }
   | { kind: 'line'; r0: number; dur: number; episode: number; beat: number; line: number; seq: number; w0: number; w1: number; typing: number;
       /** The recording of this line, when it has one: the segment lasts as long as the voice. */

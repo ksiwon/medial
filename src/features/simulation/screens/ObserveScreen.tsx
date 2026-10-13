@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import type { AttemptDetail, DomainEvent, VillagePayload } from '../api/types';
 import DayTimeline from '../components/DayTimeline';
 import DaySummary from '../components/DaySummary';
@@ -15,7 +15,7 @@ import SceneStage from '../scene/SceneStage';
 import type { Beat, Episode } from '../scene/types';
 import { ledgerAt, routineAt, timelineAt } from '../selectors/dayLedger';
 import { beckon, pill } from '../ui/primitives';
-import { accentA, night, radius } from '../ui/theme';
+import { accentA, night, px, radius } from '../ui/theme';
 
 // 사례와 서비스 경험 - watching one run.
 //
@@ -120,6 +120,33 @@ const DashLayer = styled.div<{ $on: boolean }>`
   pointer-events: ${(p) => (p.$on ? 'auto' : 'none')};
 `;
 
+/** What happened in the stretch the day passes over: the clock stands still and one sentence says it. */
+const NoteVeil = styled.div`
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: ${px(48)};
+  background: rgba(21, 21, 15, 0.84);
+  border-radius: inherit;
+  animation: ${keyframes`from { opacity: 0 } to { opacity: 1 }`} 0.35s ease both;
+  pointer-events: none;
+`;
+
+const NoteCard = styled.div`
+  max-width: ${px(960)};
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: ${px(20)};
+  word-break: keep-all;
+  animation: ${keyframes`from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: none }`} 0.5s ease 0.1s both;
+  > b { ${pill('md')} background: ${night.accent}; color: #fff; font-weight: 800; letter-spacing: 0.04em; }
+  > p { margin: 0; font-size: ${px(40)}; font-weight: 800; line-height: 1.35; letter-spacing: -0.03em; color: ${night.ink}; text-wrap: balance; }
+`;
+
 const DayEnd = styled.div`
   flex: none;
   display: flex;
@@ -182,6 +209,9 @@ export default function ObserveScreen({ village, detail, events, art, dayEnd: en
 
   const segment = position?.segment ?? null;
   const inScene = segment !== null && segment.kind !== 'map';
+  // A skipped stretch's note: "09:30 · sentence" is the time, then what the record says it was.
+  const noteRaw = segment?.kind === 'map' ? segment.note ?? null : null;
+  const note = noteRaw ? { when: noteRaw.split(' · ')[0], text: noteRaw.split(' · ').slice(1).join(' · ') } : null;
   // The last scene stays mounted while it fades out into the map.
   const last = useRef<{ episode: Episode; beat: Beat; e: number; b: number } | null>(null);
   if (reel && segment && segment.kind !== 'map') {
@@ -302,6 +332,11 @@ export default function ObserveScreen({ village, detail, events, art, dayEnd: en
 
       <Right>
         <Stage>
+          {note && (
+            <NoteVeil key={segment!.r0} aria-live="polite">
+              <NoteCard><b>{note.when}</b><p>{note.text}</p></NoteCard>
+            </NoteVeil>
+          )}
           {/* Not mounted behind a scene: an invisible layer would still be read out,
               and would say twice what the judgement panel says once. */}
           <DashLayer $on={!inScene}>

@@ -91,6 +91,7 @@ P1 = "P1 한상덕(72세 농부): 퉁명스러운 반말체. P6를 '니'라 부�
 P6 = "P6 남기웅(56세 이장): 친근한 반말체. P1을 '형님'이라 부르고 걱정과 책임감이 있다"
 P7 = "P7 고성진(58세 어부): 존대체(~습니더). 겁이 나서 급하다"
 P9 = "P9 임태식(58세 펜션 운영): 점잖은 존대체(~예, ~네예). 순하고 조금 지쳐 있다"
+P12 = "P12 남대현(63세 가게 주인): 눈치 빠르고 실속 있는 반말체. 말이 빠르다"
 NURSE = "HC_NURSE 보건소 담당자: 표준어 존댓말, 정중하고 간결"
 MEDIAL = "MEDial: 표준어 해요체, 또렷하고 간결하게 다정"
 
@@ -204,6 +205,33 @@ BRIEFS: dict[str, dict] = {
         "order": "남기웅이 여기 있었다고 → 한상덕이 못 들었고 멀쩡하다, 무슨 일이냐 → 남기웅이 MEDial이 연락 안 된다 했고 이맘때 밭이라 했다 → 한상덕이 내 일과를 어떻게 아느냐, 세 번째다 → 남기웅이 자기는 MEDial이 알려 준 대로 왔다 → 한상덕이 다음부터 일과를 전하지 말라고 못 박는다",
         "ending": "한상덕의 못 박는 한마디로 끝낸다. 작별 인사 없음.",
     },
+    "d3-m2-search": {
+        "cast": ["MEDial", "P12"], "turns": (3, 3),
+        "scene": "3일차 13:14, 전화. 식당 주인 조기범 어르신이 허리가 아픈데 먹던 약이 떨어졌고 가게를 비울 수 없다. MEDial이 약을 받아다 줄 사람을 찾는 중이고, 지금 읍내에 나와 있는 남대현 어르신께 전화한다.",
+        "people": [MEDIAL, P12],
+        "facts": [
+            "조기범 어르신은 허리가 아픈데 먹던 약이 떨어졌고, 식당을 비울 수 없어 약국에 못 간다",
+            "MEDial이 먼저 세 사람에게 부탁했지만 안 됐다: 고성재 어르신은 항구에서 자리를 뜰 수 없고, 신경태 어르신은 가게에 매여 못 나가고, 한상덕 어르신은 전화를 받지 않았다. 그래서 네 번째로 남대현 어르신께 연락한다",
+            "남대현은 지금 읍내에 나와 있고, 여섯 시쯤 읍내에서 출발한다. 돌아오는 길에 약국에 들를 수 있다",
+            "받아다 줄 약은 진통제와 파스이고, 조기범 어르신 가게로 가져다주면 된다",
+            "약은 18:30쯤 가게에 도착할 예정이고, MEDial이 조기범 어르신께 전한다",
+        ],
+        "order": "MEDial이 사정(약이 떨어졌고 가게를 못 비운다)과 부탁 → 남대현이 읍내에 있다며 어디로 뭘 하면 되느냐고 → MEDial이 약(진통제·파스)과 가져다줄 곳을 말하고, 앞서 세 분이 안 돼서 연락드렸다고 설명 → 남대현이 여섯 시쯤 출발하니 들르겠다고 → MEDial이 18:30쯤 도착이라 조기범 어르신께 전하겠다 → 남대현의 짧은 확인",
+        "ending": "남대현의 짧은 한마디로 끝낸다. 수고·작별 인사 없음. 6줄.",
+    },
+    "d3-m2-chief": {
+        "cast": ["MEDial", "P6"], "turns": (3, 3),
+        "scene": "3일차 13:08, 전화. 식당 주인 조기범 어르신이 허리가 아픈데 먹던 약이 떨어졌고 가게를 비울 수 없다. MEDial이 마을 순찰 중인 이장 남기웅에게 읍내 약국에서 약을 받아다 달라고 부탁한다.",
+        "people": [MEDIAL, P6],
+        "facts": [
+            "조기범 어르신은 허리가 아픈데 먹던 약이 떨어졌고, 식당을 비울 수 없어 약국에 못 간다",
+            "남기웅은 지금 마을 순찰 중이다. 순찰을 마치면 두 시쯤 차로 읍내 약국에 다녀올 수 있다",
+            "받아다 줄 약은 약과 파스이고, 조기범 어르신 가게로 가져다주면 된다",
+            "약은 15:09쯤 가게에 도착할 예정이고, MEDial이 조기범 어르신께 전한다",
+        ],
+        "order": "MEDial이 사정과 부탁 → 남기웅이 지금 순찰 중이라고 → MEDial이 순찰을 마친 뒤에는 가능한지 묻고 무슨 약인지 말한다 → 남기웅이 두 시쯤 차로 다녀오겠다고 → MEDial이 15:09쯤 도착이라 조기범 어르신께 전하겠다 → 남기웅의 짧은 확인",
+        "ending": "남기웅의 짧은 확인 한마디로 끝낸다. 수고·작별 인사 없음. 6줄.",
+    },
     "d3-e2": {
         "cast": ["P7", "MEDial"], "turns": (3, 4), "max_lines": 8,
         "scene": "3일차 20:32, 고성재 어르신 댁(전화). 형 고성진이 동생 고성재가 쓰러져 있는 것을 보고, MEDial의 안내를 받으며 응급처치를 한다. 구급대는 20:56에 도착한다.",
@@ -228,15 +256,15 @@ ATTEMPT_SCENES: dict[str, list[tuple[str, str]]] = {
     "att-exh-0-0": [("t2", "d2-t2"), ("w3", "d2-w3-factonly")],
     "att-exh-0-1": [("t2", "d2-t2"), ("w3", "d2-w3-disclosed")],
     "att-exh-0-2": [("t2", "d2-t2"), ("w3", "d2-w3-disclosed")],
-    "att-exh-0-0-0": [("w3", "d3-w3-nurse"), ("e2", "d3-e2")],
-    "att-exh-0-0-1": [("w3", "d3-w3-factonly"), ("e2", "d3-e2")],
-    "att-exh-0-0-2": [("w3", "d3-w3-factonly"), ("e2", "d3-e2")],
-    "att-exh-0-1-0": [("w3", "d3-w3-factonly"), ("e2", "d3-e2")],
-    "att-exh-0-1-1": [("w3", "d3-w3-disclosed"), ("e2", "d3-e2")],
-    "att-exh-0-1-2": [("w3", "d3-w3-disclosed"), ("e2", "d3-e2")],
-    "att-exh-0-2-0": [("w3", "d3-w3-factonly"), ("e2", "d3-e2")],
-    "att-exh-0-2-1": [("w3", "d3-w3-disclosed"), ("e2", "d3-e2")],
-    "att-exh-0-2-2": [("w3", "d3-w3-disclosed"), ("e2", "d3-e2")],
+    "att-exh-0-0-0": [("w3", "d3-w3-nurse"), ("m2@788", "d3-m2-search"), ("e2", "d3-e2")],
+    "att-exh-0-0-1": [("w3", "d3-w3-factonly"), ("m2@788", "d3-m2-chief"), ("e2", "d3-e2")],
+    "att-exh-0-0-2": [("w3", "d3-w3-factonly"), ("m2@788", "d3-m2-chief"), ("e2", "d3-e2")],
+    "att-exh-0-1-0": [("w3", "d3-w3-factonly"), ("m2@788", "d3-m2-chief"), ("e2", "d3-e2")],
+    "att-exh-0-1-1": [("w3", "d3-w3-disclosed"), ("m2@788", "d3-m2-chief"), ("e2", "d3-e2")],
+    "att-exh-0-1-2": [("w3", "d3-w3-disclosed"), ("m2@788", "d3-m2-chief"), ("e2", "d3-e2")],
+    "att-exh-0-2-0": [("w3", "d3-w3-factonly"), ("m2@788", "d3-m2-chief"), ("e2", "d3-e2")],
+    "att-exh-0-2-1": [("w3", "d3-w3-disclosed"), ("m2@788", "d3-m2-chief"), ("e2", "d3-e2")],
+    "att-exh-0-2-2": [("w3", "d3-w3-disclosed"), ("m2@788", "d3-m2-chief"), ("e2", "d3-e2")],
 }
 
 
@@ -347,23 +375,30 @@ def apply(path):
         scenes = json.loads(row[0])
         order = []
         for rid, v in scenes_new.items():
-            found = [e for e in scenes["episodes"] if e["requestId"] == rid
-                     and len({l["speaker"] for b in e["beats"] for l in b["lines"] if l["kind"] == "say"}) == 2]
+            # "w3" is the request's two-person scene; "m2@788" is the episode of that request starting at 13:08.
+            name, _, minute = rid.partition("@")
+            found = [e for e in scenes["episodes"] if e["requestId"] == name
+                     and (not minute or e["startMs"] // 60000 == int(minute))
+                     and (minute or len({l["speaker"] for b in e["beats"] for l in b["lines"] if l["kind"] == "say"}) == 2)]
             if not found:
-                raise SystemExit("%s: no two-person scene %s" % (attempt_id, rid))
+                raise SystemExit("%s: no scene %s" % (attempt_id, rid))
             ep = found[0]
+            # A search over several beats (asking one person after another) is told in one call to the last
+            # person asked: what the earlier ones answered is in that call's brief and in the note before it.
+            speakers = {l["speaker"] for l in v["lines"]}
+            keep = [b for b in ep["beats"] if speakers <= {l["speaker"] for l in b["lines"] if l["kind"] == "say"}]
+            ep["beats"] = keep[-1:] if keep else ep["beats"][:1]
             beat = ep["beats"][0]
             new = v["lines"]
             # Only the places of the people in the scene: a call between MEDial and the health
             # centre does not also show the field where the person they talk about is.
-            speakers = {l["speaker"] for l in new}
             here = [f for f in beat["frames"] if speakers & set(f["who"])]
             if here:
                 beat["frames"] = here
             old = [l for l in beat["lines"] if l["kind"] == "say"]
             beat["lines"] = [{"seq": old[min(i * len(old) // len(new), len(old) - 1)]["seq"], "kind": "say",
                               "speaker": l["speaker"], "text": l["text"]} for i, l in enumerate(new)]
-            order.append(rid)
+            order.append("%s@%d" % (name, ep["startMs"] // 60000))
         scenes["featured"] = order
         scenes["model"] = "gpt-6.1-sol"
         conn.execute("update attempts set scenes_json=? where id=?", (json.dumps(scenes, ensure_ascii=False), attempt_id))

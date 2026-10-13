@@ -35,6 +35,12 @@ export const REVEAL_STEP_S = 0.35;
 export const REVEAL_STEPS = 4;
 
 const MINUTE = 60_000;
+
+/** What the record's `featured` list holds: one episode, by its request and the minute it starts. */
+export const episodeKey = (e: Pick<Episode, 'requestId' | 'startMs'>) => `${e.requestId}@${Math.floor(e.startMs / MINUTE)}`;
+
+/** How long a note of the skipped stretch stays: long enough to read it whole. */
+const noteDuration = (text: string, pace: number) => clamp(2.2 + 0.06 * text.length, 3.5, 6.5) * pace;
 /** A segment before it is placed on the reel. */
 type Draft = Segment extends infer S ? (S extends Segment ? Omit<S, 'r0'> : never) : never;
 const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x));
@@ -63,9 +69,10 @@ interface Input {
   dayEndMs: number;
   pace: number;
   /**
-   * Which requests are played as scenes. Absent, all of them. The rest stay in `episodes` - the ledger,
-   * the bars and the evaluations count them - but the day runs past them on the map, so a visitor with
-   * five minutes sees the story and not every call. Chosen by the record (StoredScenes.featured).
+   * Which episodes are played as scenes (episodeKey). Absent, all of them. The rest stay in `episodes` - the
+   * ledger, the bars and the evaluations count them - but the day runs past them on the map, so a visitor
+   * with a few minutes sees the story and not every call. A skipped episode that carries a note stops the
+   * map for the time it takes to read it. Chosen by the record (StoredScenes.featured).
    */
   featured?: ReadonlySet<string> | null;
   /** The recordings, by 'speaker|text'. A line found here is paced by its voice. */
@@ -83,10 +90,21 @@ export function buildReel({ episodes, events, timeline, dayStartMs, dayEndMs, pa
 
   let clock = dayStartMs;
   // The first scene that is actually played: the opening stretch of map runs up to it.
-  const firstPlayed = episodes.findIndex((episode) => !featured || featured.has(episode.requestId));
+  const firstPlayed = episodes.findIndex((episode) => !featured || featured.has(episodeKey(episode)));
   episodes.forEach((episode, e) => {
     // Not played: the day goes on over the map, and the clock passes it without a scene.
-    if (featured && !featured.has(episode.requestId)) return;
+    if (featured && !featured.has(episodeKey(episode))) {
+      if (episode.note) {
+        // The day runs on to this stretch, then stands still on it while the sentence is read.
+        if (episode.startMs > clock) {
+          const run = mapSegment(clock, episode.startMs, null, 0, errands);
+          if (run.dur > 0) push(run);
+          clock = episode.startMs;
+        }
+        push(mapSegment(episode.startMs, episode.startMs, null, noteDuration(episode.note, pace), errands, episode.note));
+      }
+      return;
+    }
     const fromMap = episode.startMs - clock >= MAP_GAP_MS || e === firstPlayed;
     if (fromMap) push(mapSegment(clock, episode.startMs, episode.startMs, 1, errands));
     episode.beats.forEach((beat, b) => {
@@ -169,7 +187,7 @@ function errandsOf(timeline: Timeline | null) {
 /** A map shot, integrated minute by minute so the playhead can be turned back
  *  into a clock time exactly. `next` is the scene it leads into, if any. */
 function mapSegment(w0: number, w1: number, next: number | null, minDur: number,
-                    errand: (ms: number) => boolean): Draft {
+                    errand: (ms: number) => boolean, note?: string): Draft {
   const cum = [0];
   for (let m = w0; m < w1; m += MINUTE) {
     const rate = next !== null && next - m < 8 * MINUTE ? 12 : errand(m) ? 40 : 360;
@@ -177,7 +195,7 @@ function mapSegment(w0: number, w1: number, next: number | null, minDur: number,
   }
   const raw = cum[cum.length - 1];
   const scale = raw > 0 ? Math.max(1, minDur / raw) : 1;
-  return { kind: 'map', w0, w1, cum: cum.map((c) => c * scale), dur: Math.max(minDur, raw) };
+  return { kind: 'map', w0, w1, cum: cum.map((c) => c * scale), dur: Math.max(minDur, raw), ...(note ? { note } : {}) };
 }
 
 function mapTime(segment: Extract<Segment, { kind: 'map' }>, offset: number): number {
