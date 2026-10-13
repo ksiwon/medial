@@ -1,16 +1,16 @@
 """Rewrites the words of exhibition scenes in the voice of the village, one scene at a time.
 
-    python scripts/gen_dialogue.py att-exh-0 w2 w3         # print only; nothing is stored
-    python scripts/gen_dialogue.py att-exh-0 w2 --out x.json
+    python scripts/gen_dialogue.py one att-exh-0 w2 w3     # print only; nothing is stored
+    python scripts/gen_dialogue.py all --out lines.json    # every attempt's two scenes -> a file
+    python scripts/gen_dialogue.py apply lines.json        # put them in the record (backs it up first)
 
 What it keeps: the scene's frame (who is where), its cast, and the facts that are said -
 what MEDial told, what the person answered, who went where. What it rewrites: the
 wording and the number of turns. The rules are the researcher's (2026-10-10):
 two people speak, each three or four times; a line is one breath (about thirty
 characters); the old record's way of speaking is the standard (the lines already in the
-record are the examples given to the model). It reads the record and prints; it does
-not write the record. A later step replaces the lines once the researcher has read
-them.
+record are the examples given to the model). ``one`` and ``all`` only read the record and write a file; ``apply`` is the one step that
+writes it, after the researcher has read the lines, and keeps ``sim.before-dialogue.sqlite3``.
 """
 from __future__ import annotations
 
@@ -148,17 +148,96 @@ def problems(cast, new):
     return bad, count
 
 
+# Two scenes a day (researcher, 2026-10-10). The picks are the Tasks whose two speakers
+# are the people the day's evaluations are about: day 1 the check-in and the visit,
+# day 2 the hospital ride that is not found and the visit again, day 3 the visit
+# (a repeat the designer's rules change) and the emergency.
+PICK = {1: ["w2", "w3"], 2: ["t2", "w3"], 3: ["w3", "e2"]}
+RETRIES = 3
+
+
+def pick_episodes(scenes):
+    out = []
+    for rid in PICK[scenes["day"]]:
+        found = [e for e in scenes["episodes"] if e["requestId"] == rid
+                 and len({l["speaker"] for b in e["beats"] for l in b["lines"] if l["kind"] == "say"}) == 2]
+        if not found:
+            raise SystemExit("%s: no two-person scene %s" % (scenes["day"], rid))
+        out.append(found[0])
+    return out
+
+
+def generate_all(provider, policy, records, village, out_path):
+    cache: dict[str, list] = {}
+    result: dict[str, dict] = {}
+    for attempt_id, scenes in records.items():
+        result[attempt_id] = {}
+        for ep in pick_episodes(scenes):
+            _ep, old, cast = scene_of(scenes, ep["requestId"])
+            key = json.dumps([[l["speaker"], l["text"]] for l in old], ensure_ascii=False)
+            if key not in cache:
+                new = None
+                for _ in range(RETRIES):
+                    cast, _old, new, _n = write(provider, policy, records, village, attempt_id, ep["requestId"])
+                    bad, _count = problems(cast, new)
+                    if not bad:
+                        break
+                    print("  다시:", attempt_id, ep["requestId"], bad)
+                cache[key] = {"cast": cast, "lines": new, "problems": bad}
+            result[attempt_id][ep["requestId"]] = cache[key]
+        print(attempt_id, "day", scenes["day"], {r: len(v["lines"]) for r, v in result[attempt_id].items()})
+        Path(out_path).write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
+    return result
+
+
+def apply(result):
+    import shutil
+    backup = DB.with_name("sim.before-dialogue.sqlite3")
+    if not backup.exists():
+        shutil.copy2(DB, backup)
+    conn = sqlite3.connect(DB)
+    for attempt_id, scenes_new in result.items():
+        row = conn.execute("select scenes_json from attempts where id=?", (attempt_id,)).fetchone()
+        scenes = json.loads(row[0])
+        order = []
+        for ep in pick_episodes(scenes):
+            rid = ep["requestId"]
+            new = scenes_new[rid]["lines"]
+            beat = ep["beats"][0]
+            old = [l for l in beat["lines"] if l["kind"] == "say"]
+            beat["lines"] = [{"seq": old[min(i * len(old) // len(new), len(old) - 1)]["seq"], "kind": "say",
+                              "speaker": l["speaker"], "text": l["text"]} for i, l in enumerate(new)]
+            order.append(rid)
+        scenes["featured"] = order
+        scenes["model"] = "gpt-6.1-sol"
+        conn.execute("update attempts set scenes_json=? where id=?", (json.dumps(scenes, ensure_ascii=False), attempt_id))
+    conn.commit()
+    print("applied to", len(result), "attempts; backup", backup.name)
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("attempt")
-    ap.add_argument("requests", nargs="+")
-    ap.add_argument("--out")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    one = sub.add_parser("one")
+    one.add_argument("attempt")
+    one.add_argument("requests", nargs="+")
+    one.add_argument("--out")
+    allp = sub.add_parser("all")
+    allp.add_argument("--out", required=True)
+    ap_ = sub.add_parser("apply")
+    ap_.add_argument("file")
     args = ap.parse_args()
+    if args.cmd == "apply":
+        apply(json.load(open(args.file, encoding="utf-8")))
+        return
     provider = ModelProvider.from_env(env)
     policy = policy_from_env(env, mode="off")
     records = load()
     village = json.load(open(VILLAGE, encoding="utf-8"))
     print("model:", policy.headModelId)
+    if args.cmd == "all":
+        generate_all(provider, policy, records, village, args.out)
+        return
     result = {}
     for rid in args.requests:
         cast, old, new, _ = write(provider, policy, records, village, args.attempt, rid)
