@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import styled from 'styled-components';
 import {
   ASSESSMENT_LABELS,
@@ -390,6 +390,9 @@ const NO_ART: ReadonlySet<string> = new Set();
 /** How many residents a page holds: what fits side by side on a wall screen (five columns). More are a button away. */
 const PER_PAGE = 5;
 
+/** How long a page of evaluations stays before the walk goes on by itself, in seconds: the next page, or the choice. A touch goes at once. */
+export const EVAL_WAIT_S = 15;
+
 export default function EvaluationsScreen({
   detail,
   generation,
@@ -409,6 +412,24 @@ export default function EvaluationsScreen({
   const eventsById = useMemo(() => new Map((events?.list ?? []).map((e) => [e.id, e])), [events]);
   const [page, setPage] = useState(0);
   useEffect(() => setPage(0), [generation?.id]);
+  // The walk goes on by itself: each page waits EVAL_WAIT_S, then the next page or, from the last, the choice.
+  const pageCount = Math.ceil(asked.length / PER_PAGE);
+  // The countdown belongs to a page: after the page changes, the old count is never read for the new one.
+  const slot = `${generation?.id}:${page}`;
+  const [wait, setWait] = useState({ slot, left: EVAL_WAIT_S });
+  useEffect(() => {
+    setWait({ slot, left: EVAL_WAIT_S });
+    const tick = window.setInterval(() => setWait((w) => (w.slot === slot ? { slot, left: w.left - 1 } : w)), 1000);
+    return () => window.clearInterval(tick);
+  }, [slot]);
+  const left = wait.slot === slot ? wait.left : EVAL_WAIT_S;
+  const goOn = useRef(onGoToImprove);
+  goOn.current = onGoToImprove;
+  useEffect(() => {
+    if (wait.slot !== slot || wait.left > 0 || asked.length === 0) return;
+    if (page < pageCount - 1) setPage(page + 1);
+    else goOn.current();
+  }, [wait, slot, page, pageCount, asked.length]);
   const synthesis = generation?.synthesis ?? null;
   const parentDay = detail.generations.find((g) => g.id === generation?.parentGenerationId) ?? null;
   const before = useMemo(
@@ -501,6 +522,7 @@ export default function EvaluationsScreen({
             </Next>
           )}
           {pages > 1 && <Count>{page + 1} / {pages} · 주민 {asked.length}명</Count>}
+          <Count aria-live="off">{Math.max(left, 0)}초 뒤 자동으로 넘어갑니다</Count>
         </Actions>
       </Inner>
     </Sheet>

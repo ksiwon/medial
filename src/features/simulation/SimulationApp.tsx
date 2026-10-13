@@ -229,8 +229,8 @@ export default function SimulationApp() {
       {current && (
         <Foot>
           <span>화면 속 사람과 대화는 전부 시뮬레이션입니다 · 이름은 가명, 모습은 지어낸 그림입니다</span>
-          {/* The ending has its own way back (and goes by itself); every other screen of the walk has this one. */}
-          {!(screen === 'improve' && current.changeSets.length === 0) && <HomeButton onHome={it.restartPath} />}
+          {/* The way back to the opening film is on every screen of the walk, at the same place: the foot's right end. */}
+          <HomeButton onHome={it.restartPath} />
         </Foot>
       )}
     </Root>

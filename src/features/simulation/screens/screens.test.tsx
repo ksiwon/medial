@@ -18,7 +18,7 @@ import DayTimeline from '../components/DayTimeline';
 import MedialDashboard from '../components/MedialDashboard';
 import { ledgerAt, timelineAt } from '../selectors/dayLedger';
 import { changedRuleNames, openingOf, pathCount } from '../selectors/tree';
-import EvaluationsScreen from './EvaluationsScreen';
+import EvaluationsScreen, { EVAL_WAIT_S } from './EvaluationsScreen';
 import ObserveScreen from './ObserveScreen';
 
 // Mounting the two data-heavy screens against real API payloads built from the
@@ -259,6 +259,26 @@ describe('EvaluationsScreen', () => {
     expect(screen.getByText('이 평가를 보고 무엇을 고칠지 고른다')).toBeDefined();
     fireEvent.click(screen.getByText('← 앞 주민'));
     expect(container.querySelectorAll('article')).toHaveLength(5);
+  });
+
+  it('goes on by itself: the next page after the wait, the choice from the last page, and at once on a touch', () => {
+    vi.useFakeTimers();
+    const day = ordered()[0];
+    const asked = day.reviews.filter((r) => r.usageStatus !== 'no_experience');
+    if (asked.length === 0) { vi.useRealTimers(); return; }
+    const many = Array.from({ length: 6 }, (_, i) => ({ ...asked[0], id: `r${i}`, actorId: `P${i + 1}` }));
+    let chosen = 0;
+    const { container } = evaluations({ generation: { ...day, reviews: many }, onGoToImprove: () => { chosen += 1; } });
+    const wait = (s: number) => act(() => { vi.advanceTimersByTime(s * 1000); });
+    expect(screen.getByText(`${EVAL_WAIT_S}초 뒤 자동으로 넘어갑니다`)).toBeDefined();
+    wait(EVAL_WAIT_S - 1);
+    expect(container.querySelectorAll('article')).toHaveLength(5);
+    wait(2);
+    expect(container.querySelectorAll('article')).toHaveLength(1);
+    expect(chosen).toBe(0);
+    wait(EVAL_WAIT_S + 1);
+    expect(chosen).toBe(1);
+    vi.useRealTimers();
   });
 
   it('keeps the issue groups, with the original items they were made of', () => {
