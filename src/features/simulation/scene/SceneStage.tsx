@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { css, keyframes } from 'styled-components';
 import type { VillagePayload } from '../api/types';
 import { artIdOf, backdropOf, figureOf, FIT, type Fit } from './art';
 import { MEDIAL } from './beats';
@@ -144,7 +144,7 @@ const Column = styled.div`
 
 const MedColumn = styled(Column)`
   left: auto;
-  right: calc(var(--panel-w) + 16px);
+  right: calc(var(--panel-w) + 12px);
   bottom: 13%;
   width: 44%;
   align-items: flex-end;
@@ -170,6 +170,18 @@ const Bubble = styled.div<{ $side: 'r' | 'l' | 'med'; $old: boolean; $typing: bo
   transition: opacity 0.35s ease, transform 0.35s ease;
   animation: ${pop} 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2);
   > b { display: block; font-size: calc(12px * var(--k, 1)); font-weight: 800; color: ${(p) => (p.$side === 'med' ? night.accent : '#6b675f')}; margin-bottom: 2px; }
+  /* MEDial speaks from its own column: the tail runs to the judgement panel's edge. */
+  ${(p) => p.$side === 'med' && css`
+    &::after {
+      content: '';
+      position: absolute;
+      right: -12px;
+      bottom: 16px;
+      border: 8px solid transparent;
+      border-left: 12px solid ${night.accent};
+      border-right: none;
+    }
+  `}
 `;
 
 /** An act the log recorded without words. A subtitle, never a speech bubble. */

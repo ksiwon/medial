@@ -171,7 +171,7 @@ def problems(cast, new):
         if len(ln["text"]) > (44 if ln["speaker"] == "MEDial" else 36):
             bad.append("길다(%d자): %s" % (len(ln["text"]), ln["text"]))
     for c, n in count.items():
-        if not 3 <= n <= 4:
+        if not MIN_TURNS <= n <= 4:
             bad.append("%s %d번 말함" % (c, n))
     bad += repeats(new)
     return bad, count
@@ -182,6 +182,7 @@ def problems(cast, new):
 # day 2 the hospital ride that is not found and the visit again, day 3 the visit
 # (a repeat the designer's rules change) and the emergency.
 PICK = {1: ["w2", "w3"], 2: ["t2", "w3"], 3: ["w3", "e2"]}
+MIN_TURNS = 3
 RETRIES = 3  # a scene is asked again, with the problems named, up to this many times
 
 
@@ -308,6 +309,7 @@ EDIT = """당신은 한국 시골 마을(경남 남해, 경상도 사투리) 대
 - 마을 사람의 말은 경상도 사투리 그대로(지금 줄의 말버릇과 어미를 유지: ~제, ~카더라, ~아이가, ~노, ~습니더 등). MEDial은 표준어 해요체 존댓말로 또렷하고 간결하게, 어르신께 다정하되 늘어지지 않게.
 - 마을 사람의 한 줄은 공백 포함 30자 안팎(최대 36자), MEDial의 한 줄은 40자 안팎(최대 44자). 한 줄은 한 문장.
 - 이미 매끄러운 줄은 그대로 둔다. 따옴표·괄호 설명·이모지 금지.
+"추가 지시"가 있으면 위 규칙보다 우선한다.
 JSON으로 problems(발견한 문제 목록, 한국어 한 줄씩)와 lines(고친 전체 대화)를 돌려준다."""
 
 EDIT_SCHEMA = {
@@ -321,7 +323,33 @@ EDIT_SCHEMA = {
 }
 
 
+EXTRA = {
+    # day 2: the search for someone to drive Im Tae-sik is the point, and MEDial is the one who knows the bus.
+    ("t2", None): {
+        "반드시 담을 사실(원래 기록의 대사)": [
+            "임태식(P9): 오늘 08:00에 읍내 의원 진료가 있는데 본인은 운전을 하지 않는다",
+            "MEDial: 태워 줄 이웃을 찾아봤다",
+            "MEDial이 찾은 과정: 남대현 어르신(P12)이 아침에 차로 읍내에 나가신다. 그런데 임태식 어르신 댁까지 돌아가려면 우회가 8분이라 정해 둔 한도 5분을 넘어서 부탁드리지 않았다",
+            "결과: 태워 줄 사람이 없다 → 버스를 타야 한다",
+            "MEDial이 버스를 알려 준다: 읍내 가는 버스는 한 시간에 한 대라, 08:00 진료에 맞추려면 일찍 나가야 한다(구체적인 버스 시각은 모르니 말하지 않는다)",
+        ],
+        "추가 지시": "MEDial이 먼저 사정을 묻고, 이웃을 찾아본 과정(누구를 생각했고 왜 안 됐는지)을 쉽게 풀어 말한 뒤 버스 안내까지 한다. 버스는 MEDial이 알려 주는 쪽이다(임태식이 알려 주지 않는다). 임태식은 반응하고 자기 사정을 말하는 정도. 각자 3~4번.",
+    },
+    ("w3", "nurse"): {"추가 지시": "보건소 담당자는 사투리를 거의 쓰지 않는다. 표준어 존댓말(~습니다, ~겠습니다)로 정중하고 간결하게 말한다. 각자 3~4번."},
+    ("w3", "field"): {"추가 지시": "끝을 짧게 맺는다. 사실이 다 나오면 수고·작별 인사를 서로 주고받으며 늘이지 말고 한두 줄로 끝낸다. 이미 한 말(별일 없었다, 헛걸음, 자꾸 오면 불편하다)을 다시 꺼내지 않는다. 각자 2~4번."},
+}
+
+
+def extra_for(rid, cast):
+    if rid == "t2":
+        return EXTRA[("t2", None)]
+    if rid == "w3":
+        return EXTRA[("w3", "nurse" if "HC_NURSE" in cast else "field")]
+    return {}
+
+
 def polish_all(provider, policy, path, out, original_db):
+    global MIN_TURNS
     records = load(original_db)
     village = json.load(open(VILLAGE, encoding="utf-8"))
     result = json.load(open(path, encoding="utf-8"))
@@ -344,6 +372,9 @@ def polish_all(provider, policy, path, out, original_db):
                 if rid == "w3":
                     payload["참고"] = ("이 안부 확인 방문은 %d일차이고, 1일차부터 날마다 같은 일이 있었다. 이번이 %d번째다. 횟수를 말한다면 "
                                     "이 숫자(이번까지 %d번째, 앞서 %d번)와 어긋나게 말하지 않는다." % (day, day, day, day - 1))
+                extra = extra_for(rid, v["cast"])
+                payload.update(extra)
+                MIN_TURNS = 2 if "끝을 짧게" in extra.get("추가 지시", "") else 3
                 best, feedback = None, None
                 for _ in range(RETRIES + 1):
                     if feedback:
@@ -356,6 +387,8 @@ def polish_all(provider, policy, path, out, original_db):
                         break
                     feedback = {"문제": bad, "지난 줄": data["lines"]}
                     print("  다시:", attempt_id, rid, bad)
+                for l in best["lines"]:
+                    l["text"] = l["text"].replace("메디알", "MEDial")
                 cache[key] = {"cast": v["cast"], "lines": best["lines"], "problems": bad, "found": best["problems"]}
             scenes[rid] = cache[key]
         print(attempt_id, "polished")
