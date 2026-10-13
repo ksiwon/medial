@@ -64,7 +64,9 @@ export interface Episode {
 export type Segment =
   | { kind: 'map'; r0: number; dur: number; w0: number; w1: number; cum: number[] }
   | { kind: 'lead'; r0: number; dur: number; episode: number; beat: number; enter: number; reveal: boolean; seq: number; w0: number }
-  | { kind: 'line'; r0: number; dur: number; episode: number; beat: number; line: number; seq: number; w0: number; w1: number; typing: number }
+  | { kind: 'line'; r0: number; dur: number; episode: number; beat: number; line: number; seq: number; w0: number; w1: number; typing: number;
+      /** The recording of this line, when it has one: the segment lasts as long as the voice. */
+      audio?: string }
   | { kind: 'hold'; r0: number; dur: number; episode: number; beat: number; seq: number; w0: number; w1: number };
 
 export interface Position {

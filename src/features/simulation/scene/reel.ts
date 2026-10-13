@@ -1,4 +1,4 @@
-import type { DomainEvent, Timeline } from '../api/types';
+import type { DomainEvent, Timeline, VoiceClip } from '../api/types';
 import { MAP_GAP_MS } from './beats';
 import type { Episode, Position, Segment } from './types';
 
@@ -22,12 +22,15 @@ import type { Episode, Position, Segment } from './types';
 //     scene; at least 1 s between two scenes so the transition can be seen
 //   · 2026-10-07: everything but the reading times above made faster after
 //     visitors found the playback too slow. The reading times did not change.
+//   · a line that has a recording lasts as long as the voice: the dots 0.5 s, the clip, 0.35 s of air
+//     after it (2026-10-13; the lines of the played scenes were all spoken ahead of time)
 //   · pace multiplies the reading times only; the exhibition fixes it at 1 (2026-10-10:
 //     the speed buttons were removed, a visitor skips to the next scene instead)
 
 const TYPING_S = 0.5;
 const ENTER_S = 0.5;
 const CUT_S = 0.3;
+const VOICE_GAP_S = 0.35;
 export const REVEAL_STEP_S = 0.35;
 export const REVEAL_STEPS = 4;
 
@@ -65,9 +68,11 @@ interface Input {
    * five minutes sees the story and not every call. Chosen by the record (StoredScenes.featured).
    */
   featured?: ReadonlySet<string> | null;
+  /** The recordings, by 'speaker|text'. A line found here is paced by its voice. */
+  voices?: Record<string, VoiceClip> | null;
 }
 
-export function buildReel({ episodes, events, timeline, dayStartMs, dayEndMs, pace, featured = null }: Input): Reel {
+export function buildReel({ episodes, events, timeline, dayStartMs, dayEndMs, pace, featured = null, voices = null }: Input): Reel {
   const segments: Segment[] = [];
   let total = 0;
   const push = (segment: Draft) => {
@@ -93,11 +98,14 @@ export function buildReel({ episodes, events, timeline, dayStartMs, dayEndMs, pa
       const n = beat.lines.length;
       beat.lines.forEach((line, i) => {
         const say = line.kind === 'say';
+        const clip = say ? voices?.[`${line.speaker}|${line.text}`] : undefined;
         push({ kind: 'line', episode: e, beat: b, line: i, seq: line.seq,
                w0: beat.startMs + ((beat.endMs - beat.startMs) * i) / n,
                w1: beat.startMs + ((beat.endMs - beat.startMs) * (i + 1)) / n,
                typing: say ? TYPING_S * pace : 0,
-               dur: say ? sayDuration(line.text, pace) : captionDuration(line.text, pace) });
+               ...(clip ? { audio: clip.file } : {}),
+               dur: clip ? (TYPING_S + clip.seconds + VOICE_GAP_S) * pace
+                 : say ? sayDuration(line.text, pace) : captionDuration(line.text, pace) });
       });
       if (!n) push({ kind: 'hold', episode: e, beat: b, seq: beat.lastSeq, w0: beat.startMs, w1: beat.endMs, dur: 1.6 * pace });
     });

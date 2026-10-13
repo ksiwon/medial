@@ -48,6 +48,13 @@ def test_health_says_no_model_is_called():
     assert body["modelCalls"] == "none"
 
 
+def test_a_synthetic_village_has_no_voices_and_no_file_is_served_by_name():
+    api = client()
+    assert api.get("/api/sim/village/voice").json() == {"lines": {}}
+    assert api.get("/api/sim/village/voice/anything.wav").status_code == 404
+    assert api.get("/api/sim/village/voice/..%2Fmanifest.json").status_code == 404
+
+
 def test_the_catalog_publishes_the_editable_policy_fields():
     api = client()
     body = api.get("/api/sim/catalog").json()

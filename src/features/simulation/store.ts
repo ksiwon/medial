@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { api, ApiError } from './api/client';
 import { usePlayback } from './scene/playback';
+import { preloadVoices } from './scene/voice';
 import { learnPeople, learnPlaces } from './selectors/story';
-import type { AttemptDetail, DomainEvent, VillagePayload } from './api/types';
+import type { AttemptDetail, DomainEvent, VillagePayload, VoiceClip } from './api/types';
 
 // The workspace: the village, and the stored runs that have been opened. Watching
 // a run is the playback store's (scene/playback.ts); this one only loads what it
@@ -19,6 +20,8 @@ interface SimState {
   village: VillagePayload | null;
   /** Names of the scene pictures that exist for this village. */
   art: Set<string>;
+  /** The recorded voice of each spoken line, by 'speaker|text'; empty when there are none. */
+  voices: Record<string, VoiceClip>;
   attempts: Record<string, Loaded>;
   activeId: string | null;
 
@@ -39,6 +42,7 @@ export const useSimStore = create<SimState>((set, get) => ({
   error: null,
   village: null,
   art: new Set(),
+  voices: {},
   attempts: {},
   activeId: null,
 
@@ -47,13 +51,16 @@ export const useSimStore = create<SimState>((set, get) => ({
     if (get().status !== 'idle') return;
     set({ status: 'loading', error: null });
     try {
-      const [village, art] = await Promise.all([
+      const [village, art, voice] = await Promise.all([
         api.village(),
         // Pictures are optional: without them every figure is the schematic one.
         api.art().catch(() => ({ names: [] as string[] })),
+        // So are voices: a line without a recording is paced by reading time and silent.
+        api.voices().catch(() => ({ lines: {} as Record<string, VoiceClip> })),
       ]);
       learnPlaces(Object.fromEntries(Object.entries(village.places).map(([k, v]) => [k, v.label])));
-      set({ village, art: new Set(art.names), status: 'ready' });
+      preloadVoices(voice.lines);
+      set({ village, art: new Set(art.names), voices: voice.lines, status: 'ready' });
     } catch (error) {
       set({ status: 'error', error: describe(error) });
     }
@@ -65,7 +72,7 @@ export const useSimStore = create<SimState>((set, get) => ({
     // Whose names the lines use: only a record that carries them sets any.
     learnPeople(loaded.detail.scenes?.people);
     set({ activeId: id });
-    if (village) usePlayback.getState().load({ attemptId: id, ...loaded, village });
+    if (village) usePlayback.getState().load({ attemptId: id, ...loaded, village, voices: get().voices });
   },
 
   prefetch: async (id) => {

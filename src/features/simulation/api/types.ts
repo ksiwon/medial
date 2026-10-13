@@ -405,6 +405,12 @@ export interface AttemptDetail {
   scenes?: StoredScenes | null;
 }
 
+/** One spoken line: its recording and how long it runs (seconds). */
+export interface VoiceClip {
+  file: string;
+  seconds: number;
+}
+
 /** A day recorded as scenes: what was said is stored with it, not in the log. */
 export interface StoredScenes {
   source: string;

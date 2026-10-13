@@ -20,7 +20,7 @@ from ..iteration.api import router as iteration_router, set_iteration_service
 from ..iteration.service import IterationService
 from ..mode import REAL, SIM_REFUSAL, database_path, refuses, server_mode
 from ..persistence.store import AttemptExists, CommandConflict
-from ..village import art_dir
+from ..village import art_dir, voice_dir
 from ..service import (
     ForkPrefixMismatch,
     SimulationService,
@@ -176,6 +176,21 @@ def village_art(name: str) -> Any:
     if name not in index:
         raise HTTPException(status_code=404, detail="이 그림은 없다: %s" % name)
     return FileResponse(art_dir() / index[name], media_type="image/webp")
+
+
+@router.get("/village/voice")
+def village_voice_index() -> dict[str, Any]:
+    """The spoken lines: which line has a recording and how long it is. A line missing here is
+    paced by reading time and played silently."""
+    return {"lines": get_service().village.voice_index()}
+
+
+@router.get("/village/voice/{file}")
+def village_voice(file: str) -> Any:
+    index = get_service().village.voice_index()
+    if file not in {row["file"] for row in index.values()}:
+        raise HTTPException(status_code=404, detail="이 음성은 없다: %s" % file)
+    return FileResponse(voice_dir() / file, media_type="audio/wav")
 
 
 @router.post("/attempts")

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { api, ApiError } from '../api/client';
-import type { AttemptDetail, DomainEvent, ViewMode, VillagePayload } from '../api/types';
+import type { AttemptDetail, DomainEvent, ViewMode, VillagePayload, VoiceClip } from '../api/types';
 import { buildEpisodes } from './beats';
 import { buildReel, type Reel } from './reel';
 import type { Position } from './types';
@@ -23,6 +23,8 @@ interface Run {
   detail: AttemptDetail;
   events: DomainEvent[];
   village: VillagePayload;
+  /** The recorded voice of each spoken line, by 'speaker|text'. */
+  voices?: Record<string, VoiceClip>;
 }
 
 interface PlaybackState {
@@ -72,6 +74,7 @@ function reelFor(run: Run, viewMode: ViewMode): Reel {
     // scenes the record says tell the story.
     pace: 1,
     featured: run.detail.scenes?.featured?.length ? new Set(run.detail.scenes.featured) : null,
+    voices: run.voices ?? null,
   });
 }
 

@@ -153,6 +153,25 @@ describe('buildReel', () => {
   });
 });
 
+describe('a line with a recorded voice', () => {
+  const said = () => episodes().flatMap((e) => e.beats.flatMap((b) => b.lines)).find((l) => l.kind === 'say')!;
+
+  it('lasts as long as the voice, and says which file to play', () => {
+    const line = said();
+    const voices = { [`${line.speaker}|${line.text}`]: { file: 'a.wav', seconds: 4.2 } };
+    const withVoice = buildReel({ episodes: episodes(), events, timeline, pace: 1, voices, ...DAY });
+    const segment = withVoice.segments.find((s) => s.kind === 'line' && s.audio === 'a.wav');
+    expect(segment?.dur).toBeCloseTo(0.5 + 4.2 + 0.35, 5);
+    // The same reel without any recording has no audio on that line.
+    expect(reel().segments.some((s) => s.kind === 'line' && s.audio)).toBe(false);
+  });
+
+  it('leaves every other line as it was', () => {
+    const voices = { 'nobody|nothing': { file: 'x.wav', seconds: 9 } };
+    expect(buildReel({ episodes: episodes(), events, timeline, pace: 1, voices, ...DAY }).total).toBe(reel().total);
+  });
+});
+
 describe('judgmentOf', () => {
   const decisions: DecisionRecord[] = [{
     id: 'dec-1', attemptId: 'att-test', simTimeMs: 0, policyId: 'p', question: '누가 확인할 것인가',

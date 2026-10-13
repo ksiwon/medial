@@ -1,5 +1,5 @@
 import type { IterationSession, SessionDetail } from './iteration';
-import type { AttemptDetail, CommandResult, DomainEvent, VillagePayload } from './types';
+import type { AttemptDetail, CommandResult, DomainEvent, VillagePayload, VoiceClip } from './types';
 
 // What the screens read from the local API. Every call here is a read of a
 // stored record - except `command`, which moves a stored attempt's playhead
@@ -54,6 +54,9 @@ export const api = {
    *  the map: served locally, never bundled. Empty for a synthetic village. */
   art: () => request<{ names: string[] }>('/village/art'),
   artUrl: (name: string) => `${BASE}/village/art/${encodeURIComponent(name)}`,
+  /** The spoken lines (scripts/tts_scenes.py → local-data/audio/), keyed 'speaker|text'. */
+  voices: () => request<{ lines: Record<string, VoiceClip> }>('/village/voice'),
+  voiceUrl: (file: string) => `${BASE}/village/voice/${encodeURIComponent(file)}`,
 
   attempt: (id: string) => request<AttemptDetail>(`/attempts/${id}`),
   events: (id: string, after = 0) =>

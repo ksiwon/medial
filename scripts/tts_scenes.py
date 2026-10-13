@@ -41,8 +41,10 @@ MODEL = "gemini-3.8-flash-tts"  # --model gemini-3.8-flash-lite-tts for a cheape
 #: MEDial's lines are delivered brisk; the residents' voices carry their own manner.
 STYLE = {"MEDial": "brisk and efficient, natural pace"}
 VOICE_KEY = {"MEDial": "MEDIAL"}
-STYLES = ROOT / "local-data" / "tts-styles.json"
-DIALOGUE = ROOT / "local-data" / "runs" / "dialogue-2026-10-13.json"
+# The final dialogue and the acting notes are committed (synthetic lines of pseudonymous residents):
+# fixtures/exhibition/. The voices and the audio are not - they live in local-data/.
+STYLES = ROOT / "fixtures" / "exhibition" / "tts-styles.json"
+DIALOGUE = ROOT / "fixtures" / "exhibition" / "dialogue.json"
 
 NOTES = """당신은 음성 연출가다. 마을 장면의 대사 한 줄마다 '연기 지시'를 짧은 영어로 쓴다. 이 지시는 Gemini TTS의 speech_metadata.style 로 들어가 그 줄의 감정·속도·세기만 정한다.
 
@@ -264,6 +266,11 @@ def main():
         if path.exists():
             manifest["%s|%s" % (speaker, text)] = {"file": path.name, "seconds": round(seconds(path), 2)}
     (AUDIO / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=1), encoding="utf-8")
+    if len(manifest) == len(todo):  # every line has its sound: what is left over is from an older voice or text
+        keep = {row["file"] for row in manifest.values()}
+        for old in AUDIO.glob("*.wav"):
+            if old.name not in keep:
+                old.unlink()
     print("made %d, have %d of %d lines%s" % (made, len(manifest), len(todo), "; rejected %d" % len(rejected) if rejected else ""))
 
 

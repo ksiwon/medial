@@ -138,9 +138,17 @@ npm run e2e
 | `src/features/simulation/` | 세 화면 · 지도 · 장면 재생(`scene/`) · 주민 평가 · 규칙 편집기 · 비교 · 현장 기록 · sim의 기록 목록 |
 | `run-sim.*` · `run-real.*` · `scripts/launch.sh` | 두 버전의 실행 파일과 그 공통 스크립트 |
 | `scripts/freeze_sim.py` | real의 기록을 sim이 재생할 사본으로 얼린다 |
+| `scripts/gen_dialogue.py` · `tts_voices.py` · `tts_scenes.py` | 전시 대화록(장면 설명 → 줄) · 주민별 목소리 · 줄별 음성 만들기. 확정 대본은 `fixtures/exhibition/` |
 | `scripts/art.mjs` | 관찰 화면의 장면 그림(배경·인물 레이어)을 그린다 → `local-data/art/` |
 | `scripts/import_village/` | 원자료 → 정규화 레지스트리 (출처 검증 포함) |
 | `docs/research/` | 지금 기준인 연구 문서 · 데이터 계약 · 설계 결정 기록 |
 | `docs/research/history/` | 지나온 기획·명세·프롬프트 (역사. 지금 구조를 정당화하지 않습니다) |
 | `docs/presentations/` | 발표자료 · 연구노트 (캡처와 PDF는 커밋하지 않습니다) |
 | `local-data/` | 원자료에서 파생된 레지스트리, 두 버전의 실행 기록(`runs/`), 장면 그림(`art/`). **커밋하지 않습니다** |
+
+
+## 전시장 브라우저 (소리)
+
+장면의 대사는 미리 만들어 둔 음성(`local-data/audio/`, git 밖)을 화면이 틀어 준다. 브라우저는 사용자가 한 번 만지기 전에는 소리를 막으니, 전시장 PC의 브라우저는
+자동 재생을 허용해 띄운다. Chrome: `chrome --kiosk --autoplay-policy=no-user-gesture-required http://localhost:5180/`. 소리가 막혀도 장면은 소리 없이 계속 간다.
+음성 파일이 없으면(합성 마을 · 파일 없음) 대사는 읽는 시간만큼 조용히 흐른다.

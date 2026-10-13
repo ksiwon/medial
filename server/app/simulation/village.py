@@ -329,6 +329,27 @@ class Village:
         return {name: row["file"] for name, row in rows.items()
                 if (folder / row["file"]).exists()}
 
+    def voice_index(self) -> dict[str, dict[str, Any]]:
+        """The spoken lines of the exhibition: ``{"speaker|text": {"file", "seconds"}}``, or empty.
+
+        Each line of a played scene was spoken once ahead of time (``scripts/tts_scenes.py``) into
+        git-ignored ``local-data/audio/<model>/`` (override with ``MEDIAL_VOICE_DIR``); the screen plays
+        the file and paces the line by its real length. Like the pictures, they belong to *this*
+        village's pseudonymous residents, so a synthetic village gets none.
+        """
+        if self.is_synthetic:
+            return {}
+        folder = voice_dir()
+        manifest = folder / "manifest.json"
+        if not manifest.exists():
+            return {}
+        rows = json.loads(manifest.read_text(encoding="utf-8"))
+        return {line: row for line, row in rows.items() if (folder / row["file"]).exists()}
+
+
+def voice_dir() -> Path:
+    return Path(os.environ.get("MEDIAL_VOICE_DIR") or REPO_ROOT / "local-data" / "audio" / "gemini-3.8-flash-tts")
+
 
 def art_dir() -> Path:
     return Path(os.environ.get("MEDIAL_ART_DIR") or REPO_ROOT / "local-data" / "art")

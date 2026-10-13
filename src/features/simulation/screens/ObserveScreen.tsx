@@ -9,6 +9,7 @@ import { formatClock, medialKnowledge, placeLabel, posesAt } from '../positions'
 import { openRequests, requestColour } from '../scene/colours';
 import { judgmentOf } from '../scene/judgment';
 import { DAY_START_MS, usePlayback } from '../scene/playback';
+import { useLineVoice } from '../scene/voice';
 import { REVEAL_STEP_S, REVEAL_STEPS } from '../scene/reel';
 import SceneStage from '../scene/SceneStage';
 import type { Beat, Episode } from '../scene/types';
@@ -167,6 +168,7 @@ export default function ObserveScreen({ village, detail, events, art, dayEnd: en
   const [mapWidth, setMapWidth] = useState<number | null>(null);
   const reel = p.reel;
   const position = p.position;
+  useLineVoice(position, p.playing);
 
   const atMs = position?.atMs ?? DAY_START_MS;
   const cursorSeq = position?.cursorSeq ?? 0;

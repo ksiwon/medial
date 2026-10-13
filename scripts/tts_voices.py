@@ -48,7 +48,9 @@ SPECS: dict[str, tuple[str, str]] = {
     "P3": ("male", man(65, "retired man") + "Plain, steady mid-low voice with an ordinary tone; mild, even-tempered and a little reserved, speaks at a natural pace."),
     "P4": ("male", man(56, "factory manager") + "Crisp, clear mid-high voice; businesslike, quick, a little anxious and responsible."),
     "P5": ("male", man(68, "fisherman and farmer") + "Raspy, sea-weathered low voice; laconic, slow, gruff but warm."),
-    "P6": ("male", man(56, "village head") + "Warm mid-pitched baritone; hearty, dependable, friendly authority, medium pace."),
+    # P6 is the first design the researcher approved by ear ("the early one was much better"): the heavy-dialect
+    # template made him worse, so he keeps his own plainer description.
+    "P6": ("male", "A 56-year-old man from a small fishing village in Namhae County, South Gyeongsang Province, a lifelong native speaking authentic Namhae Gyeongsang dialect in a hearty, dependable, slightly gruff voice, the kind of neighbour everyone relies on."),
     "P7": ("male", "A 58-year-old man who works on a fishing boat. Mild, soft-spoken, mid-low voice; shy and careful." + LIFE),
     "P8": ("male", "A 57-year-old man who works on a fishing boat. Lighter, higher-pitched voice, brisk and easygoing." + LIFE),
     "P9": ("male", man(58, "pension owner") + "Smooth, polite soft baritone; mild and slightly tired, more refined than the others."),
