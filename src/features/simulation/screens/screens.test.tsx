@@ -385,9 +385,12 @@ describe('foldAsking', () => {
 });
 
 describe('IntroScreen', () => {
-  it('has nothing to press, and says it is a simulation', () => {
-    render(<IntroScreen onFinish={noop} />);
-    expect(screen.queryAllByRole('button').length).toBe(0);
+  it('has one small button, to skip it, and says it is a simulation', () => {
+    let finished = 0;
+    render(<IntroScreen onFinish={() => { finished += 1; }} />);
+    expect(screen.queryAllByRole('button').length).toBe(1);
+    fireEvent.click(screen.getByRole('button', { name: /건너뛰기/ }));
+    expect(finished).toBe(1);
     expect(screen.getByText(/시뮬레이션입니다/)).toBeDefined();
   });
 });
@@ -515,11 +518,13 @@ describe('ChoiceScreen', () => {
   it('ends the walk with the days taken and a way back', () => {
     render(<ChoiceScreen detail={tree} current={tree.generations[2]} onChoose={noop} onRestart={noop} />);
     expect(screen.getByText('사흘이 끝났습니다')).toBeDefined();
-    expect(screen.getByText('처음부터 다른 길로')).toBeDefined();
-    // The closing words take the page after the days have been read, or when the visitor asks.
+    // The days first, with one button on; the closing words take the page when the visitor asks,
+    // and then the way back to the opening film is the one button.
+    expect(screen.queryByText('처음으로')).toBeNull();
     expect(screen.queryByText('서비스 디자이너의 일은 선택의 연속입니다.')).toBeNull();
     fireEvent.click(screen.getByText('마무리 보기 →'));
     expect(screen.getByText('서비스 디자이너의 일은 선택의 연속입니다.')).toBeDefined();
+    expect(screen.getByText('처음으로')).toBeDefined();
     expect(screen.getByText(/Resident Simulator는 현장에 가기 전에/)).toBeDefined();
   });
 });

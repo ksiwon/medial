@@ -24,7 +24,12 @@ const PILL = {
 
 const ping = keyframes`
   0% { transform: scale(1); opacity: 0.85; }
-  70%, 100% { transform: scale(1.16, 1.5); opacity: 0; }
+  70%, 100% { transform: scale(1.22, 1.75); opacity: 0; }
+`;
+
+const glow = keyframes`
+  0%, 100% { box-shadow: 0 0 0 0 ${accentA(0)}; }
+  50% { box-shadow: 0 0 ${px(28)} ${px(8)} ${accentA(0.55)}; }
 `;
 
 /**
@@ -40,11 +45,14 @@ export const beckon = css`
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    border: 2px solid ${accentA(0.9)};
+    border: 4px solid ${accentA(0.95)};
     pointer-events: none;
     animation: ${ping} 1.6s ease-out infinite;
   }
+  animation: ${glow} 1.6s ease-in-out infinite;
   @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    box-shadow: 0 0 ${px(20)} ${px(4)} ${accentA(0.5)};
     &::before { animation: none; opacity: 1; inset: -4px; border-color: ${accentA(0.5)}; }
   }
 `;

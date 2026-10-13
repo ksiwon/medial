@@ -184,6 +184,26 @@ const Disclaimer = styled.div`
   z-index: 2;
 `;
 
+/** The one control of the film: small, in the corner, for a visitor who has seen it. */
+const Skip = styled.button`
+  position: absolute;
+  top: clamp(64px, 4.8vw, 172px);
+  right: clamp(24px, 4vw, 120px);
+  z-index: 2;
+  padding: 0.45em 1.1em;
+  border: 1px solid ${inkA(0.35)};
+  border-radius: ${radius.pill};
+  background: rgba(21, 21, 15, 0.55);
+  font: inherit;
+  font-size: clamp(12px, 0.85vw, 44px);
+  font-weight: 700;
+  color: ${inkA(0.9)};
+  cursor: pointer;
+  &:hover { background: rgba(21, 21, 15, 0.8); color: ${PAPER}; }
+  &:focus-visible { outline: 2px solid ${PAPER}; outline-offset: 4px; }
+  &::after { content: '→'; margin-left: 0.5em; }
+`;
+
 const Brand = styled.div`
   position: absolute;
   top: clamp(20px, 1.5vw, 60px);
@@ -490,6 +510,7 @@ export default function IntroScreen({ onFinish }: Props) {
     <Stage aria-label="MEDial 소개">
       <Brand>MEDial</Brand>
       <Disclaimer>그림과 대화는 모두 시뮬레이션입니다 · 이름은 가명입니다</Disclaimer>
+      <Skip type="button" onClick={() => finish.current()}>건너뛰기</Skip>
 
       <Scene $on={on(0)}>
         <Picture $src={src('FARM')} $on={on(0)} />

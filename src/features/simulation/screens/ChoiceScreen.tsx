@@ -7,7 +7,7 @@ import { nameList, personName, withParticle } from '../selectors/story';
 import { accentA, inkA, night, px, radius, space } from '../ui/theme';
 import { Inner, PageHead, Sheet } from '../ui/page';
 import Portrait from '../ui/Portrait';
-import { pill } from '../ui/primitives';
+import { beckon, pill } from '../ui/primitives';
 
 // Choosing the next version, in a record whose versions branch (selectors/tree).
 //
@@ -30,6 +30,7 @@ const Cards = styled.div`
 
 const Take = styled.span`
   ${pill('lg')}
+  ${beckon}
   align-self: end;
   justify-self: start;
   height: ${px(48)};
@@ -218,6 +219,7 @@ const Close = styled.div`
 
 const Again = styled.button`
   ${pill('lg')}
+  ${beckon}
   align-self: flex-start;
   height: ${px(56)};
   padding: 0 ${space.xl};
@@ -228,18 +230,6 @@ const Again = styled.button`
   border: none;
   background: ${night.accent};
   color: #ffffff;
-`;
-
-const More = styled.button`
-  margin-left: ${px(20)};
-  font: inherit;
-  font-size: ${px(16)};
-  font-weight: 700;
-  cursor: pointer;
-  border: none;
-  background: none;
-  color: ${night.mute};
-  &:hover { color: ${night.ink}; }
 `;
 
 const Idle = styled.span`
@@ -335,8 +325,9 @@ function Ending({ detail, current, onRestart, art }: { detail: SessionDetail; cu
           </>
         )}
         <div>
-          <Again onClick={onRestart}>처음부터 다른 길로</Again>
-          {!closing && <More onClick={() => setClosing(true)}>마무리 보기 →</More>}
+          {closing
+            ? <Again onClick={onRestart}>처음으로</Again>
+            : <Again onClick={() => setClosing(true)}>마무리 보기 →</Again>}
           <Idle aria-live="off">{left}초 뒤 처음으로 돌아갑니다</Idle>
         </div>
       </Inner>
