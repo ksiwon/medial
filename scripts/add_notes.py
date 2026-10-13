@@ -33,7 +33,7 @@ def note_for(episode, group):
     if rid == "w2":
         if "이웃" in episode["title"]:
             return "%s · 이웃 세 분께 한상덕 어르신 확인을 부탁했지만, 두 분은 자리를 뜰 수 없었고 한 분은 전화를 받지 않았습니다" % t
-        return "%s · 이장 남기웅 님께 한상덕 어르신 집에 가 확인해 달라고 부탁했습니다" % t
+        return "%s · 이장 남기웅 씨께 한상덕 어르신 집에 가 확인해 달라고 부탁했습니다" % t
     if rid == "t1":
         return "%s · 임태식 어르신이 오늘 08:00 읍내 의원 진료가 있는데 운전을 못 해, 태워 줄 사람을 요청했습니다" % t
     if rid == "t3":
@@ -47,12 +47,12 @@ def note_for(episode, group):
         if "P12" in who and "P11" in who:
             return "%s · 남대현 어르신이 읍내 약국에서 진통제와 파스를 가져다 드렸습니다" % t
         if "P6" in who and "P11" in who:
-            return "%s · 이장 남기웅 님이 읍내 약국에서 약과 파스를 가져다 드렸습니다" % t
+            return "%s · 이장 남기웅 씨가 읍내 약국에서 약과 파스를 가져다 드렸습니다" % t
         return None
     if rid == "e1":
-        return "%s · 고성재 어르신 집 안내 시계가 이상을 감지했고, 가까이 사는 형 고성진 님께 가 보라고 요청했습니다" % t
+        return "%s · 고성재 어르신 집 안내 시계가 이상을 감지했고, 가까이 사는 형 고성진 씨께 가 보라고 요청했습니다" % t
     if rid == "e3":
-        return "%s · 구급대가 도착해 환자를 인계했고, MEDial이 이장에게 알렸습니다" % t
+        return "%s · 구급대가 도착해 고성재 어르신을 인계했고, MEDial이 이장에게 알렸습니다" % t
     return None
 
 
