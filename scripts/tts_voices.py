@@ -2,6 +2,7 @@
 
     python scripts/tts_voices.py list                 # who has a voice (local-data/tts-voices.json)
     python scripts/tts_voices.py make P3 P7           # (re)design these voices; the old id is deleted
+    python scripts/tts_voices.py calibrate P1 P3      # measure a voice; draw again until its pitch is back at the approved one
 
 All twelve residents are lifelong people of Eunjeom, Namhae County (South Gyeongsang), so each one has a
 heavy Gyeongsang dialect; what tells them apart is age, pitch, timbre, pace and temper. A person's
@@ -99,17 +100,73 @@ def make(names):
         FILE.write_text(json.dumps(ids), encoding="utf-8")
 
 
+#: The median pitch (Hz) each voice had when the researcher approved it by ear (2026-10-13). A voice
+#: is a random draw from its description, so a re-made one is measured and drawn again until it is
+#: back within TOLERANCE of this - the pitch is the one thing that was complained about (P1 too high).
+TARGET_HZ = {"P1": 132, "P2": 139, "P3": 121, "P4": 115, "P5": 107, "P6": 129, "P7": 95, "P8": 115,
+             "P9": 114, "P10": 174, "P11": 130, "P12": 126}
+TOLERANCE = 14
+SAMPLE = "내가 언제 밭에 오는지 남한테까지 알리나? 영 싫네."
+
+
+def pitch(path: Path) -> float:
+    """Median fundamental frequency of the voiced parts (autocorrelation; for comparing voices, not for science)."""
+    import struct
+    import wave
+
+    with wave.open(str(path)) as w:
+        rate, raw = w.getframerate(), w.readframes(w.getnframes())
+    x = struct.unpack("<%dh" % (len(raw) // 2), raw)
+    n, found = int(rate * 0.04), []
+    for start in range(0, len(x) - n * 2, n):
+        frame = x[start:start + n * 2]
+        if sum(abs(v) for v in frame) / len(frame) < 800:
+            continue
+        best = max(range(int(rate / 350), int(rate / 60)),
+                   key=lambda lag: sum(frame[i] * frame[i + lag] for i in range(n)))
+        found.append(rate / best)
+    found.sort()
+    return found[len(found) // 2] if found else 0.0
+
+
+def calibrate(names):
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import tts_scenes as t
+
+    ids = json.load(open(FILE))
+    out = ROOT / "local-data" / "audio" / "calibration"
+    out.mkdir(parents=True, exist_ok=True)
+    for name in names:
+        for attempt in range(6):
+            path = out / ("%s.wav" % name)
+            path.write_bytes(t.speak(key(), ids[name], SAMPLE, "", "gemini-3.8-flash-tts"))
+            t.trim(path)
+            hz = pitch(path)
+            ok = abs(hz - TARGET_HZ[name]) <= TOLERANCE
+            print("%-4s attempt %d: %3.0f Hz (target %d) %s" % (name, attempt + 1, hz, TARGET_HZ[name], "ok" if ok else "again"))
+            if ok:
+                break
+            make([name])
+            ids = json.load(open(FILE))
+        else:
+            print(name, "stayed outside the tolerance after 6 tries; left as is")
+
+
 def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("list")
     mk = sub.add_parser("make")
     mk.add_argument("names", nargs="+")
+    cal = sub.add_parser("calibrate")
+    cal.add_argument("names", nargs="+")
     args = ap.parse_args()
     if args.cmd == "list":
         have = json.load(open(FILE)) if FILE.exists() else {}
         for name, (gender, text) in SPECS.items():
             print("%-9s %-6s %s %s" % (name, gender, have.get(name, "(none)"), text[:60]))
+    elif args.cmd == "calibrate":
+        calibrate(args.names)
     else:
         make(args.names)
 

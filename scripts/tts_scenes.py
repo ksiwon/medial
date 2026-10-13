@@ -188,6 +188,21 @@ def trim(path: Path) -> None:
         w.writeframes(bytes(body))
 
 
+def check(path: Path, text: str) -> str | None:
+    """Why a clip must not be kept, or None. A clip is bad when it is silent or the wrong length."""
+    import audioop
+
+    with wave.open(str(path)) as w:
+        raw, sr = w.readframes(w.getnframes()), w.getframerate()
+    secs = len(raw) / 2 / sr
+    chars = len(re.sub(r"\s", "", text))
+    if secs < 0.6 or secs > 0.45 * chars + 3:
+        return "length %.1fs for %d characters" % (secs, chars)
+    if audioop.rms(raw, 2) < 500:
+        return "silent"
+    return None
+
+
 def seconds(path: Path) -> float:
     with wave.open(str(path)) as w:
         return w.getnframes() / w.getframerate()
@@ -221,7 +236,7 @@ def main():
         return
     AUDIO = AUDIO_ROOT / args.model
     AUDIO.mkdir(parents=True, exist_ok=True)
-    key, made, manifest = api_key(), 0, {}
+    key, made, manifest, failures, rejected = api_key(), 0, {}, 0, []
     for speaker, text, voice, say, style, name in todo:
         path = AUDIO / ("%s.wav" % name)
         if not path.exists():
@@ -233,13 +248,23 @@ def main():
                 trim(path)
             except urllib.error.HTTPError as e:
                 print("HTTP", e.code, e.read()[:200].decode("utf-8", "ignore"))
-                break
+                failures += 1
+                if failures >= 3 or e.code == 429:  # a quota or a broken request: stop, do not burn calls
+                    break
+                continue
             made += 1
-            time.sleep(0.5)
+            why = check(path, say)
+            if why:
+                print("rejected %s|%s: %s" % (speaker, text, why))
+                path.unlink()
+                made -= 0
+                rejected.append((speaker, text))
+                continue
+            time.sleep(0.3)
         if path.exists():
             manifest["%s|%s" % (speaker, text)] = {"file": path.name, "seconds": round(seconds(path), 2)}
     (AUDIO / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=1), encoding="utf-8")
-    print("made %d, have %d of %d lines" % (made, len(manifest), len(todo)))
+    print("made %d, have %d of %d lines%s" % (made, len(manifest), len(todo), "; rejected %d" % len(rejected) if rejected else ""))
 
 
 if __name__ == "__main__":
