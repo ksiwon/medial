@@ -10,8 +10,9 @@ import type { GenerationDetail, SessionDetail } from '../api/iteration';
 import type { AttemptDetail, DomainEvent, StoredScenes, VillagePayload } from '../api/types';
 import { usePlayback } from '../scene/playback';
 import { learnPeople, personName, sentenceFor } from '../selectors/story';
-import ChoiceScreen, { RESULT_S, SUMMARY_IDLE_S } from './ChoiceScreen';
-import IntroScreen from './IntroScreen';
+import ChoiceScreen, { CLOSE_SAY, RESULT_S, SUMMARY_IDLE_S, closingAt } from './ChoiceScreen';
+import narration from '../../../../fixtures/exhibition/narration.json';
+import IntroScreen, { INTRO_SAY, layoutOf } from './IntroScreen';
 import JudgmentPanel, { foldAsking } from '../scene/JudgmentPanel';
 import DayTimeline from '../components/DayTimeline';
 import MedialDashboard from '../components/MedialDashboard';
@@ -392,6 +393,37 @@ describe('IntroScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: /건너뛰기/ }));
     expect(finished).toBe(1);
     expect(screen.getByText(/시뮬레이션입니다/)).toBeDefined();
+  });
+});
+
+describe('the narrator of the film and of the closing page', () => {
+  it('reads exactly the big captions: the fixture that is spoken and the screens agree', () => {
+    const said = (key: 'intro' | 'outro') => narration.scenes[key].lines.map((l) => l.text);
+    expect(said('intro')).toEqual([...INTRO_SAY]);
+    expect(said('outro')).toEqual([...CLOSE_SAY]);
+  });
+
+  const clips = (seconds: number) => Object.fromEntries([...INTRO_SAY, ...CLOSE_SAY].map((t, i) => [`NARRATOR|${t}`, { file: `n${i}.wav`, seconds }]));
+
+  it('runs the film as it was with no recordings', () => {
+    const l = layoutOf(null);
+    expect(l.ms).toEqual([5500, 5500, 12000, 11500, 9000, 15000]);
+    expect(l.two).toEqual([{ until: 5.2, next: 5.9 }, { until: 4.8, next: 7.6 }]);
+    expect(l.cues.flat()).toEqual([]);
+  });
+
+  it('lasts as long as the voice, and the second caption waits for the first to be said', () => {
+    const l = layoutOf(clips(9));
+    expect(l.two[0].next).toBeGreaterThan(9);
+    expect(l.ms.every((ms, i) => ms >= layoutOf(null).ms[i])).toBe(true);
+    expect(l.ms[0]).toBeGreaterThanOrEqual((0.5 + 9) * 1000);
+    expect(l.cues.flat().length).toBe(8);
+  });
+
+  it('brings the closing lines up one after another, each after the one before is said', () => {
+    expect(closingAt(null)).toEqual([0.4, 3.4, 8.4, 13.4]);
+    const at = closingAt(clips(6));
+    expect(at[1] - at[0]).toBeGreaterThanOrEqual(6.7);
   });
 });
 

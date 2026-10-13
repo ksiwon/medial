@@ -7,13 +7,26 @@ import bgmUrl from '../assets/bgm.mp3';
 // autoplay allowed (README, "전시장 브라우저").
 
 const VOLUME = 0.12;
+/** While the narrator speaks the pad drops to this share of its volume. */
+const DUCKED = 0.4;
+
+let bed: HTMLAudioElement | null = null;
+let ducked = false;
+const level = () => { if (bed) bed.volume = ducked ? VOLUME * DUCKED : VOLUME; };
+
+/** Lowers the background sound under a narration, and lifts it again after. */
+export function duckAmbient(on: boolean) {
+  ducked = on;
+  level();
+}
 
 export function useAmbient() {
   useEffect(() => {
     if (typeof Audio === 'undefined') return undefined;
     const audio = new Audio(bgmUrl);
     audio.loop = true;
-    audio.volume = VOLUME;
+    bed = audio;
+    level();
     const start = () => {
       const result = audio.play() as Promise<void> | undefined;
       if (result && typeof result.catch === 'function') result.catch(() => {});
@@ -25,6 +38,7 @@ export function useAmbient() {
       window.removeEventListener('pointerdown', start);
       window.removeEventListener('keydown', start);
       audio.pause();
+      bed = null;
     };
   }, []);
 }

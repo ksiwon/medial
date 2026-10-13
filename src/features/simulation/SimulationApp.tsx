@@ -191,7 +191,7 @@ export default function SimulationApp() {
       )}
 
       {!current && (
-        <IntroScreen
+        <IntroScreen voices={s.voices}
           onFinish={() => { const first = openingOf(detail); if (first) void it.choose(first.id); }} />
       )}
 
@@ -223,7 +223,7 @@ export default function SimulationApp() {
       )}
 
       {current && screen === 'improve' && (
-        <ChoiceScreen detail={detail} current={current} art={s.art} onChoose={(id) => void it.choose(id)}
+        <ChoiceScreen detail={detail} current={current} art={s.art} voices={s.voices} onChoose={(id) => void it.choose(id)}
           onRestart={it.restartPath} />
       )}
       {current && (

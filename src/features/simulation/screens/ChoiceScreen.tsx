@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { api } from '../api/client';
+import type { VoiceClip } from '../api/types';
+import { narrationOf, playNarration } from '../scene/voice';
 import type { GenerationDetail, SessionDetail } from '../api/iteration';
 import { childFor, dayFacts, dayName, pathCount, pathTo } from '../selectors/tree';
 import { nameList, personName, withParticle } from '../selectors/story';
@@ -210,12 +212,28 @@ const Close = styled.div`
   gap: ${space.lg};
   word-break: keep-all;
   > * { opacity: 0; animation: ${rise} 0.8s ease forwards; }
-  > strong { font-size: ${px(48)}; font-weight: 800; letter-spacing: -0.035em; line-height: 1.25; color: ${night.ink}; animation-delay: 0.4s; }
+  > strong { font-size: ${px(48)}; font-weight: 800; letter-spacing: -0.035em; line-height: 1.25; color: ${night.ink}; }
   > p { margin: 0; font-size: ${px(24)}; line-height: 1.7; color: ${inkA(0.86)}; }
-  > p:nth-of-type(1) { animation-delay: 3.4s; }
-  > p:nth-of-type(2) { animation-delay: 8.4s; }
-  > p:nth-of-type(3) { animation-delay: 13.4s; }
 `;
+
+/** The closing words, which the narrator reads (fixtures/exhibition/narration.json). A test keeps the two the same. */
+export const CLOSE_SAY = [
+  '서비스 디자이너의 일은 선택의 연속입니다.',
+  '어떤 규칙을 고르느냐에 따라, 같은 마을의 같은 하루가 어르신께는 전혀 다른 하루가 됩니다.',
+  '하지만 멀고 사람이 드문 마을에서는 오래 지켜보며 연구하기 어렵고, 선택의 결과를 기다릴 시간도 없습니다.',
+  'Resident Simulator는 현장에 가기 전에 그 선택을 먼저 살펴보게 하는 도구입니다. 사람을 대신하지 않고, 사람을 만나러 가기 전의 준비를 돕습니다.',
+] as const;
+
+/** When each closing line comes up (s): as before with no voice, else when the narrator is done with the one before. */
+export function closingAt(voices: Record<string, VoiceClip> | null | undefined): number[] {
+  const base = [0.4, 3.4, 8.4, 13.4];
+  const at = [base[0]];
+  for (let i = 1; i < base.length; i += 1) {
+    const clip = narrationOf(voices, CLOSE_SAY[i - 1]);
+    at.push(Math.max(base[i], at[i - 1] + (clip ? clip.seconds + 0.7 : 0)));
+  }
+  return at;
+}
 
 const Again = styled.button`
   ${pill('lg')}
@@ -247,6 +265,8 @@ interface Props {
   onRestart: () => void;
   /** Which pictures were drawn, for the faces on the cards. */
   art?: ReadonlySet<string>;
+  /** The recordings, by 'speaker|text': the narrator's closing words are read from here. */
+  voices?: Record<string, VoiceClip> | null;
 }
 
 const NO_ART: ReadonlySet<string> = new Set();
@@ -263,13 +283,24 @@ export const SUMMARY_IDLE_S = 90;
 export const RESULT_S = 24;
 
 /** The end of the walk: the days taken, and the way back - by itself, if nobody takes it. */
-function Ending({ detail, current, onRestart, art }: { detail: SessionDetail; current: GenerationDetail; onRestart: () => void; art: ReadonlySet<string> }) {
+function Ending({ detail, current, onRestart, art, voices }: { detail: SessionDetail; current: GenerationDetail; onRestart: () => void; art: ReadonlySet<string>; voices: Record<string, VoiceClip> | null }) {
+  const closeAt = useMemo(() => closingAt(voices), [voices]);
   const [left, setLeft] = useState(SUMMARY_IDLE_S);
   const [closing, setClosing] = useState(false);
   useEffect(() => {
     const timer = window.setTimeout(() => setClosing(true), RESULT_S * 1000);
     return () => window.clearTimeout(timer);
   }, []);
+  // The narrator reads the closing words as they come up; leaving the page stops it.
+  useEffect(() => {
+    if (!closing) return undefined;
+    const stops: (() => void)[] = [];
+    const timers = CLOSE_SAY.flatMap((text, i) => {
+      const clip = narrationOf(voices, text);
+      return clip ? [window.setTimeout(() => stops.push(playNarration(clip.file)), (closeAt[i] + 0.2) * 1000)] : [];
+    });
+    return () => { timers.forEach(window.clearTimeout); stops.forEach((stop) => stop()); };
+  }, [closing, voices, closeAt]);
   useEffect(() => {
     // Any touch or key starts the wait over: someone is still reading.
     const reset = () => setLeft(SUMMARY_IDLE_S);
@@ -289,10 +320,10 @@ function Ending({ detail, current, onRestart, art }: { detail: SessionDetail; cu
       <Inner>
         {closing ? (
           <Close>
-          <strong>서비스 디자이너의 일은 선택의 연속입니다.</strong>
-          <p>어떤 규칙을 고르느냐에 따라, 같은 마을의 같은 하루가 어르신께는 전혀 다른 하루가 됩니다.</p>
-          <p>하지만 멀고 사람이 드문 마을에서는 오래 지켜보며 연구하기 어렵고, 선택의 결과를 기다릴 시간도 없습니다.</p>
-          <p>Resident Simulator는 현장에 가기 전에 그 선택을 먼저 살펴보게 하는 도구입니다. 사람을 대신하지 않고, 사람을 만나러 가기 전의 준비를 돕습니다.</p>
+          <strong style={{ animationDelay: `${closeAt[0]}s` }}>{CLOSE_SAY[0]}</strong>
+          <p style={{ animationDelay: `${closeAt[1]}s` }}>{CLOSE_SAY[1]}</p>
+          <p style={{ animationDelay: `${closeAt[2]}s` }}>{CLOSE_SAY[2]}</p>
+          <p style={{ animationDelay: `${closeAt[3]}s` }}>{CLOSE_SAY[3]}</p>
         </Close>
         ) : (
           <>
@@ -336,8 +367,8 @@ function Ending({ detail, current, onRestart, art }: { detail: SessionDetail; cu
   );
 }
 
-export default function ChoiceScreen({ detail, current, onChoose, onRestart, art = NO_ART }: Props) {
-  if (current.changeSets.length === 0) return <Ending detail={detail} current={current} onRestart={onRestart} art={art} />;
+export default function ChoiceScreen({ detail, current, onChoose, onRestart, art = NO_ART, voices = null }: Props) {
+  if (current.changeSets.length === 0) return <Ending detail={detail} current={current} onRestart={onRestart} art={art} voices={voices} />;
 
   const labels = new Map(current.ruleCatalog.map((r) => [r.ruleType, r.label]));
   return (

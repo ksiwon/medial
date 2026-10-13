@@ -59,6 +59,9 @@ SPECS: dict[str, tuple[str, str]] = {
     "P12": ("male", man(63, "shop owner") + "Smooth, slightly nasal mid-high voice; quick-witted, sly, businesslike."),
     # Not residents: the system's voice and the health centre's nurse speak standard Korean.
     "MEDIAL": ("female", "A composed, bright woman in her mid-30s speaking clear standard Korean at a brisk, natural conversational pace, with a crisp, friendly, matter-of-fact tone; confident and efficient, not soft, not breathy, not sing-song."),
+    # The narrator of the opening film and the closing page: not a resident, not MEDial (a bright woman), so the
+    # audience never takes the narration for the system speaking. Low, standard Korean, brisk because time is short.
+    "NARRATOR": ("male", "A man in his 40s narrating a design exhibition film in clear standard Seoul Korean: a low, calm, steady voice with a smooth documentary delivery, brisk and confident, no dialect, no sing-song."),
     "HC_NURSE": ("female", "A woman in her mid-40s who works at a small rural clinic in South Korea, speaking clear standard Korean with a calm, courteous, professional voice."),
 }
 

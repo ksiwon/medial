@@ -1,7 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import styled, { css, keyframes } from 'styled-components';
 import { api } from '../api/client';
+import type { VoiceClip } from '../api/types';
 import { EUNJEOM, KAIST, KOREA, NAMHAE, NAMHAE_TOWN, NEAR } from '../intro/koreaMap';
+import { narrationOf, playNarration } from '../scene/voice';
 import PillText from '../ui/PillText';
 import { accentA, font, inkA, night, radius } from '../ui/theme';
 
@@ -27,9 +29,69 @@ const INK = night.deep;
 const PAPER = '#f6f1e8';
 const ACCENT = night.accent;
 
-/** Scene lengths in ms. They add up to the film. */
-const SCENE_MS = [5500, 5500, 12000, 11500, 9000, 15000];
-const INTRO_TOTAL_MS = SCENE_MS.reduce((a, b) => a + b, 0);
+/**
+ * The big captions, which the narrator reads (fixtures/exhibition/narration.json, spoken once ahead of time).
+ * The sub-lines and the chips are not read. A test keeps these and the fixture the same.
+ */
+export const INTRO_SAY = [
+  '병원은 읍내에, 주민은 낮이면 밭과 바다에 있습니다.',
+  '병원은 멀고, 아파도 참습니다.',
+  '병원과 이웃 사이를 이어 줄 사람이 마을엔 없고, 그 일은 이장님 한 분께 몰려 이미 가득 찼습니다.',
+  '그 조율을 맡아 안부를 살피고 사람을 이어 줄 AI, MEDial이 필요합니다.',
+  '이런 서비스를 들이려면 주민 대상 실증 연구가 중요합니다.',
+  '하지만 멀어서 자주 가기 어렵고, 어르신께 오래 묻기도 어렵습니다.',
+  '시뮬레이션으로 은점마을을 먼저 만들었습니다. 실제 인터뷰로 서로 다른 주민 12명을 세웠습니다.',
+  '여러분은 이 마을의 서비스 디자이너입니다.',
+] as const;
+
+/** Scene lengths in ms with no voice: they are the least a scene runs. */
+const BASE_MS = [5500, 5500, 12000, 11500, 9000, 15000];
+
+/** A caption is spoken from just after it appears; the next one appears when the narrator is done. */
+const LEAD_S = 0.5;
+const GAP_S = 0.7;
+const TAIL_S = 1.4;
+
+interface Layout {
+  /** Each scene's length, ms. */
+  ms: number[];
+  total: number;
+  /** When the two captions of scenes 2 and 3 are on: the first is gone at `until`, the second arrives at `next`. */
+  two: { until: number; next: number }[];
+  /** The narration of each scene: the clip and the second it starts. */
+  cues: { file: string; at: number }[][];
+}
+
+/**
+ * The film is paced by its narrator: a scene lasts as long as the voice reading it, and the second caption of a
+ * scene waits for the first to be said. With no recordings the clip lengths are 0 and this is the film as it was
+ * (5.2 s / 5.9 s in scene 2, 4.8 s / 7.6 s in scene 3, the lengths in BASE_MS).
+ */
+export function layoutOf(voices: Record<string, VoiceClip> | null | undefined): Layout {
+  const clip = (i: number) => narrationOf(voices, INTRO_SAY[i]);
+  const sec = (i: number) => clip(i)?.seconds ?? 0;
+  const cue = (i: number, at: number) => { const c = clip(i); return c ? [{ file: c.file, at }] : []; };
+  const end = (at: number, i: number) => at + sec(i) + TAIL_S;
+
+  const u2 = Math.max(5.2, LEAD_S + sec(2) + 0.4);
+  const n2 = u2 + 0.7;
+  const u3 = Math.max(4.8, LEAD_S + sec(4) + 0.4);
+  const n3 = Math.max(7.6, u3 + 0.8);
+  const ms = [
+    Math.max(BASE_MS[0], end(LEAD_S, 0) * 1000),
+    Math.max(BASE_MS[1], end(LEAD_S, 1) * 1000),
+    Math.max(BASE_MS[2], end(n2 + 0.3, 3) * 1000),
+    Math.max(BASE_MS[3], end(n3 + 0.3, 5) * 1000),
+    Math.max(BASE_MS[4], end(LEAD_S, 6) * 1000),
+    Math.max(BASE_MS[5], end(LEAD_S, 7) * 1000),
+  ];
+  return {
+    ms,
+    total: ms.reduce((a, b) => a + b, 0),
+    two: [{ until: u2, next: n2 }, { until: u3, next: n3 }],
+    cues: [cue(0, LEAD_S), cue(1, LEAD_S), [...cue(2, LEAD_S), ...cue(3, n2 + 0.3)], [...cue(4, LEAD_S), ...cue(5, n3 + 0.3)], cue(6, LEAD_S), cue(7, LEAD_S)],
+  };
+}
 
 const fade = keyframes`from { opacity: 0 } to { opacity: 1 }`;
 const rise = keyframes`from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: none }`;
@@ -485,9 +547,12 @@ const Route = styled.svg<{ $on: boolean }>`
 
 interface Props {
   onFinish: () => void;
+  /** The recordings of the narrator's lines, by 'NARRATOR|text'. Absent: the film runs silent at its base lengths. */
+  voices?: Record<string, VoiceClip> | null;
 }
 
-export default function IntroScreen({ onFinish }: Props) {
+export default function IntroScreen({ onFinish, voices = null }: Props) {
+  const layout = useMemo(() => layoutOf(voices), [voices]);
   const [scene, setScene] = useState(0);
   const [pictures, setPictures] = useState<Set<string>>(new Set());
 
@@ -501,10 +566,17 @@ export default function IntroScreen({ onFinish }: Props) {
   const finish = useRef(onFinish);
   finish.current = onFinish;
   useEffect(() => {
-    if (scene >= SCENE_MS.length) { finish.current(); return; }
-    const timer = window.setTimeout(() => setScene((n) => n + 1), SCENE_MS[scene]);
+    if (scene >= layout.ms.length) { finish.current(); return; }
+    const timer = window.setTimeout(() => setScene((n) => n + 1), layout.ms[scene]);
     return () => window.clearTimeout(timer);
-  }, [scene]);
+  }, [scene, layout]);
+
+  // The narrator: each caption is read as it comes up, and everything stops when the scene or the film does.
+  useEffect(() => {
+    const stops: (() => void)[] = [];
+    const timers = (layout.cues[scene] ?? []).map((cue) => window.setTimeout(() => stops.push(playNarration(cue.file)), cue.at * 1000));
+    return () => { timers.forEach(window.clearTimeout); stops.forEach((stop) => stop()); };
+  }, [scene, layout]);
 
   const src = (name: string) => (pictures.has(name) ? api.artUrl(name) : null);
   const on = (i: number) => scene === i;
@@ -558,16 +630,16 @@ export default function IntroScreen({ onFinish }: Props) {
       <Scene $on={on(2)}>
         <Picture $src={src('HOME')} $on={on(2)} />
         <Caption>
-          <Timed $on={on(2)} $at={0.2} $until={5.2}>
+          <Timed $on={on(2)} $at={0.2} $until={layout.two[0].until}>
             <Eyebrow $on={on(2)}>조율할 사람이 없다</Eyebrow>
             <Line $on={on(2)} $delay={0.3}>병원과 이웃 사이를 이어 줄 사람이 마을엔 없고, 그 일은 이장님 한 분께 몰려 이미 가득 찼습니다.</Line>
           </Timed>
         </Caption>
         <Caption>
-          <Timed $on={on(2)} $at={5.9}>
+          <Timed $on={on(2)} $at={layout.two[0].next - 0.1}>
             <Eyebrow $on={on(2)}>AI CARE ORCHESTRATOR</Eyebrow>
-            <Line $on={on(2)} $delay={6}>그 조율을 맡아 안부를 살피고 사람을 이어 줄 AI, MEDial이 필요합니다.</Line>
-            <Chain $on={on(2)} $delay={6.9}>
+            <Line $on={on(2)} $delay={layout.two[0].next}>그 조율을 맡아 안부를 살피고 사람을 이어 줄 AI, MEDial이 필요합니다.</Line>
+            <Chain $on={on(2)} $delay={layout.two[0].next + 0.9}>
               <span>안부 확인</span><i>→</i>
               <span>이웃 연결</span><i>→</i>
               <span>병원 동행</span>
@@ -581,15 +653,15 @@ export default function IntroScreen({ onFinish }: Props) {
         {on(3) && <PlaceFilm />}
         <Fog />
         <Caption>
-          <Timed $on={on(3)} $at={0.2} $until={4.8}>
+          <Timed $on={on(3)} $at={0.2} $until={layout.two[1].until}>
             <Eyebrow $on={on(3)}>실증 연구가 먼저</Eyebrow>
             <Line $on={on(3)} $delay={0.3}>이런 서비스를 들이려면 주민 대상 실증 연구가 중요합니다.</Line>
           </Timed>
         </Caption>
         <Caption>
-          <Timed $on={on(3)} $at={7.6}>
+          <Timed $on={on(3)} $at={layout.two[1].next}>
             <Eyebrow $on={on(3)}>하지만</Eyebrow>
-            <Line $on={on(3)} $delay={7.7}>멀어서 자주 가기 어렵고, 어르신께 오래 묻기도 어렵습니다.</Line>
+            <Line $on={on(3)} $delay={layout.two[1].next + 0.1}>멀어서 자주 가기 어렵고, 어르신께 오래 묻기도 어렵습니다.</Line>
           </Timed>
         </Caption>
       </Scene>
@@ -628,7 +700,7 @@ export default function IntroScreen({ onFinish }: Props) {
         </Caption>
       </Scene>
 
-      <Progress $ms={INTRO_TOTAL_MS} />
+      <Progress $ms={layout.total} />
     </Stage>
   );
 }

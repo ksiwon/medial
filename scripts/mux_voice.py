@@ -23,7 +23,9 @@ BGM = Path(__file__).resolve().parents[1] / "src" / "features" / "simulation" / 
 cmd = ["ffmpeg", "-y", "-i", video, "-stream_loop", "-1", "-i", str(BGM)]
 for p in plays:
     cmd += ["-i", f"{AUDIO / p['file']}"]
-chains = ["[1:a]volume=0.12[bgm]"]
+# The pad drops to 40% under the narrator, as the page does (ui/ambient.ts duckAmbient).
+duck = "+".join("between(t,%.2f,%.2f)" % ((p["at"] - t_page) / 1000, (p["at"] - t_page) / 1000 + (p["dur"] or 0)) for p in plays if p["file"].startswith(("intro_", "outro_")))
+chains = ["[1:a]volume=eval=frame:volume='0.12*(1-0.6*min(1,%s))'[bgm]" % (duck or "0")]
 labels = ["[bgm]"]
 for i, p in enumerate(plays, start=2):
     delay = max(0, int(p["at"] - t_page))

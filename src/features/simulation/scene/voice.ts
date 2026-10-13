@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { api } from '../api/client';
 import type { VoiceClip } from '../api/types';
+import { duckAmbient } from '../ui/ambient';
 import type { Position } from './types';
 
 // The voices of the scenes. Every said line of a played scene was spoken once ahead of time
@@ -61,3 +62,23 @@ export function useLineVoice(position: Position | null, playing: boolean) {
 
   useEffect(() => () => current.current?.pause(), []);
 }
+
+/**
+ * Plays one narration clip (the opening film's and the closing page's big captions) and keeps the background
+ * pad low under it. Returns what stops it: the film skipped or left, the page gone.
+ */
+export function playNarration(file: string): () => void {
+  const audio = audioOf(file);
+  if (!audio) return () => {};
+  audio.currentTime = 0;
+  duckAmbient(true);
+  const done = () => duckAmbient(false);
+  audio.addEventListener('ended', done, { once: true });
+  const result = audio.play() as Promise<void> | undefined;
+  if (result && typeof result.catch === 'function') result.catch(done);
+  return () => { audio.removeEventListener('ended', done); audio.pause(); done(); };
+}
+
+/** The clip of a narrator's line, by its text (the manifest keys it 'NARRATOR|text'). */
+export const narrationOf = (voices: Record<string, VoiceClip> | null | undefined, text: string): VoiceClip | null =>
+  voices?.[`NARRATOR|${text}`] ?? null;

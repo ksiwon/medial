@@ -40,12 +40,14 @@ VOICES = ROOT / "local-data" / "tts-voices.json"
 AUDIO_ROOT = ROOT / "local-data" / "audio"
 MODEL = "gemini-3.8-flash-tts"  # --model gemini-3.8-flash-lite-tts for a cheaper, separately-metered try
 #: MEDial's lines are delivered brisk; the residents' voices carry their own manner.
-STYLE = {"MEDial": "brisk and efficient, natural pace"}
+STYLE = {"MEDial": "brisk and efficient, natural pace",
+         "NARRATOR": "calm, low and steady narration, brisk pace, no pauses between phrases"}
 VOICE_KEY = {"MEDial": "MEDIAL"}
 # The final dialogue and the acting notes are committed (synthetic lines of pseudonymous residents):
 # fixtures/exhibition/. The voices and the audio are not - they live in local-data/.
 STYLES = ROOT / "fixtures" / "exhibition" / "tts-styles.json"
 DIALOGUE = ROOT / "fixtures" / "exhibition" / "dialogue.json"
+NARRATION = ROOT / "fixtures" / "exhibition" / "narration.json"  # the opening film's and the closing page's big captions
 
 NOTES = """당신은 음성 연출가다. 마을 장면의 대사 한 줄마다 '연기 지시'를 짧은 영어로 쓴다. 이 지시는 Gemini TTS의 speech_metadata.style 로 들어가 그 줄의 감정·속도·세기만 정한다.
 
@@ -84,7 +86,8 @@ def spoken(text: str) -> str:
 
     text = re.sub(r"(\d{1,2}):(\d{2})", clock, text)
     text = re.sub(r"(\d+)\s*분", lambda m: sino(int(m.group(1))) + " 분", text)
-    return text.replace("MEDial", "메디얼")
+    text = re.sub(r"(\d+)\s*명", lambda m: NATIVE_HOUR[int(m.group(1))] + " 명" if int(m.group(1)) in NATIVE_HOUR else m.group(0), text)
+    return text.replace("MEDial", "메디얼").replace("Resident Simulator", "레지던트 시뮬레이터").replace("AI", "에이아이")
 
 
 def planned():
@@ -93,7 +96,7 @@ def planned():
     One line, one file: ``<scene>_<NN>_<speaker>.wav`` (d1-w2_03_P6.wav is the third line of scene
     d1-w2, spoken by P6). Nothing is bundled, so the code can pick any line by itself.
     """
-    scenes = json.load(open(DIALOGUE, encoding="utf-8"))["scenes"]
+    scenes = {**json.load(open(DIALOGUE, encoding="utf-8"))["scenes"], **json.load(open(NARRATION, encoding="utf-8"))["scenes"]}
     voices = json.load(open(VOICES, encoding="utf-8"))
     notes = styles_of_record()
     for scene, body in scenes.items():
