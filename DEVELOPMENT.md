@@ -352,6 +352,8 @@ npm run e2e                            # 6 passed (Chromium, 합성 마을, .run
   **줄마다 파일 하나(10-13 밤):** 음성은 장면으로 묶지 않고 대사 한 줄이 파일 하나다 — `local-data/audio/gemini-3.8-flash-tts/<장면>_<번호>_<화자>.wav`
   (예 `d1-w2_03_MEDial.wav`). `scenes.json`은 장면별 줄 목록(번호 · 화자 · 글 · 읽는 글 · 연기 지시 · 목소리 · 해시 · 파일 · 길이), `manifest.json`은 화면이 읽는
   'speaker|text' → 파일. 줄의 (목소리 · 읽는 글 · 연기 지시) 해시가 바뀐 줄만 다시 만든다. 이전의 해시 이름 파일은 호출 없이 이름만 바꿔 옮겼다. 들어 보기용 복사본은 `out/tts-sample/lines/`.
+  **소리 있는 영상:** 녹화 영상(Playwright)에는 소리가 없어서, `scripts/record_walk.cjs`가 걷는 동안 화면이 튼 음성 파일과 시각(`plays.json`)을 적고 `scripts/mux_voice.py`가
+  그 시각에 파일을 얹어(ffmpeg) mp4로 묶는다(±0.2초). 말풍선 글과 소리가 같은 줄인 것을 장면 세 곳에서 확인했다.
   **음성(TTS) 준비:** `scripts/tts_scenes.py` — 화면에 나오는 글과 소리 내어 읽는 글을 나눴다. "MEDial"은 항상 **메디얼**로 읽히게 하고(안 그러면 엠이디얼 ·
   미디알 등으로 흔들렸다), 시각은 사람이 말하는 대로(08:00 → 여덟 시, 20:56 → 여덟 시 오십육 분, 60분 → 육십 분) 풀어서 보낸다. 오디오는 (목소리, 읽는 글, style)의
   해시로 `local-data/audio/`에 한 번만 만들고 `manifest.json`이 줄과 파일을 잇는다. 고유한 줄 69개라 하루 한도(100회) 안이지만, 오늘은 시험으로 한도를 다 써서
