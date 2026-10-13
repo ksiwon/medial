@@ -300,7 +300,7 @@ function Ending({ detail, current, onRestart, art }: { detail: SessionDetail; cu
         {closing ? (
           <Close>
           <strong>서비스 디자이너의 일은 선택의 연속입니다.</strong>
-          <p>어떤 규칙을 고르느냐에 따라, 같은 마을의 같은 하루가 어르신께 전혀 다르게 겪힙니다.</p>
+          <p>어떤 규칙을 고르느냐에 따라, 같은 마을의 같은 하루가 어르신께는 전혀 다른 하루가 됩니다.</p>
           <p>하지만 멀고 사람이 드문 마을에서는 오래 지켜보며 연구하기 어렵고, 선택의 결과를 기다릴 시간도 없습니다.</p>
           <p>Resident Simulator는 현장에 가기 전에 그 선택을 먼저 살펴보게 하는 도구입니다. 사람을 대신하지 않고, 사람을 만나러 가기 전의 준비를 돕습니다.</p>
         </Close>
