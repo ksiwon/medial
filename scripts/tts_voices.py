@@ -42,9 +42,9 @@ def man(age, job):
 
 
 SPECS: dict[str, tuple[str, str]] = {
-    "P1": ("male", man(72, "farmer") + "Deep, weathered, hoarse voice; slow, blunt and curt."),
+    "P1": ("male", man(72, "farmer") + "Deep, weathered, hoarse voice; blunt, curt and snappy, speaks at a brisk, natural pace with no drawl."),
     "P2": ("male", man(66, "builder") + "Loud, booming, gravelly voice; hearty, fast-talking, a bit domineering."),
-    "P3": ("male", man(65, "retired man") + "Soft, thin, slightly nasal voice; weary, gentle and wry, speaks slowly with sighs."),
+    "P3": ("male", man(65, "retired man") + "Plain, steady mid-low voice with an ordinary tone; mild, even-tempered and a little reserved, speaks at a natural pace."),
     "P4": ("male", man(56, "factory manager") + "Crisp, clear mid-high voice; businesslike, quick, a little anxious and responsible."),
     "P5": ("male", man(68, "fisherman and farmer") + "Raspy, sea-weathered low voice; laconic, slow, gruff but warm."),
     "P6": ("male", man(56, "village head") + "Warm mid-pitched baritone; hearty, dependable, friendly authority, medium pace."),
@@ -52,7 +52,7 @@ SPECS: dict[str, tuple[str, str]] = {
     "P8": ("male", "A 57-year-old man who works on a fishing boat. Lighter, higher-pitched voice, brisk and easygoing." + LIFE),
     "P9": ("male", man(58, "pension owner") + "Smooth, polite soft baritone; mild and slightly tired, more refined than the others."),
     "P10": ("female", "A 75-year-old woman who runs a small restaurant" + FROM % ("she", "her") + "Thin, high-pitched, raspy old woman voice; warm, motherly, talkative and quick."),
-    "P11": ("male", man(79, "restaurant owner") + "Very old, frail, low breathy voice with a slight tremble; very slow and soft."),
+    "P11": ("male", man(79, "restaurant owner") + "Elderly but sturdy and healthy voice; low, gravelly and firm, a little slower than younger men but clear and steady, with a stubborn old-timer's authority."),
     "P12": ("male", man(63, "shop owner") + "Smooth, slightly nasal mid-high voice; quick-witted, sly, businesslike."),
     # Not residents: the system's voice and the health centre's nurse speak standard Korean.
     "MEDIAL": ("female", "A composed, bright woman in her mid-30s speaking clear standard Korean at a brisk, natural conversational pace, with a crisp, friendly, matter-of-fact tone; confident and efficient, not soft, not breathy, not sing-song."),
