@@ -42,7 +42,7 @@ def man(age, job):
 
 
 SPECS: dict[str, tuple[str, str]] = {
-    "P1": ("male", man(72, "farmer") + "Very deep, low-pitched bass voice, weathered and hoarse, gravelly from decades of outdoor work; blunt and curt, speaks at a natural pace without drawling, never high or thin."),
+    "P1": ("male", man(72, "farmer") + "Very deep, low-pitched, firm and clear bass voice of a man who has worked outdoors for decades; blunt and curt, speaks at a natural pace without drawling, smooth with no breathiness, never high or thin."),
     "P2": ("male", man(66, "builder") + "Loud, booming, gravelly voice; hearty, fast-talking, a bit domineering."),
     "P3": ("male", man(65, "retired man") + "Plain, steady mid-low voice with an ordinary tone; mild, even-tempered and a little reserved, speaks at a natural pace."),
     "P4": ("male", man(56, "factory manager") + "Crisp, clear mid-high voice; businesslike, quick, a little anxious and responsible."),

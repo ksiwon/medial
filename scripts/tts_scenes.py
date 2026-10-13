@@ -160,6 +160,34 @@ def speak(key: str, voice: str, text: str, style: str, model: str = MODEL) -> by
     raise RuntimeError("no audio in the reply")
 
 
+def trim(path: Path) -> None:
+    """Cut the silence and any stray noise before the voice starts and after it ends.
+
+    The model starts every clip with about 0.2 s of near-silence and a click, and may end with a
+    long tail; the screen wants the line to begin the moment it is played and to end when it is over.
+    A 40 ms lead and a 10 ms fade-in are left so the voice does not start with a hard edge.
+    """
+    import audioop
+
+    with wave.open(str(path)) as w:
+        params, raw = w.getparams(), w.readframes(w.getnframes())
+    step = params.framerate // 100  # 10 ms
+    size = step * 2
+    loud = [i for i in range(0, len(raw) - size, size) if audioop.rms(raw[i:i + size], 2) > 400]
+    if not loud:
+        return
+    start = max(0, loud[0] - 4 * size)
+    end = min(len(raw), loud[-1] + size * 12)
+    body = bytearray(raw[start:end])
+    fade = min(len(body) // 2, step * 2)  # 10 ms of samples * 2 bytes
+    for k in range(0, fade, 2):
+        v = int.from_bytes(body[k:k + 2], "little", signed=True)
+        body[k:k + 2] = int(v * (k / fade)).to_bytes(2, "little", signed=True)
+    with wave.open(str(path), "wb") as w:
+        w.setparams(params)
+        w.writeframes(bytes(body))
+
+
 def seconds(path: Path) -> float:
     with wave.open(str(path)) as w:
         return w.getnframes() / w.getframerate()
@@ -202,6 +230,7 @@ def main():
                 break
             try:
                 path.write_bytes(speak(key, voice, say, style, args.model))
+                trim(path)
             except urllib.error.HTTPError as e:
                 print("HTTP", e.code, e.read()[:200].decode("utf-8", "ignore"))
                 break
