@@ -62,6 +62,8 @@ export interface Episode {
   /** When the note is for a later stretch of a request that already has a row on the timeline (the medicine
    *  arriving at 18:30), the short title of its own row. */
   noteTitle?: string;
+  /** A sentence read over the map right after this scene, for what the scene leaves open ("10:10 · …"). */
+  noteAfter?: string;
   startMs: number;
   endMs: number;
   beats: Beat[];

@@ -245,6 +245,19 @@ describe('a skipped stretch that carries a note', () => {
   });
 });
 
+describe('a note after a played scene', () => {
+  it('is read over the map right after the scene, and the scene itself stays', () => {
+    const eps = episodes();
+    const [first] = eps;
+    const withNote = eps.map((e) => (e === first ? { ...e, noteAfter: '10:10 · 보건소가 접수했습니다' } : e));
+    const reel = buildReel({ episodes: withNote, events, timeline, pace: 1, ...DAY });
+    const at = reel.segments.findIndex((s) => s.kind === 'map' && s.note);
+    expect(at).toBeGreaterThan(0);
+    expect(reel.segments[at - 1].kind).not.toBe('map');
+    expect(buildReel({ episodes: eps, events, timeline, pace: 1, ...DAY }).segments.some((s) => s.kind === 'map' && s.note)).toBe(false);
+  });
+});
+
 describe('playing only the scenes that tell the story', () => {
   const all = () => episodes();
   const ids = () => [...new Set(all().map((e) => e.requestId))];

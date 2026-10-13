@@ -63,6 +63,10 @@ def main():
         played = set(scenes.get("featured") or [])
         eps = scenes["episodes"]
         for e in eps:
+            e.pop("noteAfter", None)
+            # What a played scene leaves open: the health centre takes the case, and the day never says how it ended.
+            if "HC_NURSE" in spoken_by(e) and "%s@%d" % (e["requestId"], e["startMs"] // 60000) in played:
+                e["noteAfter"] = "%s · 보건소가 접수했습니다. 한상덕 어르신이 어떻게 됐는지는 이 하루의 기록에 나오지 않습니다" % clock(e["endMs"])
             e.pop("note", None)
             e.pop("noteTitle", None)
         i = 0

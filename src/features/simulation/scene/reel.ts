@@ -128,6 +128,7 @@ export function buildReel({ episodes, events, timeline, dayStartMs, dayEndMs, pa
       if (!n) push({ kind: 'hold', episode: e, beat: b, seq: beat.lastSeq, w0: beat.startMs, w1: beat.endMs, dur: 1.6 * pace });
     });
     clock = Math.max(clock, episode.endMs);
+    if (episode.noteAfter) push(mapSegment(clock, clock, null, noteDuration(episode.noteAfter, pace), errands, episode.noteAfter));
   });
   push(mapSegment(clock, dayEndMs, null, 1, errands));
 
