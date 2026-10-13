@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { api } from '../api/client';
 import { artIdOf } from '../scene/art';
@@ -50,17 +50,31 @@ const Disc = styled.div<{ $size: number }>`
  *  so neither a reading page's faces nor a scene's backdrop and figures are an empty
  *  frame while a large picture arrives for the first time. */
 export function preloadArt(art: ReadonlySet<string>) {
-  for (const id of art) new Image().src = api.artUrl(id);
+  for (const id of art) {
+    const url = api.artUrl(id);
+    const image = new Image();
+    image.onload = () => loaded.add(url);
+    image.src = url;
+  }
 }
+
+/** The pictures already in the browser: a face that is there is drawn at once, with no frame of the number first. */
+const loaded = new Set<string>();
 
 export default function Portrait({ actorId, art, size = 72 }: { actorId: string; art: ReadonlySet<string>; size?: number }) {
   const picture = portraitOf(actorId, art);
-  const [shown, setShown] = useState(false);
+  const url = picture ? api.artUrl(picture) : null;
+  const [shown, setShown] = useState(() => url !== null && loaded.has(url));
+  const img = useRef<HTMLImageElement>(null);
+  // A picture the browser already has is complete before it paints; waiting for onload would show the number for a frame.
+  useLayoutEffect(() => {
+    if (img.current?.complete && img.current.naturalWidth > 0) setShown(true);
+  }, [url]);
   return (
     <Disc $size={size} role="img" aria-label={personName(actorId)}>
       {/* The number stays until the picture is in: never an empty disc. */}
       {(!picture || !shown) && actorId}
-      {picture && <img src={api.artUrl(picture)} alt="" draggable={false} onLoad={() => setShown(true)}
+      {picture && <img ref={img} src={url ?? undefined} alt="" draggable={false} onLoad={() => { if (url) loaded.add(url); setShown(true); }}
         style={{ opacity: shown ? 1 : 0 }} />}
     </Disc>
   );
