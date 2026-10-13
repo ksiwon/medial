@@ -507,5 +507,7 @@ describe('ChoiceScreen', () => {
     render(<ChoiceScreen detail={tree} current={tree.generations[2]} onChoose={noop} onRestart={noop} />);
     expect(screen.getByText('사흘이 끝났습니다')).toBeDefined();
     expect(screen.getByText('처음부터 다른 길로')).toBeDefined();
+    expect(screen.getByText('서비스 디자이너의 일은 선택의 연속입니다.')).toBeDefined();
+    expect(screen.getByText(/Resident Simulator는 현장에 가기 전에/)).toBeDefined();
   });
 });

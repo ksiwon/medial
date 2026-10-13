@@ -44,10 +44,12 @@ SYSTEM = """당신은 한국 시골 마을(경상도 해안 마을)의 일상 �
 
 규칙:
 - 실제 시골 어르신들이 말하듯 쓴다. 표준어로 번역한 말투가 아니라, 예시 줄에 나온 사람별 말버릇과 어미를 그대로 따른다(예: P6 "~제?", "~카더라", "~아이가", P7 "~습니더", "~뭡니꺼"). 예시에 없는 사투리를 새로 꾸미지 않는다.
-- MEDial은 안내 시스템이다. 표준어 존댓말로, 짧고 정확하게 말한다.
-- 한 줄은 한 호흡이다. 공백 포함 30자 안팎, 길어도 36자를 넘기지 않는다. 한 줄에 한 가지만 말한다.
+- MEDial은 어르신들과 사는 마을의 안내 시스템이다. 어르신께 말하듯 따뜻하고 정중하게, 부드러운 해요체 존댓말로 말한다("~하셨어요", "~해 주시겠어요?"). 딱딱한 통보로 끊지 않고, 짧은 공감이나 안심 한마디를 곁들인다("놀라셨겠어요", "제가 곁에 있을게요", "수고가 많으세요"). 마을 사람은 직함이나 '어르신'으로 부른다. 기관 담당자(보건소 등)와는 예의 바르게만 말한다.
+- MEDial은 상황을 설명한다. 듣는 사람이 앞뒤를 모르고 와도 알아듣게, 왜 말을 거는지(무슨 일이 있었는지), 지금 무엇을 알고 무엇은 모르는지, 무엇을 부탁하고 그것이 왜 필요한지를 첫 줄들에서 차근히 말한다. 주어진 사실과 '앞에서 있었던 일'에 있는 것만으로 설명한다.
+- 되풀이하지 않는다. 한 사실은 장면에서 한 번만 말한다. 같은 질문을 다시 묻거나, 이미 한 말을 다른 말로 반복하거나, 같은 변명을 두 번 하지 않는다. 모든 줄은 새 정보·반응·결정 가운데 하나를 더해 이야기를 앞으로 나아가게 한다. 기록의 대사에 같은 말이 되풀이된 곳이 있어도 한 번만 담는다.
+- 마을 사람의 한 줄은 한 호흡이다. 공백 포함 30자 안팎, 길어도 36자를 넘기지 않는다. MEDial의 한 줄은 상황 설명을 담느라 40자 안팎, 길어도 44자를 넘기지 않는다. 한 줄은 한 문장이다.
 - 장면에서 말하는 두 화자가 각자 3번 이상 4번 이하로 말한다. 번갈아 말하되, 같은 사람이 연달아 두 줄 말하는 것은 한 번까지만 허용한다.
-- 장면의 사실은 바꾸지 않는다. 주어진 '반드시 오가는 사실'은 모두 말이나 반응으로 들어가야 하고, 그 밖의 새 사실(새 사건, 새 인물, 새 시각, 새 병명)은 만들지 않는다.
+- 장면의 사실은 바꾸지 않는다. 주어진 '반드시 오가는 사실'은 모두 말이나 반응으로 들어가야 하고, 그 밖의 새 사실(새 사건, 새 인물, 새 시각, 새 병명)은 만들지 않는다. 사실이 적으면 줄을 억지로 늘리지 말고, 정말로 사람이 할 법한 반응(걱정, 안도, 짜증, 농담)으로 3번을 채운다.
 - 설명하듯 말하지 않는다. 사람들은 서로 아는 사이라 앞뒤를 줄여 말하고, 말을 받아 되묻거나 한숨·농담 한마디가 섞인다. 다만 사실은 놓치지 않는다.
 - 숫자와 시각은 주어진 것만 쓴다. 따옴표, 괄호 설명, 이모지를 쓰지 않는다.
 JSON만 돌려준다."""
@@ -112,24 +114,50 @@ def scene_of(scenes, request_id):
     return ep, lines, cast
 
 
-def write(provider, policy, records, village, attempt_id, request_id):
+def write(provider, policy, records, village, attempt_id, request_id, feedback=None):
     scenes = records[attempt_id]
     ep, lines, cast = scene_of(scenes, request_id)
     places = [f["label"] + (" · " + f["device"] if f["device"] else "") for b in ep["beats"] for f in b["frames"]]
     panel = scenes["panels"].get(request_id, {})
+    before = []
+    for other in scenes["episodes"]:
+        if other is ep or other["startMs"] > ep["startMs"] or (other["startMs"] == ep["startMs"] and other["requestId"] == request_id):
+            continue
+        if other["subjectId"] != ep["subjectId"] or other["requestId"] == request_id:
+            continue
+        before += ["%s: %s" % (l["speaker"], l["text"]) for b in other["beats"] for l in b["lines"] if l["kind"] == "say"]
     payload = {
         "장면": "%d일차 · %s · %s" % (scenes["day"], ep["title"], " / ".join(dict.fromkeys(places))),
         "화자": [who(village, c) for c in cast],
         "MEDial이 아는 것": (panel.get("judgment") or {}).get("knows"),
         "반드시 오가는 사실(지금 기록의 대사. 말투는 새로 쓰고 사실은 모두 담는다)": [
             "%s: %s" % (ln["speaker"], ln["text"]) for ln in lines],
+        "앞에서 있었던 일(듣는 사람이 알 수 있는 것. 되풀이하지 말 것)": before[-10:],
         "사람별 말버릇 예시(기록에 있는 줄)": voices(records, cast),
     }
+    if feedback:
+        payload["지난번 시도에서 고칠 것"] = feedback
     spec_user = json.dumps(payload, ensure_ascii=False)
     client = provider._client(policy.headModelId)
     raw, usage = client._post(SYSTEM, payload, SCHEMA, "scene_lines", 2000)
     data = raw if isinstance(raw, dict) else json.loads(raw)
     return cast, lines, data["lines"], len(spec_user)
+
+
+def _bigrams(text):
+    t = "".join(ch for ch in text if ch.isalnum())
+    return {t[i:i + 2] for i in range(len(t) - 1)}
+
+
+def repeats(new):
+    """Pairs of lines that say nearly the same thing (character bigram overlap)."""
+    found = []
+    for i in range(len(new)):
+        for j in range(i + 1, len(new)):
+            a, b = _bigrams(new[i]["text"]), _bigrams(new[j]["text"])
+            if a and b and len(a & b) / min(len(a), len(b)) >= 0.5:
+                found.append("되풀이: '%s' / '%s'" % (new[i]["text"], new[j]["text"]))
+    return found
 
 
 def problems(cast, new):
@@ -140,11 +168,12 @@ def problems(cast, new):
             bad.append("화자 아님: %s" % ln["speaker"])
             continue
         count[ln["speaker"]] += 1
-        if len(ln["text"]) > 36:
+        if len(ln["text"]) > (44 if ln["speaker"] == "MEDial" else 36):
             bad.append("길다(%d자): %s" % (len(ln["text"]), ln["text"]))
     for c, n in count.items():
         if not 3 <= n <= 4:
             bad.append("%s %d번 말함" % (c, n))
+    bad += repeats(new)
     return bad, count
 
 
@@ -153,7 +182,7 @@ def problems(cast, new):
 # day 2 the hospital ride that is not found and the visit again, day 3 the visit
 # (a repeat the designer's rules change) and the emergency.
 PICK = {1: ["w2", "w3"], 2: ["t2", "w3"], 3: ["w3", "e2"]}
-RETRIES = 3
+RETRIES = 3  # a scene is asked again, with the problems named, up to this many times
 
 
 def pick_episodes(scenes):
@@ -176,12 +205,13 @@ def generate_all(provider, policy, records, village, out_path):
             _ep, old, cast = scene_of(scenes, ep["requestId"])
             key = json.dumps([[l["speaker"], l["text"]] for l in old], ensure_ascii=False)
             if key not in cache:
-                new = None
-                for _ in range(RETRIES):
-                    cast, _old, new, _n = write(provider, policy, records, village, attempt_id, ep["requestId"])
+                new, bad, feedback = None, [], None
+                for _ in range(RETRIES + 1):
+                    cast, _old, new, _n = write(provider, policy, records, village, attempt_id, ep["requestId"], feedback)
                     bad, _count = problems(cast, new)
                     if not bad:
                         break
+                    feedback = {"문제": bad, "지난 줄": new}
                     print("  다시:", attempt_id, ep["requestId"], bad)
                 cache[key] = {"cast": cast, "lines": new, "problems": bad}
             result[attempt_id][ep["requestId"]] = cache[key]
@@ -204,6 +234,12 @@ def apply(result):
             rid = ep["requestId"]
             new = scenes_new[rid]["lines"]
             beat = ep["beats"][0]
+            # Only the places of the people in the scene: a call between MEDial and the health
+            # centre does not also show the field where the person they talk about is.
+            speakers = {l["speaker"] for l in new}
+            here = [f for f in beat["frames"] if speakers & set(f["who"])]
+            if here:
+                beat["frames"] = here
             old = [l for l in beat["lines"] if l["kind"] == "say"]
             beat["lines"] = [{"seq": old[min(i * len(old) // len(new), len(old) - 1)]["seq"], "kind": "say",
                               "speaker": l["speaker"], "text": l["text"]} for i, l in enumerate(new)]
@@ -215,9 +251,57 @@ def apply(result):
     print("applied to", len(result), "attempts; backup", backup.name)
 
 
+SOFTEN = """당신은 한국 시골 마을 어르신들과 대화하는 안내 시스템 MEDial의 말을 다듬는 작가다. 장면의 대사가 주어진다.
+MEDial의 줄만 고친다. 마을 사람들(MEDial이 아닌 화자)의 줄은 한 글자도 바꾸지 말고 같은 순서로 그대로 돌려준다. 줄 수와 순서도 그대로다.
+
+MEDial의 말투:
+- 어르신께 말하듯 따뜻하고 정중하게. 딱딱한 통보("모릅니다", "없습니다")로 끊지 말고, 짧은 공감이나 안심 한마디를 앞이나 뒤에 붙인다("놀라셨겠어요", "걱정 마세요, 제가 곁에 있을게요", "수고가 많으세요").
+- "~하셨어요", "~해 주시겠어요?", "~드릴게요" 같은 부드러운 해요체 존댓말. 마을 사람을 부를 때는 직함이나 '어르신'을 쓴다.
+- 상황을 설명한다. 듣는 사람이 앞뒤를 모르고 와도 알아듣게, MEDial이 왜 말을 거는지(무슨 일이 있었고), 지금 무엇을 알고 무엇은 모르는지, 그래서 무엇을 부탁하고 그것이 왜 필요한지를 첫 줄들에서 차근히 말한다. 주어진 대사와 '장면' 정보에 있는 사실만으로 설명하고, 없는 사실은 만들지 않는다.
+- 사실·숫자·시각·절차의 순서는 그대로다. 새 사실은 만들지 않는다. 위급 장면에서는 침착하고 또렷하게, 한 번에 한 동작만 안내하고, 안심시키는 말을 곁들인다.
+- MEDial의 한 줄은 공백 포함 40자 안팎, 길어도 44자를 넘기지 않는다(상황 설명을 담느라 마을 사람 줄보다 길어도 된다). 한 줄은 한 문장이다.
+- 기관 담당자(보건소 등)와의 통화는 예의 바르되 어르신께 하는 말만큼 다정할 필요는 없다.
+JSON만 돌려준다."""
+
+
+def soften(provider, policy, cast, lines, scene=""):
+    payload = {"장면": scene, "대사": lines, "MEDial 줄 수": sum(1 for l in lines if l["speaker"] == "MEDial")}
+    client = provider._client(policy.headModelId)
+    for _ in range(RETRIES):
+        raw, _usage = client._post(SOFTEN, payload, SCHEMA, "scene_lines", 2000)
+        data = (raw if isinstance(raw, dict) else json.loads(raw))["lines"]
+        same = len(data) == len(lines) and all(
+            n["speaker"] == o["speaker"] and (o["speaker"] == "MEDial" or n["text"] == o["text"])
+            for n, o in zip(data, lines))
+        long_ = [l["text"] for l in data if len(l["text"]) > (44 if l["speaker"] == "MEDial" else 36)]
+        if same and not long_:
+            return data
+        print("  다시:", "남의 줄이 바뀜" if not same else long_)
+    raise SystemExit("softening failed")
+
+
+TITLES = {"w2": "응답 없는 안부 확인: MEDial이 이장에게 확인을 부탁", "w3": "응답 없는 안부 확인: 집에 가서 확인", "t2": "병원 동행: 갈 때 태워 줄 사람을 찾지 못함", "e2": "저녁의 위급: 쓰러진 사람 곁에서 구급대가 올 때까지"}
+
+
+def soften_all(provider, policy, path, out):
+    result = json.load(open(path, encoding="utf-8"))
+    cache: dict[str, list] = {}
+    for attempt_id, scenes in result.items():
+        for rid, v in scenes.items():
+            key = json.dumps(v["lines"], ensure_ascii=False)
+            if key not in cache:
+                cache[key] = soften(provider, policy, v["cast"], v["lines"], TITLES.get(rid, rid))
+            v["lines"] = cache[key]
+        print(attempt_id, "done")
+    Path(out).write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
 def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
+    soft = sub.add_parser("soften")
+    soft.add_argument("file")
+    soft.add_argument("--out", required=True)
     one = sub.add_parser("one")
     one.add_argument("attempt")
     one.add_argument("requests", nargs="+")
@@ -232,6 +316,9 @@ def main():
         return
     provider = ModelProvider.from_env(env)
     policy = policy_from_env(env, mode="off")
+    if args.cmd == "soften":
+        soften_all(provider, policy, args.file, args.out)
+        return
     records = load()
     village = json.load(open(VILLAGE, encoding="utf-8"))
     print("model:", policy.headModelId)

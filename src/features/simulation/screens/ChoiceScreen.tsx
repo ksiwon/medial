@@ -177,6 +177,17 @@ const Rule2 = styled.div`
   > b { display: block; margin-bottom: ${space.xs}; font-size: ${px(12)}; letter-spacing: 0.08em; color: ${night.accent}; }
 `;
 
+/** The last thing said, to the visitor as a designer: what the walk was for. */
+const Close = styled.div`
+  max-width: ${px(960)};
+  display: flex;
+  flex-direction: column;
+  gap: ${space.sm};
+  word-break: keep-all;
+  > strong { font-size: ${px(28)}; font-weight: 800; letter-spacing: -0.02em; line-height: 1.3; color: ${night.ink}; }
+  > p { margin: 0; font-size: ${px(20)}; line-height: 1.6; color: ${night.mute}; }
+`;
+
 const Again = styled.button`
   ${pill('lg')}
   align-self: flex-start;
@@ -263,6 +274,14 @@ function Ending({ detail, current, onRestart }: { detail: SessionDetail; current
             );
           })}
         </Days>
+        <Close>
+          <strong>서비스 디자이너의 일은 선택의 연속입니다.</strong>
+          <p>
+            오래 지켜보며 연구하기 어려운 마을에서는, 선택의 결과를 기다려 볼 시간이 없습니다.
+            Resident Simulator는 현장에 가기 전에 그 선택을 먼저 살펴보게 하는 도구입니다.
+            사람을 대신하지 않고, 사람을 만나러 가기 전의 준비를 돕습니다.
+          </p>
+        </Close>
         <div>
           <Again onClick={onRestart}>처음부터 다른 길로</Again>
           <Idle aria-live="off">{left}초 뒤 처음으로 돌아갑니다</Idle>
