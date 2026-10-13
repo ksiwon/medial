@@ -5,15 +5,16 @@
     python scripts/tts_scenes.py make --limit 40   # stop after this many calls (the daily quota is 100)
     python scripts/tts_scenes.py styles            # each line's acting note -> local-data/tts-styles.json
 
-What the screen shows and what the voice reads are different strings. ``spoken`` is the voice's:
+Each line is its own file (``<scene>_<NN>_<speaker>.wav``), with ``scenes.json`` listing a scene's lines in
+order and ``manifest.json`` mapping 'speaker|text' to the file for the screen. What the screen shows and what the voice reads are different strings. ``spoken`` is the voice's:
 "MEDial" is always read 메디얼 (without it the voice said 엠이디얼, 미디알, ...), clock times and
 minutes are written out the way a person says them (08:00 -> 여덟 시, 20:56 -> 여덟 시 오십육 분).
 The voice of each person is a Voice design id (`local-data/tts-voices.json`, made once with
 gemini-3.8-flash-tts; the description carries the age, the dialect and the timbre). Style text goes in
 speech_metadata, never in the text: the model reads whatever is in the text aloud.
 
-Audio is named by the hash of (voice, spoken text, style), so a line that did not change is never made
-twice and a changed line gets new audio. Nothing here is called at runtime; the screen plays the file.
+A line is made again only when its (voice, spoken text, style) hash changed, so a line that did not change is never made
+twice. Nothing here is called at runtime; the screen plays the file.
 """
 from __future__ import annotations
 
@@ -86,20 +87,24 @@ def spoken(text: str) -> str:
     return text.replace("MEDial", "메디얼")
 
 
-def lines_of_record():
-    """Every distinct spoken line of the played scenes: (speaker, shown text)."""
-    conn = sqlite3.connect(DB)
-    seen: dict[tuple[str, str], None] = {}
-    for (blob,) in conn.execute("select scenes_json from attempts where scenes_json != '{}' order by rowid"):
-        scenes = json.loads(blob)
-        for ep in scenes["episodes"]:
-            if ep["requestId"] not in scenes["featured"]:
-                continue
-            for beat in ep["beats"]:
-                for ln in beat["lines"]:
-                    if ln["kind"] == "say":
-                        seen[(ln["speaker"], ln["text"])] = None
-    return list(seen)
+def planned():
+    """Every spoken line of the final dialogue, in scene order, with the file it is kept in.
+
+    One line, one file: ``<scene>_<NN>_<speaker>.wav`` (d1-w2_03_P6.wav is the third line of scene
+    d1-w2, spoken by P6). Nothing is bundled, so the code can pick any line by itself.
+    """
+    scenes = json.load(open(DIALOGUE, encoding="utf-8"))["scenes"]
+    voices = json.load(open(VOICES, encoding="utf-8"))
+    notes = styles_of_record()
+    for scene, body in scenes.items():
+        for i, ln in enumerate(body["lines"], start=1):
+            speaker, text = ln["speaker"], ln["text"]
+            voice = voices.get(VOICE_KEY.get(speaker, speaker))
+            if voice is None:
+                raise SystemExit("no voice for %s (local-data/tts-voices.json)" % speaker)
+            say, style = spoken(text), notes.get("%s|%s" % (speaker, text)) or STYLE.get(speaker, "")
+            yield {"scene": scene, "index": i, "speaker": speaker, "text": text, "spoken": say, "style": style,
+                   "voice": voice, "hash": key_of(voice, say, style), "file": "%s_%02d_%s.wav" % (scene, i, speaker)}
 
 
 def styles_of_record():
@@ -222,31 +227,31 @@ def main():
     if args.cmd == "styles":
         write_styles()
         return
-    voices = json.load(open(VOICES, encoding="utf-8"))
-    todo = []
-    notes = styles_of_record()
-    for speaker, text in lines_of_record():
-        voice = voices.get(VOICE_KEY.get(speaker, speaker))
-        if voice is None:
-            raise SystemExit("no voice for %s (local-data/tts-voices.json)" % speaker)
-        say, style = spoken(text), notes.get("%s|%s" % (speaker, text)) or STYLE.get(speaker, "")
-        todo.append((speaker, text, voice, say, style, key_of(voice, say, style)))
+    todo = list(planned())
     if args.cmd == "list":
-        for speaker, text, _voice, say, _style, key in todo:
-            print("%-9s %s  %s%s" % (speaker, key, text, "" if say == text else "\n%s -> %s" % (" " * 20, say)))
+        for it in todo:
+            print("%-30s %-9s %s%s" % (it["file"], it["speaker"], it["text"],
+                                       "" if it["spoken"] == it["text"] else "\n%s -> %s" % (" " * 41, it["spoken"])))
         print(len(todo), "lines")
         return
     AUDIO = AUDIO_ROOT / args.model
     AUDIO.mkdir(parents=True, exist_ok=True)
-    key, made, manifest, failures, rejected = api_key(), 0, {}, 0, []
-    for speaker, text, voice, say, style, name in todo:
-        path = AUDIO / ("%s.wav" % name)
-        if not path.exists():
+    index = AUDIO / "scenes.json"
+    known = {row["file"]: row for rows in (json.load(open(index, encoding="utf-8")) if index.exists() else {}).values() for row in rows}
+    key, made, failures, rejected, kept = api_key(), 0, 0, [], {}
+    for it in todo:
+        path = AUDIO / it["file"]
+        legacy = AUDIO / ("%s.wav" % it["hash"])  # the earlier, hash-named file of the same voice, text and style
+        if path.exists() and known.get(it["file"], {}).get("hash") == it["hash"]:
+            pass
+        elif legacy.exists():
+            legacy.replace(path)
+        else:
             if made >= args.limit:
                 print("stopped at the limit (%d calls); run again later" % made)
                 break
             try:
-                path.write_bytes(speak(key, voice, say, style, args.model))
+                path.write_bytes(speak(key, it["voice"], it["spoken"], it["style"], args.model))
                 trim(path)
             except urllib.error.HTTPError as e:
                 print("HTTP", e.code, e.read()[:200].decode("utf-8", "ignore"))
@@ -255,23 +260,30 @@ def main():
                     break
                 continue
             made += 1
-            why = check(path, say)
+            why = check(path, it["spoken"])
             if why:
-                print("rejected %s|%s: %s" % (speaker, text, why))
+                print("rejected %s: %s" % (it["file"], why))
                 path.unlink()
-                made -= 0
-                rejected.append((speaker, text))
+                rejected.append(it["file"])
                 continue
             time.sleep(0.3)
         if path.exists():
-            manifest["%s|%s" % (speaker, text)] = {"file": path.name, "seconds": round(seconds(path), 2)}
+            kept.setdefault(it["scene"], []).append({
+                "index": it["index"], "speaker": it["speaker"], "text": it["text"], "spoken": it["spoken"],
+                "style": it["style"], "voice": it["voice"], "hash": it["hash"], "file": it["file"],
+                "seconds": round(seconds(path), 2)})
+    # scenes.json: the lines of each scene in order. manifest.json: the same by 'speaker|text', which is what the screen reads.
+    index.write_text(json.dumps(kept, ensure_ascii=False, indent=1), encoding="utf-8")
+    manifest = {"%s|%s" % (row["speaker"], row["text"]): {"file": row["file"], "seconds": row["seconds"]}
+                for rows in kept.values() for row in rows}
     (AUDIO / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=1), encoding="utf-8")
-    if len(manifest) == len(todo):  # every line has its sound: what is left over is from an older voice or text
-        keep = {row["file"] for row in manifest.values()}
+    if sum(len(rows) for rows in kept.values()) == len(todo):  # every line has its sound; the rest is from an older voice or text
+        keep = {row["file"] for rows in kept.values() for row in rows}
         for old in AUDIO.glob("*.wav"):
             if old.name not in keep:
                 old.unlink()
-    print("made %d, have %d of %d lines%s" % (made, len(manifest), len(todo), "; rejected %d" % len(rejected) if rejected else ""))
+    print("made %d, have %d of %d lines%s" % (made, sum(len(r) for r in kept.values()), len(todo),
+                                              "; rejected %d" % len(rejected) if rejected else ""))
 
 
 if __name__ == "__main__":
