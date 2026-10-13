@@ -63,7 +63,7 @@ SYSTEM = """당신은 경남 남해군 은점마을(경상도 해안 마을)의 
 - 마을 사람이 시스템의 정보를 줄줄 읊지 않는다. 마을 사람은 자기 눈으로 본 것, 느낀 것, 하려는 것을 말한다.
 
 형식
-- 화자는 장면 설명의 인물만. 줄 수는 각자 '줄 수' 범위 안에서, 번갈아 말한다(같은 사람이 연달아 두 줄은 한 번까지).
+- 화자는 장면 설명의 인물만. 대화는 전체 6줄 이내(각자 3번이 기본, 사실이 적으면 5줄도 된다). 번갈아 말하고, 같은 사람이 연달아 두 줄 말하지 않는다. 6줄 안에 사실을 다 담으려고 줄 하나에 한 문장 안에서 두 가지를 이어 말해도 되지만(MEDial 44자, 마을 사람 36자 이내), 사실이 넘치면 덜 중요한 세부(나열)는 줄인다.
 - 마을 사람의 한 줄은 한 호흡, 공백 포함 30자 안팎(최대 36자). MEDial의 한 줄은 40자 안팎(최대 44자). 한 줄은 한 문장.
 - 시각은 09:30처럼 쓴다. 따옴표, 괄호 설명, 이모지는 쓰지 않는다.
 JSON으로 lines(화자 speaker, 대사 text)만 돌려준다."""
@@ -97,13 +97,13 @@ MEDIAL = "MEDial: 표준어 해요체, 또렷하고 간결하게 다정"
 # What the stored record says happened, per scene (the Task panels). Nothing here is new.
 BRIEFS: dict[str, dict] = {
     "d1-w2": {
-        "cast": ["MEDial", "P6"], "turns": (3, 4),
+        "cast": ["MEDial", "P6"], "turns": (2, 3),
         "scene": "1일차 09:40, 전화. MEDial이 마을 순찰 중인 이장 남기웅에게 한상덕 어르신 안부 확인을 부탁한다.",
         "people": [MEDIAL, P6],
         "facts": [
             "MEDial이 안내 시계로 한상덕 어르신께 09:30과 09:40, 두 번 연락했지만 답이 없다",
             "집에 있는지, 어디가 아픈지는 모른다",
-            "한상덕 어르신의 등록된 평소 일과(공개에 동의한 것): 아침엔 집에 있다가 09:00에 밭에 나가고, 정오에 잠깐 집에 들르고, 13:00에 다시 밭에 나가 16:00에 돌아온다",
+            "한상덕 어르신의 등록된 평소 일과(공개에 동의한 것): 아침엔 집, 09:00부터는 보통 밭, 정오에 잠깐 집, 13:00에 다시 밭, 16:00에 귀가 — 줄 수가 모자라니 지금 시간에 필요한 핵심만('이 시간엔 보통 밭에 계세요')",
             "MEDial이 남기웅에게 집에 가서 확인해 달라고 부탁한다(본인에게 닿지 않으면 이장에게 확인을 부탁하는 규칙)",
             "남기웅은 하던 순찰을 마치고 09:52에 출발하겠다고 한다",
         ],
@@ -111,7 +111,7 @@ BRIEFS: dict[str, dict] = {
         "ending": "남기웅의 수락 한마디로 끝낸다.",
     },
     "d1-w3-disclosed": {
-        "cast": ["P6", "P1"], "turns": (3, 4),
+        "cast": ["P6", "P1"], "turns": (2, 3),
         "scene": "1일차 09:52, 밭. 이장 남기웅이 한상덕 어르신을 찾아 밭까지 왔다. 이번이 첫 번째 확인이다.",
         "people": [P6, P1],
         "facts": [
@@ -125,7 +125,7 @@ BRIEFS: dict[str, dict] = {
         "ending": "한상덕의 불편함 한마디, 남기웅의 짧은 마무리. 작별 인사를 늘이지 않는다.",
     },
     "d2-t2": {
-        "cast": ["MEDial", "P9"], "turns": (3, 4),
+        "cast": ["MEDial", "P9"], "turns": (2, 3),
         "scene": "2일차 07:48, 임태식 어르신 댁(전화). 아침 일찍 읍내 의원 진료가 있는 임태식에게, MEDial이 태워 줄 사람을 찾아본 결과를 알려 주고 버스를 안내한다. 앞서 MEDial이 진료 일정을 물었고 태워 줄 사람을 찾아보겠다고 했으니 일정을 다시 묻지 않는다.",
         "people": [MEDIAL, P9],
         "facts": [
@@ -139,7 +139,7 @@ BRIEFS: dict[str, dict] = {
         "ending": "임태식이 서두르겠다는 한마디로 끝낸다.",
     },
     "d2-w3-factonly": {
-        "cast": ["P6", "P1"], "turns": (3, 4),
+        "cast": ["P6", "P1"], "turns": (2, 3),
         "scene": "2일차 13:56, 밭. 이장 남기웅이 한상덕 어르신을 또 찾아왔다. 이번이 두 번째 확인이다(어제도 같은 일이 있었고 별일 없었다).",
         "people": [P6, P1],
         "facts": [
@@ -152,7 +152,7 @@ BRIEFS: dict[str, dict] = {
         "ending": "남기웅의 안심 한마디로 끝낸다(한상덕의 마지막 대꾸나 수고 인사를 덧붙이지 않는다). 각자 3번씩이면 충분하다.",
     },
     "d2-w3-disclosed": {
-        "cast": ["P6", "P1"], "turns": (3, 4),
+        "cast": ["P6", "P1"], "turns": (2, 3),
         "scene": "2일차 13:56, 밭. 이장 남기웅이 한상덕 어르신을 또 찾아왔다. 이번이 두 번째 확인이다(어제도 같은 일이 있었고 별일 없었다).",
         "people": [P6, P1],
         "facts": [
@@ -165,7 +165,7 @@ BRIEFS: dict[str, dict] = {
         "ending": "한상덕의 못 박는 한마디로 끝낸다. 수고·작별 인사를 늘이지 않는다.",
     },
     "d3-w3-nurse": {
-        "cast": ["MEDial", "HC_NURSE"], "turns": (3, 4),
+        "cast": ["MEDial", "HC_NURSE"], "turns": (2, 3),
         "scene": "3일차 10:10, 전화. 아침부터 이웃에게 부탁했지만 한상덕 어르신 확인이 풀리지 않아 MEDial이 면 보건소 담당자에게 확인을 넘긴다.",
         "people": [MEDIAL, NURSE],
         "facts": [
@@ -179,7 +179,7 @@ BRIEFS: dict[str, dict] = {
         "ending": "담당자의 접수 확인으로 끝낸다.",
     },
     "d3-w3-factonly": {
-        "cast": ["P6", "P1"], "turns": (3, 4),
+        "cast": ["P6", "P1"], "turns": (2, 3),
         "scene": "3일차 09:52, 밭. 이장 남기웅이 한상덕 어르신을 또 찾아왔다. 이번이 세 번째 확인이다(앞의 두 번은 모두 밭에 있었고 별일 없었다).",
         "people": [P6, P1],
         "facts": [
@@ -193,7 +193,7 @@ BRIEFS: dict[str, dict] = {
         "ending": "한상덕의 한마디(밭에 있을 때도 있다는 것을 알아 달라)로 끝낸다. 작별 인사 없음.",
     },
     "d3-w3-disclosed": {
-        "cast": ["P6", "P1"], "turns": (3, 4),
+        "cast": ["P6", "P1"], "turns": (2, 3),
         "scene": "3일차 09:52, 밭. 이장 남기웅이 한상덕 어르신을 또 찾아왔다. 이번이 세 번째 확인이다(앞의 두 번은 모두 밭에 있었고 별일 없었다).",
         "people": [P6, P1],
         "facts": [
@@ -205,7 +205,7 @@ BRIEFS: dict[str, dict] = {
         "ending": "한상덕의 못 박는 한마디로 끝낸다. 작별 인사 없음.",
     },
     "d3-e2": {
-        "cast": ["P7", "MEDial"], "turns": (3, 5),
+        "cast": ["P7", "MEDial"], "turns": (2, 3),
         "scene": "3일차 20:32, 고성재 어르신 댁(전화). 형 고성진이 동생 고성재가 쓰러져 있는 것을 보고, MEDial의 안내를 받으며 응급처치를 한다. 구급대는 20:56에 도착한다.",
         "people": [P7, MEDIAL],
         "facts": [
@@ -216,8 +216,8 @@ BRIEFS: dict[str, dict] = {
             "넷째, 팔을 곧게 펴고 가슴을 빠르고 세게 계속 누른다",
             "구급대는 20:56에 도착한다(MEDial이 안심시키며 알려 준다). 도착할 때까지 전화로 계속 안내한다",
         ],
-        "order": "고성진이 알리고 묻는다 → MEDial이 차분히 첫 안내 → 반응 없다 → 다음 안내 → 안 움직인다, 겁난다 → MEDial이 침착하라고 하며 구급대 도착 시각을 알려 주고 전화로 계속 안내한다고 한 줄로 말한다 → 다음 안내(손 위치) → 올렸다 → 마지막 안내(누르기)",
-        "ending": "MEDial의 누르기 안내로 끝낸다. 한 번에 하나의 동작만, 동작 줄에는 시각 이야기를 섞지 않는다.",
+        "order": "고성진이 알리고 묻는다 → MEDial이 첫 안내(이름 부르며 어깨 두드리고 가슴이 오르내리는지 본다) → 고성진이 반응이 없고 숨도 안 쉬는 것 같다며 겁이 난다 → MEDial이 침착하라고 하며 구급대 20:56 도착을 알리고 손 위치(가슴 한가운데 두 손 포개기)를 안내 → 고성진이 손을 올렸다고 말하며 다음을 묻는다 → MEDial이 누르기 안내(팔을 곧게 펴고 빠르고 세게 계속)",
+        "ending": "MEDial의 누르기 안내로 끝낸다. 6줄(각자 3번) 안에서 한 줄에 한 동작을 안내하되 두 동작을 한 문장으로 잇는 것은 허용한다.",
     },
 }
 
@@ -266,14 +266,16 @@ def problems(brief, lines):
     for c, n in count.items():
         if not lo <= n <= hi:
             bad.append("%s가 %d번 말함(%d~%d번)" % (c, n, lo, hi))
+    if len(lines) > 6:
+        bad.append("전체 %d줄(6줄 이내)" % len(lines))
     for i in range(len(lines)):
         for j in range(i + 1, len(lines)):
             a, b = _bigrams(lines[i]["text"]), _bigrams(lines[j]["text"])
             if a and b and len(a & b) / min(len(a), len(b)) >= 0.5:
                 bad.append("되풀이: '%s' / '%s'" % (lines[i]["text"], lines[j]["text"]))
-    for i in range(2, len(lines)):
-        if lines[i]["speaker"] == lines[i - 1]["speaker"] == lines[i - 2]["speaker"]:
-            bad.append("한 사람이 연달아 세 줄")
+    for i in range(1, len(lines)):
+        if lines[i]["speaker"] == lines[i - 1]["speaker"]:
+            bad.append("한 사람이 연달아 두 줄: '%s'" % lines[i]["text"])
     return bad
 
 
@@ -284,7 +286,7 @@ def payload_of(brief):
         "반드시 나오는 사실(이것만. 새 사실 금지)": brief["facts"],
         "흐름": brief["order"],
         "끝": brief["ending"],
-        "줄 수": "각자 %d번 이상 %d번 이하" % brief["turns"],
+        "줄 수": "전체 6줄 이내, 각자 %d~%d번" % brief["turns"],
     }
 
 
