@@ -38,9 +38,9 @@ WHO = {"P6": "the middle-aged man in the navy jacket and white polo", "P1": "the
 # kind: pair = two people in one close two-shot; call = one person on the phone; special = the emergency
 SCENES = {
     "d1-w2": dict(bg="PATROL", cast=["P6"], kind="call", place="on a village road by the sea during his patrol, a phone held to his ear"),
-    "d1-w3-disclosed": dict(bg="FARM", cast=["P6", "P1"], kind="pair"),
+    "d1-w3-disclosed": dict(bg="FARM", cast=["P1", "P6"], kind="pair"),
     "d2-t2": dict(bg="HOME", cast=["P9"], kind="call", place="inside his house, a phone held to his ear"),
-    "d2-w3-factonly": dict(bg="FARM", cast=["P6", "P1"], kind="pair"),
+    "d2-w3-factonly": dict(bg="FARM", cast=["P1", "P6"], kind="pair"),
     "d3-w3-nurse": dict(bg="CLINIC.desk", cast=["HC_NURSE"], kind="call", place="at her desk in a small rural health centre office, a landline phone held to her ear"),
     "d3-m2-search": dict(bg="TOWN", cast=["P12"], kind="call", place="on the street of a small coastal town, a phone held to his ear"),
     "d3-e2": dict(bg="HOME", cast=["P7", "P8"], kind="special"),
@@ -77,8 +77,8 @@ def prompt_for(cfg, speaker, say, n_images):
         a, b = cast
         other = names[b if speaker == a else a]
         return ("Medium two-shot, fixed camera, no camera movement. %s stand together in the same persimmon and cabbage field above a small fishing "
-                "village and the sea in Namhae, Korea, both visible from the waist up, facing each other at a slight angle. Only %s speaks. %s stays "
-                "silent, listens and reacts a little, mouth closed.%s %s" % (" and ".join(names[p] for p in cast), names[speaker], other.capitalize(), loc, voice))
+                "village and the sea in Namhae, Korea, both visible from the waist up, facing each other at a slight angle, %s on the left side of the frame and %s on the right side, and they keep these positions. Only %s speaks. %s stays "
+                "silent, listens and reacts a little, mouth closed.%s %s" % (" and ".join(names[p] for p in cast), names[a], names[b], names[speaker], other.capitalize(), loc, voice))
     if cfg["kind"] == "special":
         return ("Medium shot, fixed camera, no camera movement. %s kneels on the floor beside %s who lies unconscious on his back, doing chest "
                 "compressions with both hands, frightened and out of breath, speaking toward a phone on the floor. Only %s speaks.%s %s" % (
