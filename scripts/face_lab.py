@@ -20,12 +20,13 @@ from PIL import Image  # noqa: E402
 
 OUT = L.LAB / "faces"
 OUT.mkdir(parents=True, exist_ok=True)
-SETTING = ("standing in a persimmon and cabbage field above a small fishing village and the sea in Namhae, Korea, "
+import os
+SETTING = os.environ.get("SETTING") or ("standing in a persimmon and cabbage field above a small fishing village and the sea in Namhae, Korea, "
            "medium close-up, looking slightly off camera, natural daylight")
 
 
 def art(who):
-    for name in (who + ".stand", who + ".seated", who + ".phone"):
+    for name in ({"HC_NURSE": ("CLINIC.desk",)}.get(who, ()) + (who + ".stand", who + ".seated", who + ".phone")):
         p = L.ROOT / "local-data/art" / (name + ".webp")
         if p.exists():
             im = Image.open(p).convert("RGBA")
@@ -62,13 +63,13 @@ def make(who, n):
         r = L.call("/images/generations", {"model": "seedream-5-0-260128", "prompt": "Photorealistic portrait. " + desc + " " + SETTING,
                                          "size": "2K", "response_format": "url", "watermark": False})
         u = r["data"][0]["url"]
-        (OUT / ("%s_t%d.jpg" % (who, i))).write_bytes(urllib.request.urlopen(u, timeout=120).read())
+        (OUT / ("%s_u%d.jpg" % (who, i))).write_bytes(urllib.request.urlopen(u, timeout=120).read())
         urls.append(u); print("made", i)
-    (OUT / (who + "_t_urls.json")).write_text(json.dumps(urls), encoding="utf-8")
+    (OUT / (who + "_u_urls.json")).write_text(json.dumps(urls), encoding="utf-8")
 
 
 def probe(who):
-    urls = json.loads((OUT / (who + "_t_urls.json")).read_text(encoding="utf-8"))
+    urls = json.loads((OUT / (who + "_u_urls.json")).read_text(encoding="utf-8"))
     for i, u in enumerate(urls):
         body = {"model": "dreamina-seedance-2-0-mini-260615", "content": [
             {"type": "text", "text": "The man from @Image1 speaks, fixed camera."},
