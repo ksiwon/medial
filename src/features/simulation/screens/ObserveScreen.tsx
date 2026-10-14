@@ -75,6 +75,10 @@ const MapStrip = styled.div`
   > div { display: flex; align-items: center; gap: 8px; }
   > div > b { font-size: calc(16px * var(--k, 1)); font-weight: 800; color: ${night.ink}; letter-spacing: 0.02em; }
   > div > em { ${pill('xs')} font-style: normal; font-weight: 800; color: #fff; background: ${night.accent}; }
+  > ol { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  > ol > li { display: flex; flex-direction: column; gap: 2px; padding-left: 8px; border-left: 4px solid ${night.accent}; line-height: 1.35; }
+  > ol > li > span { color: ${night.mute}; }
+  > ol > li > b { font-weight: 800; color: ${night.ink}; }
 `;
 
 const MapBody = styled.div`
@@ -182,7 +186,7 @@ interface Props {
   /** The day is over: the evaluations are the next thing to read. */
   onReadEvaluations: () => void;
   /** Which day this is and the way back, for a record that is walked day by day. */
-  strip?: { day: string };
+  strip?: { day: string; /** The requests picked on the way here, so the day reads as their result. */ chosen?: readonly string[] };
   /** The rules the visitor changed on the way here, by the name the judgement panel gives them. */
   changedRules?: readonly string[];
 }
@@ -326,6 +330,11 @@ export default function ObserveScreen({ village, detail, events, art, dayEnd: en
             <b>MEDial</b>
             {strip && <em>{strip.day}</em>}
           </div>
+          {strip?.chosen && strip.chosen.length > 0 && (
+            <ol aria-label="내가 고른 요청">
+              {strip.chosen.map((label, i) => <li key={label}><span>{i + 1}일차 끝에 고른 요청</span><b>{label}</b></li>)}
+            </ol>
+          )}
         </MapStrip>
         <MapBody>
         <VillageMap

@@ -95,3 +95,14 @@ export function changedRuleNames(detail: SessionDetail, generationId: string): s
   }
   return names;
 }
+
+/** The requests the visitor chose on the way to this day, in the words they read on the choice screen (one per earlier day). */
+export function chosenRequests(detail: SessionDetail, generationId: string): string[] {
+  const out: string[] = [];
+  for (const g of pathTo(detail, generationId)) {
+    if (!g.appliedChangeSetId || !g.parentGenerationId) continue;
+    const label = detail.generations.find((x) => x.id === g.parentGenerationId)?.changeSets.find((c) => c.id === g.appliedChangeSetId)?.label;
+    if (label) out.push(label);
+  }
+  return out;
+}

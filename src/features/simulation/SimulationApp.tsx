@@ -6,7 +6,7 @@ import IntroScreen from './screens/IntroScreen';
 import ObserveScreen from './screens/ObserveScreen';
 import { useIterationStore } from './iterationStore';
 import { usePlayback } from './scene/playback';
-import { changedRuleNames, dayFacts, dayLine, dayName, openingOf } from './selectors/tree';
+import { changedRuleNames, chosenRequests, dayFacts, dayLine, dayName, openingOf } from './selectors/tree';
 import { useSimStore } from './store';
 import HomeButton from './ui/HomeButton';
 import { useAmbient } from './ui/ambient';
@@ -204,7 +204,7 @@ export default function SimulationApp() {
           dayEnd={{ text: `${dayName(current)}가 끝났습니다`, action: '주민 평가를 보시겠습니까',
                     note: dayFacts(current) ? dayLine(dayFacts(current)!) : null }}
           onReadEvaluations={() => it.setScreen('evaluations')}
-          strip={{ day: dayName(current) }}
+          strip={{ day: dayName(current), chosen: chosenRequests(detail, current.id) }}
           changedRules={changedRuleNames(detail, current.id)}
         />
       )}

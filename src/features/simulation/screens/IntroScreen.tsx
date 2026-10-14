@@ -52,10 +52,13 @@ const SAY_FIVE = [
 ] as const;
 
 /** Scene lengths in ms with no voice: they are the least a scene runs. */
-const BASE_MS = [5500, 5500, 12000, 11500, 11000, 13000];
+const BASE_MS = [5500, 5500, 12000, 11500, 12500, 13000];
 
 /** A caption is spoken from just after it appears; the next one appears when the narrator is done. */
 const LEAD_S = 0.5;
+/** The diagram of scene 4 is drawn within this many seconds of its second sentence (the last arrow ends it), and the arrow then stays. */
+const DIAGRAM_S = 2.6;
+const ARROW_HOLD_S = 3;
 const GAP_S = 0.7;
 const TAIL_S = 1.4;
 
@@ -81,16 +84,6 @@ export function layoutOf(voices: Record<string, VoiceClip> | null | undefined): 
   const cue = (i: number, at: number) => { const c = clip(i); return c ? [{ file: c.file, at }] : []; };
   const end = (at: number, i: number) => at + sec(i) + TAIL_S;
 
-  const until = Math.max(5.2, LEAD_S + sec(2) + 0.4);
-  const next = until + GAP_S;
-  const ms = [
-    Math.max(BASE_MS[0], end(LEAD_S, 0) * 1000),
-    Math.max(BASE_MS[1], end(LEAD_S, 1) * 1000),
-    Math.max(BASE_MS[2], end(next + 0.3, 3) * 1000),
-    Math.max(BASE_MS[3], end(LEAD_S, 4) * 1000),
-    Math.max(BASE_MS[4], end(LEAD_S, 5) * 1000),
-    Math.max(BASE_MS[5], end(LEAD_S, 6) * 1000),
-  ];
   /** Where each sentence of a clip begins, by its share of the characters (the clip is one recording). */
   const starts = (i: number, sentences: readonly string[]) => {
     const all = sentences.reduce((n, t) => n + t.length, 0);
@@ -98,11 +91,23 @@ export function layoutOf(voices: Record<string, VoiceClip> | null | undefined): 
     let used = 0;
     return sentences.map((t) => { const at = LEAD_S + (span * used) / all; used += t.length; return at; });
   };
+  const four = starts(5, SAY_FOUR);
+  const until = Math.max(5.2, LEAD_S + sec(2) + 0.4);
+  const next = until + GAP_S;
+  const ms = [
+    Math.max(BASE_MS[0], end(LEAD_S, 0) * 1000),
+    Math.max(BASE_MS[1], end(LEAD_S, 1) * 1000),
+    Math.max(BASE_MS[2], end(next + 0.3, 3) * 1000),
+    Math.max(BASE_MS[3], end(LEAD_S, 4) * 1000),
+    // The diagram's last arrow is drawn at the end of its timeline and then stays a while before the scene is left.
+    Math.max(BASE_MS[4], end(LEAD_S, 5) * 1000, (four[1] + DIAGRAM_S + ARROW_HOLD_S) * 1000),
+    Math.max(BASE_MS[5], end(LEAD_S, 6) * 1000),
+  ];
   return {
     ms,
     total: ms.reduce((x, y) => x + y, 0),
     two: { until, next },
-    said: { four: starts(5, SAY_FOUR), five: starts(6, SAY_FIVE) },
+    said: { four, five: starts(6, SAY_FIVE) },
     cues: [cue(0, LEAD_S), cue(1, LEAD_S), [...cue(2, LEAD_S), ...cue(3, next + 0.3)], cue(4, LEAD_S), cue(5, LEAD_S), cue(6, LEAD_S)],
   };
 }
@@ -506,20 +511,20 @@ function Diagram({ after }: { after: number }) {
       </g>
 
       {/* 3. The interviews it stands on, and the residents raised from them. */}
-      <g className="in" style={at(after + 0.2)}>
+      <g className="in" style={at(after + 0.1)}>
         <rect x={700} y={450} width={430} height={66} rx={33} fill="none" stroke={ACCENT} strokeWidth={2.5} />
         {label(915, 492, 24, PAPER, '실제 인터뷰 12 · 근거', 700)}
       </g>
-      {arrow('M 915 444 L 915 416', after + 0.9, ACCENT, [915, 412, -90], 0.4)}
+      {arrow('M 915 444 L 915 416', after + 0.4, ACCENT, [915, 412, -90], 0.25)}
       {Array.from({ length: 12 }, (_, i) => (
-        <g key={i} className="in" style={at(after + 1.4 + i * 0.1)}>
+        <g key={i} className="in" style={at(after + 0.7 + i * 0.06)}>
           <circle cx={705 + (i % 6) * 84} cy={160 + Math.floor(i / 6) * 76} r={30} fill="rgba(246,241,232,0.14)"
             stroke={PAPER} strokeWidth={2} />
           {label(705 + (i % 6) * 84, 169 + Math.floor(i / 6) * 76, 22, PAPER, String(i + 1), 700)}
         </g>
       ))}
-      {['이장', '보건소'].map((who, i) => (
-        <g key={who} className="in" style={at(after + 2.7 + i * 0.25)}>
+      {['119 구급대원', '보건소'].map((who, i) => (
+        <g key={who} className="in" style={at(after + 1.5 + i * 0.15)}>
           <rect x={680 + i * 240} y={300} width={220} height={60} rx={30} fill="rgba(246,241,232,0.12)"
             stroke="rgba(246,241,232,0.5)" strokeWidth={1.5} />
           {label(790 + i * 240, 340, 26, PAPER, who, 700)}
@@ -527,8 +532,8 @@ function Diagram({ after }: { after: number }) {
       ))}
 
       {/* 4. The residents' evaluation travels back to the designer. */}
-      {arrow('M 640 340 C 520 500, 240 500, 115 313', after + 3.3, ACCENT, [115, 313, -124], 1)}
-      <g className="in" style={at(after + 3.9)}>{label(380, 524, 22, PAPER, '주민 에이전트가 평가', 700)}</g>
+      {arrow('M 640 340 C 520 500, 240 500, 115 313', after + 1.9, ACCENT, [115, 313, -124], 0.7)}
+      <g className="in" style={at(after + 2.4)}>{label(380, 524, 22, PAPER, '주민 에이전트가 평가', 700)}</g>
     </Drawn>
   );
 }

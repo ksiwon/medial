@@ -24,7 +24,15 @@ def spoken_by(episode):
     return {l["speaker"] for b in episode["beats"] for l in b["lines"] if l["kind"] == "say"}
 
 
-def note_for(episode, group):
+def rule_of(panels, rid, label):
+    """The sentence of one rule as the record's panel of this request states it, or ''."""
+    for r in panels.get(rid, {}).get("judgment", {}).get("rules", []):
+        if r["label"] == label:
+            return r["sentence"]
+    return ""
+
+
+def note_for(episode, group, panels):
     """The sentence for a skipped episode, or None when the day goes on without one.
 
     The exhibition fixes a note at 4.5 s (scene/reel.ts), enough to read 28 characters (8 per second and a second to
@@ -34,10 +42,18 @@ def note_for(episode, group):
     rid, t = episode["requestId"], clock(episode["startMs"])
     if rid == "w1":
         span = clock(group[0]["startMs"]) if len(group) == 1 else "%s~%s" % (clock(group[0]["startMs"]), clock(group[-1]["startMs"]))
+        # What a revision the visitor picked made MEDial do differently is said, in the record's own terms.
+        gap = rule_of(panels, rid, "연락 최소 간격")
+        if "15분" in gap:
+            return "%s · 15분 간격을 두고 다시 연락했습니다" % span
+        if "2회" in rule_of(panels, rid, "본인 재연락"):
+            return "%s · 본인께 두 번 더 연락했습니다" % span
         return "%s · 한상덕 어르신께 연락했지만 응답이 없었습니다" % span
     if rid == "w2":
         if "이웃" in episode["title"]:
-            return "%s · 이웃 세 분께 부탁했지만 모두 어려웠습니다" % t
+            return "%s · 이웃 세 분께 먼저 부탁했지만 모두 어려웠습니다" % t
+        if "응답이 없었다는 사실만" in rule_of(panels, rid, "제3자에게 알리는 범위"):
+            return "%s · 이장께 응답이 없다는 사실만 알렸습니다" % t
         return "%s · 이장 남기웅 씨께 확인을 부탁했습니다" % t
     if rid == "t1":
         return "%s · 08:00 진료로 태워 줄 사람을 요청했습니다" % t
@@ -79,7 +95,7 @@ def main():
             while e["requestId"] == "w1" and i + len(group) < len(eps) and eps[i + len(group)]["requestId"] == "w1" \
                     and "w1@%d" % (eps[i + len(group)]["startMs"] // 60000) not in played:
                 group.append(eps[i + len(group)])
-            note = note_for(e, group)
+            note = note_for(e, group, scenes.get("panels", {}))
             if note:
                 assert len(note.split(" · ", 1)[1]) <= 28, note
                 e["note"] = note

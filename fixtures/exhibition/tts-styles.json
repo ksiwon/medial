@@ -65,11 +65,12 @@
  "P6|그래, 그리 전해 주라.": "casual, brief",
  "MEDial|밭에 계실 수도 있지만 먼저 집부터 들러 보세요. 본인께 연락이 안 닿아서요.": "concerned, calm and steady",
  "MEDial|다른 분들은 어려우시대요. 진통제랑 파스를 가게로 가져다주세요.": "brisk and clear, a little apologetic",
- "P6|MEDial이 형님 일과는 안 알려 주고, 오후 안내 시계 연락 안 받았다고만 캐서 왔다.": "concerned, slightly hurried",
- "P6|MEDial이 간격을 두고 한 번만 걸었는데 안 받는다며, 밭에 있을 때를 알려 주더라.": "reassuring, at a steady pace",
- "P6|MEDial이 나 부르기 전에 형님께 한 번 더 걸었는데 안 받았다, 밭에 있을 때도 알려 주더라.": "reassuring, at a steady pace",
- "MEDial|고치신 대로 이웃부터 찾았는데 다들 어려우시대요. 진통제랑 파스를 가게로 가져다주세요.": "brisk and clear, a little apologetic",
- "MEDial|고치신 대로 더 돌아가는 분까지 찾아봤어요. 순찰 마치신 뒤에 읍내 약국에서 약과 파스를 받아다 주실 수 있나요?": "brisk and polite, asking",
- "MEDial|고치신 대로 평소 왕래하시는 분을 먼저 찾았어요. 순찰 마치신 뒤에 읍내 약국에서 약과 파스를 받아다 주실 수 있나요?": "brisk and polite, asking",
- "MEDial|고치신 대로 가까운 이웃부터 찾았는데, 순찰 마치신 뒤에 약과 파스를 받아다 주실 수 있나요?": "brisk and polite, asking"
+ "MEDial|태워 드릴 분을 찾아봤는데 지금은 안 계세요.": "brisk, a little sorry",
+ "P9|아쉽네예, 아무도 못 구했습니꺼?": "disappointed, slightly slowed",
+ "MEDial|시간이 맞는 분이 없어서 따로 부탁드린 분은 없어요.": "matter-of-fact and brisk",
+ "P9|그라믄 어렵겠네예, 버스네예?": "resigned, at an even pace",
+ "MEDial|네, 부탁드렸는데 아직 닿은 분이 없어요.": "brisk, a little sorry",
+ "MEDial|남대현 어르신, 조기범 어르신이 급히 필요한 게 있는데 가게를 못 비우세요.": "brisk, explaining, a little concerned",
+ "MEDial|가까이 계신 분께 먼저 부탁드려요. 진통제랑 파스를 가게로 가져다주세요.": "brisk and clear, a little apologetic",
+ "MEDial|이장님, 조기범 어르신이 급히 필요한 게 있는데 가게를 못 비우세요.": "brisk, explaining, a little concerned"
 }
