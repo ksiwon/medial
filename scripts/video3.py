@@ -5,8 +5,11 @@
 The reference portraits are `local-data/video-lab/faces/<P>_<set>_urls.json`; REF below says which one each resident uses.
 One task per line; 480p; the model speaks the written line itself (its voice and its dialect are the ones we use).
 """
+import base64
+import io
 import json
 import math
+import os
 import subprocess
 import sys
 import time
@@ -20,6 +23,10 @@ import seedance_lab as L  # noqa: E402
 OUT = L.ROOT / "local-data" / "video3"  # the first single-person takes are kept in video3/ as <file>.mp4; the two-shots are <file>.two.mp4
 FACES = L.LAB / "faces"
 REF = {"P6": ("P6_s_urls.json", 3), "P1": ("P1_t_urls.json", 0)}
+BG = {"d1-w3-disclosed": "FARM"}  # the picture of the place each scene uses on the wall (local-data/art), given to the model as the location
+RES = os.environ.get("RES", "480p")
+TAG = os.environ.get("TAG", ".two")
+ONLY = os.environ.get("ONLY")  # e.g. "05" to make just that line
 WHO = {"P6": "the middle-aged man in the navy jacket and white polo", "P1": "the old man in the sun hat and olive shirt"}
 
 
@@ -30,7 +37,7 @@ def portrait(p):
 
 def one(row):
     speaker, text, seconds, file = row["speaker"], row["text"], row["seconds"], row["file"]
-    target = OUT / file.replace(".wav", ".two.mp4")
+    target = OUT / file.replace(".wav", TAG + ".mp4")
     if target.exists():
         return file, "have"
     mp3 = OUT / (file + ".mp3")
@@ -46,11 +53,18 @@ def one(row):
               "Korean naturally in a thick Gyeongsang-province accent, the way a farmer in a village talks, with small natural head and hand "
               "movements, and his mouth moves with the words. %s stays silent, listens and reacts a little, mouth closed. He says: \"%s\"" % (
                   " and ".join(names[p] for p in cast), names[speaker], " and ".join(others).capitalize() if others else "The other", say))
+    bg = []
+    if row.get("bg"):
+        from PIL import Image
+        im = Image.open(L.ROOT / "local-data/art" / (row["bg"] + ".webp")).convert("RGB")
+        buf = io.BytesIO(); im.save(buf, "JPEG", quality=92)
+        bg = [{"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()}, "role": "reference_image"}]
+        prompt += " The location is exactly the place shown in @Image%d: keep this real-looking village, sea and field as the background, with natural lighting." % (len(cast) + 1)
     voice_of = [{"type": "audio_url", "audio_url": {"url": L.data_uri(mp3, "audio/mpeg")}, "role": "reference_audio"}]
-    body = {"model": "dreamina-seedance-2-5-260628", "generate_audio": True, "ratio": "16:9", "resolution": "480p", "watermark": False,
+    body = {"model": "dreamina-seedance-2-5-260628", "generate_audio": True, **({"seed": int(os.environ["SEED"])} if os.environ.get("SEED") else {}), "ratio": "16:9", "resolution": RES, "watermark": False,
             "duration": min(15, max(4, math.ceil(seconds + 0.8))),
             "content": [{"type": "text", "text": prompt}]
-                       + [{"type": "image_url", "image_url": {"url": portrait(p)}, "role": "reference_image"} for p in cast] + voice_of}
+                       + [{"type": "image_url", "image_url": {"url": portrait(p)}, "role": "reference_image"} for p in cast] + bg + voice_of}
     tid = L.call("/contents/generations/tasks", body)["id"]
     while True:
         time.sleep(8)
@@ -73,7 +87,7 @@ def main():
     scene = sys.argv[2]
     rows = json.load(open(L.ROOT / "local-data/audio/gemini-3.8-flash-tts/scenes.json", encoding="utf-8"))[scene]
     cast = sorted({r["speaker"] for r in rows if r["speaker"] in REF})
-    todo = [dict(r, cast=cast) for r in rows if r["speaker"] in REF]
+    todo = [dict(r, cast=cast, bg=BG.get(scene)) for r in rows if r["speaker"] in REF and (not ONLY or ("_%s_" % ONLY) in r["file"])]
     print(scene, len(rows), "lines;", len(todo), "to make")
     with ThreadPoolExecutor(3) as ex:
         for file, state in ex.map(one, todo):
