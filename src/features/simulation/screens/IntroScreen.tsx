@@ -485,7 +485,7 @@ function Diagram({ after }: { after: number }) {
       <g className="in" style={at(0.4)}>
         <rect x={10} y={185} width={210} height={120} rx={30} fill={PAPER} />
         {label(115, 240, 28, INK, '서비스 디자이너', 800)}
-        {label(115, 278, 21, '#55574b', '여러분', 700)}
+        {label(115, 278, 21, '#55574b', '관객 여러분', 700)}
       </g>
       {arrow('M 228 245 L 292 245', 1.1, PAPER, [296, 245, 0], 0.5)}
       <g className="in" style={at(1.3)}>{label(260, 222, 20, PAPER, '구상', 700)}</g>
@@ -528,7 +528,7 @@ function Diagram({ after }: { after: number }) {
 
       {/* 4. The residents' evaluation travels back to the designer. */}
       {arrow('M 640 340 C 520 500, 240 500, 115 313', after + 3.3, ACCENT, [115, 313, -124], 1)}
-      <g className="in" style={at(after + 3.9)}>{label(380, 470, 22, PAPER, '주민이 평가한다', 700)}</g>
+      <g className="in" style={at(after + 3.9)}>{label(380, 524, 22, PAPER, '주민 에이전트가 평가', 700)}</g>
     </Drawn>
   );
 }
