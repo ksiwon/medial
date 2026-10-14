@@ -52,7 +52,7 @@ const SAY_MEDIAL = [
 ] as const;
 const SAY_FIVE = [
   '이제 여러분이, 초안을 들고 온 서비스 디자이너가 되어 봅니다.',
-  '하루를 지켜보고, 주민 에이전트의 평가를 읽고, 수정 요청 하나를 골라 초안을 고칩니다.',
+  '하루를 지켜보고, 주민 에이전트의 평가를 읽고,\n수정 요청 하나를 골라 초안을 고칩니다.',
   '직접 가지 못해도, 어르신들의 고충을 미리 확인할 수 있습니다.',
 ] as const;
 
@@ -718,7 +718,7 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
         <Caption>
           <Timed $on={on(2)} $at={0.2} $until={layout.two.until}>
             <Eyebrow $on={on(2)}>살펴 줄 사람이 없다</Eyebrow>
-            <Line $on={on(2)} $delay={0.3}>{'문제는, 어르신을 살펴 줄 사람이 마을에 없다는 겁니다.\n그 일은 이장님 한 분께 이미 몰려 있습니다.'}</Line>
+            <Line $on={on(2)} $delay={0.3} $long>{'문제는, 어르신을 살펴 줄 사람이 마을에 없다는 겁니다.\n그 일은 이장님 한 분께 이미 몰려 있습니다.'}</Line>
           </Timed>
         </Caption>
         {SAY_MEDIAL.map((text, k) => (
