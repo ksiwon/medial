@@ -152,3 +152,7 @@ npm run e2e
 장면의 대사는 미리 만들어 둔 음성(`local-data/audio/`, git 밖)을 화면이 틀어 준다. 브라우저는 사용자가 한 번 만지기 전에는 소리를 막으니, 전시장 PC의 브라우저는
 자동 재생을 허용해 띄운다. Chrome: `chrome --kiosk --autoplay-policy=no-user-gesture-required http://localhost:5180/`. 소리가 막혀도 장면은 소리 없이 계속 간다.
 음성 파일이 없으면(합성 마을 · 파일 없음) 대사는 읽는 시간만큼 조용히 흐른다.
+
+**영상 모드(3안)** — 주소 뒤에 `?video=1` 을 붙이면(`http://localhost:5180/?video=1`) 영상이 있는 대사 줄은 생성 영상으로 나온다
+(`local-data/video3/`, git 밖 · `python scripts/video3_manifest.py` 가 `manifest.json` 을 만든다). 영상이 없는 줄은 사진 그대로이고,
+`?video=1` 이 없으면 사진 모드로 영상 파일이 있어도 쓰지 않는다. 영상 소리도 위와 같이 자동 재생을 허용해야 난다.

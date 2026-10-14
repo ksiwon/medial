@@ -276,6 +276,22 @@ npm run e2e                            # 6 passed (Chromium, 합성 마을, .run
 날짜별로 무엇을 어떻게 바꿨고 무엇을 확인했는지. 더 오래된 기록(v0.2~v0.4 · MAS 재구축 · 폐기된 설계)은
 [docs/research/history/DEVELOPMENT_HISTORY.md](docs/research/history/DEVELOPMENT_HISTORY.md).
 
+## 2026-10-15 · 3안 — 대화 장면을 생성 영상으로 (영상 모드 `?video=1`)
+
+- **무엇:** 전시 영상 3안은 사흘 사이클(1일차 → 체면 → 2일차 → 이웃부터 → 3일차)의 대화 장면 7개를 BytePlus Seedance 2.5로
+  만든 영상으로 보여 준다. 목소리·사투리·입 모양은 모델이 만든 것(사용자가 고름), 얼굴은 글로 묘사해 Seedream으로 뽑은
+  기준 인물(실제 얼굴 입력은 거절됨), 배경은 장면 그림을 장소 참조로 넣었다. 두 사람 장면은 한상덕 왼쪽 · 이장 오른쪽으로 고정.
+- **앱:** 사진 모드(기본)와 영상 모드(`?video=1`)가 있다. 영상 모드는 `GET /village/video`(줄별 클립) · `/village/video/{file}`;
+  클립이 있는 줄만 영상으로 나오고 나머지는 사진 그대로다(`reel.ts` 의 `videos`, `SceneStage` 의 `FilmFrame`).
+  주민 줄은 클립이 직접 말하고(점 없이 바로 시작, 줄 길이 = 말이 끝나는 곳), MEDial이 말하는 줄은 주민이 전화를 듣는
+  영상 위에 기존 MEDial 음성. 한 사람(통화)은 꽉 채우고, 두 사람은 장면 그림을 흐리게 깐 위에 통째로 보인다.
+  주소에 `?video=1` 이 없으면 영상 파일이 있어도 2안과 똑같다(서버 테스트 · 줄 길이 테스트 추가).
+- **만드는 법(git 밖 `local-data/video3/`):** `scripts/video3.py scene|listen <장면>`(RES=480p|720p|1080p) →
+  `scripts/video3_manifest.py` 가 `manifest.json` → `scripts/video3_stt.py` 로 받아쓰기 확인 → `scripts/video3_scene.py` 장면별 미리보기.
+  녹화는 `node scripts/record_walk.cjs <새 폴더> video`, 소리는 `scripts/mux_voice.py`(영상 클립 소리는 말 끝에서 자르고 크기를 맞춘다).
+- **지금(베타):** 480p. 1080p는 확정 후(약 $91). "메디얼이라는 에이아이" 발음이 몇 줄에서 "메디올/매디풀"로 들린다.
+  녹화: `docs/presentations/2026-10-07-exhibition/out/ver3/MEDial_전체관람_3안_영상모드_2026-10-15.mp4`(7분 43초; 2안 7분 9.5초).
+
 ## 2026-10-14 (교수님 피드백) · 초안을 고치는 디자이너 · 주민 AI 에이전트 · 안부 스피커 · 선택이 결과로 보임
 
 - **서사:** 서비스 디자이너는 MEDial을 처음부터 설계하는 사람이 아니라 *초안을 들고 와 고치는* 사람이다. 인트로 4·5·6·7번 · 아웃트로 1·2·4번 해설을

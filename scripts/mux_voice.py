@@ -38,8 +38,8 @@ chains = ["[1:a]volume=eval=frame:volume='0.12*(1-0.6*min(1,%s))'[bgm]" % (duck 
 labels = ["[bgm]"]
 for i, p in enumerate(plays, start=2):
     delay = max(0, int(p["at"] - t_page))
-    # a clip is cut where its speech ends
-    cut = f"atrim=0:{p['dur']:.2f}," if p["file"] in spoken else ""
+    # a clip is cut where its speech ends and levelled (the model's voices come out at very different loudness)
+    cut = f"atrim=0:{p['dur']:.2f},loudnorm=I=-17:TP=-2:LRA=7," if p["file"] in spoken else ""
     chains.append(f"[{i}:a]{cut}adelay={delay}|{delay}[a{i}]")
     labels.append(f"[a{i}]")
 chains.append("".join(labels) + f"amix=inputs={len(plays) + 1}:normalize=0:dropout_transition=0,apad[aout]")
