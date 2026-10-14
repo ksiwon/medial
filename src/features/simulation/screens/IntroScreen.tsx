@@ -47,8 +47,8 @@ export const INTRO_SAY = [
 const SAY_FOUR = ['그래서 가기 어려운 한 시골마을을 시뮬레이션, Resident Simulator로 대신 만들었습니다.', '실제 인터뷰를 바탕으로, 열두 분 모두를 스스로 판단하고 움직이는 AI 에이전트로 세웠습니다.'] as const;
 /** Scene 2's second caption is one sentence of the narration shown in two pieces. */
 const SAY_MEDIAL = [
-  '이런 고충을 해결하고자, 서비스 디자이너가 어르신의 안부를 살피고 이웃과 병원을 이어 줄 조율자 AI, MEDial의 초안을 제안하며,',
-  '이를 도입하고자 합니다.',
+  '이런 고충을 해결하고자, 서비스 디자이너가 어르신의 안부를 살피고 이웃과 병원을 이어 줄',
+  '조율자 AI, MEDial의 초안을 제안하며, 이를 도입하고자 합니다.',
 ] as const;
 const SAY_FIVE = [
   '이제 여러분이, 초안을 들고 온 서비스 디자이너가 되어 봅니다.',
@@ -145,7 +145,9 @@ const Scene = styled.section<{ $on: boolean }>`
   transition: visibility 0s linear ${(p) => (p.$on ? '0s' : '0.5s')};
   > * { transition: opacity 0.5s ease; }
   > :not(:first-child) { opacity: ${(p) => (p.$on ? 1 : 0)}; transition-duration: ${(p) => (p.$on ? '0.4s' : '0.25s')}; }
-  > :first-child { opacity: ${(p) => (p.$on ? 1 : 0)}; }
+  /* A picture that is leaving stays whole until the arriving one has faded in over it (then visibility takes the scene away),
+     so two scenes cross-fade instead of both dipping to the dark ground in between. */
+  > :first-child { opacity: ${(p) => (p.$on ? 1 : 0)}; transition: opacity ${(p) => (p.$on ? '0.5s ease' : '0s linear 0.5s')}; }
 `;
 
 const Picture = styled.div<{ $src: string | null; $on: boolean; $dim?: boolean }>`
@@ -218,6 +220,9 @@ const Line = styled.h1<{ $on: boolean; $delay?: number; $long?: boolean }>`
   letter-spacing: -0.035em;
   word-break: keep-all;
   text-wrap: balance;
+  /* A 
+ in the text is a line break the writer chose, where balance alone would leave a sentence's last word on the next line. */
+  white-space: pre-line;
   opacity: 0;
   ${(p) => p.$on && css`animation: ${rise} 0.5s ease ${p.$delay ?? 0.3}s forwards;`}
 `;
@@ -391,7 +396,7 @@ function PlaceFilm() {
   const clear = (dot: number, font: number) => u * (dot + 6 + font * 0.82);
 
   return (
-    <Drawn ref={ref} style={{ inset: 0, width: '100%', height: '100%' }} aria-hidden>
+    <Drawn ref={ref} style={{ inset: 0, width: '100%', height: '100%', transitionDuration: '0.5s' }} aria-hidden>
       {wide && close && (
         <Camera style={{ '--wide': wide.transform, '--close': close.transform } as React.CSSProperties}>
           {/* The provinces are simplified for a glance; up close they would draw a
@@ -671,15 +676,15 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
       </Corner>
 
       <Scene $on={on(0)}>
-        <Picture $src={src('FARM')} $on={on(0)} />
+        <Picture $src={src('FARM')} $on={scene >= 0} />
         <Caption>
           <Eyebrow $on={on(0)}>하루의 풍경</Eyebrow>
-          <Line $on={on(0)}>시골의 낮입니다. 병원은 읍내에 있고, 주민들은 밭과 바다에 계시죠.</Line>
+          <Line $on={on(0)}>{'시골의 낮입니다.\n병원은 읍내에 있고, 주민들은 밭과 바다에 계시죠.'}</Line>
         </Caption>
       </Scene>
 
       <Scene $on={on(1)}>
-        <Picture $src={src('INTRO.road')} $on={on(1)} />
+        <Picture $src={src('INTRO.road')} $on={scene >= 1} />
         <Route $on={on(1)} viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid slice" aria-hidden>
           {on(1) && (
             <>
@@ -709,11 +714,11 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
       </Scene>
 
       <Scene $on={on(2)}>
-        <Picture $src={src('HOME')} $on={on(2)} />
+        <Picture $src={src('HOME')} $on={scene >= 2} />
         <Caption>
           <Timed $on={on(2)} $at={0.2} $until={layout.two.until}>
             <Eyebrow $on={on(2)}>살펴 줄 사람이 없다</Eyebrow>
-            <Line $on={on(2)} $delay={0.3}>문제는, 어르신을 살펴 줄 사람이 마을에 없다는 겁니다. 그 일은 이장님 한 분께 이미 몰려 있습니다.</Line>
+            <Line $on={on(2)} $delay={0.3}>{'문제는, 어르신을 살펴 줄 사람이 마을에 없다는 겁니다.\n그 일은 이장님 한 분께 이미 몰려 있습니다.'}</Line>
           </Timed>
         </Caption>
         {SAY_MEDIAL.map((text, k) => (
@@ -735,7 +740,8 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
 
       <Scene $on={on(3)}>
         <Ground />
-        {on(3) && <PlaceFilm />}
+        {/* Stays mounted through the next scene's arrival so the map fades out under the village picture instead of vanishing at once. */}
+        {(scene === 3 || scene === 4) && <PlaceFilm />}
         <Fog />
         <Caption>
           <Eyebrow $on={on(3)}>서비스 디자이너의 고충</Eyebrow>
@@ -744,7 +750,7 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
       </Scene>
 
       <Scene $on={on(4)}>
-        <Picture $src={src('INTRO.village')} $on={on(4)} $dim />
+        <Picture $src={src('INTRO.village')} $on={scene >= 4} $dim />
         {on(4) && <Diagram after={layout.said.four[1]} />}
         {SAY_FOUR.map((text, k) => (
           <Caption key={k}>
@@ -757,7 +763,7 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
       </Scene>
 
       <Scene $on={on(5)}>
-        <Picture $src={src('INTRO.desk')} $on={on(5)} />
+        <Picture $src={src('INTRO.desk')} $on={scene >= 5} />
         {SAY_FIVE.map((text, k) => {
           const at = layout.said.five[k];
           const next = layout.said.five[k + 1];
