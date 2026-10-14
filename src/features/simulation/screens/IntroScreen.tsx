@@ -548,7 +548,7 @@ function Diagram({ after }: { after: number }) {
       ))}
 
       {/* 4. The residents' evaluation travels back to the designer. */}
-      {arrow('M 640 340 C 520 500, 240 500, 115 313', after + 1.9, ACCENT, [115, 313, -124], 0.7)}
+      {arrow('M 640 340 C 520 500, 249 513, 124 326', after + 1.9, ACCENT, [115, 313, -124], 0.7)}
       <g className="in" style={at(after + 2.4)}>{label(380, 518, 22, PAPER, '주민 에이전트가 MEDial을 평가', 700)}</g>
     </Drawn>
   );
