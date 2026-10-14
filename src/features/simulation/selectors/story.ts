@@ -197,7 +197,7 @@ const subj = (id: string | null | undefined) => withParticle(personName(id), 'su
 
 /** How a contact went, as an adverb: "전화로 연락했습니다". */
 const channelOf = (c: unknown): string =>
-  ({ home_device: '안내 시계로', phone: '전화로', in_person: '직접 찾아가서' })[String(c)] ??
+  ({ home_device: '안부 스피커로', phone: '전화로', in_person: '직접 찾아가서' })[String(c)] ??
   String(c ?? '');
 
 /** One readable sentence per event, or null when the event has nothing to say

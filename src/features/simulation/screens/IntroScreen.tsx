@@ -37,17 +37,17 @@ export const INTRO_SAY = [
   '시골의 낮입니다. 병원은 읍내에 있고, 주민들은 밭과 바다에 계시죠.',
   '어르신들은 병원에 가야 할 일이 잦지만, 병원은 멀어서 웬만하면 참으십니다.',
   '문제는, 어르신을 살펴 줄 사람이 마을에 없다는 겁니다. 그 일은 이장님 한 분께 이미 몰려 있습니다.',
-  '그래서 안부를 살피고 이웃과 병원을 이어 줄 조율자 AI, MEDial을 도입하려고 합니다.',
-  '서비스 디자이너는 도입에 앞서 주민 대상 실증 연구를 해야 하지만, 마을이 멀어 자주 찾아가기도, 오래 묻기도 어렵습니다.',
-  '그래서 가기 어려운 한 시골마을을 시뮬레이션, Resident Simulator로 대신 만들었습니다. 실제 인터뷰를 바탕으로, 주민 열두 분을 세웠습니다.',
-  '이제 여러분이, 이 시뮬레이션 속 서비스 디자이너가 되어 봅니다. 하루를 지켜보고, 주민의 평가를 읽고, 수정안 하나를 골라 MEDial의 규칙을 고칩니다. 직접 가지 못해도, 어느 어르신이 어디서 막히는지 볼 수 있습니다.',
+  '서비스 디자이너가 안부를 살피고 이웃과 병원을 이어 줄 조율자 AI, MEDial의 초안을 만들었습니다.',
+  '도입에 앞서 주민 대상 실증 연구로 이 초안을 고쳐야 하지만, 마을이 멀어 자주 찾아가기도, 오래 묻기도 어렵습니다.',
+  '그래서 가기 어려운 한 시골마을을 시뮬레이션, Resident Simulator로 대신 만들었습니다. 실제 인터뷰를 바탕으로, 열두 분 모두를 스스로 판단하고 움직이는 AI 에이전트로 세웠습니다.',
+  '이제 여러분이, 초안을 들고 온 서비스 디자이너가 되어 봅니다. 하루를 지켜보고, 주민 에이전트의 평가를 읽고, 수정 요청 하나를 골라 초안을 고칩니다. 직접 가지 못해도, 어느 어르신이 어디서 막히는지 볼 수 있습니다.',
 ] as const;
 
 /** Scenes 4 and 5 are said in one go but shown a sentence at a time (INTRO_SAY joined). */
-const SAY_FOUR = ['그래서 가기 어려운 한 시골마을을 시뮬레이션, Resident Simulator로 대신 만들었습니다.', '실제 인터뷰를 바탕으로, 주민 열두 분을 세웠습니다.'] as const;
+const SAY_FOUR = ['그래서 가기 어려운 한 시골마을을 시뮬레이션, Resident Simulator로 대신 만들었습니다.', '실제 인터뷰를 바탕으로, 열두 분 모두를 스스로 판단하고 움직이는 AI 에이전트로 세웠습니다.'] as const;
 const SAY_FIVE = [
-  '이제 여러분이, 이 시뮬레이션 속 서비스 디자이너가 되어 봅니다.',
-  '하루를 지켜보고, 주민의 평가를 읽고, 수정안 하나를 골라 MEDial의 규칙을 고칩니다.',
+  '이제 여러분이, 초안을 들고 온 서비스 디자이너가 되어 봅니다.',
+  '하루를 지켜보고, 주민 에이전트의 평가를 읽고, 수정 요청 하나를 골라 초안을 고칩니다.',
   '직접 가지 못해도, 어느 어르신이 어디서 막히는지 볼 수 있습니다.',
 ] as const;
 
@@ -493,21 +493,21 @@ function Diagram({ after }: { after: number }) {
         {label(115, 278, 21, '#55574b', '관객 여러분', 700)}
       </g>
       {arrow('M 228 245 L 292 245', 1.1, PAPER, [296, 245, 0], 0.5)}
-      <g className="in" style={at(1.3)}>{label(260, 222, 20, PAPER, '구상', 700)}</g>
+      <g className="in" style={at(1.3)}>{label(260, 222, 20, PAPER, '초안', 700)}</g>
       <g className="in" style={at(1.6)}>
         <rect x={300} y={185} width={210} height={120} rx={30} fill={accentA(0.22)} stroke={ACCENT} strokeWidth={3} />
         {label(405, 240, 34, PAPER, 'MEDial', 800)}
-        {label(405, 278, 21, 'rgba(246,241,232,0.8)', 'AI 조율자', 700)}
+        {label(405, 278, 21, 'rgba(246,241,232,0.8)', 'AI 조율자 · 초안', 700)}
       </g>
 
       {/* 2. The village it will be applied to is built. */}
       {arrow('M 518 245 L 632 245', 2.3, PAPER, [636, 245, 0], 0.6)}
-      <g className="in" style={at(2.6)}>{label(575, 222, 20, PAPER, '적용', 700)}</g>
+      <g className="in" style={at(2.6)}>{label(575, 222, 20, PAPER, '시험', 700)}</g>
       <g className="in" style={at(2.9)}>
         <rect x={640} y={10} width={550} height={390} rx={36} fill="rgba(21,21,15,0.62)" stroke="rgba(246,241,232,0.55)"
           strokeWidth={2} strokeDasharray="10 10" />
         {label(915, 64, 32, PAPER, '시뮬레이션 마을', 800)}
-        {label(915, 98, 20, ACCENT, 'Resident Simulator', 700)}
+        {label(915, 98, 20, ACCENT, 'Resident Simulator · 주민 AI 에이전트 12', 700)}
       </g>
 
       {/* 3. The interviews it stands on, and the residents raised from them. */}
@@ -708,7 +708,7 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
         <Caption>
           <Timed $on={on(2)} $at={layout.two.next - 0.1}>
             <Eyebrow $on={on(2)}>AI CARE ORCHESTRATOR</Eyebrow>
-            <Line $on={on(2)} $delay={layout.two.next}>그래서 안부를 살피고 이웃과 병원을 이어 줄 조율자 AI, MEDial을 도입하려고 합니다.</Line>
+            <Line $on={on(2)} $delay={layout.two.next}>서비스 디자이너가 안부를 살피고 이웃과 병원을 이어 줄 조율자 AI, MEDial의 초안을 만들었습니다.</Line>
             <Chain $on={on(2)} $delay={layout.two.next + 0.9}>
               <span>안부 확인</span><i>→</i>
               <span>이웃 연결</span><i>→</i>
@@ -724,7 +724,7 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
         <Fog />
         <Caption>
           <Eyebrow $on={on(3)}>서비스 디자이너의 고충</Eyebrow>
-          <Line $on={on(3)} $long>서비스 디자이너는 도입에 앞서 주민 대상 실증 연구를 해야 하지만, 마을이 멀어 자주 찾아가기도, 오래 묻기도 어렵습니다.</Line>
+          <Line $on={on(3)} $long>도입에 앞서 주민 대상 실증 연구로 이 초안을 고쳐야 하지만, 마을이 멀어 자주 찾아가기도, 오래 묻기도 어렵습니다.</Line>
         </Caption>
       </Scene>
 
@@ -754,7 +754,7 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
                 {k === 1 && (
                   <Chain $on={on(5)} $delay={at + 0.9}>
                     <span>하루를 겪는다</span><i>→</i>
-                    <span>주민이 평가한다</span><i>→</i>
+                    <span>주민 에이전트가 평가한다</span><i>→</i>
                     <span>요청 하나로 고친다</span><i>→</i>
                     <span>다시 돌린다</span>
                   </Chain>

@@ -66,7 +66,7 @@ class Village:
 
     def _head(self, prompt):
         if prompt["stage"] == "read":
-            return {"summary": "%s 어르신이 안내 시계에 응답하지 않았다." % prompt["subjectId"],
+            return {"summary": "%s 어르신이 안부 스피커에 응답하지 않았다." % prompt["subjectId"],
                     "locationStatus": "unconfirmed", "clinicalStatus": "unconfirmed",
                     "evidenceEventIds": [], "emergencyEvidenceEventIds": [],
                     "rationale": "응답이 없다는 것 외에는 아는 것이 없다."}
@@ -89,7 +89,7 @@ class Village:
             "askOrder": order,
             "waitMinutes": None if order else 30,
             "rationale": "가까이 있을 사람에게 먼저 부탁한다." if order else "30분 뒤에 다시 본다.",
-            "message": "%s 어르신이 오늘 안내 시계에 응답이 없으셨어요. 잠깐 들러 봐 주실 수 있을까요?"
+            "message": "%s 어르신이 오늘 안부 스피커에 응답이 없으셨어요. 잠깐 들러 봐 주실 수 있을까요?"
                        % prompt["subjectId"],
         }
 

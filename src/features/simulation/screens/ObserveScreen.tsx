@@ -331,7 +331,7 @@ export default function ObserveScreen({ village, detail, events, art, dayEnd: en
             {strip && <em>{strip.day}</em>}
           </div>
           {strip?.chosen && strip.chosen.length > 0 && (
-            <ol aria-label="내가 고른 요청">
+            <ol aria-label="내가 고른 수정 요청">
               {strip.chosen.map((label, i) => <li key={label}><span>{i + 1}일차 끝에 고른 요청</span><b>{label}</b></li>)}
             </ol>
           )}

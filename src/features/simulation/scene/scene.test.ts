@@ -43,7 +43,7 @@ describe('buildEpisodes', () => {
   it('shows the silent house and where the person really is - to the researcher only', () => {
     const checkin = episodes().find((e) => e.requestId === 'checkin-P1')!;
     const frames = checkin.beats[0].frames;
-    expect(frames.find((f) => f.device === '안내 시계')?.place).toBe('HOME:P1');
+    expect(frames.find((f) => f.device === '안부 스피커')?.place).toBe('HOME:P1');
     // In the world P1 was at the farm, which is why nobody answered.
     const p1 = frames.find((f) => f.who.includes('P1'))!;
     expect(p1.place).toBe('FARM');
@@ -232,7 +232,7 @@ describe('a skipped stretch that carries a note', () => {
   const keys = (rid: string) => new Set(all().filter((e) => e.requestId === rid).map(episodeKey));
   it('stands the map still for as long as the note takes to read, and the clock does not move', () => {
     const [first, second] = [...new Set(all().map((e) => e.requestId))];
-    const eps = all().map((e) => (e.requestId === second && e.firstOfRequest ? { ...e, note: '09:30 · 안내 시계로 불렀지만 응답이 없었습니다' } : e));
+    const eps = all().map((e) => (e.requestId === second && e.firstOfRequest ? { ...e, note: '09:30 · 안부 스피커로 불렀지만 응답이 없었습니다' } : e));
     const reel = buildReel({ episodes: eps, events, timeline, pace: 1, featured: keys(first), ...DAY });
     const notes = reel.segments.filter((s) => s.kind === 'map' && s.note);
     expect(notes.length).toBe(1);

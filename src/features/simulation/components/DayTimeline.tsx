@@ -424,7 +424,7 @@ export default function DayTimeline({
           <Item $state="edge" data-ms={dayEndMs} onClick={() => { onSeek(dayEndMs); onCommit(); }}
             style={{ borderBottom: 'none', borderTop: '1px solid ${inkA(0.08)}' }}>
             <i aria-hidden />
-            <div><b>하루 끝 · 주민 평가</b><time>{formatClock(dayEndMs)}</time></div>
+            <div><b>하루 끝 · 주민 에이전트 평가</b><time>{formatClock(dayEndMs)}</time></div>
           </Item>
         </Track>
       </Scroll>

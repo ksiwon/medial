@@ -218,10 +218,10 @@ const Close = styled.div`
 
 /** The closing words, which the narrator reads (fixtures/exhibition/narration.json). A test keeps the two the same. */
 export const CLOSE_SAY = [
-  '서비스 디자이너의 일은 선택의 연속입니다.',
-  '어떤 규칙을 고르느냐에 따라, 같은 마을의 같은 하루도 어르신께는 다른 하루가 됩니다.',
+  '서비스 디자이너의 일은 초안을 고쳐 나가는 일입니다.',
+  '어떤 수정 요청을 고르느냐에 따라, 같은 마을의 같은 하루도 어르신께는 다른 하루가 됩니다.',
   '그런데 멀고 사람이 드문 마을에서는, 그 선택의 결과를 현장에서 오래 지켜볼 수 없습니다.',
-  '그래서 Resident Simulator는, 갈 수 없는 현장을 대신해 그 선택의 결과를 보여 주는 도구입니다.',
+  '그래서 Resident Simulator는, 갈 수 없는 현장을 대신해 초안을 미리 시험해 보는 도구입니다.',
   '멀고 어려운 현장 연구의 부담을 덜어, 서비스 디자이너가 더 나은 서비스를 마을에 들이도록 돕습니다.',
 ] as const;
 
@@ -376,7 +376,7 @@ export default function ChoiceScreen({ detail, current, onChoose, onRestart, art
   return (
     <Sheet>
       <Inner>
-        <PageHead eyebrow={`${dayName(current)} → ${current.index + 2}일차 · 수정안 고르기`} title="무엇을 고칠 것인가">
+        <PageHead eyebrow={`${dayName(current)} → ${current.index + 2}일차 · 수정 요청 고르기`} title="무엇을 고칠 것인가">
           오늘 주민들이 겪은 일에서 나온 세 가지입니다. 하나만 고를 수 있고, 고른 것이 내일의 규칙이
           되어 내일의 시뮬레이션이 여러분의 선택대로 달라집니다. 나머지 조건은 그대로 둡니다.
         </PageHead>
@@ -389,7 +389,7 @@ export default function ChoiceScreen({ detail, current, onChoose, onRestart, art
                 title={child ? undefined : '이 기록에서는 실행하지 않은 안입니다'}>
                 <Kind>
                   <b>{index + 1}</b>
-                  <small>{(rule?.semantic && labels.get(rule.semantic.ruleType)) ?? rule?.field ?? '수정안'}</small>
+                  <small>{(rule?.semantic && labels.get(rule.semantic.ruleType)) ?? rule?.field ?? '수정 요청'}</small>
                 </Kind>
                 <strong>{changeSet.label}</strong>
                 {/* Every card keeps all seven rows, empty or not, so the rows line up. */}
@@ -402,7 +402,7 @@ export default function ChoiceScreen({ detail, current, onChoose, onRestart, art
                         <Portrait key={id} actorId={id} art={art} size={36} />
                       ))}
                     </span>
-                    <div><b>{withParticle(nameList(changeSet.affectedActors), 'subject')}</b> 겪은 일에서 나온 요청</div>
+                    <div><b>{withParticle(nameList(changeSet.affectedActors), 'subject')}</b> 겪은 일에서 나온 수정 요청</div>
                   </From>
                 ) : <span />}
                 {rule ? (

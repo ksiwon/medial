@@ -77,8 +77,15 @@ def sino(n: int) -> str:
     return ("" if tens == 1 else SINO[tens]) + "십" + ("" if ones == 0 else SINO[ones])
 
 
-def spoken(text: str) -> str:
-    """The line as it is read aloud."""
+def spoken(text: str, speaker: str = "") -> str:
+    """The line as it is read aloud.
+
+    The residents' Gyeongsang voices garble a bare "메디얼이" (heard back as 며느리, 매제, 멧돼지); said as "메디얼이라는
+    에이아이가" the name survives, so a resident naming MEDial says what it is along with it (measured 2026-10-14).
+    """
+    if speaker not in ("", "MEDial", "NARRATOR"):
+        pair = {"이": "가", "가": "가", "은": "는", "는": "는", "을": "를", "를": "를"}
+        text = re.sub(r"MEDial(이|가|은|는|을|를)?", lambda m: "메디얼이라는 에이아이" + pair.get(m.group(1) or "", ""), text)
     def clock(m):
         h, mi = int(m.group(1)), int(m.group(2))
         h = h - 12 if h > 12 else h  # people say 한 시 for 13:00, 여덟 시 for 20:56
@@ -105,7 +112,7 @@ def planned():
             voice = voices.get(VOICE_KEY.get(speaker, speaker))
             if voice is None:
                 raise SystemExit("no voice for %s (local-data/tts-voices.json)" % speaker)
-            say, style = spoken(text), notes.get("%s|%s" % (speaker, text)) or STYLE.get(speaker, "")
+            say, style = spoken(text, speaker), notes.get("%s|%s" % (speaker, text)) or STYLE.get(speaker, "")
             yield {"scene": scene, "index": i, "speaker": speaker, "text": text, "spoken": say, "style": style,
                    "voice": voice, "hash": key_of(voice, say, style), "file": "%s_%02d_%s.wav" % (scene, i, speaker)}
 
@@ -254,7 +261,15 @@ def main():
                 print("stopped at the limit (%d calls); run again later" % made)
                 break
             try:
-                path.write_bytes(speak(key, it["voice"], it["spoken"], it["style"], args.model))
+                for tries in range(3):  # a read timeout or a dropped connection is retried; a quota or a bad request is not
+                    try:
+                        path.write_bytes(speak(key, it["voice"], it["spoken"], it["style"], args.model))
+                        break
+                    except (TimeoutError, ConnectionError, urllib.error.URLError) as e:
+                        if isinstance(e, urllib.error.HTTPError) or tries == 2:
+                            raise
+                        print("retry %s: %s" % (it["file"], type(e).__name__))
+                        time.sleep(3)
                 trim(path)
             except urllib.error.HTTPError as e:
                 print("HTTP", e.code, e.read()[:200].decode("utf-8", "ignore"))

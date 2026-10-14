@@ -44,7 +44,7 @@ fs.mkdirSync(`${out}/run/frames`, { recursive: true });
     else if (await vis(/다음 주민 보기/)) state = 'eval-page';
     else if (await vis(/결과 보러 가기/)) state = 'eval-last';
     else if (await vis(/이 평가를 보고 무엇을 고칠지/)) state = 'eval';
-    else if (await vis(/주민 평가를 보시겠습니까/)) state = 'dayend';
+    else if (await vis(/주민 에이전트 평가를 보시겠습니까/)) state = 'dayend';
     else if (await vis(/정지|재생/)) state = 'day';
     if (false && state === 'day' && choices >= 2 && !fast) { await p.getByRole('button', { name: '빠르게' }).click().catch(() => {}); fast = true; }
     if (state !== last) { stamp(state); last = state; await shot(state); }

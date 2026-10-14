@@ -57,7 +57,7 @@ export interface Episode {
   title: string;
   firstOfRequest: boolean;
   /** One sentence of what this stretch was, shown over the map when the scene itself is not played
-   *  ("09:30 · 안내 시계로 …"). Only the stored record writes it (scripts/add_notes.py). */
+   *  ("09:30 · 안부 스피커로 …"). Only the stored record writes it (scripts/add_notes.py). */
   note?: string;
   /** When the note is for a later stretch of a request that already has a row on the timeline (the medicine
    *  arriving at 18:30), the short title of its own row. */

@@ -441,11 +441,11 @@ export default function EvaluationsScreen({
     return (
       <Sheet>
         <Inner>
-          <PageHead title="주민 평가" />
+          <PageHead title="주민 에이전트 평가" />
           <Empty>
             {detail.running
-              ? '아직 이 버전의 주민 평가를 모으는 중입니다. 끝나면 여기에 나타납니다.'
-              : '이 버전에는 주민 평가 기록이 없습니다. 사례와 서비스 경험에서 하루를 실행하세요.'}
+              ? '아직 이 버전의 주민 에이전트 평가를 모으는 중입니다. 끝나면 여기에 나타납니다.'
+              : '이 버전에는 주민 에이전트 평가 기록이 없습니다. 사례와 서비스 경험에서 하루를 실행하세요.'}
           </Empty>
         </Inner>
       </Sheet>
@@ -458,7 +458,7 @@ export default function EvaluationsScreen({
   return (
     <Sheet>
       <Inner>
-        <PageHead eyebrow={eyebrow} title="주민 평가" />
+        <PageHead eyebrow={eyebrow} title="주민 에이전트 평가" />
         <Context>
           <div>
             <ContextTag>이 날의 설정</ContextTag>

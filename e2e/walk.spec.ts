@@ -53,7 +53,7 @@ test.beforeAll(async ({ request }) => {
   await makeRecord(request);
 });
 
-test('소개 → 1일차 → 주민 평가 → 수정안 고르기를 걷는다', async ({ page }) => {
+test('소개 → 1일차 → 주민 에이전트 평가 → 수정 요청 고르기를 걷는다', async ({ page }) => {
   // The film is about fifty seconds and nothing in it can be pressed.
   test.setTimeout(300_000);
   await page.goto('/');
@@ -65,13 +65,13 @@ test('소개 → 1일차 → 주민 평가 → 수정안 고르기를 걷는다'
   await expect(page.getByRole('button', { name: '↺ 처음으로' })).toBeVisible({ timeout: 90_000 });
   await expect(page.getByRole('button', { name: /정지|재생/ })).toBeVisible();
   // The day is skipped scene by scene, as a visitor in a hurry would.
-  for (let i = 0; i < 8 && !(await page.getByRole('button', { name: /주민 평가/ }).first().isVisible()); i += 1) {
+  for (let i = 0; i < 8 && !(await page.getByRole('button', { name: /주민 에이전트 평가/ }).first().isVisible()); i += 1) {
     await page.getByRole('button', { name: /건너뛰기/ }).click({ timeout: 5_000 }).catch(() => {});
     await page.waitForTimeout(800);
   }
 
   // At the day's end the evaluations are one press away.
-  const toEvaluations = page.getByRole('button', { name: /주민 평가/ }).first();
+  const toEvaluations = page.getByRole('button', { name: /주민 에이전트 평가/ }).first();
   await expect(toEvaluations).toBeVisible({ timeout: 240_000 });
   await toEvaluations.click();
 

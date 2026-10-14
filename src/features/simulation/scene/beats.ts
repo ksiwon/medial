@@ -18,7 +18,7 @@ export const MAP_GAP_MS = 3 * 60_000;
 
 export const MEDIAL = 'MEDial';
 const INSTITUTION_LABEL: Record<string, string> = { HC_NURSE: '보건소', EMS_DISPATCH: '119 상황실' };
-const DEVICE: Record<string, string> = { home_device: '안내 시계', phone: '전화' };
+const DEVICE: Record<string, string> = { home_device: '안부 스피커', phone: '전화' };
 
 interface Input {
   events: DomainEvent[];

@@ -67,7 +67,7 @@ def note_for(episode, group, panels):
             return "%s · 이장 남기웅 씨가 약을 가져다 드렸습니다" % t
         return None
     if rid == "e1":
-        return "%s · 고성재 어르신 집 안내 시계가 이상을 감지했습니다" % t
+        return "%s · 고성재 어르신 집 안부 스피커가 이상을 감지했습니다" % t
     return None
 
 

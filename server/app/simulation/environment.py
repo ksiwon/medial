@@ -84,11 +84,11 @@ _DEVICE = [
     ReachabilityRule(
         place="HOME:self", channel=Channel.home_device, reachable=True,
         provenance="source-adapted",
-        reason="안내 시계는 집에 설치된 기기이므로 집에 있을 때만 닿는다"),
+        reason="안부 스피커는 집에 설치된 기기이므로 집에 있을 때만 닿는다"),
     ReachabilityRule(
         place="*", channel=Channel.home_device, reachable=False,
         provenance="source-adapted",
-        reason="안내 시계는 집에 설치된 기기이므로 집 밖에서는 닿지 않는다"),
+        reason="안부 스피커는 집에 설치된 기기이므로 집 밖에서는 닿지 않는다"),
 ]
 
 #: Whether somebody staying in a place could break off and go. Sibling of the

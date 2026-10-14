@@ -20,8 +20,8 @@ import { useUiScale } from './ui/uiScale';
 //   소개 영상          - why this exists, and who the visitor is; it ends by
 //                        opening day one;
 //   관찰               - the day, as a scene, a map and a timeline;
-//   주민 평가          - the residents who went through the day, in their words;
-//   수정안 고르기      - the revision that becomes the next day's rule.
+//   주민 에이전트 평가 - the residents who went through the day, in their words;
+//   수정 요청 고르기      - the revision that becomes the next day's rule.
 //
 // Every day shown was run when the record was made (selectors/tree): choosing a
 // revision opens that day, it starts nothing. The old second flow - preparing a
@@ -201,7 +201,7 @@ export default function SimulationApp() {
           detail={loaded.detail}
           events={loaded.events}
           art={s.art}
-          dayEnd={{ text: `${dayName(current)}가 끝났습니다`, action: '주민 평가를 보시겠습니까',
+          dayEnd={{ text: `${dayName(current)}가 끝났습니다`, action: '주민 에이전트 평가를 보시겠습니까',
                     note: dayFacts(current) ? dayLine(dayFacts(current)!) : null }}
           onReadEvaluations={() => it.setScreen('evaluations')}
           strip={{ day: dayName(current), chosen: chosenRequests(detail, current.id) }}

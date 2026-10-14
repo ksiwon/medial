@@ -85,7 +85,7 @@ describe('ObserveScreen', () => {
     // to the residents' review at its end; the loop's own start/pause/stop live in
     // the progress strip, which is not this component.
     expect(screen.getByRole('slider', { name: '시각' })).toBeDefined();
-    expect(screen.getByText('하루 끝 · 주민 평가')).toBeDefined();
+    expect(screen.getByText('하루 끝 · 주민 에이전트 평가')).toBeDefined();
     // No speed buttons and no settings gear: one pace, and a way to skip.
     expect(screen.queryByRole('group', { name: '대사 속도' })).toBeNull();
     expect(screen.queryByLabelText('재생 설정')).toBeNull();
@@ -299,7 +299,7 @@ describe('a record that carries its scenes (the exhibition record)', () => {
       beats: [{
         requestId: 'w1', firstSeq: at.seq, lastSeq: at.seq, startMs: 9.5 * 3_600_000, endMs: 9.6 * 3_600_000,
         frames: [
-          { key: 'HOME:P1', place: 'HOME:P1', label: '자택', device: '안내 시계', who: [], poses: {} },
+          { key: 'HOME:P1', place: 'HOME:P1', label: '자택', device: '안부 스피커', who: [], poses: {} },
           { key: 'FARM', place: 'FARM', label: '밭', device: null, who: ['P1'], poses: { P1: 'work' } },
         ],
         cast: ['MEDial'], medial: true, waiting: null,
@@ -456,9 +456,9 @@ describe('the end of the three days, in a hall', () => {
   it('moves on to the closing words by itself after the days are read', () => {
     vi.useFakeTimers();
     render(<ChoiceScreen detail={detailOf} current={last} onChoose={noop} onRestart={noop} />);
-    expect(screen.queryByText('서비스 디자이너의 일은 선택의 연속입니다.')).toBeNull();
+    expect(screen.queryByText('서비스 디자이너의 일은 초안을 고쳐 나가는 일입니다.')).toBeNull();
     wait(RESULT_S + 1);
-    expect(screen.getByText('서비스 디자이너의 일은 선택의 연속입니다.')).toBeDefined();
+    expect(screen.getByText('서비스 디자이너의 일은 초안을 고쳐 나가는 일입니다.')).toBeDefined();
     vi.useRealTimers();
   });
 
@@ -573,9 +573,9 @@ describe('ChoiceScreen', () => {
     // The days first, with one button on; the closing words take the page when the visitor asks,
     // and then the way back to the opening film is the one button.
     expect(screen.queryByText('처음으로')).toBeNull();
-    expect(screen.queryByText('서비스 디자이너의 일은 선택의 연속입니다.')).toBeNull();
+    expect(screen.queryByText('서비스 디자이너의 일은 초안을 고쳐 나가는 일입니다.')).toBeNull();
     fireEvent.click(screen.getByText('마무리 보기 →'));
-    expect(screen.getByText('서비스 디자이너의 일은 선택의 연속입니다.')).toBeDefined();
+    expect(screen.getByText('서비스 디자이너의 일은 초안을 고쳐 나가는 일입니다.')).toBeDefined();
     expect(screen.getByText('처음으로')).toBeDefined();
     expect(screen.getByText(/갈 수 없는 현장을 대신해/)).toBeDefined();
   });
