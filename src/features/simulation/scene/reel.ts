@@ -1,4 +1,4 @@
-import type { DomainEvent, Timeline, VoiceClip } from '../api/types';
+import type { DomainEvent, Timeline, VideoClip, VoiceClip } from '../api/types';
 import { MAP_GAP_MS } from './beats';
 import type { Episode, Position, Segment } from './types';
 
@@ -80,9 +80,14 @@ interface Input {
   featured?: ReadonlySet<string> | null;
   /** The recordings, by 'speaker|text'. A line found here is paced by its voice. */
   voices?: Record<string, VoiceClip> | null;
+  /**
+   * The video mode's clips, by 'speaker|text'. A resident's line is the clip that speaks it, paced by its speech; a line
+   * MEDial says keeps its own recording and shows the resident listening. A line not found here stays a picture.
+   */
+  videos?: Record<string, VideoClip> | null;
 }
 
-export function buildReel({ episodes, events, timeline, dayStartMs, dayEndMs, pace, featured = null, voices = null }: Input): Reel {
+export function buildReel({ episodes, events, timeline, dayStartMs, dayEndMs, pace, featured = null, voices = null, videos = null }: Input): Reel {
   const segments: Segment[] = [];
   let total = 0;
   const push = (segment: Draft) => {
@@ -114,18 +119,25 @@ export function buildReel({ episodes, events, timeline, dayStartMs, dayEndMs, pa
       const enter = b === 0 && fromMap ? ENTER_S : CUT_S;
       const reveal = b === 0 && episode.firstOfRequest;
       const firstSeq = beat.lines[0]?.seq ?? beat.firstSeq;
+      const opening = beat.lines.map((l) => (l.kind === 'say' ? videos?.[`${l.speaker}|${l.text}`] : undefined)).find(Boolean);
       push({ kind: 'lead', episode: e, beat: b, enter, reveal, w0: beat.startMs, seq: Math.max(0, firstSeq - 1),
-             dur: enter + (reveal ? REVEAL_STEPS * REVEAL_STEP_S * pace : 0.2) });
+             dur: enter + (reveal ? REVEAL_STEPS * REVEAL_STEP_S * pace : 0.2),
+             ...(opening ? { video: { file: opening.file, sound: opening.sound, fit: opening.fit } } : {}) });
       const n = beat.lines.length;
       beat.lines.forEach((line, i) => {
         const say = line.kind === 'say';
         const clip = say ? voices?.[`${line.speaker}|${line.text}`] : undefined;
+        const film = say ? videos?.[`${line.speaker}|${line.text}`] : undefined;
+        // A clip that speaks the line replaces the recording: no dots, it starts at once and the line lasts as long as its speech.
+        const own = film?.sound === true;
         push({ kind: 'line', episode: e, beat: b, line: i, seq: line.seq,
                w0: beat.startMs + ((beat.endMs - beat.startMs) * i) / n,
                w1: beat.startMs + ((beat.endMs - beat.startMs) * (i + 1)) / n,
-               typing: say ? TYPING_S * pace : 0,
-               ...(clip ? { audio: clip.file } : {}),
-               dur: clip ? (TYPING_S + clip.seconds + VOICE_GAP_S) * pace
+               typing: say && !own ? TYPING_S * pace : 0,
+               ...(clip && !own ? { audio: clip.file } : {}),
+               ...(film ? { video: { file: film.file, sound: film.sound, fit: film.fit } } : {}),
+               dur: film && own ? (film.seconds + VOICE_GAP_S) * pace
+                 : clip ? (TYPING_S + clip.seconds + VOICE_GAP_S) * pace
                  : say ? sayDuration(line.text, pace) : captionDuration(line.text, pace) });
       });
       if (!n) push({ kind: 'hold', episode: e, beat: b, seq: beat.lastSeq, w0: beat.startMs, w1: beat.endMs, dur: 1.6 * pace });

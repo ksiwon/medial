@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import styled, { css, keyframes } from 'styled-components';
 import type { VillagePayload } from '../api/types';
 import { artIdOf, backdropOf, figureOf, FIT, type Fit } from './art';
@@ -6,7 +6,7 @@ import { MEDIAL } from './beats';
 import { Figure } from './Figure';
 import JudgmentPanel from './JudgmentPanel';
 import { nameOf, type Judgment } from './judgment';
-import type { Beat, Frame, SceneLine } from './types';
+import type { Beat, Frame, SceneLine, SegmentVideo } from './types';
 import { api } from '../api/client';
 import { night, px, radius, shadeA } from '../ui/theme';
 import { pill } from '../ui/primitives';
@@ -86,6 +86,20 @@ const Backdrop = styled.div`
   inset: 0;
   background-size: cover;
   background-position: center;
+`;
+
+/* The video mode: one clip fills the stage's frame, the way the pictures do. */
+const Film = styled.video`
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+`;
+
+/* A wide shot of two people is kept whole; the bars above and below are the place's own picture, blurred. */
+const Bars = styled(Backdrop)`
+  filter: blur(28px) brightness(0.55);
+  transform: scale(1.15);
 `;
 
 const Unknown = styled.div`
@@ -219,10 +233,14 @@ interface Props {
   typing: boolean;
   /** Real seconds the beat plays for, for the slow push-in. */
   seconds: number;
+  /** The clip this moment shows in the video mode, or null for the pictures. */
+  video?: SegmentVideo | null;
+  /** The day is playing (a paused day holds the clip). */
+  playing?: boolean;
   panel: { title: string; subtitle?: string | null; tint: string; judgment: Judgment; lit: number; changedRules?: readonly string[] };
 }
 
-export default function SceneStage({ beat, beatKey, village, art, line, typing, seconds, panel }: Props) {
+export default function SceneStage({ beat, beatKey, village, art, line, typing, seconds, video = null, playing = false, panel }: Props) {
   const [pushed, setPushed] = useState(false);
   useEffect(() => {
     setPushed(false);
@@ -257,6 +275,7 @@ export default function SceneStage({ beat, beatKey, village, art, line, typing, 
     }));
   });
   const anchor = (id: string) => {
+    if (video) return null; // one clip, not frames: every bubble stands in the column by MEDial's
     for (let fi = 0; fi < layout.length; fi += 1) {
       const hit = layout[fi].find((p) => p.id === id || p.names?.includes(id));
       if (hit) return { fi, x: hit.x };
@@ -274,7 +293,7 @@ export default function SceneStage({ beat, beatKey, village, art, line, typing, 
   return (
     <Box>
       <Frames>
-        {beat.frames.map((frame, fi) => (
+        {video ? <FilmFrame video={video} playing={playing} frame={filmFrame(beat, speaking)} village={village} art={art} /> : beat.frames.map((frame, fi) => (
           <FrameView key={frame.key} frame={frame} village={village} art={art} people={layout[fi]}
             sharp={sharp} pushed={pushed} seconds={seconds}>
             <Column style={{ bottom: `${100 - Math.min(40, ...layout[fi].map((p) => PLACE[p.fit].head + (p.many && p.fit === 'tall' ? 6 : 0))) - 22}%` }}>
@@ -287,11 +306,44 @@ export default function SceneStage({ beat, beatKey, village, art, line, typing, 
         ))}
       </Frames>
       <MedColumn>
-        {bubbles.filter((b) => b.line.speaker === MEDIAL || !anchor(b.line.speaker)).map((b) => bubbleOf(b, 'med'))}
+        {bubbles.filter((b) => b.line.speaker === MEDIAL || !anchor(b.line.speaker)).map((b) => bubbleOf(b, b.line.speaker === MEDIAL ? 'med' : 'l'))}
       </MedColumn>
       {current?.kind === 'caption' && <Caption><span key={`${beatKey}:${line}`}>{current.text}</span></Caption>}
       <JudgmentPanel {...panel} absent={!beat.medial} waiting={beat.waiting} />
     </Box>
+  );
+}
+
+/** The frame's label under a clip: the place of whoever speaks, or of the person listening when MEDial does. */
+function filmFrame(beat: Beat, speaking: string | null): Frame {
+  return beat.frames.find((f) => !f.device && speaking !== null && f.who.includes(speaking)) ?? beat.frames.find((f) => !f.device) ?? beat.frames[0];
+}
+
+/**
+ * One clip as the whole frame. The element is the clip's own (a new file mounts a new one, and the same file
+ * goes on across lines: the listening shot continues while MEDial speaks), it speaks only a resident's own line
+ * and only while the day plays, and it holds still while paused or before its line starts.
+ */
+function FilmFrame({ video, playing, frame, village, art }: { video: SegmentVideo; playing: boolean; frame: Frame; village: VillagePayload; art: ReadonlySet<string> }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const place = backdropOf(frame.place, village);
+  const backdrop = place && art.has(place) ? place : null;
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.muted = !video.sound || !playing;
+    if (playing) {
+      const result = el.play() as Promise<void> | undefined;
+      if (result && typeof result.catch === 'function') result.catch(() => {});
+    } else el.pause();
+  }, [playing, video.sound, video.file]);
+  return (
+    <FrameBox>
+      {video.fit === 'contain' && backdrop && <Bars style={{ backgroundImage: `url(${api.artUrl(backdrop)})` }} />}
+      <Film key={video.file} ref={ref} src={api.videoUrl(video.file)} loop={!video.sound} playsInline preload="auto" muted
+        style={{ objectFit: video.fit, background: video.fit === 'cover' || !backdrop ? '#1b1c1a' : 'transparent' }} />
+      <Label>{frame.label}</Label>
+    </FrameBox>
   );
 }
 

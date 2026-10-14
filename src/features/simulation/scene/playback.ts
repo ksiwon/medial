@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { api, ApiError } from '../api/client';
-import type { AttemptDetail, DomainEvent, ViewMode, VillagePayload, VoiceClip } from '../api/types';
+import type { AttemptDetail, DomainEvent, ViewMode, VideoClip, VillagePayload, VoiceClip } from '../api/types';
 import { buildEpisodes } from './beats';
 import { buildReel, type Reel } from './reel';
 import type { Position } from './types';
@@ -25,6 +25,8 @@ interface Run {
   village: VillagePayload;
   /** The recorded voice of each spoken line, by 'speaker|text'. */
   voices?: Record<string, VoiceClip>;
+  /** The video mode's clip of each line, by 'speaker|text'; none in the picture mode. */
+  videos?: Record<string, VideoClip>;
 }
 
 interface PlaybackState {
@@ -75,6 +77,7 @@ function reelFor(run: Run, viewMode: ViewMode): Reel {
     pace: 1,
     featured: run.detail.scenes?.featured?.length ? new Set(run.detail.scenes.featured) : null,
     voices: run.voices ?? null,
+    videos: run.videos ?? null,
   });
 }
 

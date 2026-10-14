@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { api } from '../api/client';
-import type { VoiceClip } from '../api/types';
+import type { VideoClip, VoiceClip } from '../api/types';
 import { duckAmbient } from '../ui/ambient';
 import type { Position } from './types';
 
@@ -23,6 +23,22 @@ export function preloadVoices(clips: Record<string, VoiceClip>) {
     const audio = new Audio(api.voiceUrl(file));
     audio.preload = 'auto';
     pool.set(file, audio);
+  }
+}
+
+/**
+ * The video mode (3안) is a switch in the address, `?video=1`: the lines that have a clip play as video and every
+ * other line stays a picture. Without it the screen is the picture mode, whether or not clips exist.
+ */
+export const videoMode = () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('video') === '1';
+
+/** Fetch every clip now (the browser keeps it by address), so a line's video does not start from black. */
+export function preloadVideos(clips: Record<string, VideoClip>) {
+  if (typeof document === 'undefined') return;
+  for (const file of new Set(Object.values(clips).map((c) => c.file))) {
+    const video = document.createElement('video');
+    video.preload = 'auto';
+    video.src = api.videoUrl(file);
   }
 }
 

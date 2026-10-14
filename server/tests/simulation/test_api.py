@@ -55,6 +55,13 @@ def test_a_synthetic_village_has_no_voices_and_no_file_is_served_by_name():
     assert api.get("/api/sim/village/voice/..%2Fmanifest.json").status_code == 404
 
 
+def test_a_synthetic_village_has_no_videos_and_no_file_is_served_by_name():
+    api = client()
+    assert api.get("/api/sim/village/video").json() == {"lines": {}}
+    assert api.get("/api/sim/village/video/anything.mp4").status_code == 404
+    assert api.get("/api/sim/village/video/..%2Fmanifest.json").status_code == 404
+
+
 def test_the_catalog_publishes_the_editable_policy_fields():
     api = client()
     body = api.get("/api/sim/catalog").json()

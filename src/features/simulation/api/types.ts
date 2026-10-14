@@ -411,6 +411,18 @@ export interface VoiceClip {
   seconds: number;
 }
 
+/**
+ * One line's video in the video mode (3안): the clip, how long its speech runs (seconds), and whether the clip
+ * speaks the line itself (a resident's) or only shows the resident listening while MEDial's recording plays.
+ */
+export interface VideoClip {
+  file: string;
+  seconds: number;
+  sound: boolean;
+  /** 'cover' fills the stage (one person, close); 'contain' keeps a wide shot of two people whole. */
+  fit: 'cover' | 'contain';
+}
+
 /** A day recorded as scenes: what was said is stored with it, not in the log. */
 export interface StoredScenes {
   source: string;

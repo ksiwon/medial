@@ -172,6 +172,32 @@ describe('a line with a recorded voice', () => {
   });
 });
 
+describe('a line with a video clip (the video mode)', () => {
+  const said = () => episodes().flatMap((e) => e.beats.flatMap((b) => b.lines)).find((l) => l.kind === 'say')!;
+  const key = () => `${said().speaker}|${said().text}`;
+
+  it('is the clip that speaks it: no dots, no recording, as long as its speech', () => {
+    const videos = { [key()]: { file: 'a.mp4', seconds: 3.1, sound: true, fit: 'cover' as const } };
+    const r = buildReel({ episodes: episodes(), events, timeline, pace: 1, voices: { [key()]: { file: 'a.wav', seconds: 9 } }, videos, ...DAY });
+    const segment = r.segments.find((s) => s.kind === 'line' && s.video?.file === 'a.mp4');
+    expect(segment).toMatchObject({ typing: 0, dur: 3.1 + 0.2 });
+    expect(segment && 'audio' in segment ? segment.audio : undefined).toBeUndefined();
+    // The beat's opening holds the first clip before the line starts.
+    expect(r.segments.some((s) => s.kind === 'lead' && s.video?.file === 'a.mp4')).toBe(true);
+  });
+
+  it('keeps the recording of a line the clip only listens to', () => {
+    const videos = { [key()]: { file: 'listen.mp4', seconds: 8, sound: false, fit: 'cover' as const } };
+    const r = buildReel({ episodes: episodes(), events, timeline, pace: 1, voices: { [key()]: { file: 'a.wav', seconds: 4.2 } }, videos, ...DAY });
+    const segment = r.segments.find((s) => s.kind === 'line' && s.video?.file === 'listen.mp4');
+    expect(segment).toMatchObject({ audio: 'a.wav', dur: 0.3 + 4.2 + 0.2 });
+  });
+
+  it('leaves the reel as it was without clips', () => {
+    expect(buildReel({ episodes: episodes(), events, timeline, pace: 1, videos: {}, ...DAY }).total).toBe(reel().total);
+  });
+});
+
 describe('judgmentOf', () => {
   const decisions: DecisionRecord[] = [{
     id: 'dec-1', attemptId: 'att-test', simTimeMs: 0, policyId: 'p', question: '누가 확인할 것인가',

@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { api, ApiError } from './api/client';
 import { usePlayback } from './scene/playback';
-import { preloadVoices } from './scene/voice';
+import { preloadVideos, preloadVoices, videoMode } from './scene/voice';
 import { learnPeople, learnPlaces } from './selectors/story';
-import type { AttemptDetail, DomainEvent, VillagePayload, VoiceClip } from './api/types';
+import type { AttemptDetail, DomainEvent, VideoClip, VillagePayload, VoiceClip } from './api/types';
 
 // The workspace: the village, and the stored runs that have been opened. Watching
 // a run is the playback store's (scene/playback.ts); this one only loads what it
@@ -22,6 +22,8 @@ interface SimState {
   art: Set<string>;
   /** The recorded voice of each spoken line, by 'speaker|text'; empty when there are none. */
   voices: Record<string, VoiceClip>;
+  /** The video mode's clips by 'speaker|text'; empty in the picture mode. */
+  videos: Record<string, VideoClip>;
   attempts: Record<string, Loaded>;
   activeId: string | null;
 
@@ -43,6 +45,7 @@ export const useSimStore = create<SimState>((set, get) => ({
   village: null,
   art: new Set(),
   voices: {},
+  videos: {},
   attempts: {},
   activeId: null,
 
@@ -51,16 +54,19 @@ export const useSimStore = create<SimState>((set, get) => ({
     if (get().status !== 'idle') return;
     set({ status: 'loading', error: null });
     try {
-      const [village, art, voice] = await Promise.all([
+      const [village, art, voice, video] = await Promise.all([
         api.village(),
         // Pictures are optional: without them every figure is the schematic one.
         api.art().catch(() => ({ names: [] as string[] })),
         // So are voices: a line without a recording is paced by reading time and silent.
         api.voices().catch(() => ({ lines: {} as Record<string, VoiceClip> })),
+        // Clips only when the address asks for the video mode; a line without a clip stays a picture.
+        videoMode() ? api.videos().catch(() => ({ lines: {} as Record<string, VideoClip> })) : { lines: {} as Record<string, VideoClip> },
       ]);
       learnPlaces(Object.fromEntries(Object.entries(village.places).map(([k, v]) => [k, v.label])));
       preloadVoices(voice.lines);
-      set({ village, art: new Set(art.names), voices: voice.lines, status: 'ready' });
+      preloadVideos(video.lines);
+      set({ village, art: new Set(art.names), voices: voice.lines, videos: video.lines, status: 'ready' });
     } catch (error) {
       set({ status: 'error', error: describe(error) });
     }
@@ -72,7 +78,7 @@ export const useSimStore = create<SimState>((set, get) => ({
     // Whose names the lines use: only a record that carries them sets any.
     learnPeople(loaded.detail.scenes?.people);
     set({ activeId: id });
-    if (village) usePlayback.getState().load({ attemptId: id, ...loaded, village, voices: get().voices });
+    if (village) usePlayback.getState().load({ attemptId: id, ...loaded, village, voices: get().voices, videos: get().videos });
   },
 
   prefetch: async (id) => {

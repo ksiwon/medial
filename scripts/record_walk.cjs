@@ -5,6 +5,8 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 const out = process.argv[2];
+// node scripts/record_walk.cjs <out dir> [video]: with `video` the walk is the 3안 (?video=1: the clips of the lines that have one)
+const address = `http://localhost:5180/${process.argv[3] === 'video' ? '?video=1' : ''}`;
 fs.rmSync(`${out}/run`, { recursive: true, force: true });
 fs.mkdirSync(`${out}/run/frames`, { recursive: true });
 (async () => {
@@ -30,7 +32,7 @@ fs.mkdirSync(`${out}/run/frames`, { recursive: true });
     await p.screenshot({ path: `${out}/run/frames/${s}-${tag}.png` }).catch(() => {});
     n += 1;
   };
-  await p.goto('http://localhost:5180/');
+  await p.goto(address);
   stamp('start');
   const deadline = Date.now() + 14 * 60 * 1000;
   let last = '';

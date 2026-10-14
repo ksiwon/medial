@@ -69,14 +69,25 @@ export interface Episode {
   beats: Beat[];
 }
 
+/** The video a scene segment shows (the video mode): the clip, and whether it speaks the line itself. */
+export interface SegmentVideo {
+  file: string;
+  sound: boolean;
+  fit: 'cover' | 'contain';
+}
+
 export type Segment =
   | { kind: 'map'; r0: number; dur: number; w0: number; w1: number; cum: number[];
       /** The clock stands still at w0 while this sentence of the skipped stretch is read. */
       note?: string }
-  | { kind: 'lead'; r0: number; dur: number; episode: number; beat: number; enter: number; reveal: boolean; seq: number; w0: number }
+  | { kind: 'lead'; r0: number; dur: number; episode: number; beat: number; enter: number; reveal: boolean; seq: number; w0: number;
+      /** The first video of the beat, held on its first picture until the line starts. */
+      video?: SegmentVideo }
   | { kind: 'line'; r0: number; dur: number; episode: number; beat: number; line: number; seq: number; w0: number; w1: number; typing: number;
       /** The recording of this line, when it has one: the segment lasts as long as the voice. */
-      audio?: string }
+      audio?: string;
+      /** The clip shown for this line in the video mode. */
+      video?: SegmentVideo }
   | { kind: 'hold'; r0: number; dur: number; episode: number; beat: number; seq: number; w0: number; w1: number };
 
 export interface Position {

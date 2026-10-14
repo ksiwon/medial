@@ -12,7 +12,7 @@ import { DAY_START_MS, usePlayback } from '../scene/playback';
 import { useLineVoice } from '../scene/voice';
 import { REVEAL_STEP_S, REVEAL_STEPS } from '../scene/reel';
 import SceneStage from '../scene/SceneStage';
-import type { Beat, Episode } from '../scene/types';
+import type { Beat, Episode, SegmentVideo } from '../scene/types';
 import { ledgerAt, routineAt, timelineAt } from '../selectors/dayLedger';
 import { beckon, pill } from '../ui/primitives';
 import { accentA, night, px, radius } from '../ui/theme';
@@ -227,6 +227,10 @@ export default function ObserveScreen({ village, detail, events, art, dayEnd: en
     last.current = { episode, beat: episode.beats[segment.beat], e: segment.episode, b: segment.beat };
   }
   const scene = last.current;
+  // The video mode: the clip of this moment; the scene fading out into the map keeps its last one.
+  const lastVideo = useRef<SegmentVideo | null>(null);
+  if (segment?.kind === 'line' || segment?.kind === 'lead') lastVideo.current = segment.video ?? null;
+  const video = lastVideo.current;
 
   // Where the stage is: its frames, marked on the map while the scene is on.
   const spotlight = useMemo(
@@ -380,6 +384,8 @@ export default function ObserveScreen({ village, detail, events, art, dayEnd: en
                 line={line}
                 typing={typing}
                 seconds={beatSeconds}
+                video={video}
+                playing={p.playing && segment?.kind === 'line'}
                 panel={{ title: scene.episode.title, subtitle: stored?.subtitle ?? null, tint, judgment, lit, changedRules }}
               />
             )}
