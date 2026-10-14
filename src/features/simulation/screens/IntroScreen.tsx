@@ -52,7 +52,7 @@ const SAY_FIVE = [
 ] as const;
 
 /** Scene lengths in ms with no voice: they are the least a scene runs. */
-const BASE_MS = [5500, 5500, 12000, 11500, 12500, 13000];
+const BASE_MS = [5500, 5500, 12000, 9000, 12500, 13000];
 
 /** A caption is spoken from just after it appears; the next one appears when the narrator is done. */
 const LEAD_S = 0.5;
@@ -338,12 +338,15 @@ function fit(box: typeof WIDE_BOX, W: number, H: number, top: number, bottom: nu
   return { s, tx, ty, transform: `translate(${tx}px, ${ty}px) scale(${s})` };
 }
 
+/** How much faster the map film runs than it was first drawn (13 s). */
+const MAP_K = 0.72;
+
 const Camera = styled.g`
   transform-origin: 0 0;
   animation: ${keyframes`
     0%, 40% { transform: var(--wide); }
     57%, 100% { transform: var(--close); }
-  `} 13s cubic-bezier(0.6, 0, 0.3, 1) forwards;
+  `} ${13 * MAP_K}s cubic-bezier(0.6, 0, 0.3, 1) forwards;
 `;
 
 /** Straight-line kilometres between two points of the outline. */
@@ -352,6 +355,8 @@ const km = (a: [number, number], b: [number, number]) => Math.hypot(a[0] - b[0],
 const PLATE = 'rgba(21, 21, 15, 0.86)';
 
 function PlaceFilm() {
+  /** Every time of the map film, scaled together (the narration ends well before the film did). */
+  const t = (sec: number) => at(sec * MAP_K);
   const ref = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   useLayoutEffect(() => {
@@ -385,25 +390,25 @@ function PlaceFilm() {
         <Camera style={{ '--wide': wide.transform, '--close': close.transform } as React.CSSProperties}>
           {/* The provinces are simplified for a glance; up close they would draw a
               coast that is not there, so they leave as the camera arrives. */}
-          <path className="gone" style={at(6.2)} d={KOREA} fill="#3a3b33" stroke="rgba(246,241,232,0.35)" strokeWidth={0.6} vectorEffect="non-scaling-stroke" />
+          <path className="gone" style={t(6.2)} d={KOREA} fill="#3a3b33" stroke="rgba(246,241,232,0.35)" strokeWidth={0.6} vectorEffect="non-scaling-stroke" />
           {/* The close-up's coast fades in as the camera arrives; at a glance it is
               the same land the provinces already draw. */}
-          <g className="in" style={at(5.6)}>
+          <g className="in" style={t(5.6)}>
             <path d={NEAR} fill="#3a3b33" stroke="rgba(246,241,232,0.3)" strokeWidth={0.8} vectorEffect="non-scaling-stroke" />
             <path d={NAMHAE} fill="#55574b" stroke="rgba(246,241,232,0.7)" strokeWidth={1.2} vectorEffect="non-scaling-stroke" />
           </g>
 
           {/* The wide frame: where the study comes from, and the line south.
               Lines run under the points they join and end at their centres. */}
-          <g className="gone" style={at(4.8)}>
+          <g className="gone" style={t(4.8)}>
             <path className="draw" d={`M ${kx} ${ky} C ${kx + 70} ${ky + 50} ${nx - 40} ${ny - 90} ${nx} ${ny}`}
               pathLength={1} fill="none" stroke={ACCENT} strokeWidth={w(5)} strokeLinecap="round"
-              style={{ ...at(1.1), animationDuration: '2.2s' }} />
-            <g className="in" style={at(0.5)}>
+              style={{ ...t(1.1), animationDuration: `${2.2 * MAP_K}s` }} />
+            <g className="in" style={t(0.5)}>
               <circle className="ring" cx={kx} cy={ky} r={w(9)} fill="none" stroke={PAPER} strokeWidth={w(2)} />
               <circle cx={kx} cy={ky} r={w(8)} fill={PAPER} />
             </g>
-            <g className="in" style={at(3.3)}>
+            <g className="in" style={t(3.3)}>
               {/* An end of the line: accent, ringed, so it reads as a point and not the line's tip. */}
               <circle cx={nx} cy={ny} r={w(9)} fill={ACCENT} stroke={PAPER} strokeWidth={w(2.5)} />
             </g>
@@ -412,11 +417,11 @@ function PlaceFilm() {
           {/* The close frame: from the county town south-east to the village. */}
           <path className="draw" d={`M ${nx} ${ny} Q ${(nx + ex) / 2 + 1} ${ny - 1} ${ex} ${ey}`}
             pathLength={1} fill="none" stroke={ACCENT} strokeWidth={c(5)} strokeLinecap="round"
-            style={{ ...at(7.8), animationDuration: '1s' }} />
-          <g className="in" style={at(7.5)}>
+            style={{ ...t(7.8), animationDuration: `${MAP_K}s` }} />
+          <g className="in" style={t(7.5)}>
             <circle cx={nx} cy={ny} r={c(8)} fill={PAPER} />
           </g>
-          <g className="in" style={at(8.6)}>
+          <g className="in" style={t(8.6)}>
             <circle className="ring" cx={ex} cy={ey} r={c(13)} fill="none" stroke={ACCENT} strokeWidth={c(3)} />
             <circle cx={ex} cy={ey} r={c(10)} fill={ACCENT} stroke={PAPER} strokeWidth={c(3)} />
           </g>
@@ -436,20 +441,20 @@ function PlaceFilm() {
         const [eX, eY] = onScreen(close, ex, ey);
         return (
           <>
-            <g className="gone" style={at(4.8)}>
-              <g className="in" style={at(0.5)}>
+            <g className="gone" style={t(4.8)}>
+              <g className="in" style={t(0.5)}>
                 <PillText x={kX - clear(9, 24)} y={kY + 8 * u} anchor="end" size={24 * u} weight={800} fill={PAPER} plate={PLATE} text="KAIST · 대전" />
               </g>
-              <g className="in" style={at(3.3)}>
+              <g className="in" style={t(3.3)}>
                 <PillText x={nX + clear(11, 24)} y={nY + 8 * u} size={24 * u} weight={800} fill={PAPER} plate={PLATE} text="남해" />
                 <PillText x={(kX + nX) / 2 + 46 * u} y={(kY + nY) / 2} size={18 * u} weight={700} fill="rgba(246,241,232,0.85)"
                   plate={PLATE} text={`직선 약 ${Math.round(km(KAIST, EUNJEOM) / 10) * 10}km`} />
               </g>
             </g>
-            <g className="in" style={at(7.6)}>
+            <g className="in" style={t(7.6)}>
               <PillText x={tX - clear(9, 20)} y={tY + 7 * u} anchor="end" size={20 * u} weight={800} fill={PAPER} plate={PLATE} text="남해읍" />
             </g>
-            <g className="in" style={at(8.6)}>
+            <g className="in" style={t(8.6)}>
               {/* The name centred on the marker; the place under it, plates aligned on their left edges. */}
               <PillText x={eX + clear(14, 30)} y={eY + 10 * u} size={30 * u} weight={800} fill="#fff" plate={ACCENT} text="은점마을" />
               <PillText x={eX + clear(14, 30) - 30 * 0.82 * u + 16 * 0.82 * u} y={eY + 55 * u} size={16 * u} weight={700} fill={PAPER}
@@ -533,7 +538,7 @@ function Diagram({ after }: { after: number }) {
 
       {/* 4. The residents' evaluation travels back to the designer. */}
       {arrow('M 640 340 C 520 500, 240 500, 115 313', after + 1.9, ACCENT, [115, 313, -124], 0.7)}
-      <g className="in" style={at(after + 2.4)}>{label(380, 524, 22, PAPER, '주민 에이전트가 평가', 700)}</g>
+      <g className="in" style={at(after + 2.4)}>{label(380, 518, 22, PAPER, '주민 에이전트가 MEDial을 평가', 700)}</g>
     </Drawn>
   );
 }

@@ -427,7 +427,7 @@ describe('the narrator of the film and of the closing page', () => {
 
   it('runs the film as it was with no recordings', () => {
     const l = layoutOf(null);
-    expect(l.ms).toEqual([5500, 5500, 12000, 11500, 12500, 13000]);
+    expect(l.ms).toEqual([5500, 5500, 12000, 9000, 12500, 13000]);
     expect(l.two).toEqual({ until: 5.2, next: 5.9 });
     expect(l.cues.flat()).toEqual([]);
   });
