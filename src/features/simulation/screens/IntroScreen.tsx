@@ -37,18 +37,23 @@ export const INTRO_SAY = [
   '시골의 낮입니다. 병원은 읍내에 있고, 주민들은 밭과 바다에 계시죠.',
   '어르신들은 병원에 가야 할 일이 잦지만, 병원은 멀어서 웬만하면 참으십니다.',
   '문제는, 어르신을 살펴 줄 사람이 마을에 없다는 겁니다. 그 일은 이장님 한 분께 이미 몰려 있습니다.',
-  '서비스 디자이너가 안부를 살피고 이웃과 병원을 이어 줄 조율자 AI, MEDial의 초안을 만들었습니다.',
+  '이런 고충을 해결하고자, 서비스 디자이너가 어르신의 안부를 살피고 이웃과 병원을 이어 줄 조율자 AI, MEDial의 초안을 제안하며, 이를 도입하고자 합니다.',
   '도입에 앞서 주민 대상 실증 연구로 이 초안을 고쳐야 하지만, 마을이 멀어 자주 찾아가기도, 오래 묻기도 어렵습니다.',
   '그래서 가기 어려운 한 시골마을을 시뮬레이션, Resident Simulator로 대신 만들었습니다. 실제 인터뷰를 바탕으로, 열두 분 모두를 스스로 판단하고 움직이는 AI 에이전트로 세웠습니다.',
-  '이제 여러분이, 초안을 들고 온 서비스 디자이너가 되어 봅니다. 하루를 지켜보고, 주민 에이전트의 평가를 읽고, 수정 요청 하나를 골라 초안을 고칩니다. 직접 가지 못해도, 어느 어르신이 어디서 막히는지 볼 수 있습니다.',
+  '이제 여러분이, 초안을 들고 온 서비스 디자이너가 되어 봅니다. 하루를 지켜보고, 주민 에이전트의 평가를 읽고, 수정 요청 하나를 골라 초안을 고칩니다. 직접 가지 못해도, 어르신들의 고충을 미리 확인할 수 있습니다.',
 ] as const;
 
 /** Scenes 4 and 5 are said in one go but shown a sentence at a time (INTRO_SAY joined). */
 const SAY_FOUR = ['그래서 가기 어려운 한 시골마을을 시뮬레이션, Resident Simulator로 대신 만들었습니다.', '실제 인터뷰를 바탕으로, 열두 분 모두를 스스로 판단하고 움직이는 AI 에이전트로 세웠습니다.'] as const;
+/** Scene 2's second caption is one sentence of the narration shown in two pieces. */
+const SAY_MEDIAL = [
+  '이런 고충을 해결하고자, 서비스 디자이너가 어르신의 안부를 살피고 이웃과 병원을 이어 줄 조율자 AI, MEDial의 초안을 제안하며,',
+  '이를 도입하고자 합니다.',
+] as const;
 const SAY_FIVE = [
   '이제 여러분이, 초안을 들고 온 서비스 디자이너가 되어 봅니다.',
   '하루를 지켜보고, 주민 에이전트의 평가를 읽고, 수정 요청 하나를 골라 초안을 고칩니다.',
-  '직접 가지 못해도, 어느 어르신이 어디서 막히는지 볼 수 있습니다.',
+  '직접 가지 못해도, 어르신들의 고충을 미리 확인할 수 있습니다.',
 ] as const;
 
 /** Scene lengths in ms with no voice: they are the least a scene runs. */
@@ -69,7 +74,7 @@ interface Layout {
   /** Scene 2 has two captions: the first is gone at `until`, the second arrives at `next`. */
   two: { until: number; next: number };
   /** Scenes 4 and 5 show their narration a sentence at a time: the second each sentence's caption arrives. */
-  said: { four: number[]; five: number[] };
+  said: { three: number[]; four: number[]; five: number[] };
   /** The narration of each scene: the clip and the second it starts. */
   cues: { file: string; at: number }[][];
 }
@@ -94,6 +99,7 @@ export function layoutOf(voices: Record<string, VoiceClip> | null | undefined): 
   const four = starts(5, SAY_FOUR);
   const until = Math.max(5.2, LEAD_S + sec(2) + 0.4);
   const next = until + GAP_S;
+  const medial = starts(3, SAY_MEDIAL).map((at) => next + 0.3 + (at - LEAD_S)); // the clip starts 0.3 s after the caption
   const ms = [
     Math.max(BASE_MS[0], end(LEAD_S, 0) * 1000),
     Math.max(BASE_MS[1], end(LEAD_S, 1) * 1000),
@@ -107,7 +113,7 @@ export function layoutOf(voices: Record<string, VoiceClip> | null | undefined): 
     ms,
     total: ms.reduce((x, y) => x + y, 0),
     two: { until, next },
-    said: { four, five: starts(6, SAY_FIVE) },
+    said: { three: medial, four, five: starts(6, SAY_FIVE) },
     cues: [cue(0, LEAD_S), cue(1, LEAD_S), [...cue(2, LEAD_S), ...cue(3, next + 0.3)], cue(4, LEAD_S), cue(5, LEAD_S), cue(6, LEAD_S)],
   };
 }
@@ -710,17 +716,21 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
             <Line $on={on(2)} $delay={0.3}>문제는, 어르신을 살펴 줄 사람이 마을에 없다는 겁니다. 그 일은 이장님 한 분께 이미 몰려 있습니다.</Line>
           </Timed>
         </Caption>
-        <Caption>
-          <Timed $on={on(2)} $at={layout.two.next - 0.1}>
-            <Eyebrow $on={on(2)}>AI CARE ORCHESTRATOR</Eyebrow>
-            <Line $on={on(2)} $delay={layout.two.next}>서비스 디자이너가 안부를 살피고 이웃과 병원을 이어 줄 조율자 AI, MEDial의 초안을 만들었습니다.</Line>
-            <Chain $on={on(2)} $delay={layout.two.next + 0.9}>
-              <span>안부 확인</span><i>→</i>
-              <span>이웃 연결</span><i>→</i>
-              <span>병원 동행</span>
-            </Chain>
-          </Timed>
-        </Caption>
+        {SAY_MEDIAL.map((text, k) => (
+          <Caption key={k}>
+            <Timed $on={on(2)} $at={(k === 0 ? layout.two.next : layout.said.three[1]) - 0.1} $until={k === 0 ? layout.said.three[1] - 0.2 : undefined}>
+              <Eyebrow $on={on(2)}>AI CARE ORCHESTRATOR</Eyebrow>
+              <Line $on={on(2)} $delay={k === 0 ? layout.two.next : layout.said.three[1]}>{text}</Line>
+              {k === 1 && (
+                <Chain $on={on(2)} $delay={layout.said.three[1] + 0.6}>
+                  <span>안부 확인</span><i>→</i>
+                  <span>이웃 연결</span><i>→</i>
+                  <span>병원 동행</span>
+                </Chain>
+              )}
+            </Timed>
+          </Caption>
+        ))}
       </Scene>
 
       <Scene $on={on(3)}>
@@ -759,7 +769,7 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
                 {k === 1 && (
                   <Chain $on={on(5)} $delay={at + 0.9}>
                     <span>하루를 겪는다</span><i>→</i>
-                    <span>주민 에이전트가 평가한다</span><i>→</i>
+                    <span>주민 에이전트가 MEDial을 평가한다</span><i>→</i>
                     <span>요청 하나로 고친다</span><i>→</i>
                     <span>다시 돌린다</span>
                   </Chain>
