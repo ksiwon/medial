@@ -1,6 +1,6 @@
 """Writes local-data/video/clips/manifest.json: which line of the exhibition has a video clip (the app's video mode, `?video=1`).
 
-    python scripts/video3_manifest.py [tag]      # tag default .480p; use the clips named <line>.<tag>.mp4
+    python scripts/video3_manifest.py [tag]      # tag default .v2; the clips named <line>.<tag>.mp4, else <line>.480p.mp4
 
 {"speaker|text": {"file", "start", "seconds", "sound", "fit", "zoom", "tx", "ty"}}   fit: cover (one person on a call) | contain (two people in one shot)
   - a resident's line: the clip that speaks it (sound true); it plays from `start` (just before the voice: the model leads in with a
@@ -21,7 +21,8 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 V = ROOT / "local-data" / "video" / "clips"
 AUDIO = ROOT / "local-data" / "audio" / "gemini-3.8-flash-tts"
-TAG = sys.argv[1] if len(sys.argv) > 1 else ".480p"
+TAG = sys.argv[1] if len(sys.argv) > 1 else ".v2"
+FALLBACK = ".480p"  # a take not made again at TAG is the earlier one
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from video3 import SCENES  # noqa: E402
 
@@ -99,10 +100,14 @@ for scene, cfg in SCENES.items():
         if row["speaker"] == "MEDial":
             listen = V / ("%s.listen%s.mp4" % (scene, TAG))
             if not listen.exists():
+                listen = V / ("%s.listen%s.mp4" % (scene, FALLBACK))
+            if not listen.exists():
                 continue
             entry = {"file": listen.name, "start": 0.0, "seconds": 8.0, "sound": False, "fit": fit}
         elif row["speaker"] in cfg["cast"]:
             clip = V / row["file"].replace(".wav", TAG + ".mp4")
+            if not clip.exists():
+                clip = V / row["file"].replace(".wav", FALLBACK + ".mp4")
             if not clip.exists():
                 continue
             start = speech_start(clip)

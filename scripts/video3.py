@@ -24,6 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import seedance_lab as L  # noqa: E402
 
+SEED_OF_SCENE = 11
 OUT = L.ROOT / "local-data" / "video" / "clips"
 FACES = L.LAB / "faces"
 RES = os.environ.get("RES", "480p")
@@ -41,7 +42,7 @@ SCENES = {
     "d1-w3-disclosed": dict(bg="FARM", cast=["P1", "P6"], kind="pair"),
     "d2-t2": dict(bg="HOME", cast=["P9"], kind="call", place="inside his house, a phone held to his ear"),
     "d2-w3-factonly": dict(bg="FARM", cast=["P1", "P6"], kind="pair"),
-    "d3-w3-nurse": dict(bg="CLINIC.desk", cast=["HC_NURSE"], kind="call", place="at her desk in a small rural health centre office, a landline phone held to her ear"),
+    "d3-w3-nurse": dict(bg="CLINIC", cast=["HC_NURSE"], kind="call", place="at her desk in a small rural health centre office with a window, a landline phone held to her ear"),
     "d3-m2-search": dict(bg="TOWN", cast=["P12"], kind="call", place="on the street of a small coastal town, a phone held to his ear"),
     "d3-e2": dict(bg="HOME", cast=["P7", "P8"], kind="special"),
 }
@@ -61,18 +62,37 @@ def location(art):
     return {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()}, "role": "reference_image"}
 
 
+HOURS = ["", "한", "두", "세", "네", "다섯", "여섯", "일곱", "여덟", "아홉", "열", "열한", "열두"]
+TENS = ["", "십", "이십", "삼십", "사십", "오십"]
+UNITS = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"]
+
+
+def clock(m):
+    """09:52 -> 아홉 시 오십이 분: the model reads digits as numbers (15 52) otherwise."""
+    h, mi = int(m.group(1)), int(m.group(2))
+    return "%s 시%s" % (HOURS[h % 12 or 12], (" %s%s 분" % (TENS[mi // 10], UNITS[mi % 10])) if mi else "")
+
+
 def spoken(text):
     pair = {"이": "가", "가": "가", "은": "는", "는": "는", "을": "를", "를": "를"}
+    text = re.sub(r"(\d{1,2}):(\d{2})", clock, text)
     return re.sub(r"MEDial(이|가|은|는|을|를)?", lambda m: "메디얼이라는 에이아이" + pair.get(m.group(1) or "", ""), text)
+
+
+# words the model says wrong unless told how (found by listening back: scripts/video3_stt.py)
+SAY = {"메디얼": "pronounced clearly in three syllables: me, di, eol", "밭": "pronounced 'bat' (a field), with a final t sound, not 'bap' or 'bak'"}
 
 
 def prompt_for(cfg, speaker, say, n_images):
     cast = cfg["cast"]
     names = {p: "%s (@Image%d)" % (WHO[p], i + 1) for i, p in enumerate(cast)}
-    loc = " The place is exactly the one in @Image%d: keep this real-looking place as the background, natural lighting." % n_images
+    # every take of a scene is its own generation: say the camera does not move between them, or the background is a different view each time
+    loc = (" The place is exactly the one in @Image%d, seen from exactly the camera position, angle, lens and framing of that picture; the background "
+           "never changes between shots of this scene. Natural daylight, the same lighting in every shot." % n_images)
     he = HE.get(speaker, "He")
+    word = "".join(' The word "%s" is %s.' % (w, how) for w, how in SAY.items() if w in say)
     voice = ("%s talks Korean naturally in a thick Gyeongsang-province accent, the way a person in a village in Namhae talks, with small natural "
-             "movements, and the mouth moves with the words. %s says: \"%s\"" % (he, he, say))
+             "movements, and the mouth moves with the words.%s %s says: \"%s\"" % (he, word, he, say))
     if cfg["kind"] == "pair":
         a, b = cast
         other = names[b if speaker == a else a]
@@ -118,8 +138,7 @@ def one(job):
             "duration": min(15, max(4, math.ceil(row["seconds"] + 0.8))),
             "content": [{"type": "text", "text": prompt_for(cfg, speaker, spoken(row["text"]), len(refs))}] + refs
                        + [{"type": "audio_url", "audio_url": {"url": L.data_uri(mp3, "audio/mpeg")}, "role": "reference_audio"}]}
-    if os.environ.get("SEED"):
-        body["seed"] = int(os.environ["SEED"])
+    body["seed"] = int(os.environ.get("SEED", SEED_OF_SCENE))  # one seed for a scene: its takes then start from the same composition
     got = submit(body)
     mp3.unlink()
     if got["status"] != "succeeded":

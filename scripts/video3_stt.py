@@ -34,7 +34,7 @@ def hear(mp4):
         return "STT 실패 %s" % e
 
 
-scenes = json.load(open(OUT.parent / "audio/gemini-3.8-flash-tts/scenes.json", encoding="utf-8"))
+scenes = json.load(open(T.ROOT / "local-data/audio/gemini-3.8-flash-tts/scenes.json", encoding="utf-8"))
 jobs = []
 for sc, rows in scenes.items():
     for r in rows:

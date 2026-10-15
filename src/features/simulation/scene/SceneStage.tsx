@@ -335,7 +335,8 @@ function FilmFrame({ video, playing, frame, village, art }: { video: SegmentVide
   if (stack[stack.length - 1].file !== video.file) setStack([stack[stack.length - 1], video]);
   return (
     <FrameBox>
-      {video.fit === 'contain' && backdrop && <Bars style={{ backgroundImage: `url(${api.artUrl(backdrop)})` }} />}
+      {/* under the clip: the place's own picture, so a clip not yet on screen is the picture mode's frame, not black (blurred as the bars of a wide shot) */}
+      {backdrop && (video.fit === 'contain' ? <Bars style={{ backgroundImage: `url(${api.artUrl(backdrop)})` }} /> : <Backdrop style={{ backgroundImage: `url(${api.artUrl(backdrop)})` }} />)}
       {stack.map((v, i) => <Take key={v.file} video={v} live={i === stack.length - 1} playing={playing} base={stack.length === 1 || i === 0} />)}
       <Label>{frame.label}</Label>
     </FrameBox>
