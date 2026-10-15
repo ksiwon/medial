@@ -6,7 +6,7 @@
     env RES=480p|720p|1080p (default 480p)   ONLY=05 (a single line)   SEED=n   TAG=.name (default: .<res>)
 
 Outputs go to local-data/video3/<file>.<res>.mp4. A rejected request (face filter) costs nothing; every accepted one is rendered and billed.
-Portraits: local-data/video-lab/faces/<P>_<set>_urls.json (REF). See docs/presentations/2026-10-07-exhibition/ver3-design.md.
+Portraits: local-data/video-lab/faces/<P>_<set>_urls.json (REF). See docs/presentations/2026-10-07-exhibition/design/ver3-design.md.
 """
 import base64
 import io

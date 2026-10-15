@@ -290,7 +290,7 @@ npm run e2e                            # 6 passed (Chromium, 합성 마을, .run
   `scripts/video3_manifest.py` 가 `manifest.json` → `scripts/video3_stt.py` 로 받아쓰기 확인 → `scripts/video3_scene.py` 장면별 미리보기.
   녹화는 `node scripts/record_walk.cjs <새 폴더> video`, 소리는 `scripts/mux_voice.py`(영상 클립 소리는 말 끝에서 자르고 크기를 맞춘다).
 - **지금(베타):** 480p. 1080p는 확정 후(약 $91). "메디얼이라는 에이아이" 발음이 몇 줄에서 "메디올/매디풀"로 들린다.
-  녹화: `docs/presentations/2026-10-07-exhibition/out/ver3/MEDial_전체관람_3안_영상모드_2026-10-15.mp4`(7분 43초; 2안 7분 9.5초).
+  녹화: `docs/presentations/2026-10-07-exhibition/out/video/3안_영상모드/MEDial_전체관람_3안_영상모드_2026-10-15.mp4`(7분 43초; 2안 7분 9.5초).
 
 ## 2026-10-14 (교수님 피드백) · 초안을 고치는 디자이너 · 주민 AI 에이전트 · 안부 스피커 · 선택이 결과로 보임
 
@@ -732,13 +732,14 @@ python scripts/import_exhibition.py --replace   # sim.sqlite3 다시 만듦(sche
 - 실제 주민 검토 0건 · 사람이 써 본 사용성 검증 0회는 그대로다.
 - 800px 이하에서는 지도가 가로 띠가 되어 마을이 작다.
 
-### 전시 산출물 (`docs/presentations/2026-10-07-exhibition/out/`, git 제외)
+### 전시 산출물 (`docs/presentations/2026-10-07-exhibition/out/`, git 제외 — 위치는 2026-10-15에 정리, 아래 파일명 앞에 `pdf/` · `video/시안_이전/` 이 붙는다)
 작업은 medial 안에서만 한다. `5학년/기타/` 의 기존 발표자료는 참고만 하고 거기에는 아무것도 쓰지 않는다.
 - `MEDial_시연영상_7분.mp4` — 1440×900, 7분 6초. 소개 영상 → 사흘(핵심 장면) → 요청 고르기 둘 → 요약.
 - `발표자료_한글.pdf` · `발표자료_English.pdf` — 1280×720 8쪽(본문 7 + 부록 1). 틀은 `박정원_동문학술_발표자료.pdf`.
   내용은 연구 발표가 아니라 **전시장에서 어떻게 발표하고 관객에게 무엇을 보여 줄지**다.
 - `발표대본_한글.pdf` · `발표대본_English.pdf` — A4 한 장. 영어는 짧은 문장·쉬운 낱말·한국어 낱말 풀이.
-- 원본은 같은 폴더 위의 `deck.html` · `deck.en.html` · `script.html` · `script.en.html`(저장소에 있다).
+- 원본은 `2026-10-07-exhibition/slides/` 의 `deck.html` · `deck.en.html` · `script.html` · `script.en.html`(저장소에 있다).
+  폴더 구성은 `2026-10-07-exhibition/README.md` (2026-10-15에 `out/` 을 pdf · video · work · audio 로 나눔).
   캡처(`shot-*.webp`)와 폰트는 git 제외라, 새로 받으면 sim 서버를 열어 다시 찍는다. PDF는 Chromium 으로
   `page.pdf({ width: '1280px', height: '720px' })`(발표자료), `format: 'A4'`(대본)로 뽑는다.
 
