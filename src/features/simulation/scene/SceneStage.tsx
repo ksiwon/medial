@@ -8,6 +8,7 @@ import JudgmentPanel from './JudgmentPanel';
 import { nameOf, type Judgment } from './judgment';
 import type { Beat, Frame, SceneLine, SegmentVideo } from './types';
 import { api } from '../api/client';
+import { videoSrc } from './voice';
 import { night, px, radius, shadeA } from '../ui/theme';
 import { pill } from '../ui/primitives';
 
@@ -89,11 +90,14 @@ const Backdrop = styled.div`
 `;
 
 /* The video mode: one clip fills the stage's frame, the way the pictures do. */
-const Film = styled.video`
+const dissolve = keyframes`from { opacity: 0; } to { opacity: 1; }`;
+const Film = styled.video<{ $dissolve: boolean }>`
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  /* A take comes in over the one before it: the cut is a dissolve, so neither the jump of a new generation nor its first dark frame shows. */
+  ${(p) => p.$dissolve && css`animation: ${dissolve} 0.3s ease-out both;`}
 `;
 
 /* A wide shot of two people is kept whole; the bars above and below are the place's own picture, blurred. */
@@ -293,7 +297,7 @@ export default function SceneStage({ beat, beatKey, village, art, line, typing, 
   return (
     <Box>
       <Frames>
-        {video ? <FilmFrame video={video} playing={playing} frame={filmFrame(beat, speaking)} village={village} art={art} /> : beat.frames.map((frame, fi) => (
+        {video ? <FilmFrame key={beatKey} video={video} playing={playing} frame={filmFrame(beat, speaking)} village={village} art={art} /> : beat.frames.map((frame, fi) => (
           <FrameView key={frame.key} frame={frame} village={village} art={art} people={layout[fi]}
             sharp={sharp} pushed={pushed} seconds={seconds}>
             <Column style={{ bottom: `${100 - Math.min(40, ...layout[fi].map((p) => PLACE[p.fit].head + (p.many && p.fit === 'tall' ? 6 : 0))) - 22}%` }}>
@@ -320,30 +324,39 @@ function filmFrame(beat: Beat, speaking: string | null): Frame {
 }
 
 /**
- * One clip as the whole frame. The element is the clip's own (a new file mounts a new one, and the same file
- * goes on across lines: the listening shot continues while MEDial speaks), it speaks only a resident's own line
- * and only while the day plays, and it holds still while paused or before its line starts.
+ * The clip as the whole frame. A new file mounts a new element above the previous one, which stays under it, paused on
+ * its last picture; the shot goes on across lines when the file is the same (the listening shot while MEDial speaks).
+ * Only the current element runs, and it speaks only a resident's own line while the day plays.
  */
 function FilmFrame({ video, playing, frame, village, art }: { video: SegmentVideo; playing: boolean; frame: Frame; village: VillagePayload; art: ReadonlySet<string> }) {
-  const ref = useRef<HTMLVideoElement>(null);
   const place = backdropOf(frame.place, village);
   const backdrop = place && art.has(place) ? place : null;
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.muted = !video.sound || !playing;
-    if (playing) {
-      const result = el.play() as Promise<void> | undefined;
-      if (result && typeof result.catch === 'function') result.catch(() => {});
-    } else el.pause();
-  }, [playing, video.sound, video.file]);
+  const [stack, setStack] = useState<SegmentVideo[]>([video]);
+  if (stack[stack.length - 1].file !== video.file) setStack([stack[stack.length - 1], video]);
   return (
     <FrameBox>
       {video.fit === 'contain' && backdrop && <Bars style={{ backgroundImage: `url(${api.artUrl(backdrop)})` }} />}
-      <Film key={video.file} ref={ref} src={api.videoUrl(video.file)} loop={!video.sound} playsInline preload="auto" muted
-        style={{ objectFit: video.fit, background: video.fit === 'cover' || !backdrop ? '#1b1c1a' : 'transparent' }} />
+      {stack.map((v, i) => <Take key={v.file} video={v} live={i === stack.length - 1} playing={playing} base={stack.length === 1 || i === 0} />)}
       <Label>{frame.label}</Label>
     </FrameBox>
+  );
+}
+
+function Take({ video, live, playing, base }: { video: SegmentVideo; live: boolean; playing: boolean; base: boolean }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.muted = !live || !video.sound || !playing;
+    if (live && playing) {
+      if (el.currentTime < video.start) el.currentTime = video.start; // a fresh clip begins where the voice does
+      const result = el.play() as Promise<void> | undefined;
+      if (result && typeof result.catch === 'function') result.catch(() => {});
+    } else el.pause();
+  }, [live, playing, video.sound, video.start]);
+  return (
+    <Film $dissolve={live && !base} ref={ref} data-file={video.file} src={`${videoSrc(video.file)}#t=${video.start}`} playsInline preload="auto" muted
+      style={{ objectFit: video.fit, transform: video.zoom ? `translate(${video.tx ?? 0}%, ${video.ty ?? 0}%) scale(${video.zoom})` : undefined }} />
   );
 }
 

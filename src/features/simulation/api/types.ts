@@ -417,10 +417,17 @@ export interface VoiceClip {
  */
 export interface VideoClip {
   file: string;
+  /** Where in the file it starts: the model leads in with a silent second before the voice. */
+  start: number;
+  /** How long it plays from `start`: to where the speech ends. */
   seconds: number;
   sound: boolean;
   /** 'cover' fills the stage (one person, close); 'contain' keeps a wide shot of two people whole. */
   fit: 'cover' | 'contain';
+  /** A call's take is scaled and shifted (% of the frame) so the face stands where the other takes have it; a cut does not jump. */
+  zoom?: number;
+  tx?: number;
+  ty?: number;
 }
 
 /** A day recorded as scenes: what was said is stored with it, not in the log. */

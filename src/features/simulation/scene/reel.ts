@@ -1,6 +1,6 @@
 import type { DomainEvent, Timeline, VideoClip, VoiceClip } from '../api/types';
 import { MAP_GAP_MS } from './beats';
-import type { Episode, Position, Segment } from './types';
+import type { Episode, Position, Segment, SegmentVideo } from './types';
 
 // The day in real seconds.
 //
@@ -33,6 +33,8 @@ const TYPING_S = 0.3;
 const ENTER_S = 0.3;
 const CUT_S = 0.3;
 const VOICE_GAP_S = 0.2;
+
+const segmentVideo = ({ file, start, sound, fit, zoom, tx, ty }: VideoClip): SegmentVideo => ({ file, start, sound, fit, zoom, tx, ty });
 export const REVEAL_STEP_S = 0.2;
 export const REVEAL_STEPS = 4;
 
@@ -122,7 +124,7 @@ export function buildReel({ episodes, events, timeline, dayStartMs, dayEndMs, pa
       const opening = beat.lines.map((l) => (l.kind === 'say' ? videos?.[`${l.speaker}|${l.text}`] : undefined)).find(Boolean);
       push({ kind: 'lead', episode: e, beat: b, enter, reveal, w0: beat.startMs, seq: Math.max(0, firstSeq - 1),
              dur: enter + (reveal ? REVEAL_STEPS * REVEAL_STEP_S * pace : 0.2),
-             ...(opening ? { video: { file: opening.file, sound: opening.sound, fit: opening.fit } } : {}) });
+             ...(opening ? { video: segmentVideo(opening) } : {}) });
       const n = beat.lines.length;
       beat.lines.forEach((line, i) => {
         const say = line.kind === 'say';
@@ -135,7 +137,7 @@ export function buildReel({ episodes, events, timeline, dayStartMs, dayEndMs, pa
                w1: beat.startMs + ((beat.endMs - beat.startMs) * (i + 1)) / n,
                typing: say && !own ? TYPING_S * pace : 0,
                ...(clip && !own ? { audio: clip.file } : {}),
-               ...(film ? { video: { file: film.file, sound: film.sound, fit: film.fit } } : {}),
+               ...(film ? { video: segmentVideo(film) } : {}),
                dur: film && own ? (film.seconds + VOICE_GAP_S) * pace
                  : clip ? (TYPING_S + clip.seconds + VOICE_GAP_S) * pace
                  : say ? sayDuration(line.text, pace) : captionDuration(line.text, pace) });

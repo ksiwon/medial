@@ -16,13 +16,17 @@ data = json.load(open(f"{run}/plays.json", encoding="utf-8"))
 t_page = data["tPage"]
 VIDEO = Path(__file__).resolve().parents[1] / "local-data" / "video" / "clips"
 clips = json.load(open(VIDEO / "manifest.json", encoding="utf-8")) if (VIDEO / "manifest.json").exists() else {}
-spoken = {c["file"]: c["seconds"] for c in clips.values() if c["sound"]}  # the clips that speak a line (3안); a listening clip has no sound of its own
+spoken = {c["file"]: (c["start"], c["seconds"]) for c in clips.values() if c["sound"]}  # the clips that speak a line (3안); a listening clip has no sound of its own
 plays = [p for p in data["plays"] if p["file"].endswith(".wav") or p["file"] in spoken]
+# the page may ask a clip to play twice in a row (it plays once): a repeat within 2 s of the same file is one play
+plays = [p for i, p in enumerate(plays) if not any(q["file"] == p["file"] and 0 <= p["at"] - q["at"] < 2000 for q in plays[:i])]
 # A clip the page started before it had read its length reports 0: the manifest has it.
 length = {v["file"]: v["seconds"] for v in json.load(open(AUDIO / "manifest.json", encoding="utf-8")).values()}
 for p in plays:
     # a clip's voice ends where its speech does: the page moves to the next line then (the clip itself runs on a little)
-    p["dur"] = spoken[p["file"]] if p["file"] in spoken else p["dur"] or length.get(p["file"], 0)
+    p["dur"] = spoken[p["file"]][1] if p["file"] in spoken else p["dur"] or length.get(p["file"], 0)
+    if p["file"] in spoken:
+        p["at"] = p.get("playing", p["at"])  # the voice is the clip's own: it is heard when the clip is really playing
     p["path"] = VIDEO / p["file"] if p["file"] in spoken else AUDIO / p["file"]
 video = glob.glob(f"{run}/*.webm")[0]
 print("clips:", len(plays), "first at %.2fs" % ((plays[0]["at"] - t_page) / 1000))
@@ -39,7 +43,7 @@ labels = ["[bgm]"]
 for i, p in enumerate(plays, start=2):
     delay = max(0, int(p["at"] - t_page))
     # a clip is cut where its speech ends and levelled (the model's voices come out at very different loudness)
-    cut = f"atrim=0:{p['dur']:.2f},loudnorm=I=-17:TP=-2:LRA=7," if p["file"] in spoken else ""
+    cut = f"atrim={spoken[p['file']][0]:.2f}:{spoken[p['file']][0] + p['dur']:.2f},asetpts=PTS-STARTPTS,loudnorm=I=-17:TP=-2:LRA=7," if p["file"] in spoken else ""
     chains.append(f"[{i}:a]{cut}adelay={delay}|{delay}[a{i}]")
     labels.append(f"[a{i}]")
 chains.append("".join(labels) + f"amix=inputs={len(plays) + 1}:normalize=0:dropout_transition=0,apad[aout]")

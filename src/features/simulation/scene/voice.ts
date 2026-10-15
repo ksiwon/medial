@@ -32,15 +32,26 @@ export function preloadVoices(clips: Record<string, VoiceClip>) {
  */
 export const videoMode = () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('video') === '1';
 
-/** Fetch every clip now (the browser keeps it by address), so a line's video does not start from black. */
+const filmBlobs = new Map<string, string>();
+
+/**
+ * Fetch every clip into memory now. A clip streamed when its line starts shows (and speaks) a moment late, and the line's
+ * time, which runs from its start, then ends before the speech does; from memory it starts at once.
+ */
 export function preloadVideos(clips: Record<string, VideoClip>) {
-  if (typeof document === 'undefined') return;
+  if (typeof window === 'undefined') return;
   for (const file of new Set(Object.values(clips).map((c) => c.file))) {
-    const video = document.createElement('video');
-    video.preload = 'auto';
-    video.src = api.videoUrl(file);
+    if (filmBlobs.has(file)) continue;
+    filmBlobs.set(file, '');
+    fetch(api.videoUrl(file))
+      .then((r) => r.blob())
+      .then((blob) => filmBlobs.set(file, URL.createObjectURL(blob)))
+      .catch(() => filmBlobs.delete(file));
   }
 }
+
+/** Where a clip is read from: its copy in memory once that has arrived, else the server. */
+export const videoSrc = (file: string) => filmBlobs.get(file) || api.videoUrl(file);
 
 const audioOf = (file: string) => {
   let audio = pool.get(file);

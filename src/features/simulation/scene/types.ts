@@ -3,6 +3,8 @@
 // episode is one uninterrupted stretch of a request, and the reel is the day
 // laid out in real seconds for playback.
 
+import type { VideoClip } from '../api/types';
+
 /** What a person's body is doing in a frame. Chooses the picture, nothing else. */
 export type Pose = 'stand' | 'phone' | 'work' | 'desk' | 'drive' | 'seated' | 'lying' | 'cpr';
 
@@ -70,11 +72,7 @@ export interface Episode {
 }
 
 /** The video a scene segment shows (the video mode): the clip, and whether it speaks the line itself. */
-export interface SegmentVideo {
-  file: string;
-  sound: boolean;
-  fit: 'cover' | 'contain';
-}
+export type SegmentVideo = Pick<VideoClip, 'file' | 'start' | 'sound' | 'fit' | 'zoom' | 'tx' | 'ty'>;
 
 export type Segment =
   | { kind: 'map'; r0: number; dur: number; w0: number; w1: number; cum: number[];

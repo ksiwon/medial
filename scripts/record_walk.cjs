@@ -20,7 +20,11 @@ fs.mkdirSync(`${out}/run/frames`, { recursive: true });
     window.__plays = [];
     const orig = HTMLMediaElement.prototype.play;
     HTMLMediaElement.prototype.play = function () {
-      window.__plays.push({ file: this.src.split('/').pop(), at: Date.now(), dur: this.duration });
+      // a clip held in memory has a blob address: the page names its file on the element
+      const entry = { file: this.dataset.file || this.src.split('/').pop(), at: Date.now(), dur: this.duration };
+      window.__plays.push(entry);
+      // `at` is when the page asked; the picture and the voice of a clip come when it is really playing
+      this.addEventListener('playing', () => { entry.playing = Date.now(); }, { once: true });
       return orig.call(this);
     };
   });

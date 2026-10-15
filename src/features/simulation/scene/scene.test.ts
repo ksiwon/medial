@@ -177,7 +177,7 @@ describe('a line with a video clip (the video mode)', () => {
   const key = () => `${said().speaker}|${said().text}`;
 
   it('is the clip that speaks it: no dots, no recording, as long as its speech', () => {
-    const videos = { [key()]: { file: 'a.mp4', seconds: 3.1, sound: true, fit: 'cover' as const } };
+    const videos = { [key()]: { file: 'a.mp4', start: 0, seconds: 3.1, sound: true, fit: 'cover' as const } };
     const r = buildReel({ episodes: episodes(), events, timeline, pace: 1, voices: { [key()]: { file: 'a.wav', seconds: 9 } }, videos, ...DAY });
     const segment = r.segments.find((s) => s.kind === 'line' && s.video?.file === 'a.mp4');
     expect(segment).toMatchObject({ typing: 0, dur: 3.1 + 0.2 });
@@ -187,7 +187,7 @@ describe('a line with a video clip (the video mode)', () => {
   });
 
   it('keeps the recording of a line the clip only listens to', () => {
-    const videos = { [key()]: { file: 'listen.mp4', seconds: 8, sound: false, fit: 'cover' as const } };
+    const videos = { [key()]: { file: 'listen.mp4', start: 0, seconds: 8, sound: false, fit: 'cover' as const } };
     const r = buildReel({ episodes: episodes(), events, timeline, pace: 1, voices: { [key()]: { file: 'a.wav', seconds: 4.2 } }, videos, ...DAY });
     const segment = r.segments.find((s) => s.kind === 'line' && s.video?.file === 'listen.mp4');
     expect(segment).toMatchObject({ audio: 'a.wav', dur: 0.3 + 4.2 + 0.2 });
