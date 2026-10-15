@@ -57,7 +57,7 @@ export const api = {
   /** The spoken lines (scripts/tts_scenes.py → local-data/audio/), keyed 'speaker|text'. */
   voices: () => request<{ lines: Record<string, VoiceClip> }>('/village/voice'),
   voiceUrl: (file: string) => `${BASE}/village/voice/${encodeURIComponent(file)}`,
-  /** The video mode's clips (scripts/video3_manifest.py → local-data/video3/), keyed 'speaker|text'. */
+  /** The video mode's clips (scripts/video3_manifest.py → local-data/video/clips/), keyed 'speaker|text'. */
   videos: () => request<{ lines: Record<string, VideoClip> }>('/village/video'),
   videoUrl: (file: string) => `${BASE}/village/video/${encodeURIComponent(file)}`,
 

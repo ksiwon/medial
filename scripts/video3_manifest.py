@@ -1,4 +1,4 @@
-"""Writes local-data/video3/manifest.json: which line of the exhibition has a video clip (the app's video mode, `?video=1`).
+"""Writes local-data/video/clips/manifest.json: which line of the exhibition has a video clip (the app's video mode, `?video=1`).
 
     python scripts/video3_manifest.py [tag]      # tag default .480p; use the clips named <line>.<tag>.mp4
 
@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-V = ROOT / "local-data" / "video3"
+V = ROOT / "local-data" / "video" / "clips"
 AUDIO = ROOT / "local-data" / "audio" / "gemini-3.8-flash-tts"
 TAG = sys.argv[1] if len(sys.argv) > 1 else ".480p"
 sys.path.insert(0, str(Path(__file__).resolve().parent))

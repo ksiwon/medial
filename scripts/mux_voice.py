@@ -14,7 +14,7 @@ from pathlib import Path
 AUDIO = Path(__file__).resolve().parents[1] / "local-data" / "audio" / "gemini-3.8-flash-tts"
 data = json.load(open(f"{run}/plays.json", encoding="utf-8"))
 t_page = data["tPage"]
-VIDEO = Path(__file__).resolve().parents[1] / "local-data" / "video3"
+VIDEO = Path(__file__).resolve().parents[1] / "local-data" / "video" / "clips"
 clips = json.load(open(VIDEO / "manifest.json", encoding="utf-8")) if (VIDEO / "manifest.json").exists() else {}
 spoken = {c["file"]: c["seconds"] for c in clips.values() if c["sound"]}  # the clips that speak a line (3안); a listening clip has no sound of its own
 plays = [p for p in data["plays"] if p["file"].endswith(".wav") or p["file"] in spoken]

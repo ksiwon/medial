@@ -143,8 +143,8 @@ npm run e2e
 | `scripts/import_village/` | 원자료 → 정규화 레지스트리 (출처 검증 포함) |
 | `docs/research/` | 지금 기준인 연구 문서 · 데이터 계약 · 설계 결정 기록 |
 | `docs/research/history/` | 지나온 기획·명세·프롬프트 (역사. 지금 구조를 정당화하지 않습니다) |
-| `docs/presentations/` | 발표자료 · 연구노트 (캡처와 PDF는 커밋하지 않습니다) |
-| `local-data/` | 원자료에서 파생된 레지스트리, 두 버전의 실행 기록(`runs/`), 장면 그림(`art/`). **커밋하지 않습니다** |
+| `docs/presentations/` | 발표자료 · 연구노트 — `2026-09/`(9월 발표·연구노트) · `2026-10-07-exhibition/`(전시 발표·영상). 캡처와 PDF는 커밋하지 않습니다 |
+| `local-data/` | 원자료에서 파생된 레지스트리(`normalized/`), 두 버전의 실행 기록(`runs/`), 장면 그림(`art/`), 음성(`audio/`), 3안 영상(`video/`), 목소리 설정(`tts/`). **커밋하지 않습니다.** 어디에 무엇이 있는지는 `docs/README.md` |
 
 
 ## 전시장 브라우저 (소리)
@@ -154,5 +154,5 @@ npm run e2e
 음성 파일이 없으면(합성 마을 · 파일 없음) 대사는 읽는 시간만큼 조용히 흐른다.
 
 **영상 모드(3안)** — 주소 뒤에 `?video=1` 을 붙이면(`http://localhost:5180/?video=1`) 영상이 있는 대사 줄은 생성 영상으로 나온다
-(`local-data/video3/`, git 밖 · `python scripts/video3_manifest.py` 가 `manifest.json` 을 만든다). 영상이 없는 줄은 사진 그대로이고,
+(`local-data/video/clips/`, git 밖 · `python scripts/video3_manifest.py` 가 `manifest.json` 을 만든다). 영상이 없는 줄은 사진 그대로이고,
 `?video=1` 이 없으면 사진 모드로 영상 파일이 있어도 쓰지 않는다. 영상 소리도 위와 같이 자동 재생을 허용해야 난다.

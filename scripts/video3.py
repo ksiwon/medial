@@ -5,8 +5,8 @@
 
     env RES=480p|720p|1080p (default 480p)   ONLY=05 (a single line)   SEED=n   TAG=.name (default: .<res>)
 
-Outputs go to local-data/video3/<file>.<res>.mp4. A rejected request (face filter) costs nothing; every accepted one is rendered and billed.
-Portraits: local-data/video-lab/faces/<P>_<set>_urls.json (REF). See docs/presentations/2026-10-07-exhibition/design/ver3-design.md.
+Outputs go to local-data/video/clips/<file>.<res>.mp4. A rejected request (face filter) costs nothing; every accepted one is rendered and billed.
+Portraits: local-data/video/lab/faces/<P>_<set>_urls.json (REF). See docs/presentations/2026-10-07-exhibition/design/ver3-design.md.
 """
 import base64
 import io
@@ -24,7 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import seedance_lab as L  # noqa: E402
 
-OUT = L.ROOT / "local-data" / "video3"
+OUT = L.ROOT / "local-data" / "video" / "clips"
 FACES = L.LAB / "faces"
 RES = os.environ.get("RES", "480p")
 TAG = os.environ.get("TAG", "." + RES)

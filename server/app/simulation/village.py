@@ -351,7 +351,7 @@ class Village:
         """The video mode's clips (3안): ``{"speaker|text": {"file", "seconds", "sound"}}``, or empty.
 
         ``scripts/video3_manifest.py`` writes the manifest next to the generated clips in git-ignored
-        ``local-data/video3/`` (override with ``MEDIAL_VIDEO_DIR``). A resident's line is a clip that
+        ``local-data/video/clips/`` (override with ``MEDIAL_VIDEO_DIR``). A resident's line is a clip that
         speaks it (``sound``); a line MEDial speaks shows the resident listening, with MEDial's own
         recording on top. A line without a clip stays a picture.
         """
@@ -366,7 +366,7 @@ class Village:
 
 
 def video_dir() -> Path:
-    return Path(os.environ.get("MEDIAL_VIDEO_DIR") or REPO_ROOT / "local-data" / "video3")
+    return Path(os.environ.get("MEDIAL_VIDEO_DIR") or REPO_ROOT / "local-data" / "video" / "clips")
 
 
 def voice_dir() -> Path:

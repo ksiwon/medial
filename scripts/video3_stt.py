@@ -1,6 +1,6 @@
 """Transcribe what each generated 3안 clip says and print it next to the intended line.
 
-    python scripts/video3_stt.py [tag]      # tag default .480p; reads local-data/video3/*<tag>.mp4
+    python scripts/video3_stt.py [tag]      # tag default .480p; reads local-data/video/clips/*<tag>.mp4
 """
 import base64
 import json
@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import tts_scenes as T  # noqa: E402
 import video3 as V  # noqa: E402,F401  (SCENES only; main() is guarded below)
 
-OUT = T.ROOT / "local-data" / "video3"
+OUT = T.ROOT / "local-data" / "video" / "clips"
 TAG = sys.argv[1] if len(sys.argv) > 1 else ".480p"
 KEY = T.api_key()
 

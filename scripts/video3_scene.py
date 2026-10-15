@@ -1,6 +1,6 @@
 """Whole-scene preview: the residents' generated clips and, for the lines MEDial speaks, the "listening" clip with MEDial's existing voice.
 
-    python scripts/video3_scene.py <scene-id> [out.mp4]      # reads *.480p.mp4 in local-data/video3
+    python scripts/video3_scene.py <scene-id> [out.mp4]      # reads *.480p.mp4 in local-data/video/clips
 """
 import json
 import subprocess
@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-V = ROOT / "local-data/video3"
+V = ROOT / "local-data/video/clips"
 AUDIO = ROOT / "local-data/audio/gemini-3.8-flash-tts"
 TAG = ".480p"
 scene = sys.argv[1]

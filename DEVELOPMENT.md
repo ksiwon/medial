@@ -286,7 +286,7 @@ npm run e2e                            # 6 passed (Chromium, 합성 마을, .run
   주민 줄은 클립이 직접 말하고(점 없이 바로 시작, 줄 길이 = 말이 끝나는 곳), MEDial이 말하는 줄은 주민이 전화를 듣는
   영상 위에 기존 MEDial 음성. 한 사람(통화)은 꽉 채우고, 두 사람은 장면 그림을 흐리게 깐 위에 통째로 보인다.
   주소에 `?video=1` 이 없으면 영상 파일이 있어도 2안과 똑같다(서버 테스트 · 줄 길이 테스트 추가).
-- **만드는 법(git 밖 `local-data/video3/`):** `scripts/video3.py scene|listen <장면>`(RES=480p|720p|1080p) →
+- **만드는 법(git 밖 `local-data/video/clips/`):** `scripts/video3.py scene|listen <장면>`(RES=480p|720p|1080p) →
   `scripts/video3_manifest.py` 가 `manifest.json` → `scripts/video3_stt.py` 로 받아쓰기 확인 → `scripts/video3_scene.py` 장면별 미리보기.
   녹화는 `node scripts/record_walk.cjs <새 폴더> video`, 소리는 `scripts/mux_voice.py`(영상 클립 소리는 말 끝에서 자르고 크기를 맞춘다).
 - **지금(베타):** 480p. 1080p는 확정 후(약 $91). "메디얼이라는 에이아이" 발음이 몇 줄에서 "메디올/매디풀"로 들린다.
@@ -383,7 +383,7 @@ npm run e2e                            # 6 passed (Chromium, 합성 마을, .run
   기록의 장면 틀(누가 어디서)과 사실은 두고 **말투와 횟수만** 다시 쓴다: 하루 2장면(1일차 w2·w3, 2일차 t2·w3, 3일차 w3·e2),
   말하는 두 사람이 각자 3–4번, 한 줄 36자 이내(코드가 검사하고 어기면 다시 묻는다), 말버릇은 기록에 이미 있는 그 사람의 줄을 예시로
   준다. 13경로 26장면(같은 원문은 한 번만 호출)을 뽑아 `sim.sqlite3`의 `scenes_json`(대사 · `featured` · `model`)에 반영했다.
-  원래 기록은 `local-data/runs/sim.before-dialogue.sqlite3`, 새 줄은 `dialogue-2026-10-13.json`(둘 다 git 밖). 평가·규칙·패널은 건드리지
+  원래 기록은 `local-data/runs/backup/sim.before-dialogue.sqlite3`, 새 줄은 `dialogue-2026-10-13.json`(둘 다 git 밖). 평가·규칙·패널은 건드리지
   않았다(평가는 사건을 인용하지 대사를 그대로 옮기지 않는다). 하루 장면 대사 시간은 약 71–90초(대사 14–16줄).
   같은 날 피드백으로 두 번 더 다듬었다: MEDial은 어르신께 따뜻한 해요체로 **상황을 설명**(왜 말을 거는지 · 아는 것/모르는 것 · 부탁과 이유,
   한 줄 44자까지)하고, 한 장면에서 같은 말을 되풀이하지 않는다(글자 쌍 겹침 검사 + 문제를 알려 주고 다시 묻기, 최대 3번). 앞 장면의 대사와
@@ -391,7 +391,7 @@ npm run e2e                            # 6 passed (Chromium, 합성 마을, .run
   "서비스 디자이너의 일은 선택의 연속입니다 … Resident Simulator" 맺음말을 넣었다.
   이어서 편집 단계(`gen_dialogue.py polish`)를 더했다: 모델이 편집자로서 되풀이 · 앞 줄에 대한 응답(티키타카) · 사실 누락을 점검해 고쳐 쓴다.
   3일차 방문 장면은 "이번이 세 번째"로 횟수를 맞춘다(원문의 "두 번째" 어긋남 수정). 보건소 담당자도 남해 사람이라 경상도 어미를 쓴다.
-  음성은 시험만 했다: `gemini-3.8-flash-tts`는 Interactions API · Voice design 으로 주민별 목소리(`local-data/tts-voices.json`)를 만들어 쓴다.
+  음성은 시험만 했다: `gemini-3.8-flash-tts`는 Interactions API · Voice design 으로 주민별 목소리(`local-data/tts/voices.json`)를 만들어 쓴다.
   Tier 1은 이 모델 **하루 100회**라, 전체 장면(고유 약 80줄)을 만들려면 하루를 나누거나 등급을 올려야 한다. 파이프라인 · 화면 연결은 아직 없다.
   피드백 반영(10-13 저녁): 2일차 병원 장면(t2)을 "이웃을 찾아본 과정"(남대현이 아침에 읍내에 가지만 우회 8분이 한도 5분을 넘어 부탁하지 않음 → 태워 줄
   사람 없음)과 MEDial의 버스 안내(한 시간에 한 대 · 일찍 나가야 함)로 다시 썼다 — 패널의 `asked`/`knows`가 사실 근거. 방문 장면의 끝은 작별 인사를 늘이지
@@ -404,12 +404,12 @@ npm run e2e                            # 6 passed (Chromium, 합성 마을, .run
   **6줄 이내(10-13 밤):** 한 장면은 전체 6줄 이내(각자 3번, 5줄도 가능)로 줄였다. 같은 말을 되풀이하던 줄과 작별 인사가 빠지고, 시스템 정보를 읊는 줄이 줄었다.
   위급 장면(CPR)만 8줄(안내를 또렷하게), 나머지는 5–6줄. 1일차 방문은 "얼굴 봤으니 간다"로 끝나고, 보건소 장면은 "네, 접수했습니다."로 끝난다. TTS 고유 줄 54개.
   **줄별 연기 지시:** `tts_scenes.py styles` — 모델이 장면 설명을 보고 줄마다 2–6단어 영어 지시(감정 · 속도, 예 "frightened, a little hurried")를 써서
-  `local-data/tts-styles.json`에 둔다. 나이 · 사투리 · 음색은 목소리(Voice design)가 정하므로 지시에 넣지 않는다. `make`가 이 지시를 `speech_metadata.style`로 보낸다.
+  `fixtures/exhibition/tts-styles.json`에 둔다. 나이 · 사투리 · 음색은 목소리(Voice design)가 정하므로 지시에 넣지 않는다. `make`가 이 지시를 `speech_metadata.style`로 보낸다.
   **임시 음성(lite):** `tts_scenes.py make --model gemini-3.8-flash-lite-tts` 로 54줄(고유 243초)을 별도 한도로 먼저 만들었다(`local-data/audio/gemini-3.8-flash-lite-tts/`). 청취 평가상 P9은
   사투리가 뚜렷하지만 P6 · P1 · P7은 표준어에 가깝게 들린다(full 모델이 낫다). 한도가 풀리면 full 모델로 다시 만들어 비교한다.
   **목소리 12명 + 2(10-13):** `scripts/tts_voices.py` — 주민 12명 모두 은점마을 토박이라 **센 경상도(남해) 사투리**이고, 나이 · 음높이 · 음색 · 속도 · 성격으로 서로 구분한다
   (P1 아주 낮고 거친 저음의 퉁명스러운 노인, P2 크고 걸걸한 건축업, P3 평범하고 차분한 중저음, P4 또렷하고 빠른 공장장, P5 갈라지는 어부, P6 따뜻한 이장, P7 부드럽고 수줍은 어부, P8 가볍고 높은 어부,
-  P9 점잖고 순한 펜션 주인, P10 얇고 높은 할머니, P11 느리지만 튼튼하고 고집 센 79세, P12 매끄럽고 약삭빠른 자영업). MEDial과 보건소는 표준어. 설명은 영어 한두 문장, id는 `local-data/tts-voices.json`.
+  P9 점잖고 순한 펜션 주인, P10 얇고 높은 할머니, P11 느리지만 튼튼하고 고집 센 79세, P12 매끄럽고 약삭빠른 자영업). MEDial과 보건소는 표준어. 설명은 영어 한두 문장, id는 `local-data/tts/voices.json`.
   lite 로 같은 문장을 읽혀 본 청취 평가: 사투리가 뚜렷한 쪽 P1 · P2 · P3 · P7 · P8 · P10 · P12, 약한 쪽 P4 · P5 · P6 · P9 · P11 — 사람 귀로 구분 · 일관성을 확인해야 한다.
   **소리 다듬기:** 모델은 클립마다 앞에 약 0.2초의 무음 · 클릭 소리를 넣고 끝에 긴 꼬리를 붙인다. `tts_scenes.py`의 `trim()`이 만들 때마다 앞뒤를 잘라 40ms 앞여백 · 10ms 페이드인만 남긴다(줄이 틀자마자 시작하고 끝나자마자 끝나도록).
   P1은 "hoarse · gravelly"가 거친 숨소리처럼 들린다는 지적으로 지우고 "firm and clear, no breathiness"로 다시 설계했다.

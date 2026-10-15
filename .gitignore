@@ -21,7 +21,7 @@ local-archive/
 # 실서버 스크린샷에는 주민의 일과·장소가 담긴다. local-data/ 와 같은 이유로 제외한다.
 docs/presentations/screenshots/
 # 발표자료 PDF에도 그 캡처가 통째로 들어 있다.
-docs/presentations/*.pdf
+docs/presentations/**/*.pdf
 # 2026-10-07 전시 발표: 캡처(shot-*)에 같은 화면이 들어 있고, 폰트(PretendardVariable)는 npm 패키지에서 복사한 것이다.
 # HTML 원본만 저장소에 둔다. 그림을 다시 받으려면 DEVELOPMENT.md 의 2026-10-07 절을 따른다.
 docs/presentations/2026-10-07-exhibition/slides/shot-*.webp

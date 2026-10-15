@@ -2,7 +2,7 @@
 (Seedream, text only), and find out which ones Seedance's input filter lets through (the task is cancelled right after it is
 accepted, so a pass costs almost nothing).
 
-    python scripts/face_lab.py describe P6        # vision model -> local-data/video-lab/faces/P6.txt
+    python scripts/face_lab.py describe P6        # vision model -> local-data/video/lab/faces/P6.txt
     python scripts/face_lab.py make P6 3          # n portraits from that description -> faces/P6_<i>.jpg (+ url)
     python scripts/face_lab.py probe P6           # does Seedance take each portrait? (task created, then cancelled)
 """

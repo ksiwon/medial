@@ -1,6 +1,6 @@
 """Small, paid experiments with BytePlus Seedance for the exhibition's talking scenes (3안). Not part of the app.
 
-    python scripts/seedance_lab.py frame            # builds local-data/video-lab/frame.png (first frame of the test)
+    python scripts/seedance_lab.py frame            # builds local-data/video/lab/frame.png (first frame of the test)
     python scripts/seedance_lab.py run <name> [--audio on|off] [--ref-audio] [--model ID]   # ONE task, 480p, 4 s, then downloads it
 
 Every `run` is one task: it costs money (about 0.4 USD at 480p / 4 s on dreamina-seedance-2-5). Nothing here loops.
@@ -19,7 +19,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-LAB = ROOT / "local-data" / "video-lab"
+LAB = ROOT / "local-data" / "video" / "lab"
 BASE = "https://ark.ap-southeast.bytepluses.com/api/v3"
 sys.stdout.reconfigure(encoding="utf-8")
 

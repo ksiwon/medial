@@ -3,13 +3,13 @@
     python scripts/tts_scenes.py list              # the lines and what is sent for each (no calls)
     python scripts/tts_scenes.py make              # missing audio only -> local-data/audio/<model>/<hash>.wav
     python scripts/tts_scenes.py make --limit 40   # stop after this many calls (the daily quota is 100)
-    python scripts/tts_scenes.py styles            # each line's acting note -> local-data/tts-styles.json
+    python scripts/tts_scenes.py styles            # each line's acting note -> fixtures/exhibition/tts-styles.json
 
 Each line is its own file (``<scene>_<NN>_<speaker>.wav``), with ``scenes.json`` listing a scene's lines in
 order and ``manifest.json`` mapping 'speaker|text' to the file for the screen. What the screen shows and what the voice reads are different strings. ``spoken`` is the voice's:
 "MEDial" is always read 메디얼 (without it the voice said 엠이디얼, 미디알, ...), clock times and
 minutes are written out the way a person says them (08:00 -> 여덟 시, 20:56 -> 여덟 시 오십육 분).
-The voice of each person is a Voice design id (`local-data/tts-voices.json`, made once with
+The voice of each person is a Voice design id (`local-data/tts/voices.json`, made once with
 gemini-3.8-flash-tts; the description carries the age, the dialect and the timbre). Style text goes in
 speech_metadata, never in the text: the model reads whatever is in the text aloud.
 
@@ -36,7 +36,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.stdout.reconfigure(encoding="utf-8")
 
 DB = ROOT / "local-data" / "runs" / "sim.sqlite3"
-VOICES = ROOT / "local-data" / "tts-voices.json"
+VOICES = ROOT / "local-data" / "tts" / "voices.json"
 AUDIO_ROOT = ROOT / "local-data" / "audio"
 MODEL = "gemini-3.8-flash-tts"  # --model gemini-3.8-flash-lite-tts for a cheaper, separately-metered try
 #: MEDial's lines are delivered brisk; the residents' voices carry their own manner.
@@ -111,7 +111,7 @@ def planned():
             speaker, text = ln["speaker"], ln["text"]
             voice = voices.get(VOICE_KEY.get(speaker, speaker))
             if voice is None:
-                raise SystemExit("no voice for %s (local-data/tts-voices.json)" % speaker)
+                raise SystemExit("no voice for %s (local-data/tts/voices.json)" % speaker)
             say, style = spoken(text, speaker), notes.get("%s|%s" % (speaker, text)) or STYLE.get(speaker, "")
             yield {"scene": scene, "index": i, "speaker": speaker, "text": text, "spoken": say, "style": style,
                    "voice": voice, "hash": key_of(voice, say, style), "file": "%s_%02d_%s.wav" % (scene, i, speaker)}

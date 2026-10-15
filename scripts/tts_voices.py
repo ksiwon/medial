@@ -1,6 +1,6 @@
 """The voices of the exhibition: one Voice design per person, made once, kept by id.
 
-    python scripts/tts_voices.py list                 # who has a voice (local-data/tts-voices.json)
+    python scripts/tts_voices.py list                 # who has a voice (local-data/tts/voices.json)
     python scripts/tts_voices.py make P3 P7           # (re)design these voices; the old id is deleted
     python scripts/tts_voices.py calibrate P1 P3      # measure a voice; draw again until its pitch is back at the approved one
 
@@ -10,7 +10,7 @@ voice is fixed here - the line-by-line acting (worry, annoyance, relief) is a se
 each line (tts_scenes.py styles). The description is English because the model reads it best that way;
 it is one or two sentences, as the Voice design guide asks (long descriptions drift).
 
-The ids are in local-data/tts-voices.json (not committed); the descriptions below are the record of
+The ids are in local-data/tts/voices.json (not committed); the descriptions below are the record of
 how each voice was asked for. gemini-3.8-flash-tts sometimes answers a design with a 500 or a safety
 refusal; ``make`` tries again, and a different wording usually passes.
 """
@@ -27,7 +27,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.stdout.reconfigure(encoding="utf-8")
-FILE = ROOT / "local-data" / "tts-voices.json"
+FILE = ROOT / "local-data" / "tts" / "voices.json"
 URL = "https://generativelanguage.googleapis.com/v1beta/voices"
 
 LIFE = (" Lifelong resident of Eunjeom, a tiny seaside village in Namhae County, South Gyeongsang Province, "
