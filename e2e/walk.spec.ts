@@ -116,10 +116,16 @@ test('태블릿으로 걷는다: 시작 → 1일차 → 평가(한 사람의 인
   await expect(wall.getByRole('heading', { name: '무엇을 고칠 것인가' })).toBeVisible();
   await expect(wall.getByRole('button')).toHaveCount(0);
   await expect(wall.getByText('화면 속 사람과 대화는 전부 시뮬레이션입니다')).toBeVisible();
-  const first = pad.locator('main button:not([disabled])').first();
-  await expect(first).toBeVisible();
-  await first.tap();
-  await expect(wall.getByText('2일차').first()).toBeVisible({ timeout: 30_000 });
+  // A revision this record ran opens its day with one touch; one it never ran cannot be chosen at all.
+  // (The record here is made fresh by the rule adapters, so which revisions were run is not fixed.)
+  const runnable = pad.locator('main button:not([disabled])');
+  if (await runnable.count() > 0) {
+    await runnable.first().tap();
+    await expect(wall.getByText('2일차').first()).toBeVisible({ timeout: 30_000 });
+  } else {
+    await expect(pad.locator('main button[disabled]').first()).toBeVisible();
+    await expect(wall.getByText('이 기록에서는 돌리지 않은 안').first()).toBeVisible();
+  }
 
   await wallCtx.close();
   await padCtx.close();

@@ -483,6 +483,33 @@ describe('the end of the three days, in a hall', () => {
     vi.useRealTimers();
   });
 
+  it('says out loud, on the page, that it goes on by itself after RESULT_S seconds', () => {
+    vi.useFakeTimers();
+    ending();
+    expect(RESULT_S).toBe(15);
+    expect(screen.getByText('15초 뒤 자동으로 넘어갑니다')).toBeDefined();
+    wait(5);
+    expect(screen.getByText('10초 뒤 자동으로 넘어갑니다')).toBeDefined();
+    vi.useRealTimers();
+  });
+
+  it('says the way back, not the way on, once the closing words are up', () => {
+    ending({ closing: true });
+    expect(screen.queryByText(/초 뒤 자동으로 넘어갑니다/)).toBeNull();
+    expect(screen.getByText(`${SUMMARY_IDLE_S}초 뒤 처음으로 돌아갑니다`)).toBeDefined();
+  });
+
+  it('does not ask for the closing words a second time when they were already brought sooner', () => {
+    vi.useFakeTimers();
+    let asked = 0;
+    const view = ending({ onClosing: () => { asked += 1; } });
+    wait(4);
+    view.rerender(<ChoiceScreen detail={detailOf} current={last} closing onClosing={() => { asked += 1; }} onRestart={noop} />);
+    wait(RESULT_S * 2);
+    expect(asked).toBe(0);                      // the tablet's press made it true; the wait must not fire on top of it
+    vi.useRealTimers();
+  });
+
   it('says the closing words once the wall is told they have taken the page, and has no button of its own', () => {
     const { container } = ending({ closing: true });
     expect(screen.getByText('서비스 디자이너의 일은 초안을 고쳐 나가는 일입니다.')).toBeDefined();
@@ -515,9 +542,9 @@ describe('the end of the three days, in a hall', () => {
     vi.useRealTimers();
   });
 
-  it('says how long is left, so it does not vanish without warning', () => {
+  it('says how long is left on the way back too, so it does not vanish without warning', () => {
     vi.useFakeTimers();
-    ending();
+    ending({ closing: true });
     expect(screen.getByText(`${SUMMARY_IDLE_S}초 뒤 처음으로 돌아갑니다`)).toBeDefined();
     wait(10);
     expect(screen.getByText(`${SUMMARY_IDLE_S - 10}초 뒤 처음으로 돌아갑니다`)).toBeDefined();

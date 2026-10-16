@@ -20,9 +20,9 @@ export type Command =
   | { name: 'evalOpen'; id: string }
   | { name: 'evalClose' }
   | { name: 'evalIssues' }
-  | { name: 'openScene'; id: string }
   | { name: 'goImprove' }
   | { name: 'choose'; id: string }
+  | { name: 'closing' }
   | { name: 'home' };
 
 export type CommandName = Command['name'];
@@ -39,8 +39,8 @@ export interface TaskBrief {
   title: string;
 }
 
+/** One thing a resident went through, as the evaluation's own list says it: a time and a title. Read, not pressed. */
 export interface WentBrief {
-  /** The event a press opens as a scene. */
   id: string;
   time: string;
   title: string;
@@ -85,7 +85,7 @@ export interface StageState {
   issues: boolean;
   /** Issue groups exist for this day. */
   hasIssues: boolean;
-  /** What the open resident went through, each one a scene the wall can open. */
+  /** What the open resident went through, in the order it happened: the tablet draws it as a timeline. */
   went: WentBrief[];
   /** Whether the day's evaluations lead to a choice (otherwise to the result). */
   hasChoice: boolean;

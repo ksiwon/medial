@@ -42,7 +42,6 @@ interface PlaybackState {
   play: () => Promise<void>;
   pause: () => Promise<void>;
   tick: (deltaMs: number) => void;
-  seekSeq: (seq: number) => Promise<void>;
   /** The previous or next scene, from wherever the playhead is. */
   jumpScene: (direction: -1 | 1) => Promise<void>;
   /** To the next scene, and on playing from there (jumpScene alone stops the clock). */
@@ -131,14 +130,6 @@ export const usePlayback = create<PlaybackState>((set, get) => {
       if (!playing || !reel) return;
       at(rt + deltaMs / 1000);
       if (get().rt >= reel.total) void get().pause();
-    },
-
-    seekSeq: async (seq) => {
-      const reel = get().reel;
-      if (!reel) return;
-      set({ playing: false });
-      at(reel.atSeq(seq));
-      await send('seek', cursor());
     },
 
     jumpScene: async (direction) => {

@@ -92,6 +92,37 @@ export function Day({ s, press }: { s: StageState; press: Press }) {
 
 // ---- the residents' evaluations ----------------------------------------------
 
+/** What the open resident went through, one line each, down a rail: a thing to read. It is not pressable and
+ *  does not look it - no card, no arrow - because the wall is where the scenes are. */
+const Went = styled.ol`
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow: hidden;
+  &::before { content: ''; position: absolute; left: 8px; margin-left: -1px; top: 12px; bottom: 12px; width: 2px; background: ${inkA(0.22)}; }
+  > li { position: relative; display: flex; align-items: baseline; gap: 20px; padding-left: 40px; }
+  > li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 12px;
+    width: 16px;
+    height: 16px;
+    border-radius: ${radius.round};
+    background: ${night.ground};
+    border: 4px solid ${night.ink};
+    box-sizing: border-box;
+  }
+  > li > time { flex: none; min-width: 88px; font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  > li > span { min-width: 0; font-size: 28px; line-height: 1.4; color: ${night.mute}; word-break: keep-all; }
+`;
+
 export function Evaluations({ s, press }: { s: StageState; press: Press }) {
   const open = s.openActor ? s.residents.find((r) => r.id === s.openActor) ?? null : null;
   if (open || s.issues) {
@@ -104,16 +135,12 @@ export function Evaluations({ s, press }: { s: StageState; press: Press }) {
         <Hint>큰 화면에서 읽어 주세요. 한동안 누르지 않으면 목록으로 돌아갑니다.</Hint>
         {open && s.went.length > 0 && (
           <>
-            <Hint>이분이 겪은 일을 누르면 큰 화면이 그 장면으로 갑니다.</Hint>
-            <Grid $cols={2}>
+            <Hint>{open.name}이 이날 겪은 일</Hint>
+            <Went>
               {s.went.map((w) => (
-                <Card key={w.id} onClick={() => press({ name: 'openScene', id: w.id })}>
-                  <small>{w.time}</small>
-                  <b>{w.title}</b>
-                  <span>장면 보기</span>
-                </Card>
+                <li key={w.id}><time>{w.time}</time><span>{w.title}</span></li>
               ))}
-            </Grid>
+            </Went>
           </>
         )}
       </Page>
@@ -184,13 +211,15 @@ export function Choose({ s, press }: { s: StageState; press: Press }) {
 // ---- the end ------------------------------------------------------------------
 
 export function Ending({ s, press }: { s: StageState; press: Press }) {
-  // Nothing to press until the end: the three days stay up for a while and the closing words follow by
-  // themselves (ChoiceScreen RESULT_S); a visitor reads, and does not have to ask for the next page.
+  // The three days stay up for a while and the closing words follow by themselves (ChoiceScreen RESULT_S);
+  // the button is for the visitor who has read enough and does not want to wait.
   return (
     <Stage>
       <h1>{s.closing ? '체험이 끝났습니다' : '사흘이 끝났습니다'}</h1>
-      <p>{s.closing ? '다음 분을 위해 처음 화면으로 돌아갑니다.' : '고른 것과 마을이 어떻게 됐는지를 큰 화면에서 봐 주세요. 곧 마무리가 이어집니다.'}</p>
-      {s.closing && <Button $tone="primary" $big onClick={() => press({ name: 'home' })}>처음으로</Button>}
+      <p>{s.closing ? '다음 분을 위해 처음 화면으로 돌아갑니다.' : '고른 것과 마을이 어떻게 됐는지를 큰 화면에서 봐 주세요. 잠시 뒤 마무리가 이어집니다.'}</p>
+      {s.closing
+        ? <Button $tone="primary" $big onClick={() => press({ name: 'home' })}>처음으로</Button>
+        : <Next $big onClick={() => press({ name: 'closing' })}>마무리 화면 보기 →</Next>}
     </Stage>
   );
 }

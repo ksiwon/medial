@@ -59,12 +59,6 @@ export async function apply(command: Command): Promise<void> {
     case 'evalIssues':
       if (on('evaluations') && (day?.synthesis?.issueGroups.length ?? 0) > 0) it.setIssues(!it.issues);
       return;
-    case 'openScene': {
-      if (!on('evaluations')) return;
-      const review = askedReviews(day).find((r) => r.experiencedEventIds.includes(command.id));
-      if (review) await it.openScene(review.attemptId, command.id);
-      return;
-    }
     case 'goImprove':
       if (on('evaluations')) it.setScreen('improve');
       return;
@@ -75,6 +69,10 @@ export async function apply(command: Command): Promise<void> {
       if (runs.includes(command.id)) await it.choose(command.id);
       return;
     }
+    case 'closing':
+      // Asked for before the wait is over: the three days give way to the closing words now.
+      if (on('improve') && day?.changeSets.length === 0) it.setClosing(true);
+      return;
     case 'home':
       if (it.pathStarted || it.introStarted) it.restartPath();
       return;

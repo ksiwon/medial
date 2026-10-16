@@ -272,12 +272,17 @@ function Ending({ detail, current, closing, onClosing, onRestart, art, voices }:
 }) {
   const closeAt = useMemo(() => closingAt(voices), [voices]);
   const [left, setLeft] = useState(SUMMARY_IDLE_S);
+  // The three days stay up RESULT_S seconds, said out loud on the page, and then the closing words follow by
+  // themselves. A press on the tablet that brings them sooner ends this wait early (`closing` turns true).
+  const [until, setUntil] = useState(RESULT_S);
   const closeNow = useRef(onClosing);
   closeNow.current = onClosing;
   useEffect(() => {
-    const timer = window.setTimeout(() => closeNow.current(), RESULT_S * 1000);
-    return () => window.clearTimeout(timer);
-  }, []);
+    if (closing) return undefined;
+    const tick = window.setInterval(() => setUntil((n) => n - 1), 1000);
+    return () => window.clearInterval(tick);
+  }, [closing]);
+  useEffect(() => { if (!closing && until <= 0) closeNow.current(); }, [closing, until]);
   // The narrator reads the closing words as they come up; leaving the page stops it.
   useEffect(() => {
     if (!closing) return undefined;
@@ -339,7 +344,9 @@ function Ending({ detail, current, closing, onClosing, onRestart, art, voices }:
           </>
         )}
         <div>
-          <Idle aria-live="off">{left}초 뒤 처음으로 돌아갑니다</Idle>
+          {closing
+            ? <Idle aria-live="off">{left}초 뒤 처음으로 돌아갑니다</Idle>
+            : <Idle aria-live="off">{Math.max(until, 0)}초 뒤 자동으로 넘어갑니다</Idle>}
         </div>
       </Inner>
     </Sheet>

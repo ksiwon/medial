@@ -75,9 +75,6 @@ interface IterationState {
   choose: (generationId: string) => Promise<void>;
   /** Back to the opening film. */
   restartPath: () => void;
-  /** Open the scene an evaluation cites: switch to that attempt and seek to the
-   *  event. A read of a stored log; no adapter runs. */
-  openScene: (attemptId: string, eventId: string) => Promise<void>;
 }
 
 export const useIterationStore = create<IterationState>((set, get) => ({
@@ -130,20 +127,5 @@ export const useIterationStore = create<IterationState>((set, get) => ({
   restartPath: () => {
     void usePlayback.getState().pause();
     set({ introStarted: false, pathStarted: false, screen: 'case', page: 0, openActor: null, issues: false, closing: false });
-  },
-
-  openScene: async (attemptId, eventId) => {
-    try {
-      await useSimStore.getState().setActive(attemptId);
-      const event = useSimStore.getState().attempts[attemptId]?.events.find((e) => e.id === eventId);
-      if (!event) {
-        set({ error: `이 시도의 로그에서 사건 ${eventId} 을(를) 찾지 못했습니다.` });
-        return;
-      }
-      await usePlayback.getState().seekSeq(event.seq);
-      set({ screen: 'case', page: 0, openActor: null, issues: false });
-    } catch (error) {
-      set({ error: describe(error) });
-    }
   },
 }));
