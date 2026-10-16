@@ -1,5 +1,5 @@
 import { useUiScale } from '../ui/uiScale';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { api } from '../api/client';
 import type { VillagePayload } from '../api/types';
@@ -14,8 +14,8 @@ import {
 } from '../positions';
 import { mapFrame } from '../mapFrame';
 import { personName } from '../selectors/story';
-import { colour, font, inkA, night, radius } from '../ui/theme';
-import { ActivityIcon, FaceChip, FaceMark, VehicleMark } from './Marks';
+import { colour, font, night, radius } from '../ui/theme';
+import { ActivityIcon, FaceMark, VehicleMark } from './Marks';
 import PillText, { plateSize } from '../ui/PillText';
 import { pill } from '../ui/primitives';
 
@@ -26,7 +26,9 @@ import { pill } from '../ui/primitives';
 // village's proportions used to leave a blank strip at the side); the village's
 // north and south run above and below. Zooming leaves that view and 전체 comes back.
 // While a scene plays, the places it is filmed in are marked on the map (spotlight),
-// so the stage and the village are read as one.
+// so the stage and the village are read as one. The map is only looked at: on the
+// two-screen exhibition the wall shows it fitted to its column and nothing on it can
+// be touched (the tablet has no map control; 2026-10-16).
 //
 // Three rules from doc 15 section 5 shape the drawing:
 //
@@ -90,46 +92,12 @@ const Frame = styled.div`
   /* The map is the one light object on the night ground; past its edges is the ground. */
   background: ${night.panel};
   overflow: hidden;
-  touch-action: none;
 `;
 
 const Svg = styled.svg`
   width: 100%;
   height: 100%;
   display: block;
-`;
-
-const Corner = styled.div`
-  position: absolute;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-`;
-
-const Tools = styled(Corner)`
-  right: 12px;
-  bottom: 32px;
-  flex-direction: row;
-  background: rgba(18, 19, 16, 0.82);
-  border-radius: ${radius.pill};
-  padding: 4px 8px;
-`;
-
-const ToolButton = styled.button`
-  ${pill('md')}
-  border: none;
-  background: transparent;
-  color: ${night.ink};
-  font-family: inherit;
-  font-weight: 700;
-  cursor: pointer;
-  &:hover {
-    background: ${inkA(0.14)};
-  }
-  &:focus-visible {
-    outline: 2px solid ${colour.primary};
-    outline-offset: -1px;
-  }
 `;
 
 const Compass = styled.div`
@@ -185,80 +153,6 @@ const Credit = styled.div`
   text-overflow: ellipsis;
 `;
 
-/* Flips above/below and clamps to the frame, with 16 px of clearance so it
-   never covers the marker it belongs to. */
-const Popover = styled.div<{ $left: number; $top: number; $below: boolean }>`
-  position: absolute;
-  left: ${(p) => p.$left}px;
-  top: ${(p) => p.$top}px;
-
-  width: 252px;
-  max-width: calc(100% - 16px);
-  background: ${colour.surface};
-  border: 1px solid ${colour.border};
-  border-radius: ${radius.panel};
-  box-shadow: 0 4px 16px rgba(29, 41, 53, 0.14);
-  z-index: 5;
-  overflow: hidden;
-`;
-
-/** The people in this group, as a single horizontal strip. Long groups scroll
- *  sideways inside the card rather than turning it into twelve profiles. */
-const PopPeople = styled.div`
-  display: flex;
-  gap: 4px;
-  overflow-x: auto;
-  padding: 8px 36px 8px 12px;
-  border-bottom: 1px solid ${colour.border};
-`;
-
-const PersonPick = styled.button<{ $active: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex: none;
-  border: 1px solid ${(p) => (p.$active ? colour.primary : 'transparent')};
-  background: ${(p) => (p.$active ? colour.selected : 'transparent')};
-  border-radius: ${radius.control};
-  padding: 4px 8px;
-  cursor: pointer;
-  font-size: ${font.small};
-  color: ${colour.text};
-  &:focus-visible {
-    outline: 2px solid ${colour.primary};
-    outline-offset: 1px;
-  }
-`;
-
-const PopBody = styled.div`
-  padding: 8px 12px 12px;
-  font-size: ${font.small};
-  line-height: 1.5;
-  color: ${colour.text};
-`;
-
-/** Who is in the chip row; who they are, where they are and what they are doing
- *  below it. This card is the person's page now - the observe screen has no
- *  person column - so it carries the registry's age, job and group too. */
-const Facts = styled.dl`
-  margin: 0;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: 8px;
-  row-gap: 2px;
-  > dt {
-    color: ${colour.unknown};
-    white-space: nowrap;
-  }
-  > dd {
-    margin: 0;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-`;
-
 /** Everyone who has no coordinate on this map, as one row of names under it. */
 /* One height whoever is out: the map above it must not jump as people leave
    and come back. Three rows of chips fit; more scroll inside. */
@@ -289,16 +183,13 @@ interface Props {
   viewMode: 'researcher' | 'medial';
   medialKnown: Map<string, MedialKnown>;
   seatsPerVehicle: number;
-  selectedCluster: string | null;
   /** Colour per still-running request: the ring on whoever is doing it. */
   taskColours?: Map<string, string>;
-  selectedActor: string | null;
   /** The places the stage is showing now, marked on the map. Empty between scenes. */
   spotlight?: Spot[];
   /** The column width at which the whole village fills the frame exactly, for
    *  the frame's present height: the screen sizes the column to it. */
   onFitWidth?: (px: number) => void;
-  onSelectCluster: (key: string | null, actorId?: string | null) => void;
 }
 
 export default function VillageMap({
@@ -307,10 +198,7 @@ export default function VillageMap({
   viewMode,
   medialKnown,
   seatsPerVehicle,
-  selectedCluster,
   taskColours,
-  selectedActor,
-  onSelectCluster,
   spotlight = [],
   onFitWidth,
 }: Props) {
@@ -335,7 +223,8 @@ export default function VillageMap({
     const h = box.width > 1 && box.height > 1 ? extent.w * (box.height / box.width) : extent.h;
     return { x: extent.x, w: extent.w, h, y: extent.y + extent.h / 2 - h / 2 };
   }, [extent, box]);
-  const [view, setView] = useState<View>(home);
+  // The whole village, always: nothing here zooms or pans.
+  const view = home;
   // The column is as wide as the village is, at the frame's height: then the map
   // fills its frame both ways, with no strip at the side and nobody cut off the
   // top or bottom (the village runs 1.2 km north-south; at a fixed width someone
@@ -343,22 +232,10 @@ export default function VillageMap({
   useEffect(() => {
     if (onFitWidth && box.height > 1) onFitWidth(Math.round(box.height * (extent.w / extent.h)));
   }, [onFitWidth, box.height, extent]);
-  // Zooming leaves the fitted view; 전체 returns.
-  const [fitMode, setFitMode] = useState<'all' | null>('all');
-  const [hovered, setHovered] = useState<string | null>(null);
-  /** The card Escape just closed. The marker keeps focus and often the pointer
-   *  too, and both of those open a card, so without this the card reopens in
-   *  the same tick and Escape appears to do nothing. */
-  const [dismissed, setDismissed] = useState<string | null>(null);
   const [mapBroken, setMapBroken] = useState(false);
-  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const popRef = useRef<HTMLDivElement | null>(null);
-  const [popSize, setPopSize] = useState({ width: 252, height: 140 });
-  useEffect(() => () => { if (hoverTimer.current) clearTimeout(hoverTimer.current); }, []);
   const frameRef = useRef<HTMLDivElement | null>(null);
-  const drag = useRef<{ px: number; py: number; view: View } | null>(null);
 
-  useEffect(() => { setMapBroken(false); setFitMode('all'); }, [extent]);
+  useEffect(() => { setMapBroken(false); }, [extent]);
 
   useEffect(() => {
     const node = frameRef.current;
@@ -370,68 +247,8 @@ export default function VillageMap({
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    if (box.width > 1 && box.height > 1 && fitMode) setView(home);
-  }, [home, box, fitMode]);
-
   const ui = useUiScale();
   const project = useMemo(() => projector(view, box), [view, box]);
-
-  const onWheel = useCallback(
-    (event: WheelEvent) => {
-      if ((event.target as Element).closest('[data-overlay]')) return;
-      event.preventDefault();
-      setFitMode(null);
-      const node = frameRef.current;
-      if (!node) return;
-      const rect = node.getBoundingClientRect();
-      const anchor = project.toSvg(event.clientX - rect.left, event.clientY - rect.top);
-      const factor = Math.exp(Math.max(-120, Math.min(120, event.deltaY)) * 0.0015);
-      setView((current) => {
-        const w = Math.min(home.w * 1.2, Math.max(home.w / 24, current.w * factor));
-        const ratio = w / current.w;
-        return {
-          w,
-          h: current.h * ratio,
-          x: anchor.x - (anchor.x - current.x) * ratio,
-          y: anchor.y - (anchor.y - current.y) * ratio,
-        };
-      });
-    },
-    [home.w, project],
-  );
-
-  useEffect(() => {
-    const node = frameRef.current;
-    node?.addEventListener('wheel', onWheel, { passive: false });
-    return () => node?.removeEventListener('wheel', onWheel);
-  }, [onWheel]);
-
-  const onPointerDown = (event: React.PointerEvent) => {
-    if ((event.target as HTMLElement).closest('g[data-marker]')) return;
-    // Panning captures the pointer on the frame, and a captured pointer
-    // retargets the click that follows: pressing a button that sits *inside*
-    // the frame - the popover's 더 알아보기, the zoom controls - never
-    // produced a click at all. Overlays opt out of the drag entirely.
-    if ((event.target as HTMLElement).closest('[data-overlay]')) return;
-    if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    setHovered(null); onSelectCluster(null, null);
-    setFitMode(null);
-    drag.current = { px: event.clientX, py: event.clientY, view };
-    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-  };
-
-  const onPointerMove = (event: React.PointerEvent) => {
-    const start = drag.current;
-    if (!start) return;
-    const dx = (event.clientX - start.px) / project.scale;
-    const dy = (event.clientY - start.py) / project.scale;
-    setView({ ...start.view, x: start.view.x - dx, y: start.view.y - dy });
-  };
-
-  const endDrag = () => {
-    drag.current = null;
-  };
 
   const medial = viewMode === 'medial';
   const projected = useMemo(
@@ -540,100 +357,14 @@ export default function VillageMap({
     return out;
   }, [clusters, project]);
 
-  // Hover and keyboard focus open the same card a click does. Only one is ever
-  // open, and a pinned one wins over a hover elsewhere.
-  const openKey = selectedCluster ?? hovered;
-  const active =
-    openKey && openKey !== dismissed ? (clusters.find((c) => c.key === openKey) ?? null) : null;
-  const activeAt = active ? (layout.get(active.key) ?? anchors.get(active.key)!) : null;
-  const below = activeAt ? activeAt.top < popSize.height + 24 : false;
-  const clampedLeft = activeAt
-    ? Math.max(8, Math.min(activeAt.left - popSize.width / 2, box.width - popSize.width - 8)) : 0;
-  const popTop = activeAt ? Math.max(8, Math.min(
-    below ? activeAt.top + 26 : activeAt.top - popSize.height - 26,
-    box.height - popSize.height - 8)) : 0;
-  useEffect(() => {
-    const node = popRef.current;
-    if (!node) return;
-    const observer = new ResizeObserver(() => setPopSize({width: node.offsetWidth, height: node.offsetHeight}));
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [active?.key]);
-
-  // A card opened by hover closes when the pointer is no longer over its marker or
-  // the card. The browser sends `mouseenter` for a marker that was drawn *under* a
-  // pointer that did not move (a new day opens, markers are redrawn), but never the
-  // matching `mouseleave` - so the card stayed open with the pointer far away
-  // (found recording the demo, 2026-10-06). Only a hover is closed this way: a card
-  // the reader pinned (clicked) stays until they close it.
-  useEffect(() => {
-    if (!hovered || selectedCluster) return;
-    const onMove = (event: PointerEvent) => {
-      if (!pointerIsOver(event.target as Element | null, hovered)) onHover(null);
-    };
-    window.addEventListener('pointermove', onMove);
-    return () => window.removeEventListener('pointermove', onMove);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hovered, selectedCluster]);
-
-  /** Leaving a marker, or moving to another one, forgets an Escape: the key
-   *  hides the card that is open, it does not make a marker permanently mute. */
-  const onHover = (key: string | null) => {
-    if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    if (key === null) {
-      hoverTimer.current = setTimeout(() => setHovered(null), 260);
-      return;
-    }
-    setHovered(key);
-    // Functional, because Escape focuses the marker in the same batch: the
-    // focus handler lands here while `dismissed` still reads as its old value,
-    // and a plain read would immediately undo the dismissal it just caused.
-    setDismissed((current) => (key !== null && key === current ? current : null));
-  };
-
-  // Escape closes whichever card is open, and the open one is usually *not* the
-  // pinned one: the card itself says 누르면 고정, so hovering is the common way
-  // to see it. Keying this on `selectedCluster` meant Escape did nothing at all
-  // for a hover-opened card, including one the pointer had moved into.
-  useEffect(() => {
-    if (!openKey) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      if (hoverTimer.current) clearTimeout(hoverTimer.current);
-      setDismissed(openKey);
-      if (selectedCluster) onSelectCluster(null, null);
-      // Focus goes back to the marker the card belonged to, not to the body.
-      frameRef.current
-        ?.querySelector<SVGGElement>(`g[data-marker="${CSS.escape(openKey)}"]`)
-        ?.focus();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [openKey, selectedCluster, onSelectCluster]);
-
   const mapImage = village.mapImage;
   const hasRaster = Boolean(mapImage) && !mapBroken;
   /** SVG units per screen pixel. */
   const k = ui / (project.scale || 1);
 
-  const selectedMember =
-    active?.members.find((m) => m.id === selectedActor) ?? active?.members[0] ?? null;
-  const resident = (id: string) => village.residents.find((r) => r.id === id) ?? null;
-  const popWhere = selectedMember
-    ? selectedMember.moving
-      ? '이동 중'
-      : (placeLabel(village, selectedMember.place, selectedMember.id) ?? '자택')
-    : '';
-
   return (
     <>
-      <Frame
-        ref={frameRef}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-      >
+      <Frame ref={frameRef}>
         <Svg
           viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}
           preserveAspectRatio="xMidYMid meet"
@@ -761,15 +492,6 @@ export default function VillageMap({
                 seats={seatsPerVehicle}
                 medial={medial}
                 taskColours={taskColours}
-                selected={cluster.key === selectedCluster}
-                hovered={cluster.key === hovered}
-                onSelect={() =>
-                  onSelectCluster(
-                    cluster.key === selectedCluster ? null : cluster.key,
-                    cluster.members[0]?.id ?? null,
-                  )
-                }
-                onHover={onHover}
               />
             );
           })}
@@ -787,75 +509,6 @@ export default function VillageMap({
             ? '© OpenStreetMap 기여자'
             : '지도 이미지 없음 · 원자료 좌표만 표시'}
         </Credit>
-
-        <Tools data-overlay>
-          <ToolButton onClick={() => { setFitMode(null); setView((v) => zoomBy(v, 1 / 1.2, home)); }} title="확대">
-            ＋
-          </ToolButton>
-          <ToolButton onClick={() => { setFitMode(null); setView((v) => zoomBy(v, 1.2, home)); }} title="축소">
-            －
-          </ToolButton>
-          <ToolButton onClick={() => setFitMode('all')} title="마을 전체 보기">전체</ToolButton>
-        </Tools>
-
-        {active && activeAt && (
-          <Popover
-            ref={popRef}
-            data-overlay
-            $left={clampedLeft}
-            $top={popTop}
-            $below={below}
-            role="dialog"
-            aria-label={`${placeName(active, village)} · ${active.members.length}명`}
-            onMouseEnter={() => onHover(active.key)}
-            onMouseLeave={() => onHover(null)}
-            onFocus={() => onHover(active.key)}
-            onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) onHover(null); }}
-          >
-            <ToolButton aria-label="팝오버 닫기"
-              style={{position:'absolute',right:8,top:10,height:24,minWidth:20,padding:0}}
-              onClick={() => { setDismissed(active.key); onSelectCluster(null, null); setHovered(null); }}>×</ToolButton>
-            {active.members.length > 0 && (
-              <PopPeople>
-                {active.members.map((member) => (
-                  <PersonPick
-                    key={member.id}
-                    $active={member.id === selectedMember?.id}
-                    aria-pressed={member.id === selectedMember?.id}
-                    onClick={() => onSelectCluster(active.key, member.id)}
-                  >
-                    <FaceChip id={member.id} size={26} isVillageHead={member.isVillageHead} />
-                    {member.isVillageHead ? '이장' : member.id}
-                  </PersonPick>
-                ))}
-              </PopPeople>
-            )}
-
-            {selectedMember && (
-              <PopBody>
-                <Facts>
-                  {resident(selectedMember.id) && (
-                    <>
-                      <dt>누구</dt>
-                      <dd>{[resident(selectedMember.id)!.age != null ? `${resident(selectedMember.id)!.age}세` : null,
-                            resident(selectedMember.id)!.job,
-                            village.groups[resident(selectedMember.id)!.group]?.label].filter(Boolean).join(' · ')}</dd>
-                    </>
-                  )}
-                  <dt>어디서</dt>
-                  <dd>{popWhere}</dd>
-                  <dt>무엇을</dt>
-                  <dd>
-                    {/* A stay's activity is the place's own name ("자택"), which
-                        would repeat the line above. */}
-                    {selectedMember.activity === popWhere ? '머무는 중' : selectedMember.activity}
-                    {selectedMember.ridingWith && ' · 차량 동승'}
-                  </dd>
-                </Facts>
-              </PopBody>
-            )}
-          </Popover>
-        )}
       </Frame>
 
       {/* Who is not on the map, always in view (the exhibition wall's strip):
@@ -872,26 +525,6 @@ export default function VillageMap({
       </Outside>
     </>
   );
-}
-
-/** Is the pointer on the marker `key`, or on an overlay (its card, the zoom tools)? */
-export function pointerIsOver(target: Element | null, key: string): boolean {
-  return Boolean(target?.closest?.(`[data-marker="${CSS.escape(key)}"], [data-overlay]`));
-}
-
-function placeName(cluster: Cluster, village: VillagePayload): string {
-  if (cluster.reason === 'vehicle') return '이동 중인 차 안';
-  if (!cluster.placeId) return '이동 중';
-  return placeLabel(village, cluster.placeId) ?? '이동 중';
-}
-
-function zoomBy(view: View, factor: number, home: View): View {
-  const w = Math.min(home.w * 1.2, Math.max(home.w / 24, view.w * factor));
-  const ratio = w / view.w;
-  const cx = view.x + view.w / 2;
-  const cy = view.y + view.h / 2;
-  const h = view.h * ratio;
-  return { w, h, x: cx - w / 2, y: cy - h / 2 };
 }
 
 function activityKind(pose: ActorPose): 'travel' | 'waiting' | 'task' | 'boat' | null {
@@ -913,10 +546,6 @@ function ClusterMark({
   seats,
   medial,
   taskColours,
-  selected,
-  hovered,
-  onSelect,
-  onHover,
 }: {
   cluster: Cluster;
   /** Where the mark is drawn, after de-collision. */
@@ -931,10 +560,6 @@ function ClusterMark({
   seats: number;
   medial: boolean;
   taskColours?: Map<string, string>;
-  selected: boolean;
-  hovered: boolean;
-  onSelect: () => void;
-  onHover: (key: string | null) => void;
 }) {
   const lead = cluster.members[0];
   const driver = cluster.members.find((m) => m.mode === 'drive' || m.mode === 'boat');
@@ -962,23 +587,11 @@ function ClusterMark({
   return (
     <g
       data-marker={cluster.key}
-      tabIndex={0}
-      role="button"
+      role="img"
       aria-label={`${lead.displayName} ${lead.activity}${
         cluster.members.length > 1 ? ` 외 ${cluster.members.length - 1}명` : ''
       }`}
-      style={{ cursor: 'pointer', outline: 'none' }}
-      onClick={onSelect}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onSelect();
-        }
-      }}
-      onMouseEnter={() => onHover(cluster.key)}
-      onMouseLeave={() => onHover(null)}
-      onFocus={() => onHover(cluster.key)}
-      onBlur={() => onHover(null)}
+      style={{ pointerEvents: 'none' }}
     >
       {/* A mark that had to move keeps a thread back to where these people
           really are, so the nudge cannot be read as a different location. */}
@@ -1000,8 +613,8 @@ function ClusterMark({
       <rect x={x - (alone ? SOLO_LEFT : 28) * k} y={y - (alone ? 13 : 16) * k}
         width={(alone ? SOLO_W : 56) * k} height={(alone ? 26 : 32) * k}
         rx={(alone ? 13 : 16) * k}
-        fill={taskRing ? `${taskRing}14` : selected || hovered ? '#edf5ec' : '#fffffff5'}
-        stroke={taskRing ?? (selected || hovered ? '#8eaf98' : '#d6e1d3')}
+        fill={taskRing ? `${taskRing}14` : '#fffffff5'}
+        stroke={taskRing ?? '#d6e1d3'}
         strokeWidth={(taskRing ? 1.8 : 1.2) * k}
         style={{filter:'drop-shadow(0 1px 2px #304c3926)'}} />
 
@@ -1062,7 +675,7 @@ function ClusterMark({
       {alone && <text
         x={x + (SOLO_FACE_R + 4) * k} y={y + 3.5*k} fontSize={10*k}
         textAnchor="start" fill="#496054"
-        fontWeight={selected || hovered ? 650 : 500}
+        fontWeight={500}
         style={{pointerEvents:'none'}}>
         {lead.isVillageHead ? '이장' : lead.id}
       </text>}

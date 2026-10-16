@@ -8,9 +8,11 @@ import 'pretendard/dist/web/variable/pretendardvariable.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import SimulationApp from './features/simulation/SimulationApp';
+import PadApp from './features/simulation/stage/PadApp';
+import { roleOf } from './features/simulation/stage/protocol';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <SimulationApp />
+    {roleOf() === 'pad' ? <PadApp /> : <SimulationApp />}
   </React.StrictMode>,
 );

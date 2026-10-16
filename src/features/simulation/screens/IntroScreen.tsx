@@ -262,7 +262,7 @@ const Progress = styled.div<{ $ms: number }>`
   }
 `;
 
-/** The film's top right: what the pictures are, and the one way out, on one row. */
+/** The film's top right: what the pictures are. */
 const Corner = styled.div`
   position: absolute;
   top: clamp(24px, 1.6vw, 64px);
@@ -280,22 +280,6 @@ const Disclaimer = styled.div`
   font-size: clamp(12px, 0.85vw, 44px);
   letter-spacing: 0.02em;
   color: ${inkA(0.82)};
-`;
-
-/** The one control of the film: small, in the corner, for a visitor who has seen it. */
-const Skip = styled.button`
-  padding: 0.45em 1.1em;
-  border: 1px solid ${inkA(0.35)};
-  border-radius: ${radius.pill};
-  background: rgba(21, 21, 15, 0.55);
-  font: inherit;
-  font-size: clamp(12px, 0.85vw, 44px);
-  font-weight: 700;
-  color: ${inkA(0.9)};
-  cursor: pointer;
-  &:hover { background: rgba(21, 21, 15, 0.8); color: ${PAPER}; }
-  &:focus-visible { outline: 2px solid ${PAPER}; outline-offset: 4px; }
-  &::after { content: '→'; margin-left: 0.5em; }
 `;
 
 const Brand = styled.div`
@@ -672,7 +656,6 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
       <Brand>MEDial</Brand>
       <Corner>
         <Disclaimer>그림과 대화는 모두 시뮬레이션입니다 · 이름은 가명입니다</Disclaimer>
-        <Skip type="button" onClick={() => finish.current()}>건너뛰기</Skip>
       </Corner>
 
       <Scene $on={on(0)}>

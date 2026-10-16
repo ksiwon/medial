@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { formatClock } from '../positions';
 import type { TimelineItem } from '../selectors/dayLedger';
@@ -6,8 +6,10 @@ import { personName } from '../selectors/story';
 import { accentA, font, inkA, night, px, radius } from '../ui/theme';
 import { pill } from '../ui/primitives';
 
-// 오늘의 타임라인: the right-hand column of the observe screen, and the day's
-// playback control (2026-10-07).
+// 오늘의 타임라인: the right-hand column of the observe screen (2026-10-07).
+// On the two-screen exhibition (2026-10-16) it is read, not pressed: play, skip and
+// the time slider are on the tablet, which says "seek" to the wall; here the rail
+// only shows where the day is.
 //
 // One line per Task down a rail, the way an incident log reads: what is over is
 // quiet, what is happening now is lit and says which request it belongs to, and
@@ -85,17 +87,6 @@ const Row = styled.div`
   gap: 12px;
 `;
 
-const Play = styled.button`
-  ${pill('md')}
-  flex: none;
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
-  border: none;
-  background: ${LIVE};
-  color: #fff;
-  &:focus-visible { outline: 2px solid ${PAPER}; outline-offset: 2px; }
-`;
 
 const Clock = styled.time`
   flex: 1;
@@ -107,19 +98,6 @@ const Clock = styled.time`
   font-variant-numeric: tabular-nums;
 `;
 
-/** Past the scene on screen, to the next one - the only control a visitor needs besides play. */
-const Skip = styled.button`
-  ${pill('md')}
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
-  border: 1px solid ${inkA(0.25)};
-  background: transparent;
-  color: ${inkA(0.75)};
-  &:hover:not(:disabled) { color: ${PAPER}; border-color: ${inkA(0.6)}; }
-  &:disabled { opacity: 0.4; cursor: default; }
-  &:focus-visible { outline: 2px solid ${PAPER}; outline-offset: 2px; }
-`;
 
 const Note = styled.p`
   margin: 0;
@@ -156,7 +134,6 @@ const Rail = styled.div`
   bottom: 0;
   left: ${RAIL_X - 14}px;
   width: 28px;
-  cursor: ns-resize;
   touch-action: none;
   z-index: 2;
   &::before {
@@ -197,14 +174,12 @@ const Playhead = styled.div`
     background: ${PAPER};
     border: 4px solid ${LIVE};
     pointer-events: auto;
-    cursor: grab;
   }
 `;
 
 const Item = styled.li<{ $state: TimelineItem['state'] | 'edge' }>`
   position: relative;
   padding: ${PAD_Y}px 0 ${PAD_Y}px 40px;
-  cursor: pointer;
   border-bottom: 1px solid ${inkA(0.08)};
   > i {
     position: absolute;
@@ -243,7 +218,6 @@ const Item = styled.li<{ $state: TimelineItem['state'] | 'edge' }>`
     font-variant-numeric: tabular-nums;
     color: ${(p) => (p.$state === 'now' ? PAPER : 'rgba(246, 241, 232, 0.5)')};
   }
-  &:hover > div > b { color: ${(p) => (p.$state === 'now' ? LIVE : PAPER)}; }
 `;
 
 const Detail = styled.p`
@@ -290,18 +264,9 @@ interface Props {
   dayStartMs: number;
   dayEndMs: number;
   playing: boolean;
-  onTogglePlay: () => void;
-  /** Move the clock (while dragging), and settle it (on release). */
-  onSeek: (ms: number) => void;
-  onCommit: () => void;
-  /** To the next scene; absent or `canSkip` false when the day is over. */
-  onSkip: () => void;
-  canSkip: boolean;
 }
 
-export default function DayTimeline({
-  items, atMs, dayStartMs, dayEndMs, playing, onTogglePlay, onSeek, onCommit, onSkip, canSkip,
-}: Props) {
+export default function DayTimeline({ items, atMs, dayStartMs, dayEndMs, playing }: Props) {
   const track = useRef<HTMLOListElement>(null);
   const scroll = useRef<HTMLDivElement>(null);
   const [anchors, setAnchors] = useState<Anchor[]>([]);
@@ -344,68 +309,31 @@ export default function DayTimeline({
     }
   }, [headY, playing]);
 
-  const timeAt = useCallback((clientY: number) => {
-    const box = track.current!.getBoundingClientRect();
-    const ms = along(anchors, 'y', clientY - box.top);
-    return Math.round(Math.min(dayEndMs, Math.max(dayStartMs, ms)) / 60_000) * 60_000;
-  }, [anchors, dayStartMs, dayEndMs]);
-
-  const drag = (e: React.PointerEvent) => {
-    e.preventDefault();
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    onSeek(timeAt(e.clientY));
-  };
-
   const seen = items.filter((item) => item.state !== 'planned').length;
   return (
     <Box aria-label="오늘의 타임라인">
       <Head>
         <Row>
-          {/* This plays back a stored log. Stopping it stops nothing on the server. */}
-          <Play type="button" onClick={onTogglePlay}>{playing ? '⏸ 정지' : '▶ 재생'}</Play>
           <Clock>{formatClock(atMs)}</Clock>
         </Row>
-        <Row>
-          <Skip type="button" onClick={onSkip} disabled={!canSkip}>건너뛰기 →</Skip>
-        </Row>
-        <Note title="앞일은 예정된 것만 보입니다. 선을 끌어 시각을 옮깁니다.">
-          {seen === 0 ? '아직 일어난 일이 없습니다' : `지금까지 ${seen}건`} · 선을 끌어 시각 이동
+        <Note title="앞일은 예정된 것만 보입니다.">
+          {seen === 0 ? '아직 일어난 일이 없습니다' : `지금까지 ${seen}건`}
         </Note>
       </Head>
       <Scroll ref={scroll}>
         <Track ref={track}>
-          <Rail
-            role="slider"
-            aria-label="시각"
-            aria-orientation="vertical"
-            aria-valuemin={dayStartMs}
-            aria-valuemax={dayEndMs}
-            aria-valuenow={atMs}
-            aria-valuetext={formatClock(atMs)}
-            tabIndex={0}
-            onPointerDown={drag}
-            onPointerMove={(e) => { if (e.buttons) onSeek(timeAt(e.clientY)); }}
-            onPointerUp={onCommit}
-            onKeyDown={(e) => {
-              const step = e.key === 'ArrowDown' ? 5 : e.key === 'ArrowUp' ? -5 : 0;
-              if (!step) return;
-              e.preventDefault();
-              onSeek(Math.min(dayEndMs, Math.max(dayStartMs, atMs + step * 60_000)));
-            }}
-            onKeyUp={onCommit}
-          >
+          <Rail role="img" aria-label={`시각 ${formatClock(atMs)}`}>
             <i style={{ height: Math.max(0, headY) }} />
           </Rail>
           <Playhead style={{ top: headY }} aria-hidden><b /></Playhead>
           {hours.map((h) => <Hour key={h.ms} style={{ top: h.y }} aria-hidden>{h.label}</Hour>)}
 
-          <Item $state="edge" data-ms={dayStartMs} onClick={() => { onSeek(dayStartMs); onCommit(); }}>
+          <Item $state="edge" data-ms={dayStartMs}>
             <i aria-hidden />
             <div><b>하루 시작</b><time>{formatClock(dayStartMs)}</time></div>
           </Item>
           {items.map((item) => (
-            <Item key={item.key} $state={item.state} data-state={item.state} data-ms={item.startMs}
-              onClick={() => { onSeek(item.startMs); onCommit(); }} title={`${formatClock(item.startMs)}로 이동`}>
+            <Item key={item.key} $state={item.state} data-state={item.state} data-ms={item.startMs}>
               <i aria-hidden />
               <div>
                 <b>{item.title}</b>
@@ -421,7 +349,7 @@ export default function DayTimeline({
               {!item.medial && <Tag $kind="unseen">MEDial은 모름</Tag>}
             </Item>
           ))}
-          <Item $state="edge" data-ms={dayEndMs} onClick={() => { onSeek(dayEndMs); onCommit(); }}
+          <Item $state="edge" data-ms={dayEndMs}
             style={{ borderBottom: 'none', borderTop: '1px solid ${inkA(0.08)}' }}>
             <i aria-hidden />
             <div><b>하루 끝 · 주민 에이전트 평가</b><time>{formatClock(dayEndMs)}</time></div>

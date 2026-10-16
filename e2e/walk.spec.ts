@@ -53,51 +53,70 @@ test.beforeAll(async ({ request }) => {
   await makeRecord(request);
 });
 
-test('소개 → 1일차 → 주민 에이전트 평가 → 수정 요청 고르기를 걷는다', async ({ page }) => {
-  // The film is about fifty seconds and nothing in it can be pressed.
+test('태블릿으로 걷는다: 시작 → 1일차 → 평가(한 사람의 인터뷰) → 수정 요청 고르기', async ({ browser }) => {
   test.setTimeout(300_000);
-  await page.goto('/');
-  await page.evaluate(() => document.fonts.ready);
-  await expect(page.getByLabel('MEDial 소개')).toBeVisible();
-  await expect(page.getByRole('button')).toHaveCount(0);
+  const base = `http://localhost:5174`;
+  const wallCtx = await browser.newContext({ viewport: { width: 2560, height: 1440 } });
+  const padCtx = await browser.newContext({ viewport: { width: 1180, height: 820 }, hasTouch: true, isMobile: true });
+  const wall = await wallCtx.newPage();
+  const pad = await padCtx.newPage();
+  await wall.goto(`${base}/?role=wall`);
+  await pad.goto(`${base}/?role=pad`);
 
-  // The film ends by opening day one, which plays by itself.
-  await expect(page.getByRole('button', { name: '↺ 처음으로' })).toBeVisible({ timeout: 90_000 });
-  await expect(page.getByRole('button', { name: /정지|재생/ })).toBeVisible();
-  // The day is skipped scene by scene, as a visitor in a hurry would.
-  for (let i = 0; i < 8 && !(await page.getByRole('button', { name: /주민 에이전트 평가/ }).first().isVisible()); i += 1) {
-    await page.getByRole('button', { name: /건너뛰기/ }).click({ timeout: 5_000 }).catch(() => {});
-    await page.waitForTimeout(800);
-  }
+  // Waiting: the wall asks for the tablet, and has nothing to press.
+  await expect(wall.getByText(/태블릿에서 시작하기/)).toBeVisible();
+  await expect(pad.getByRole('button', { name: '시작하기' })).toBeVisible({ timeout: 30_000 });
+  await pad.getByRole('button', { name: '시작하기' }).tap();
+  await expect(wall.getByLabel('MEDial 소개')).toBeVisible();
+  await expect(wall.getByRole('button')).toHaveCount(0);
 
-  // At the day's end the evaluations are one press away.
-  const toEvaluations = page.getByRole('button', { name: /주민 에이전트 평가/ }).first();
-  await expect(toEvaluations).toBeVisible({ timeout: 240_000 });
-  await toEvaluations.click();
+  // The tablet skips the film; day one opens and plays on the wall.
+  await pad.getByRole('button', { name: /건너뛰기/ }).tap();
+  await expect(wall.getByLabel('오늘의 타임라인')).toBeVisible({ timeout: 30_000 });
+  await expect(pad.getByRole('button', { name: /정지|재생/ })).toBeVisible();
+  await expect(wall.getByRole('button')).toHaveCount(0);
 
-  // Only residents who went through the day, in their own words; no score.
-  await expect(page.getByText('서비스를 겪고 평가한 주민')).toBeVisible();
-  await expect(page.getByText('합성 평가입니다', { exact: false })).toBeVisible();
-  await expect(page.getByText(/만족도\s*[0-9]/)).toHaveCount(0);
-  await expect(page.getByText('미경험')).toHaveCount(0);
-  await expect(page.locator('article').first()).toBeVisible();
+  // A touch on the tablet moves the wall's day: pause there stops it too.
+  await pad.getByRole('button', { name: /정지/ }).tap();
+  await expect(pad.getByRole('button', { name: /재생/ })).toBeVisible();
 
-  // More than four residents are paged: a button leads on until the last page.
-  const next = page.getByRole('button', { name: '다음 주민 보기' });
-  while (await next.isVisible()) await next.click();
+  // To the evaluations, from the tablet.
+  await pad.getByRole('button', { name: /평가 보기/ }).tap();
+  await expect(wall.getByText('서비스를 겪고 평가한 주민')).toBeVisible();
+  await expect(wall.getByText('합성 평가입니다', { exact: false })).toBeVisible();
+  await expect(wall.getByText(/만족도\s*[0-9]/)).toHaveCount(0);
+  const cards = await wall.locator('article').count();
+  expect(cards).toBeGreaterThan(0);
 
-  // Then the revision to choose; a revision that was never run cannot be chosen.
-  await page.getByRole('button', { name: /이 평가를 보고 무엇을 고칠지/ }).click();
-  await expect(page.getByRole('heading', { name: '무엇을 고칠 것인가' })).toBeVisible();
-  await expect(page.getByText('화면 속 사람과 대화는 전부 시뮬레이션입니다')).toBeVisible();
+  // One resident on the tablet: the wall shows that person's whole interview, and the cards come back.
+  const person = pad.locator('main button').first();
+  const name = (await person.innerText()).split('\n')[0];
+  await person.tap();
+  await expect(wall.getByRole('heading', { name: `${name}의 인터뷰` })).toBeVisible();
+  await expect(wall.locator('article')).toHaveCount(1);
+  await pad.getByRole('button', { name: /목록으로 돌아가기/ }).tap();
+  await expect(wall.locator('article')).toHaveCount(cards);
+
+  // Then the revision to choose: read on the wall, chosen on the tablet with one touch.
+  await pad.getByRole('button', { name: /고칠지 고른다|결과 보러/ }).tap();
+  await expect(wall.getByRole('heading', { name: '무엇을 고칠 것인가' })).toBeVisible();
+  await expect(wall.getByRole('button')).toHaveCount(0);
+  await expect(wall.getByText('화면 속 사람과 대화는 전부 시뮬레이션입니다')).toBeVisible();
+  const first = pad.locator('main button:not([disabled])').first();
+  await expect(first).toBeVisible();
+  await first.tap();
+  await expect(wall.getByText('2일차').first()).toBeVisible({ timeout: 30_000 });
+
+  await wallCtx.close();
+  await padCtx.close();
 });
 
-test('1440 · 1366 · 800에서 가로로 넘치지 않는다', async ({ page }) => {
-  for (const width of [1440, 1366, 800]) {
-    await page.setViewportSize({ width, height: 900 });
-    await page.goto('/');
-    await expect(page.getByLabel('MEDial 소개')).toBeVisible();
+test('모니터는 2560 · 1440에서 가로로 넘치지 않고, 태블릿은 1180 · 1024에서 넘치지 않는다', async ({ page }) => {
+  for (const [role, width, height] of [['wall', 2560, 1440], ['wall', 1440, 900], ['pad', 1180, 820], ['pad', 1024, 768]] as const) {
+    await page.setViewportSize({ width, height });
+    await page.goto(`/?role=${role}`);
+    await expect(role === 'wall' ? page.getByText(/태블릿에서 시작하기|불러오는 중/) : page.getByText('MEDial').first()).toBeVisible();
     const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    expect(over, `${width}px`).toBeLessThanOrEqual(0);
+    expect(over, `${role} ${width}px`).toBeLessThanOrEqual(0);
   }
 });

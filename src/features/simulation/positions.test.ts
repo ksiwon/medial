@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { VillagePayload } from './api/types';
 import { mapFrame } from './mapFrame';
-import { pointerIsOver } from './components/VillageMap';
 import { spreadOverlaps } from './positions';
 
 describe('map marker collision regression', () => {
@@ -38,26 +37,5 @@ describe('map frame', () => {
     expect(frame.at(12, 34)).toEqual([12, 34]);
     expect(frame.viewBox).toEqual([0, 0, 490, 1230]);
     expect(frame.rasterTransform).toBeNull();
-  });
-});
-
-describe('a hover card and the pointer that opened it', () => {
-  const dom = (html: string) => { const d = document.createElement('div'); d.innerHTML = html; document.body.append(d); return d; };
-
-  it('stays while the pointer is on its marker or on an overlay', () => {
-    const d = dom('<svg><g data-marker="c1"><circle id="m"/></g></svg><div data-overlay><b id="card">x</b></div>');
-    expect(pointerIsOver(d.querySelector('#m'), 'c1')).toBe(true);
-    expect(pointerIsOver(d.querySelector('#card'), 'c1')).toBe(true);
-    d.remove();
-  });
-
-  it('closes when the pointer is anywhere else', () => {
-    // The case found recording the demo: the marker was drawn under a pointer that
-    // did not move, so only `mouseenter` ever came and the card stayed open for good.
-    const d = dom('<svg><g data-marker="c1"/><g data-marker="c2"><circle id="other"/></g></svg><p id="away">far</p>');
-    expect(pointerIsOver(d.querySelector('#away'), 'c1')).toBe(false);
-    expect(pointerIsOver(d.querySelector('#other'), 'c1')).toBe(false);
-    expect(pointerIsOver(null, 'c1')).toBe(false);
-    d.remove();
   });
 });

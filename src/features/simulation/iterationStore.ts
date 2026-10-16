@@ -4,7 +4,8 @@ import type { SessionDetail } from './api/iteration';
 import { usePlayback } from './scene/playback';
 import { useSimStore } from './store';
 
-// The walk through a stored record, as the exhibition wall has it: a first
+// The walk through a stored record, as the exhibition wall has it (the wall is
+// driven by the tablet's presses - wall/commands.ts - and by its own timers): a first
 // setting, the day it ran, the residents' evaluations, the revisions to choose
 // from, the next day. Every day shown was run when the record was made, so
 // nothing here starts a run: choosing opens a day that already happened.
@@ -48,13 +49,27 @@ interface IterationState {
   /** The version whose day is being read. */
   viewGenerationId: string | null;
   screen: Screen;
+  /** The visitor pressed start: the opening film is playing (or has played). Until then the wall waits. */
+  introStarted: boolean;
   /** Whether the opening film is over and a day has been walked into. */
   pathStarted: boolean;
+  /** Evaluations: which page of residents is up, and whose full interview is open (null: the summary cards). */
+  page: number;
+  openActor: string | null;
+  /** The day's issue groups (a reading of the same evaluations) are open under the cards. */
+  issues: boolean;
+  /** The end of the walk: the closing words have taken the page. */
+  closing: boolean;
   error: string | null;
 
   /** Open the newest stored session. A read: it starts nothing. */
   init: () => Promise<void>;
   setScreen: (screen: Screen) => void;
+  startIntro: () => void;
+  setPage: (page: number) => void;
+  setOpenActor: (actorId: string | null) => void;
+  setIssues: (open: boolean) => void;
+  setClosing: (closing: boolean) => void;
   setViewGeneration: (id: string) => void;
   /** Walk to this version: its day opens from 05:00 and plays. */
   choose: (generationId: string) => Promise<void>;
@@ -70,7 +85,12 @@ export const useIterationStore = create<IterationState>((set, get) => ({
   detail: null,
   viewGenerationId: null,
   screen: 'case',
+  introStarted: false,
   pathStarted: false,
+  page: 0,
+  openActor: null,
+  issues: false,
+  closing: false,
   error: null,
 
   init: async () => {
@@ -88,13 +108,19 @@ export const useIterationStore = create<IterationState>((set, get) => ({
     }
   },
 
-  setScreen: (screen) => set({ screen }),
+  // A new screen begins at its top: the first page, no interview open, no closing words yet.
+  setScreen: (screen) => set({ screen, page: 0, openActor: null, issues: false, closing: false }),
+  startIntro: () => set({ introStarted: true }),
+  setPage: (page) => set({ page, openActor: null, issues: false }),
+  setOpenActor: (openActor) => set({ openActor, issues: false }),
+  setIssues: (issues) => set({ issues, openActor: null }),
+  setClosing: (closing) => set({ closing }),
   setViewGeneration: (viewGenerationId) => set({ viewGenerationId }),
 
   choose: async (generationId) => {
     const attemptId = get().detail?.generations.find((g) => g.id === generationId)?.attemptIds[0];
     if (!attemptId) return;
-    set({ viewGenerationId: generationId, pathStarted: true, screen: 'case' });
+    set({ viewGenerationId: generationId, pathStarted: true, screen: 'case', page: 0, openActor: null, issues: false, closing: false });
     await useSimStore.getState().setActive(attemptId);
     const playback = usePlayback.getState();
     await playback.restart();
@@ -103,7 +129,7 @@ export const useIterationStore = create<IterationState>((set, get) => ({
 
   restartPath: () => {
     void usePlayback.getState().pause();
-    set({ pathStarted: false, screen: 'case' });
+    set({ introStarted: false, pathStarted: false, screen: 'case', page: 0, openActor: null, issues: false, closing: false });
   },
 
   openScene: async (attemptId, eventId) => {
@@ -115,7 +141,7 @@ export const useIterationStore = create<IterationState>((set, get) => ({
         return;
       }
       await usePlayback.getState().seekSeq(event.seq);
-      set({ screen: 'case' });
+      set({ screen: 'case', page: 0, openActor: null, issues: false });
     } catch (error) {
       set({ error: describe(error) });
     }

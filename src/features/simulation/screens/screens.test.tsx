@@ -18,7 +18,7 @@ import DayTimeline from '../components/DayTimeline';
 import MedialDashboard from '../components/MedialDashboard';
 import { ledgerAt, timelineAt } from '../selectors/dayLedger';
 import { changedRuleNames, openingOf, pathCount } from '../selectors/tree';
-import EvaluationsScreen, { EVAL_WAIT_S } from './EvaluationsScreen';
+import EvaluationsScreen, { EVAL_WAIT_S, OPEN_WAIT_S } from './EvaluationsScreen';
 import ObserveScreen from './ObserveScreen';
 
 // Mounting the two data-heavy screens against real API payloads built from the
@@ -81,16 +81,23 @@ describe('ObserveScreen', () => {
 
   it('separates the recording from the run', () => {
     observe();
-    // The playback control is the timeline's rail: the village day from its start
-    // to the residents' review at its end; the loop's own start/pause/stop live in
-    // the progress strip, which is not this component.
-    expect(screen.getByRole('slider', { name: '시각' })).toBeDefined();
+    // The timeline's rail shows where the day is, from its start to the residents' review at its end;
+    // pressing is the tablet's (stage/PadApp), so the wall's rail is a picture, not a slider.
+    expect(screen.getByRole('img', { name: /^시각 / })).toBeDefined();
+    expect(screen.queryByRole('slider')).toBeNull();
     expect(screen.getByText('하루 끝 · 주민 에이전트 평가')).toBeDefined();
-    // No speed buttons and no settings gear: one pace, and a way to skip.
+    // No speed buttons and no settings gear: one pace.
     expect(screen.queryByRole('group', { name: '대사 속도' })).toBeNull();
     expect(screen.queryByLabelText('재생 설정')).toBeNull();
-    expect(screen.getByText('건너뛰기 →')).toBeDefined();
+    expect(screen.queryByText('건너뛰기 →')).toBeNull();
     expect(screen.queryByText('실행 중지')).toBeNull();
+  });
+
+  it('has nothing to press: the tablet is the only control of the day', () => {
+    const { container } = observe({ at: hour(11) });
+    expect(container.querySelectorAll('button')).toHaveLength(0);
+    expect(container.querySelectorAll('[tabindex]')).toHaveLength(0);
+    for (const label of ['재생', '정지', '확대', '축소', '전체']) expect(screen.queryByText(label)).toBeNull();
   });
 
   it("films a scene with MEDial's judgement where MEDial would stand", () => {
@@ -149,6 +156,7 @@ describe('ObserveScreen', () => {
 
 describe('EvaluationsScreen', () => {
   const ordered = () => [...session.generations].sort((a, b) => a.index - b.index);
+  const asked = () => ordered()[0].reviews.filter((r) => r.usageStatus !== 'no_experience');
   function evaluations(overrides: Partial<Parameters<typeof EvaluationsScreen>[0]> = {}) {
     return render(
       <EvaluationsScreen
@@ -156,20 +164,21 @@ describe('EvaluationsScreen', () => {
         generation={ordered()[0]}
         residents={village.residents.map((r) => r.id)}
         eyebrow="1일차가 끝났습니다"
-        onOpenScene={noop}
+        page={0}
+        openActor={null}
+        issues={false}
+        onPage={noop}
         onGoToImprove={noop}
+        onCloseOpen={noop}
         {...overrides}
       />,
     );
   }
-  /** Opens a person's items: the card's own link, not a list elsewhere. */
-  const openItems = (actorId: string) => {
-    const card = screen.getAllByText(personName(actorId))[0].closest('article')!;
-    fireEvent.click(within(card).getByText(/평가 항목 [0-9]+개 보기/));
-  };
+  /** Five to a page, as many as there are of them; the same spread of reviews the pages test needs. */
+  const many = (n: number) => Array.from({ length: n }, (_, i) => ({ ...asked()[0], id: `r${i}`, actorId: `P${i + 1}` }));
 
   it('says one card a person - their words, how much they went through - and that it is simulated', () => {
-    const review = ordered()[0].reviews.find((r) => r.usageStatus !== 'no_experience')!;
+    const review = asked()[0];
     const { container } = evaluations();
     const text = container.textContent ?? '';
     expect(text).toContain(review.overallNarrative);
@@ -178,10 +187,16 @@ describe('EvaluationsScreen', () => {
     expect(container.querySelector('select')).toBeNull();
   });
 
+  it('has nothing to press: the cards are read here and picked on the tablet', () => {
+    const { container } = evaluations();
+    expect(container.querySelectorAll('button')).toHaveLength(0);
+    expect(container.querySelectorAll('summary')).toHaveLength(0);
+    expect(screen.queryByText(/장면 보기|다음 주민 보기|평가 항목/)).toBeNull();
+  });
+
   it('shows only the residents who went through the day, and counts the rest without scoring them', () => {
     const { container } = evaluations({ residents: [...village.residents.map((r) => r.id), 'P99'] });
-    const asked = ordered()[0].reviews.filter((r) => r.usageStatus !== 'no_experience');
-    expect(container.querySelectorAll('article')).toHaveLength(asked.length);
+    expect(container.querySelectorAll('article')).toHaveLength(asked().length);
     expect(screen.queryByText(personName('P99'))).toBeNull();
     expect(container.textContent).not.toContain('미경험');
     expect(container.textContent).toContain('불만족으로 세지 않습니다');
@@ -199,7 +214,7 @@ describe('EvaluationsScreen', () => {
   });
 
   it('says when they went through it when that attempt is loaded', () => {
-    const review = ordered()[0].reviews.find((r) => r.experiencedEventIds.length > 0);
+    const review = asked().find((r) => r.experiencedEventIds.length > 0);
     const sayable = events.find((e) => sentenceFor(e));
     if (!review || !sayable) return;
     const cited = { ...sayable, id: review.experiencedEventIds[0] };
@@ -207,84 +222,97 @@ describe('EvaluationsScreen', () => {
     expect(screen.getByText(sentenceFor(cited)!.text, { exact: false })).toBeDefined();
   });
 
-  it('opens a row to its items and folds the ones judged 판단 불가, keeping them', () => {
-    const review = ordered()[0].reviews.find((r) =>
-      r.usageStatus !== 'no_experience' && r.items.some((i) => i.assessment === 'unknown'));
-    if (!review) return;
-    const { container } = evaluations();
-    openItems(review.actorId);
+  it('shows the whole interview of the person the tablet picked, in place of the cards', () => {
+    const review = asked().find((r) => r.items.some((i) => i.assessment !== 'unknown')) ?? asked()[0];
+    const { container } = evaluations({ openActor: review.actorId });
+    // One article: this person's interview, not five cards.
+    expect(container.querySelectorAll('article')).toHaveLength(1);
+    expect(screen.getByLabelText(`${personName(review.actorId)}의 인터뷰`)).toBeDefined();
+    expect(container.textContent).toContain(review.overallNarrative);
     const judged = review.items.find((i) => i.assessment !== 'unknown');
+    // Everything the card folded away is open: the reasons, and nothing is behind a press.
     if (judged) expect(container.textContent).toContain(judged.reason);
-    const unknown = review.items.filter((i) => i.assessment === 'unknown');
-    const summary = [...container.querySelectorAll('summary')].find((el) =>
-      el.textContent?.startsWith('판단 불가'),
-    );
-    expect(summary?.textContent).toContain(`판단 불가 ${unknown.length}개`);
-    expect(summary?.parentElement?.textContent).toContain(unknown[0].reason);
+    expect(container.querySelectorAll('button, summary')).toHaveLength(0);
+    expect(container.textContent).toContain('합성 평가입니다');
   });
 
-  it('opens an item\'s evidence in place and closes back to it', () => {
-    const review = ordered()[0].reviews.find((r) =>
-      r.usageStatus !== 'no_experience'
-      && r.items.some((i) => i.assessment !== 'unknown' && i.eventRefs.length > 0));
+  it('keeps what they could not judge in their interview, as 판단 불가, with its reason', () => {
+    const review = asked().find((r) => r.items.some((i) => i.assessment === 'unknown'));
     if (!review) return;
-    evaluations();
-    openItems(review.actorId);
-    fireEvent.click(screen.getAllByText(/사건 근거 [0-9]+건 보기/)[0]);
-    expect(screen.getAllByText('그 장면 열기').length).toBeGreaterThan(0);
-    fireEvent.click(screen.getAllByText(/사건 근거 [0-9]+건 닫기/)[0]);
-    expect(screen.queryByText('그 장면 열기')).toBeNull();
+    const { container } = evaluations({ openActor: review.actorId });
+    const unknown = review.items.filter((i) => i.assessment === 'unknown');
+    expect(container.textContent).toContain(`판단 불가 ${unknown.length}개`);
+    expect(container.textContent).toContain(unknown[0].reason);
+  });
+
+  it('comes back to the cards when the person is not one who was asked', () => {
+    const { container } = evaluations({ openActor: 'P99' });
+    expect(container.querySelectorAll('article')).toHaveLength(asked().length);
+  });
+
+  it('shows the issue groups, with the original items they were made of, when the tablet asks', () => {
+    if ((ordered()[0].synthesis?.issueGroups.length ?? 0) === 0) return;
+    const { container } = evaluations({ issues: true });
+    expect(screen.getByText('쟁점 묶음', { selector: 'h1' })).toBeDefined();
+    expect(container.querySelectorAll('article')).toHaveLength(0);
   });
 
   it('leads to the choice while there is something to change, and to the result on the last day', () => {
     const day = ordered()[0];
     const { unmount } = evaluations({ generation: { ...day, changeSets: [day.changeSets[0] ?? ({} as never)] } });
-    expect(screen.getByText('이 평가를 보고 무엇을 고칠지 고른다')).toBeDefined();
     unmount();
     evaluations({ generation: { ...day, changeSets: [] } });
-    expect(screen.getByText('결과 보러 가기')).toBeDefined();
     expect(screen.queryByText('이 평가를 보고 무엇을 고칠지 고른다')).toBeNull();
   });
 
-  it('pages the residents by five and leads on with a button until the last page', () => {
+  it('pages the residents by five', () => {
     const day = ordered()[0];
-    const asked = day.reviews.filter((r) => r.usageStatus !== 'no_experience');
-    if (asked.length === 0) return;
-    const many = Array.from({ length: 6 }, (_, i) => ({ ...asked[0], id: `r${i}`, actorId: `P${i + 1}` }));
-    const { container } = evaluations({ generation: { ...day, reviews: many } });
-    expect(container.querySelectorAll('article')).toHaveLength(5);
-    expect(screen.queryByText('이 평가를 보고 무엇을 고칠지 고른다')).toBeNull();
-    fireEvent.click(screen.getByText('다음 주민 보기'));
-    expect(container.querySelectorAll('article')).toHaveLength(1);
-    expect(screen.getByText('이 평가를 보고 무엇을 고칠지 고른다')).toBeDefined();
-    fireEvent.click(screen.getByText('← 앞 주민'));
-    expect(container.querySelectorAll('article')).toHaveLength(5);
+    if (asked().length === 0) return;
+    const list = many(6);
+    const first = evaluations({ generation: { ...day, reviews: list }, page: 0 });
+    expect(first.container.querySelectorAll('article')).toHaveLength(5);
+    expect(screen.getByText(/1 \/ 2 · 주민 6명/)).toBeDefined();
+    first.unmount();
+    const second = evaluations({ generation: { ...day, reviews: list }, page: 1 });
+    expect(second.container.querySelectorAll('article')).toHaveLength(1);
   });
 
-  it('goes on by itself: the next page after the wait, the choice from the last page, and at once on a touch', () => {
+  it('goes on by itself: the next page after the wait, the choice from the last page', () => {
     vi.useFakeTimers();
     const day = ordered()[0];
-    const asked = day.reviews.filter((r) => r.usageStatus !== 'no_experience');
-    if (asked.length === 0) { vi.useRealTimers(); return; }
-    const many = Array.from({ length: 6 }, (_, i) => ({ ...asked[0], id: `r${i}`, actorId: `P${i + 1}` }));
+    if (asked().length === 0) { vi.useRealTimers(); return; }
+    const list = many(6);
+    const pages: number[] = [];
     let chosen = 0;
-    const { container } = evaluations({ generation: { ...day, reviews: many }, onGoToImprove: () => { chosen += 1; } });
-    const wait = (s: number) => act(() => { vi.advanceTimersByTime(s * 1000); });
+    const wait = (n: number) => act(() => { vi.advanceTimersByTime(n * 1000); });
+    const first = evaluations({ generation: { ...day, reviews: list }, page: 0, onPage: (p) => pages.push(p) });
     expect(screen.getByText(`${EVAL_WAIT_S}초 뒤 자동으로 넘어갑니다`)).toBeDefined();
     wait(EVAL_WAIT_S - 1);
-    expect(container.querySelectorAll('article')).toHaveLength(5);
+    expect(pages).toEqual([]);
     wait(2);
-    expect(container.querySelectorAll('article')).toHaveLength(1);
-    expect(chosen).toBe(0);
+    expect(pages).toEqual([1]);
+    first.unmount();
+    evaluations({ generation: { ...day, reviews: list }, page: 1, onGoToImprove: () => { chosen += 1; } });
     wait(EVAL_WAIT_S + 1);
     expect(chosen).toBe(1);
     vi.useRealTimers();
   });
 
-  it('keeps the issue groups, with the original items they were made of', () => {
-    if ((ordered()[0].synthesis?.issueGroups.length ?? 0) === 0) return;
-    const { container } = evaluations();
-    expect(container.textContent).toContain('쟁점 묶음');
+  it('gives an open interview longer, then brings the cards back instead of moving on', () => {
+    vi.useFakeTimers();
+    const review = asked()[0];
+    if (!review) { vi.useRealTimers(); return; }
+    let closed = 0;
+    let went = 0;
+    const wait = (n: number) => act(() => { vi.advanceTimersByTime(n * 1000); });
+    evaluations({ openActor: review.actorId, onCloseOpen: () => { closed += 1; }, onGoToImprove: () => { went += 1; } });
+    expect(screen.getByText(`${OPEN_WAIT_S}초 뒤 목록으로 돌아갑니다`)).toBeDefined();
+    wait(EVAL_WAIT_S + 5);
+    expect(closed).toBe(0);
+    wait(OPEN_WAIT_S);
+    expect(closed).toBe(1);
+    expect(went).toBe(0);
+    vi.useRealTimers();
   });
 });
 
@@ -343,33 +371,24 @@ describe('what MEDial does not see', () => {
   const ledger = ledgerAt(episodes, min(11, 30), (id) => subtitles[id]);
 
   const items = (researcher: boolean) => timelineAt(episodes, min(11, 30), new Set(), (id) => subtitles[id], researcher);
-  const controls = { atMs: min(11, 30), dayStartMs: min(5), dayEndMs: min(22), playing: false, onTogglePlay: noop,
-    onCommit: noop, onSkip: noop, canSkip: true };
+  const controls = { atMs: min(11, 30), dayStartMs: min(5), dayEndMs: min(22), playing: false };
 
-  it('has no speed buttons and no gear, and skips to the next scene', () => {
-    let skipped = 0;
-    render(<DayTimeline {...controls} onSeek={noop} items={items(true)} onSkip={() => { skipped += 1; }} />);
-    for (const label of ['천천히', '보통', '빠르게']) expect(screen.queryByText(label)).toBeNull();
+  it('has no speed buttons, no gear and nothing to press: the tablet plays, skips and seeks', () => {
+    const { container } = render(<DayTimeline {...controls} items={items(true)} />);
+    for (const label of ['천천히', '보통', '빠르게', '건너뛰기 →', '▶ 재생', '⏸ 정지']) expect(screen.queryByText(label)).toBeNull();
     expect(screen.queryByLabelText('재생 설정')).toBeNull();
-    fireEvent.click(screen.getByText('건너뛰기 →'));
-    expect(skipped).toBe(1);
+    expect(container.querySelectorAll('button')).toHaveLength(0);
+    expect(screen.getByText('11:30')).toBeDefined();
   });
 
   it('is listed for the researcher, marked as unknown to MEDial', () => {
-    render(<DayTimeline {...controls} items={items(true)} onSeek={noop} />);
+    render(<DayTimeline {...controls} items={items(true)} />);
     expect(screen.getByText('항구에서 한 말')).toBeDefined();
     expect(screen.getByText('MEDial은 모름')).toBeDefined();
   });
 
-  it('goes to a Task when its line is pressed', () => {
-    const seen: number[] = [];
-    render(<DayTimeline {...controls} items={items(true)} onSeek={(ms) => seen.push(ms)} />);
-    fireEvent.click(screen.getByText('본인에게 연락'));
-    expect(seen).toEqual([min(9, 30)]);
-  });
-
   it('is not listed at all in the MEDial-only view', () => {
-    render(<DayTimeline {...controls} items={items(false)} onSeek={noop} />);
+    render(<DayTimeline {...controls} items={items(false)} />);
     expect(screen.queryByText('항구에서 한 말')).toBeNull();
     expect(screen.queryByText('MEDial은 모름')).toBeNull();
   });
@@ -406,12 +425,9 @@ describe('foldAsking', () => {
 });
 
 describe('IntroScreen', () => {
-  it('has one small button, to skip it, and says it is a simulation', () => {
-    let finished = 0;
-    render(<IntroScreen onFinish={() => { finished += 1; }} />);
-    expect(screen.queryAllByRole('button').length).toBe(1);
-    fireEvent.click(screen.getByRole('button', { name: /건너뛰기/ }));
-    expect(finished).toBe(1);
+  it('has nothing to press - the tablet can skip it - and says it is a simulation', () => {
+    render(<IntroScreen onFinish={noop} />);
+    expect(screen.queryAllByRole('button').length).toBe(0);
     expect(screen.getByText(/시뮬레이션입니다/)).toBeDefined();
   });
 });
@@ -452,20 +468,32 @@ describe('the end of the three days, in a hall', () => {
   const last = { ...base, id: 'z', index: 2, parentGenerationId: null, changeSets: [], reviews: [] } as GenerationDetail;
   const detailOf = { ...session, generations: [last] } as SessionDetail;
   const wait = (s: number) => act(() => { vi.advanceTimersByTime(s * 1000); });
+  const ending = (over: Partial<Parameters<typeof ChoiceScreen>[0]> = {}) => render(
+    <ChoiceScreen detail={detailOf} current={last} closing={false} onClosing={noop} onRestart={noop} {...over} />);
 
-  it('moves on to the closing words by itself after the days are read', () => {
+  it('asks for the closing words by itself after the days are read', () => {
     vi.useFakeTimers();
-    render(<ChoiceScreen detail={detailOf} current={last} onChoose={noop} onRestart={noop} />);
+    let asked = 0;
+    ending({ onClosing: () => { asked += 1; } });
     expect(screen.queryByText('서비스 디자이너의 일은 초안을 고쳐 나가는 일입니다.')).toBeNull();
-    wait(RESULT_S + 1);
-    expect(screen.getByText('서비스 디자이너의 일은 초안을 고쳐 나가는 일입니다.')).toBeDefined();
+    wait(RESULT_S - 1);
+    expect(asked).toBe(0);
+    wait(2);
+    expect(asked).toBe(1);
     vi.useRealTimers();
   });
 
-  it('goes back to the start by itself when nobody touches it', () => {
+  it('says the closing words once the wall is told they have taken the page, and has no button of its own', () => {
+    const { container } = ending({ closing: true });
+    expect(screen.getByText('서비스 디자이너의 일은 초안을 고쳐 나가는 일입니다.')).toBeDefined();
+    expect(screen.getByText(/갈 수 없는 현장을 대신해/)).toBeDefined();
+    expect(container.querySelectorAll('button')).toHaveLength(0);
+  });
+
+  it('goes back to the start by itself when nobody touches the tablet', () => {
     vi.useFakeTimers();
     let restarted = 0;
-    render(<ChoiceScreen detail={detailOf} current={last} onChoose={noop} onRestart={() => { restarted += 1; }} />);
+    ending({ onRestart: () => { restarted += 1; } });
     wait(SUMMARY_IDLE_S - 1);
     expect(restarted).toBe(0);
     wait(2);
@@ -473,12 +501,13 @@ describe('the end of the three days, in a hall', () => {
     vi.useRealTimers();
   });
 
-  it('waits again when someone is still reading', () => {
+  it('waits again when the closing words are asked for: someone is still there', () => {
     vi.useFakeTimers();
     let restarted = 0;
-    render(<ChoiceScreen detail={detailOf} current={last} onChoose={noop} onRestart={() => { restarted += 1; }} />);
+    const onRestart = () => { restarted += 1; };
+    const view = ending({ onRestart });
     wait(SUMMARY_IDLE_S - 5);
-    fireEvent.pointerDown(window);
+    view.rerender(<ChoiceScreen detail={detailOf} current={last} closing onClosing={noop} onRestart={onRestart} />);
     wait(SUMMARY_IDLE_S - 5);
     expect(restarted).toBe(0);
     wait(10);
@@ -488,7 +517,7 @@ describe('the end of the three days, in a hall', () => {
 
   it('says how long is left, so it does not vanish without warning', () => {
     vi.useFakeTimers();
-    render(<ChoiceScreen detail={detailOf} current={last} onChoose={noop} onRestart={noop} />);
+    ending();
     expect(screen.getByText(`${SUMMARY_IDLE_S}초 뒤 처음으로 돌아갑니다`)).toBeDefined();
     wait(10);
     expect(screen.getByText(`${SUMMARY_IDLE_S - 10}초 뒤 처음으로 돌아갑니다`)).toBeDefined();
@@ -545,13 +574,14 @@ describe('ChoiceScreen', () => {
     expect(pathCount(tree, 'a')).toBe(1);
   });
 
-  it('offers the day\'s revisions, and one that was never run cannot be chosen', () => {
-    let chosen = '';
-    render(<ChoiceScreen detail={tree} current={tree.generations[0]} onChoose={(id) => { chosen = id; }}
+  it('shows the day revisions to read - the tablet chooses - and says which was never run', () => {
+    const { container } = render(<ChoiceScreen detail={tree} current={tree.generations[0]} closing={false} onClosing={noop}
       onRestart={noop} />);
-    fireEvent.click(screen.getByText('고친 안').closest('button')!);
-    expect(chosen).toBe('a1');
-    expect((screen.getByText('돌리지 않은 안').closest('button') as HTMLButtonElement).disabled).toBe(true);
+    expect(container.querySelectorAll('button')).toHaveLength(0);
+    expect(screen.getByText('고친 안')).toBeDefined();
+    expect(screen.getByText('돌리지 않은 안')).toBeDefined();
+    expect(screen.getAllByText('태블릿에서 고릅니다')).toHaveLength(1);
+    expect(screen.getByText('이 기록에서는 돌리지 않은 안')).toBeDefined();
     expect(screen.getAllByText('후 규칙').length).toBe(2);
   });
 
@@ -561,22 +591,18 @@ describe('ChoiceScreen', () => {
   });
 
   it('says what each day changed and what a resident said, with no numbers to compare', () => {
-    const { container } = render(<ChoiceScreen detail={tree} current={tree.generations[2]} onChoose={noop} onRestart={noop} />);
+    const { container } = render(<ChoiceScreen detail={tree} current={tree.generations[2]} closing={false} onClosing={noop} onRestart={noop} />);
     expect(container.textContent).toContain('이날 바뀐 규칙');
     expect(container.textContent).toContain('후 규칙');
     expect(container.textContent).not.toContain('확인까지');
   });
 
-  it('ends the walk with the days taken and a way back', () => {
-    render(<ChoiceScreen detail={tree} current={tree.generations[2]} onChoose={noop} onRestart={noop} />);
+  it('ends the walk with the days taken; the closing words and the way back are the tablet to bring', () => {
+    const view = render(<ChoiceScreen detail={tree} current={tree.generations[2]} closing={false} onClosing={noop} onRestart={noop} />);
     expect(screen.getByText('사흘이 끝났습니다')).toBeDefined();
-    // The days first, with one button on; the closing words take the page when the visitor asks,
-    // and then the way back to the opening film is the one button.
-    expect(screen.queryByText('처음으로')).toBeNull();
     expect(screen.queryByText('서비스 디자이너의 일은 초안을 고쳐 나가는 일입니다.')).toBeNull();
-    fireEvent.click(screen.getByText('마무리 보기 →'));
+    view.rerender(<ChoiceScreen detail={tree} current={tree.generations[2]} closing onClosing={noop} onRestart={noop} />);
     expect(screen.getByText('서비스 디자이너의 일은 초안을 고쳐 나가는 일입니다.')).toBeDefined();
-    expect(screen.getByText('처음으로')).toBeDefined();
     expect(screen.getByText(/갈 수 없는 현장을 대신해/)).toBeDefined();
   });
 });

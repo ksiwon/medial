@@ -11,7 +11,8 @@ are in; only what this module lets through differs.
   model client, and it refuses every request that would start a run or write a
   research record. What it serves is a frozen copy of real's database,
   ``local-data/runs/sim.sqlite3``, made by ``scripts/freeze_sim.py``. The only
-  thing that moves is an attempt's playback cursor.
+  thing that moves is an attempt's playback cursor (and, on the exhibition's two
+  screens, the relay of a press - see ``_STAGE_PATH``).
 
 There is no default. A server that silently came up as one of the two would make
 "was this generated just now?" unanswerable, which is the whole point of having
@@ -33,6 +34,10 @@ RUNS_DIR = Path(__file__).resolve().parents[3] / "local-data" / "runs"
 #: The one write a sim server accepts: moving an attempt's playback cursor
 #: (play, pause, step, seek). It changes where the reader is, not what happened.
 _CURSOR_PATH = re.compile(r"^/api/sim/attempts/[^/]+/commands$")
+#: The exhibition's two screens talk through the server (api/stage.py): a press
+#: from the tablet and the wall's description of what it shows. Both are
+#: relayed and forgotten; neither is a run or a research record.
+_STAGE_PATH = re.compile(r"^/api/sim/stage/(command|state)$")
 _READS = frozenset({"GET", "HEAD", "OPTIONS"})
 
 SIM_REFUSAL = ("sim 버전은 미리 돌려 둔 기록만 보여 줍니다. 새 실행·수정안 확정·현장 기록은 "
@@ -63,7 +68,7 @@ def refuses(mode: str, method: str, path: str) -> bool:
     """Whether a sim server turns this request away."""
     if mode != SIM or method.upper() in _READS:
         return False
-    return not _CURSOR_PATH.match(path)
+    return not (_CURSOR_PATH.match(path) or _STAGE_PATH.match(path))
 
 
 __all__ = ["SIM", "REAL", "MODES", "SIM_REFUSAL", "ModeNotSet", "server_mode",

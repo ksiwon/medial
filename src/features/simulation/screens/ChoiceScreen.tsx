@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { api } from '../api/client';
 import type { VoiceClip } from '../api/types';
@@ -9,9 +9,12 @@ import { nameList, personName, withParticle } from '../selectors/story';
 import { accentA, inkA, night, px, radius, space } from '../ui/theme';
 import { Inner, PageHead, Sheet } from '../ui/page';
 import Portrait from '../ui/Portrait';
-import { beckon, pill } from '../ui/primitives';
+import { pill } from '../ui/primitives';
 
 // Choosing the next version, in a record whose versions branch (selectors/tree).
+//
+// Two screens (2026-10-16): this is the wall. The cards are read here and chosen on the
+// tablet, in one touch (stage/wall.ts), which opens the next day here.
 //
 // Two moments, as the exhibition wall had them: the revision after each day and
 // the end of the third day. The first setting is not chosen - the opening film
@@ -32,7 +35,6 @@ const Cards = styled.div`
 
 const Take = styled.span`
   ${pill('lg')}
-  ${beckon}
   align-self: end;
   justify-self: start;
   height: ${px(48)};
@@ -45,11 +47,10 @@ const Take = styled.span`
   &::after { content: '→'; margin-left: ${px(8)}; }
 `;
 
-const Card = styled.button`
+const Card = styled.article<{ $off?: boolean }>`
   position: relative;
   font: inherit;
   text-align: left;
-  cursor: pointer;
   color: ${night.ink};
   background: ${night.panel};
   border: 1px solid ${night.line};
@@ -61,14 +62,8 @@ const Card = styled.button`
   row-gap: ${space.md};
   align-content: start;
   word-break: keep-all;
-  transition: border-color 0.18s ease, transform 0.18s ease;
-  &:hover:not(:disabled), &:focus-visible {
-    border-color: ${night.accent};
-    transform: translateY(-4px);
-  }
-  &:hover:not(:disabled) ${Take}, &:focus-visible ${Take} { background: ${night.accent}; color: #fff; }
-  &:focus-visible { outline: 2px solid ${night.ink}; outline-offset: 4px; }
-  &:disabled { cursor: default; opacity: 0.5; }
+  opacity: ${(p) => (p.$off ? 0.5 : 1)};
+
   > strong { font-size: ${px(28)}; font-weight: 800; letter-spacing: -0.03em; line-height: 1.3; }
   > p { margin: 0; font-size: ${px(16)}; line-height: 1.7; color: ${night.mute}; }
 `;
@@ -236,21 +231,6 @@ export function closingAt(voices: Record<string, VoiceClip> | null | undefined):
   return at;
 }
 
-const Again = styled.button`
-  ${pill('lg')}
-  ${beckon}
-  align-self: flex-start;
-  height: ${px(56)};
-  padding: 0 ${space.xl};
-  font: inherit;
-  font-size: ${px(20)};
-  font-weight: 800;
-  cursor: pointer;
-  border: none;
-  background: ${night.accent};
-  color: #ffffff;
-`;
-
 const Idle = styled.span`
   margin-left: ${px(20)};
   font-size: ${px(16)};
@@ -262,7 +242,9 @@ interface Props {
   detail: SessionDetail;
   /** The version whose day was just read. */
   current: GenerationDetail;
-  onChoose: (generationId: string) => void;
+  /** The closing words have taken the page (the tablet asked, or the days' wait ran out). */
+  closing: boolean;
+  onClosing: () => void;
   onRestart: () => void;
   /** Which pictures were drawn, for the faces on the cards. */
   art?: ReadonlySet<string>;
@@ -284,12 +266,16 @@ export const SUMMARY_IDLE_S = 90;
 export const RESULT_S = 14;
 
 /** The end of the walk: the days taken, and the way back - by itself, if nobody takes it. */
-function Ending({ detail, current, onRestart, art, voices }: { detail: SessionDetail; current: GenerationDetail; onRestart: () => void; art: ReadonlySet<string>; voices: Record<string, VoiceClip> | null }) {
+function Ending({ detail, current, closing, onClosing, onRestart, art, voices }: {
+  detail: SessionDetail; current: GenerationDetail; closing: boolean; onClosing: () => void; onRestart: () => void;
+  art: ReadonlySet<string>; voices: Record<string, VoiceClip> | null;
+}) {
   const closeAt = useMemo(() => closingAt(voices), [voices]);
   const [left, setLeft] = useState(SUMMARY_IDLE_S);
-  const [closing, setClosing] = useState(false);
+  const closeNow = useRef(onClosing);
+  closeNow.current = onClosing;
   useEffect(() => {
-    const timer = window.setTimeout(() => setClosing(true), RESULT_S * 1000);
+    const timer = window.setTimeout(() => closeNow.current(), RESULT_S * 1000);
     return () => window.clearTimeout(timer);
   }, []);
   // The narrator reads the closing words as they come up; leaving the page stops it.
@@ -303,17 +289,12 @@ function Ending({ detail, current, onRestart, art, voices }: { detail: SessionDe
     return () => { timers.forEach(window.clearTimeout); stops.forEach((stop) => stop()); };
   }, [closing, voices, closeAt]);
   useEffect(() => {
-    // Any touch or key starts the wait over: someone is still reading.
-    const reset = () => setLeft(SUMMARY_IDLE_S);
-    window.addEventListener('pointerdown', reset);
-    window.addEventListener('keydown', reset);
     const tick = window.setInterval(() => setLeft((n) => n - 1), 1000);
-    return () => {
-      window.removeEventListener('pointerdown', reset);
-      window.removeEventListener('keydown', reset);
-      window.clearInterval(tick);
-    };
+    return () => window.clearInterval(tick);
   }, []);
+  // A press on the tablet (closing words, or any press the wall is handed) starts the wait over:
+  // someone is still there.
+  useEffect(() => { setLeft(SUMMARY_IDLE_S); }, [closing]);
   useEffect(() => { if (left <= 0) onRestart(); }, [left, onRestart]);
   return (
     <Film $src={art.has('INTRO.desk') ? api.artUrl('INTRO.desk') : null}>
@@ -358,9 +339,6 @@ function Ending({ detail, current, onRestart, art, voices }: { detail: SessionDe
           </>
         )}
         <div>
-          {closing
-            ? <Again onClick={onRestart}>처음으로</Again>
-            : <Again onClick={() => setClosing(true)}>마무리 보기 →</Again>}
           <Idle aria-live="off">{left}초 뒤 처음으로 돌아갑니다</Idle>
         </div>
       </Inner>
@@ -369,8 +347,10 @@ function Ending({ detail, current, onRestart, art, voices }: { detail: SessionDe
   );
 }
 
-export default function ChoiceScreen({ detail, current, onChoose, onRestart, art = NO_ART, voices = null }: Props) {
-  if (current.changeSets.length === 0) return <Ending detail={detail} current={current} onRestart={onRestart} art={art} voices={voices} />;
+export default function ChoiceScreen({ detail, current, closing, onClosing, onRestart, art = NO_ART, voices = null }: Props) {
+  if (current.changeSets.length === 0) {
+    return <Ending detail={detail} current={current} closing={closing} onClosing={onClosing} onRestart={onRestart} art={art} voices={voices} />;
+  }
 
   const labels = new Map(current.ruleCatalog.map((r) => [r.ruleType, r.label]));
   return (
@@ -385,7 +365,7 @@ export default function ChoiceScreen({ detail, current, onChoose, onRestart, art
             const child = childFor(detail, changeSet.id);
             const rule = changeSet.changes[0];
             return (
-              <Card key={changeSet.id} disabled={!child} onClick={() => child && onChoose(child.id)}
+              <Card key={changeSet.id} $off={!child}
                 title={child ? undefined : '이 기록에서는 실행하지 않은 안입니다'}>
                 <Kind>
                   <b>{index + 1}</b>
@@ -414,7 +394,7 @@ export default function ChoiceScreen({ detail, current, onChoose, onRestart, art
                     <b>{rule.afterRule}</b>
                   </Rule>
                 ) : <span />}
-                <Take as="span">{child ? '이걸로 내일을 돌린다' : '이 기록에서는 돌리지 않은 안'}</Take>
+                <Take as="span">{child ? '태블릿에서 고릅니다' : '이 기록에서는 돌리지 않은 안'}</Take>
               </Card>
             );
           })}

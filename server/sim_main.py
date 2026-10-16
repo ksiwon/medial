@@ -73,7 +73,10 @@ def main() -> int:
 
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=int(os.environ.get("MEDIAL_SIM_PORT", 8010)))
+    # 127.0.0.1 unless told otherwise: the API is only for the screens on this
+    # machine. The two-screen exhibition reaches it through the web server's proxy.
+    uvicorn.run(app, host=os.environ.get("MEDIAL_SIM_HOST", "127.0.0.1"),
+                port=int(os.environ.get("MEDIAL_SIM_PORT", 8010)))
     return 0
 
 

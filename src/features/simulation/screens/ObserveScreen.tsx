@@ -14,7 +14,7 @@ import { REVEAL_STEP_S, REVEAL_STEPS } from '../scene/reel';
 import SceneStage from '../scene/SceneStage';
 import type { Beat, Episode, SegmentVideo } from '../scene/types';
 import { ledgerAt, routineAt, timelineAt } from '../selectors/dayLedger';
-import { beckon, pill } from '../ui/primitives';
+import { pill } from '../ui/primitives';
 import { accentA, night, px, radius } from '../ui/theme';
 
 // 사례와 서비스 경험 - watching one run.
@@ -168,7 +168,7 @@ const DayEnd = styled.div`
   > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   > div > p { margin: 0; display: flex; flex-wrap: wrap; gap: 0 12px; font-size: calc(12px * var(--k, 1)); color: ${night.mute}; }
   > div > p > span { white-space: nowrap; }
-  > button { flex: none; font: inherit; ${pill('md')} ${beckon} font-weight: 800; cursor: pointer; border: none;
+  > b { flex: none; font: inherit; ${pill('md')} font-weight: 800; border: none;
              background: ${night.accent}; color: #fff; }
   > small { flex: none; margin-left: auto; font-size: calc(12px * var(--k, 1)); color: ${night.mute}; font-variant-numeric: tabular-nums; }
 `;
@@ -193,13 +193,6 @@ interface Props {
 
 export default function ObserveScreen({ village, detail, events, art, dayEnd: ending, onReadEvaluations, strip, changedRules = [] }: Props) {
   const p = usePlayback();
-  /** To the next scene, and on playing from there (jumpScene stops the clock). */
-  const skip = async () => {
-    const { jumpScene, play, reel: current } = usePlayback.getState();
-    await jumpScene(1);
-    const { rt } = usePlayback.getState();
-    if (current && rt < current.total - 0.01) await play();
-  };
   const [mapWidth, setMapWidth] = useState<number | null>(null);
   const reel = p.reel;
   const position = p.position;
@@ -348,9 +341,6 @@ export default function ObserveScreen({ village, detail, events, art, dayEnd: en
           medialKnown={medialKnown}
           seatsPerVehicle={detail.timeline?.reservations?.seatsPerVehicle ?? detail.resources.assumedVehicleSeats ?? 0}
           taskColours={colours}
-          selectedCluster={p.selectedCluster}
-          selectedActor={p.selectedActor}
-          onSelectCluster={p.selectCluster}
           spotlight={spotlight}
           onFitWidth={setMapWidth}
         />
@@ -399,7 +389,7 @@ export default function ObserveScreen({ village, detail, events, art, dayEnd: en
             {ending.note && <p>{ending.note.split(' · ').map((fact) => <span key={fact}>{fact}</span>)}</p>}
           </div>
           <small aria-live="off">{Math.max(wait, 0)}초 뒤 자동으로 넘어갑니다</small>
-          <button type="button" onClick={onReadEvaluations}>{ending.action} →</button>
+          <b>{ending.action} →</b>
         </DayEnd>
       )}
 
@@ -411,11 +401,6 @@ export default function ObserveScreen({ village, detail, events, art, dayEnd: en
         dayStartMs={DAY_START_MS}
         dayEndMs={dayEnd}
         playing={p.playing}
-        onTogglePlay={() => void (p.playing ? p.pause() : p.play())}
-        onSeek={(ms) => p.seekTime(ms)}
-        onCommit={() => void p.commit()}
-        onSkip={() => void skip()}
-        canSkip={!!reel && p.rt < reel.total - 0.01}
       />
     </Screen>
   );

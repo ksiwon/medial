@@ -11,10 +11,11 @@ import {
 } from '../api/iteration';
 import type { DomainEvent } from '../api/types';
 import { formatClock } from '../positions';
+import { askedReviews, pagesOf, PER_PAGE, wentThrough } from '../selectors/evaluations';
 import { personName, sentenceFor } from '../selectors/story';
 import { Inner, PageHead, Sheet } from '../ui/page';
 import Portrait from '../ui/Portrait';
-import { beckon, pill } from '../ui/primitives';
+import { pill } from '../ui/primitives';
 import { accentA, font, inkA, night, px, radius, space } from '../ui/theme';
 
 // Screen B: the resident evaluations, as the screen the loop arrives at.
@@ -35,7 +36,14 @@ import { accentA, font, inkA, night, px, radius, space } from '../ui/theme';
 // events, each one opening its scene), what they said in their own words, what
 // they asked to change, and what they said the day before. A card whose review
 // carries dimension items (the engine's reviews do; the exhibition's are one
-// paragraph each) opens to them - reasons, evidence, what they could not judge.
+// paragraph each) has them in the interview page - reasons, evidence, what they
+// could not judge.
+//
+// Two screens (2026-10-16): this one is the wall and nothing on it can be pressed.
+// The cards are every resident who was asked; when the tablet picks one person the
+// wall shows that person's whole interview instead, and the tablet brings the cards
+// back. Which page, whose interview and the issue groups are the iteration store's,
+// set by the tablet's presses (stage/wall.ts).
 
 /** The day's setting and who is here: the thing the people below are evaluating. */
 const Context = styled.div`
@@ -221,42 +229,7 @@ const Dimension = styled.div`
   > div:nth-child(2) { color: ${night.ink}; }
 `;
 
-const Link = styled.button`
-  font: inherit;
-  font-size: ${px(12)};
-  font-weight: 700;
-  color: ${night.mute};
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  text-decoration: underline;
-  text-decoration-color: ${inkA(0.3)};
-  text-underline-offset: 4px;
-  &:hover { color: ${night.ink}; text-decoration-color: ${night.accent}; }
-  &:focus-visible { outline: 2px solid ${night.accent}; outline-offset: 2px; }
-`;
 
-/** A fold that stays quiet until it is wanted: yesterday's words, the judged items. */
-const Fold = styled.details`
-  font-size: ${px(16)};
-  color: ${night.mute};
-  > summary {
-    cursor: pointer;
-    list-style: none;
-    display: flex;
-    align-items: center;
-    gap: ${space.sm};
-    padding: ${space.sm} 0;
-    border-top: 1px solid ${night.line};
-    font-weight: 700;
-    color: ${night.mute};
-  }
-  > summary::-webkit-details-marker { display: none; }
-  > summary::before { content: '＋'; color: ${night.accent}; font-weight: 800; }
-  &[open] > summary::before { content: '－'; }
-  > summary:hover { color: ${night.ink}; }
-`;
 
 const Mono = styled.span`
   font-family: ui-monospace, 'SF Mono', Consolas, monospace;
@@ -271,45 +244,8 @@ const Note = styled.p`
   color: ${night.faint};
 `;
 
-const Next = styled.button`
-  ${pill('lg')}
-  ${beckon}
-  height: ${px(56)};
-  padding: 0 ${space.xl};
-  font: inherit;
-  font-size: ${px(20)};
-  font-weight: 800;
-  cursor: pointer;
-  border: none;
-  background: ${night.accent};
-  color: #ffffff;
-  transition: transform 0.15s ease;
-  &::after { content: '→'; margin-left: ${px(4)}; }
-  &:hover { transform: translateY(-2px); }
-  &:focus-visible { outline: 2px solid ${night.ink}; outline-offset: 4px; }
-`;
 
-const Actions = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: ${space.lg};
-`;
 
-const Back = styled.button`
-  ${pill('md')}
-  height: ${px(56)};
-  padding: 0 ${space.xl};
-  font: inherit;
-  font-size: ${px(16)};
-  font-weight: 800;
-  cursor: pointer;
-  color: ${night.ink};
-  background: transparent;
-  border: 1px solid ${inkA(0.3)};
-  &:hover { border-color: ${inkA(0.7)}; }
-  &:focus-visible { outline: 2px solid ${night.ink}; outline-offset: 4px; }
-`;
 
 const Count = styled.span`
   font-size: ${px(16)};
@@ -327,6 +263,53 @@ const Empty = styled.div`
   color: ${night.mute};
 `;
 
+/** One person's interview: what they said and went through on the left, what they judged on the right. */
+const Interview = styled.article<{ $wide: boolean }>`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: ${space.xl};
+  padding: ${space.xl};
+  border: 1px solid ${night.line};
+  border-radius: ${radius.card};
+  background: ${night.panel};
+  @media (min-width: 1400px) {
+    grid-template-columns: ${(p) => (p.$wide ? 'minmax(0, 1fr)' : 'minmax(0, 5fr) minmax(0, 6fr)')};
+    gap: ${space.xxl};
+    padding: ${space.xxl};
+  }
+  > section { display: flex; flex-direction: column; gap: ${space.lg}; min-width: 0; }
+  blockquote { font-size: ${px(28)}; }
+  /* A review that is one paragraph has no items to put beside it: the words take the width. */
+  blockquote { max-width: ${(p) => (p.$wide ? px(1200) : 'none')}; }
+`;
+
+const Issue = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${space.sm};
+  padding: ${space.lg};
+  border-radius: ${radius.card};
+  background: ${night.panel};
+  border: 1px solid ${night.line};
+  font-size: ${px(16)};
+  line-height: 1.6;
+  color: ${night.mute};
+  > header { display: flex; flex-wrap: wrap; gap: ${space.sm}; align-items: center; color: ${night.ink}; }
+`;
+
+const IssueGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(420px * var(--k, 1))), 1fr));
+  gap: ${space.lg};
+`;
+
+const Foot = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: ${space.lg};
+`;
+
 /** What a service designer reads an assessment as. */
 const ASSESSMENT_SAYS: Record<Assessment, string> = {
   positive: '좋았던 점',
@@ -342,42 +325,22 @@ const ROLE_LABELS: Record<AgentReview['actorRole'], string> = {
   health_director: '보건소장',
 };
 
-function byActor(a: AgentReview, b: AgentReview) {
-  return a.actorId.localeCompare(b.actorId, undefined, { numeric: true });
-}
-
-interface WentRow { id: string; time: string; title: string }
-
-/** What someone went through, as the log says it: "09:30 본인에게 연락". A Task
- *  event says its title; any other event its own sentence. */
-function wentThrough(review: AgentReview, eventsById: Map<string, DomainEvent> | null): WentRow[] {
-  if (!eventsById) return [];
-  const said: WentRow[] = [];
-  const seen = new Set<string>();
-  for (const id of review.experiencedEventIds) {
-    const event = eventsById.get(id);
-    if (!event) continue;
-    const title = typeof event.payload.title === 'string' ? event.payload.title : sentenceFor(event)?.text;
-    if (!title) continue;
-    const time = formatClock(event.simTimeMs);
-    if (seen.has(`${time} ${title}`)) continue;
-    seen.add(`${time} ${title}`);
-    said.push({ id, time, title });
-  }
-  return said;
-}
-
 interface Props {
   detail: SessionDetail;
   generation: GenerationDetail | null;
   /** Everyone in the village: only to say how many went through nothing. */
   residents: string[];
-  /** Opens the cited scene on the experience screen and moves its cursor. A
-   *  read of a stored log; no adapter runs. */
-  onOpenScene: (attemptId: string, eventId: string) => void;
-  onGoToImprove: () => void;
   /** The small line above the title: which version, or which day ended. */
   eyebrow: string;
+  /** Which page of cards, whose interview is open (null: the cards), and whether the issue groups are open. */
+  page: number;
+  openActor: string | null;
+  issues: boolean;
+  /** The wall goes on by itself, as the single screen did: the next page, then the choice (or the result). */
+  onPage: (page: number) => void;
+  onGoToImprove: () => void;
+  /** An interview left open and unattended goes back to the cards. */
+  onCloseOpen: () => void;
   /** The log of the attempt being read, so what people went through can be
    *  said as what happened rather than as ids. Absent or another attempt: ids only. */
   events?: { attemptId: string; list: DomainEvent[] } | null;
@@ -387,53 +350,46 @@ interface Props {
 
 const NO_ART: ReadonlySet<string> = new Set();
 
-/** How many residents a page holds: what fits side by side on a wall screen (five columns). More are a button away. */
-const PER_PAGE = 5;
-
-/** How long a page of evaluations stays before the walk goes on by itself, in seconds: the next page, or the choice. A touch goes at once. */
+/** How long a page of evaluations stays before the walk goes on by itself, in seconds: the next page, or the choice. */
 export const EVAL_WAIT_S = 15;
 
+/** How long an interview or the issue groups stay open with no press before the cards come back, in seconds. */
+export const OPEN_WAIT_S = 60;
+
 export default function EvaluationsScreen({
-  detail,
-  generation,
-  residents,
-  onOpenScene,
-  onGoToImprove,
-  eyebrow,
-  events = null,
-  art = NO_ART,
+  detail, generation, residents, eyebrow, page, openActor, issues, onPage, onGoToImprove, onCloseOpen,
+  events = null, art = NO_ART,
 }: Props) {
-  // Only those who went through the day and were asked. A review of someone who
-  // went through nothing says nothing, so it is not shown.
-  const asked = useMemo(
-    () => (generation?.reviews ?? []).filter((r) => r.usageStatus !== 'no_experience').sort(byActor),
-    [generation],
-  );
+  const asked = useMemo(() => askedReviews(generation), [generation]);
   const eventsById = useMemo(() => new Map((events?.list ?? []).map((e) => [e.id, e])), [events]);
-  const [page, setPage] = useState(0);
-  useEffect(() => setPage(0), [generation?.id]);
-  // The walk goes on by itself: each page waits EVAL_WAIT_S, then the next page or, from the last, the choice.
-  const pageCount = Math.ceil(asked.length / PER_PAGE);
-  // The countdown belongs to a page: after the page changes, the old count is never read for the new one.
-  const slot = `${generation?.id}:${page}`;
-  const [wait, setWait] = useState({ slot, left: EVAL_WAIT_S });
+  const pages = pagesOf(asked.length);
+  const open = openActor ? asked.find((r) => r.actorId === openActor) ?? null : null;
+  const reading = open !== null || issues;
+
+  // The countdown belongs to what is on the wall: a new page, interview or issue list starts it afresh,
+  // and the old count is never read for the new one.
+  const slot = `${generation?.id}:${page}:${openActor ?? ''}:${issues}`;
+  const limit = reading ? OPEN_WAIT_S : EVAL_WAIT_S;
+  const [wait, setWait] = useState({ slot, left: limit });
   useEffect(() => {
-    setWait({ slot, left: EVAL_WAIT_S });
+    setWait({ slot, left: limit });
     const tick = window.setInterval(() => setWait((w) => (w.slot === slot ? { slot, left: w.left - 1 } : w)), 1000);
     return () => window.clearInterval(tick);
-  }, [slot]);
-  const left = wait.slot === slot ? wait.left : EVAL_WAIT_S;
-  const goOn = useRef(onGoToImprove);
-  goOn.current = onGoToImprove;
+  }, [slot, limit]);
+  const left = wait.slot === slot ? wait.left : limit;
+  const act = useRef({ onPage, onGoToImprove, onCloseOpen });
+  act.current = { onPage, onGoToImprove, onCloseOpen };
   useEffect(() => {
     if (wait.slot !== slot || wait.left > 0 || asked.length === 0) return;
-    if (page < pageCount - 1) setPage(page + 1);
-    else goOn.current();
-  }, [wait, slot, page, pageCount, asked.length]);
+    if (reading) act.current.onCloseOpen();
+    else if (page < pages - 1) act.current.onPage(page + 1);
+    else act.current.onGoToImprove();
+  }, [wait, slot, page, pages, asked.length, reading]);
+
   const synthesis = generation?.synthesis ?? null;
   const parentDay = detail.generations.find((g) => g.id === generation?.parentGenerationId) ?? null;
   const before = useMemo(
-    () => new Map((parentDay?.reviews ?? []).filter((r) => r.usageStatus !== 'no_experience').map((r) => [r.actorId, r])),
+    () => new Map(askedReviews(parentDay).map((r) => [r.actorId, r])),
     [parentDay],
   );
 
@@ -445,20 +401,20 @@ export default function EvaluationsScreen({
           <Empty>
             {detail.running
               ? '아직 이 버전의 주민 에이전트 평가를 모으는 중입니다. 끝나면 여기에 나타납니다.'
-              : '이 버전에는 주민 에이전트 평가 기록이 없습니다. 사례와 서비스 경험에서 하루를 실행하세요.'}
+              : '이 버전에는 주민 에이전트 평가 기록이 없습니다.'}
           </Empty>
         </Inner>
       </Sheet>
     );
   }
 
-  const pages = Math.ceil(asked.length / PER_PAGE);
   const others = residents.filter((id) => !asked.some((r) => r.actorId === id)).length;
+  const cited = (review: AgentReview) => (events?.attemptId === review.attemptId ? eventsById : null);
 
   return (
     <Sheet>
       <Inner>
-        <PageHead eyebrow={eyebrow} title="주민 에이전트 평가" />
+        <PageHead eyebrow={eyebrow} title={open ? `${personName(open.actorId)}의 인터뷰` : issues ? '쟁점 묶음' : '주민 에이전트 평가'} />
         <Context>
           <div>
             <ContextTag>이 날의 설정</ContextTag>
@@ -470,186 +426,158 @@ export default function EvaluationsScreen({
           )}
         </Context>
 
-        <Cards>
-          {asked.slice(page * PER_PAGE, (page + 1) * PER_PAGE).map((review) => (
-            <PersonCard key={review.id} review={review} art={art}
-              cited={events?.attemptId === review.attemptId ? eventsById : null}
-              yesterday={before.get(review.actorId) ?? null}
-              yesterdayName={parentDay?.label ?? null}
-              onOpenScene={onOpenScene} />
-          ))}
-        </Cards>
-
-        {synthesis && synthesis.issueGroups.length > 0 && (
-          <Fold>
-            <summary>쟁점 묶음 {synthesis.issueGroups.length}개 · 원본 평가의 읽기용 요약</summary>
-            <div>
-              {synthesis.issueGroups.map((issue) => (
-                <div key={issue.id} style={{ marginTop: 12 }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                    <Chip>{DIMENSION_LABELS[issue.dimension]}</Chip>
-                    {issue.minority && <Chip $strong>소수 의견</Chip>}
-                    <strong style={{ color: night.ink }}>{issue.title}</strong>
-                  </div>
-                  {issue.reviewItemRefs.map((ref) => {
-                    const [reviewId, indexText] = ref.split('#');
-                    const review = asked.find((r) => r.id === reviewId);
-                    const item = review?.items[Number(indexText)];
-                    return review && item ? (
-                      <Note key={ref}>
-                        <strong>{personName(review.actorId)}</strong> · {ASSESSMENT_LABELS[item.assessment]} —{' '}
-                        {item.reason}
-                      </Note>
-                    ) : null;
-                  })}
-                </div>
-              ))}
-            </div>
-          </Fold>
+        {open ? (
+          <InterviewPage review={open} art={art} cited={cited(open)} yesterday={before.get(open.actorId) ?? null}
+            yesterdayName={parentDay?.label ?? null} />
+        ) : issues && synthesis ? (
+          <IssueGrid>
+            {synthesis.issueGroups.map((issue) => (
+              <Issue key={issue.id}>
+                <header>
+                  <Chip>{DIMENSION_LABELS[issue.dimension]}</Chip>
+                  {issue.minority && <Chip $strong>소수 의견</Chip>}
+                  <strong>{issue.title}</strong>
+                </header>
+                {issue.reviewItemRefs.map((ref) => {
+                  const [reviewId, indexText] = ref.split('#');
+                  const review = asked.find((r) => r.id === reviewId);
+                  const item = review?.items[Number(indexText)];
+                  return review && item ? (
+                    <Note key={ref}>
+                      <strong>{personName(review.actorId)}</strong> · {ASSESSMENT_LABELS[item.assessment]} — {item.reason}
+                    </Note>
+                  ) : null;
+                })}
+              </Issue>
+            ))}
+          </IssueGrid>
+        ) : (
+          <Cards>
+            {asked.slice(page * PER_PAGE, (page + 1) * PER_PAGE).map((review) => (
+              <SummaryCard key={review.id} review={review} art={art} cited={cited(review)} />
+            ))}
+          </Cards>
         )}
 
         <Note>
           합성 평가입니다. 실제 주민의 만족도나 동의가 아니며, 나중에 실제 주민이 확인·반박할 대상입니다.
         </Note>
-        <Actions>
-          {pages > 1 && page > 0 && <Back onClick={() => setPage(page - 1)}>← 앞 주민</Back>}
-          {page < pages - 1 ? (
-            <Next onClick={() => setPage(page + 1)}>다음 주민 보기</Next>
-          ) : (
-            /* The last day has nothing left to change: its evaluations lead to the result. */
-            <Next onClick={onGoToImprove}>
-              {generation.changeSets.length > 0 ? '이 평가를 보고 무엇을 고칠지 고른다' : '결과 보러 가기'}
-            </Next>
-          )}
-          {pages > 1 && <Count>{page + 1} / {pages} · 주민 {asked.length}명</Count>}
-          <Count aria-live="off">{Math.max(left, 0)}초 뒤 자동으로 넘어갑니다</Count>
-        </Actions>
+        <Foot>
+          {pages > 1 && !reading && <Count>{page + 1} / {pages} · 주민 {asked.length}명</Count>}
+          <Count aria-live="off">
+            {Math.max(left, 0)}초 뒤 {reading ? '목록으로 돌아갑니다' : '자동으로 넘어갑니다'}
+          </Count>
+        </Foot>
       </Inner>
     </Sheet>
   );
 }
 
-function PersonCard({
-  review,
-  art,
-  cited,
-  yesterday,
-  yesterdayName,
-  onOpenScene,
-}: {
-  review: AgentReview;
-  art: ReadonlySet<string>;
-  cited: Map<string, DomainEvent> | null;
-  yesterday: AgentReview | null;
-  yesterdayName: string | null;
-  onOpenScene: (attemptId: string, eventId: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const went = wentThrough(review, cited);
-  const judged = review.items.filter((item) => item.assessment !== 'unknown');
-  const abstained = review.items.filter((item) => item.assessment === 'unknown');
+function WhoCard({ review, art }: { review: AgentReview; art: ReadonlySet<string> }) {
+  return (
+    <Who>
+      <Portrait actorId={review.actorId} art={art} size={84} />
+      <Name>
+        <strong>{personName(review.actorId)}</strong>
+        <div>
+          <Chip>{ROLE_LABELS[review.actorRole]}</Chip>
+          <Chip $strong>겪은 일 {review.experiencedEventIds.length}건</Chip>
+        </div>
+      </Name>
+    </Who>
+  );
+}
+
+function Asks({ review }: { review: AgentReview }) {
   const asks = review.items.map((i) => i.requestedChange).filter((c): c is string => Boolean(c));
+  if (asks.length === 0) return null;
+  return (
+    <Asked>
+      <Label>바라는 것</Label>
+      <ul>{asks.map((ask, index) => <li key={index}>{ask}</li>)}</ul>
+    </Asked>
+  );
+}
+
+function Went({ review, cited }: { review: AgentReview; cited: Map<string, DomainEvent> | null }) {
+  const went = wentThrough(review, cited);
+  if (went.length === 0) return null;
+  return (
+    <div>
+      <Label>겪은 일</Label>
+      <WentList>
+        {went.map((w) => (
+          <li key={w.id}>
+            <time>{w.time}</time>
+            <span>{w.title}</span>
+          </li>
+        ))}
+      </WentList>
+    </div>
+  );
+}
+
+/** The card the wall shows for everyone who was asked: who, their words, what they asked for, what they went through. */
+function SummaryCard({ review, art, cited }: { review: AgentReview; art: ReadonlySet<string>; cited: Map<string, DomainEvent> | null }) {
   return (
     <Card title={`${review.adapter} 어댑터 · ${review.id}`}>
-      <Who>
-        <Portrait actorId={review.actorId} art={art} size={84} />
-        <Name>
-          <strong>{personName(review.actorId)}</strong>
-          <div>
-            <Chip>{ROLE_LABELS[review.actorRole]}</Chip>
-            <Chip $strong>겪은 일 {review.experiencedEventIds.length}건</Chip>
-          </div>
-        </Name>
-      </Who>
-
+      <WhoCard review={review} art={art} />
       <Quote>{review.overallNarrative}</Quote>
-
-      {asks.length > 0 && (
-        <Asked>
-          <Label>바라는 것</Label>
-          <ul>{asks.map((ask, index) => <li key={index}>{ask}</li>)}</ul>
-        </Asked>
-      )}
-
-      {went.length > 0 && (
-        <div>
-          <Label>겪은 일</Label>
-          <WentList>
-            {went.map((w) => (
-              <li key={w.id}>
-                <time>{w.time}</time>
-                <span>
-                  {w.title}{' '}
-                  <Link onClick={() => onOpenScene(review.attemptId, w.id)}>장면 보기</Link>
-                </span>
-              </li>
-            ))}
-          </WentList>
-        </div>
-      )}
-
-      {yesterday && yesterdayName && (
-        <Fold>
-          <summary>{yesterdayName} 날에는 이렇게 말했습니다</summary>
-          <Yesterday>{yesterday.overallNarrative}</Yesterday>
-        </Fold>
-      )}
-
-      {review.items.length > 0 && (
-        <>
-          <Link style={{ alignSelf: 'flex-start' }} onClick={() => setOpen(!open)}>
-            {open ? '평가 항목 닫기' : `평가 항목 ${review.items.length}개 보기`}
-          </Link>
-          {open && (
-            <Items>
-              {judged.map((item) => (
-                <DimensionRow key={item.dimension} item={item} attemptId={review.attemptId}
-                  eventsById={cited} onOpenScene={onOpenScene} />
-              ))}
-              {abstained.length > 0 && (
-                <Fold>
-                  <summary>
-                    판단 불가 {abstained.length}개 —{' '}
-                    {abstained.map((item) => DIMENSION_LABELS[item.dimension]).join(', ')}
-                  </summary>
-                  <div>
-                    {abstained.map((item) => (
-                      <DimensionRow key={item.dimension} item={item} attemptId={review.attemptId}
-                        eventsById={cited} onOpenScene={onOpenScene} />
-                    ))}
-                  </div>
-                </Fold>
-              )}
-              {review.unknowns.length > 0 && (
-                <div>
-                  <Label>판단할 수 없는 것</Label>
-                  <ul style={{ margin: '8px 0 0', paddingLeft: 20, lineHeight: 1.7, color: night.mute }}>
-                    {review.unknowns.map((unknown) => <li key={unknown}>{unknown}</li>)}
-                  </ul>
-                </div>
-              )}
-            </Items>
-          )}
-        </>
-      )}
+      <Asks review={review} />
+      <Went review={review} cited={cited} />
     </Card>
   );
 }
 
-function DimensionRow({
-  item,
-  attemptId,
-  eventsById,
-  onOpenScene,
-}: {
-  item: ReviewItem;
-  attemptId: string;
-  eventsById: Map<string, DomainEvent> | null;
-  onOpenScene: (attemptId: string, eventId: string) => void;
+/** Everything the card holds, and what it folded away: yesterday's words, each judged item with its reasons and
+ *  evidence, what they could not judge. Nothing on the wall opens, so nothing here is folded. */
+function InterviewPage({ review, art, cited, yesterday, yesterdayName }: {
+  review: AgentReview; art: ReadonlySet<string>; cited: Map<string, DomainEvent> | null;
+  yesterday: AgentReview | null; yesterdayName: string | null;
 }) {
-  // Evidence opens in place and closes back to the same item, so the round trip
-  // from an evaluation to its scene and back is one explicit action each way.
-  const [open, setOpen] = useState<'events' | 'evidence' | null>(null);
+  const judged = review.items.filter((item) => item.assessment !== 'unknown');
+  const abstained = review.items.filter((item) => item.assessment === 'unknown');
+  return (
+    <Interview $wide={review.items.length === 0 && review.unknowns.length === 0}
+      aria-label={`${personName(review.actorId)}의 인터뷰`}>
+      <section>
+        <WhoCard review={review} art={art} />
+        <Quote>{review.overallNarrative}</Quote>
+        <Asks review={review} />
+        <Went review={review} cited={cited} />
+        {yesterday && yesterdayName && (
+          <div>
+            <Label>{yesterdayName} 날에는 이렇게 말했습니다</Label>
+            <Yesterday>{yesterday.overallNarrative}</Yesterday>
+          </div>
+        )}
+      </section>
+      {(review.items.length > 0 || review.unknowns.length > 0) && <section>
+        {judged.length > 0 && (
+          <Items>
+            {judged.map((item) => <DimensionRow key={item.dimension} item={item} cited={cited} />)}
+          </Items>
+        )}
+        {abstained.length > 0 && (
+          <Items>
+            <Label>판단 불가 {abstained.length}개 — {abstained.map((item) => DIMENSION_LABELS[item.dimension]).join(', ')}</Label>
+            {abstained.map((item) => <DimensionRow key={item.dimension} item={item} cited={cited} />)}
+          </Items>
+        )}
+        {review.unknowns.length > 0 && (
+          <div>
+            <Label>판단할 수 없는 것</Label>
+            <ul style={{ margin: '8px 0 0', paddingLeft: 20, lineHeight: 1.7, color: night.mute }}>
+              {review.unknowns.map((unknown) => <li key={unknown}>{unknown}</li>)}
+            </ul>
+          </div>
+        )}
+      </section>}
+    </Interview>
+  );
+}
+
+function DimensionRow({ item, cited }: { item: ReviewItem; cited: Map<string, DomainEvent> | null }) {
   return (
     <Dimension>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
@@ -657,55 +585,33 @@ function DimensionRow({
         <strong style={{ color: night.ink }}>{DIMENSION_LABELS[item.dimension]}</strong>
       </div>
       <div>{item.reason}</div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
-        {item.eventRefs.length > 0 && (
-          <Link onClick={() => setOpen(open === 'events' ? null : 'events')}>
-            사건 근거 {item.eventRefs.length}건 {open === 'events' ? '닫기' : '보기'}
-          </Link>
-        )}
-        {item.evidenceRefs.length > 0 && (
-          <Link onClick={() => setOpen(open === 'evidence' ? null : 'evidence')}>
-            인터뷰 근거 {item.evidenceRefs.length}건 {open === 'evidence' ? '닫기' : '보기'}
-          </Link>
-        )}
-        {item.assessment === 'unknown' && item.eventRefs.length === 0 && (
-          <Note as="span">겪은 일이 없어 판단하지 않음</Note>
-        )}
-      </div>
-      {open === 'events' && (
-        <div style={{ paddingLeft: 12 }}>
+      {item.eventRefs.length > 0 && (
+        <div>
+          <Label>사건 근거 {item.eventRefs.length}건</Label>
           {item.eventRefs.map((eventId) => {
-            // What happened, in the log's own sentence, when this attempt's log
-            // is loaded; the id otherwise. No sentence is made up here.
-            const event = eventsById?.get(eventId) ?? null;
+            // What happened, in the log's own sentence, when this attempt's log is loaded; the id
+            // otherwise. No sentence is made up here.
+            const event = cited?.get(eventId) ?? null;
             const said = event ? sentenceFor(event)?.text ?? null : null;
             return (
               <div key={eventId} style={{ fontSize: font.small }}>
-                {event && said ? (
-                  <>
-                    <Mono>{formatClock(event.simTimeMs)}</Mono> {said}
-                  </>
-                ) : (
-                  <Mono>{eventId}</Mono>
-                )}{' '}
-                <Link onClick={() => onOpenScene(attemptId, eventId)}>그 장면 열기</Link>
+                {event && said ? <><Mono>{formatClock(event.simTimeMs)}</Mono> {said}</> : <Mono>{eventId}</Mono>}
               </div>
             );
           })}
         </div>
       )}
-      {open === 'evidence' && (
-        <div style={{ paddingLeft: 12 }}>
+      {item.evidenceRefs.length > 0 && (
+        <div>
+          <Label>인터뷰 근거 {item.evidenceRefs.length}건</Label>
           {item.evidenceRefs.map((ref) => (
-            <div key={ref} style={{ fontSize: font.small }}>
-              <Mono>{ref}</Mono>{' '}
-              <Note as="span">
-                본인 페르소나의 근거 카드입니다. 원문은 권한이 있는 서버 경로에만 있고 화면과
-                번들에는 들어오지 않습니다.
-              </Note>
-            </div>
+            <div key={ref} style={{ fontSize: font.small }}><Mono>{ref}</Mono></div>
           ))}
+          <Note>본인 페르소나의 근거 카드입니다. 원문은 권한이 있는 서버 경로에만 있고 화면과 번들에는 들어오지 않습니다.</Note>
         </div>
+      )}
+      {item.assessment === 'unknown' && item.eventRefs.length === 0 && (
+        <Note>겪은 일이 없어 판단하지 않음</Note>
       )}
     </Dimension>
   );

@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from ..contracts import ContactStrategy, ENGINE_VERSION
 from ..iteration.api import router as iteration_router, set_iteration_service
+from .stage import router as stage_router
 from ..iteration.service import IterationService
 from ..mode import REAL, SIM_REFUSAL, database_path, refuses, server_mode
 from ..persistence.store import AttemptExists, CommandConflict
@@ -396,4 +397,5 @@ def create_app() -> FastAPI:
 
     app.include_router(router)
     app.include_router(iteration_router)
+    app.include_router(stage_router)
     return app

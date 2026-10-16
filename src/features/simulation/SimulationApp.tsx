@@ -2,23 +2,26 @@ import { useEffect, useMemo, useRef } from 'react';
 import styled from 'styled-components';
 import ChoiceScreen from './screens/ChoiceScreen';
 import EvaluationsScreen from './screens/EvaluationsScreen';
+import IdleScreen from './screens/IdleScreen';
 import IntroScreen from './screens/IntroScreen';
 import ObserveScreen from './screens/ObserveScreen';
 import { useIterationStore } from './iterationStore';
 import { usePlayback } from './scene/playback';
 import { changedRuleNames, chosenRequests, dayFacts, dayLine, dayName, openingOf } from './selectors/tree';
+import { useWall } from './stage/wall';
 import { useSimStore } from './store';
-import HomeButton from './ui/HomeButton';
 import { useAmbient } from './ui/ambient';
 import { preloadArt } from './ui/Portrait';
 import { Callout, Mono } from './ui/primitives';
 import { font, night } from './ui/theme';
 import { useUiScale } from './ui/uiScale';
 
-// The walk, and the shell that holds it:
+// The wall: the big screen of the exhibition's two screens. It shows the walk and
+// nothing on it can be touched; the tablet (stage/PadApp) presses, and stage/wall.ts
+// does what was pressed and says what is on screen. The walk is:
 //
-//   소개 영상          - why this exists, and who the visitor is; it ends by
-//                        opening day one;
+//   소개 영상          - why this exists, and who the visitor is; it starts when the
+//                        tablet says start and ends by opening day one;
 //   관찰               - the day, as a scene, a map and a timeline;
 //   주민 에이전트 평가 - the residents who went through the day, in their words;
 //   수정 요청 고르기      - the revision that becomes the next day's rule.
@@ -26,7 +29,8 @@ import { useUiScale } from './ui/uiScale';
 // Every day shown was run when the record was made (selectors/tree): choosing a
 // revision opens that day, it starts nothing. The old second flow - preparing a
 // run, comparing versions, the field sheet - was removed on 2026-10-10 with the
-// rest of the interface that created runs; one path is left to read.
+// rest of the interface that created runs; one path is left to read. The one-screen
+// version of this exhibition is on the `single-screen` branch.
 
 const Root = styled.div`
   position: relative;
@@ -41,6 +45,9 @@ const Root = styled.div`
   font-family: ${font.family};
   font-size: ${font.body};
   overflow: hidden;
+  /* Nothing here is pressed: the wall has no pointer, and a stray touch or click on it does nothing. */
+  cursor: none;
+  user-select: none;
 `;
 
 /** Every screen of the walk says what its people are. A simulated resident's
@@ -49,14 +56,11 @@ const Root = styled.div`
  *  which says the same in its own corner. */
 const Foot = styled.footer`
   flex: none;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 16px;
+  display: flex;
+  justify-content: center;
   padding: 0 16px 8px;
   font-size: ${font.small};
-  > span { grid-column: 2; opacity: 0.6; text-align: center; }
-  > button { grid-column: 3; justify-self: end; }
+  > span { opacity: 0.6; text-align: center; }
 `;
 
 const Notices = styled.div`
@@ -70,6 +74,7 @@ const Notices = styled.div`
 export default function SimulationApp() {
   useUiScale();
   useAmbient();
+  useWall();
   const s = useSimStore();
   const it = useIterationStore();
   const playing = usePlayback((state) => state.playing);
@@ -190,7 +195,9 @@ export default function SimulationApp() {
         </Notices>
       )}
 
-      {!current && (
+      {!current && !it.introStarted && <IdleScreen art={s.art} />}
+
+      {!current && it.introStarted && (
         <IntroScreen voices={s.voices}
           onFinish={() => { const first = openingOf(detail); if (first) void it.choose(first.id); }} />
       )}
@@ -215,23 +222,24 @@ export default function SimulationApp() {
           generation={current}
           residents={s.village.residents.map((r) => r.id)}
           eyebrow={`${dayName(current)}가 끝났습니다`}
-          onOpenScene={(attemptId, eventId) => void it.openScene(attemptId, eventId)}
+          page={it.page}
+          openActor={it.openActor}
+          issues={it.issues}
+          onPage={it.setPage}
           onGoToImprove={() => it.setScreen('improve')}
+          onCloseOpen={() => { it.setOpenActor(null); it.setIssues(false); }}
           events={loaded ? { attemptId: loaded.detail.attempt.id, list: loaded.events } : null}
           art={s.art}
         />
       )}
 
       {current && screen === 'improve' && (
-        <ChoiceScreen detail={detail} current={current} art={s.art} voices={s.voices} onChoose={(id) => void it.choose(id)}
-          onRestart={it.restartPath} />
+        <ChoiceScreen detail={detail} current={current} art={s.art} voices={s.voices}
+          closing={it.closing} onClosing={() => it.setClosing(true)} onRestart={it.restartPath} />
       )}
       {current && (
         <Foot>
           <span>화면 속 사람과 대화는 전부 시뮬레이션입니다 · 이름은 가명, 모습은 지어낸 그림입니다</span>
-          {/* The way back to the opening film is on every screen of the walk, at the same place: the foot's right end. */}
-          {/* The last screen (the three days and the closing words) has its own way back, and goes by itself. */}
-          {!(screen === 'improve' && current.changeSets.length === 0) && <HomeButton onHome={it.restartPath} />}
         </Foot>
       )}
     </Root>

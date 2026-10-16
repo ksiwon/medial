@@ -37,9 +37,6 @@ interface PlaybackState {
   position: Position | null;
   playing: boolean;
   error: string | null;
-  /** The map's open card: which marker, and which person in it. */
-  selectedCluster: string | null;
-  selectedActor: string | null;
 
   load: (run: Run) => void;
   play: () => Promise<void>;
@@ -51,8 +48,9 @@ interface PlaybackState {
   commit: () => Promise<void>;
   /** The previous or next scene, from wherever the playhead is. */
   jumpScene: (direction: -1 | 1) => Promise<void>;
+  /** To the next scene, and on playing from there (jumpScene alone stops the clock). */
+  skipScene: () => Promise<void>;
   restart: () => Promise<void>;
-  selectCluster: (key: string | null, actorId?: string | null) => void;
   dismissError: () => void;
 }
 
@@ -108,12 +106,10 @@ export const usePlayback = create<PlaybackState>((set, get) => {
     position: null,
     playing: false,
     error: null,
-    selectedCluster: null,
-    selectedActor: null,
 
     load: (run) => {
       const reel = reelFor(run, get().viewMode);
-      set({ run, reel, playing: false, selectedCluster: null, selectedActor: null });
+      set({ run, reel, playing: false });
       // Reopen where the researcher left off: the cursor lives in the database.
       at(reel.atSeq(run.detail.attempt.cursorSeq ?? 0), reel);
     },
@@ -141,9 +137,7 @@ export const usePlayback = create<PlaybackState>((set, get) => {
     seekTime: (ms) => {
       const reel = get().reel;
       if (!reel) return;
-      // Moving the day moves everyone: a card opened on where someone *was* would
-      // go on describing a place they have left.
-      set({ playing: false, selectedCluster: null, selectedActor: null });
+      set({ playing: false });
       at(reel.atTime(ms));
     },
 
@@ -172,13 +166,18 @@ export const usePlayback = create<PlaybackState>((set, get) => {
       await send('seek', cursor());
     },
 
+    skipScene: async () => {
+      const current = get().reel;
+      await get().jumpScene(1);
+      if (current && get().rt < current.total - 0.01) await get().play();
+    },
+
     restart: async () => {
       set({ playing: false });
       at(0);
       await send('cancel');
     },
 
-    selectCluster: (key, actorId = null) => set({ selectedCluster: key, selectedActor: actorId }),
     dismissError: () => set({ error: null }),
   };
 });
