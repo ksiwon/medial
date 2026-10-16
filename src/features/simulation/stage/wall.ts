@@ -1,13 +1,15 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GenerationDetail, SessionDetail } from '../api/iteration';
 import type { DomainEvent } from '../api/types';
 import { useIterationStore } from '../iterationStore';
 import { DAY_START_MS, usePlayback } from '../scene/playback';
 import { askedReviews, pagesOf, saidOf, wentThrough } from '../selectors/evaluations';
 import { personName } from '../selectors/story';
-import { childFor, dayName, openingOf } from '../selectors/tree';
+import { childFor, chosenRequests, dayName, openingOf, pathTo } from '../selectors/tree';
 import { useSimStore } from '../store';
-import { IDLE_STATE, STAGE_API, sendState, type Command, type Phase, type StageState } from './protocol';
+import { postState } from './bus';
+import { IDLE_STATE, type Command, type Phase, type StageState } from './protocol';
+import { useStream } from './stream';
 
 // The wall's side of the two screens: it does what the tablet pressed, and says what it shows.
 //
@@ -130,6 +132,8 @@ export function describeStage(args: {
   return {
     phase,
     day: dayName(day),
+    dayIndex: day.index,
+    dayCount: Math.max(3, day.index + 1, ...detail.generations.map((g) => g.index + 1)),
     scene: args.sceneTitle,
     playing: args.playing,
     progress: args.total > 0 ? Math.min(1, args.rt / args.total) : 0,
@@ -155,56 +159,93 @@ export function describeStage(args: {
         kind: (rule?.semantic && labels.get(rule.semantic.ruleType)) ?? rule?.field ?? '수정 요청',
         goal: cs.expectedEffects[0] ?? null,
         rule: rule ? { before: rule.beforeRule, after: rule.afterRule } : null,
+        from: cs.affectedActors.map(personName),
       };
     }),
+    chosen: chosenRequests(detail, day.id),
     closing: args.closing,
   };
 }
 
-/** Listen for the tablet's presses, and report the wall's state whenever it changes. Mount once, on the wall. */
-export function useWall(): void {
-  // Presses are applied one at a time, in the order they came.
-  const queue = useRef<Promise<void>>(Promise.resolve());
-  useEffect(() => {
-    const source = new EventSource(`${STAGE_API}/events?role=wall`);
-    source.addEventListener('command', (message) => {
-      const command = JSON.parse((message as MessageEvent<string>).data) as Command;
-      queue.current = queue.current.then(() => apply(command)).catch(() => {});
-    });
-    // The tablet that connects later is told the state again (the server keeps the last one).
-    source.addEventListener('presence', () => { last.current = ''; push(); });
-    return () => source.close();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+/** What changes about the state while a day plays is the playhead; the tablet needs it about twice a second.
+ *  A coarse copy of the state is what is compared, so a reel ticking sixty times a second sends nothing. */
+function coarse(state: StageState): string {
+  return JSON.stringify({ ...state, progress: Math.round(state.progress * 200), atMs: Math.round(state.atMs / 60_000) });
+}
+
+/** Listen for the tablet's presses and report the wall's state whenever it changes. Mount once, on the wall.
+ *  Returns whether a tablet is paired: until one is, the wall shows the code to scan instead of the walk.
+ *
+ *  Two things keep the screens from tripping over each other:
+ *  - presses are applied strictly one after another, in the order they arrived (a press that starts a day
+ *    is awaited before the next one is looked at, so "choose" and a quick "seek" cannot interleave);
+ *  - state goes out one request at a time and only the newest is kept while one is on its way. */
+export function useWall(): { paired: boolean } {
+  const [paired, setPaired] = useState(false);
+  const chain = useRef<Promise<void>>(Promise.resolve());
+  const sending = useRef(false);
+  const waiting = useRef<StageState | null>(null);
+  const sent = useRef('');
+  const latest = useRef<StageState>(IDLE_STATE);
+
+  const flush = useCallback(async () => {
+    if (sending.current) return;
+    sending.current = true;
+    try {
+      for (let next = waiting.current; next; next = waiting.current) {
+        waiting.current = null;
+        try { await postState(next); } catch { sent.current = ''; /* try again on the next change */ }
+      }
+    } finally {
+      sending.current = false;
+    }
   }, []);
+  const publish = useCallback((force: boolean) => {
+    const key = coarse(latest.current);
+    if (!force && key === sent.current) return;
+    sent.current = key;
+    waiting.current = latest.current;
+    void flush();
+  }, [flush]);
+
+  useStream({
+    query: 'role=wall',
+    on: {
+      command: (data) => {
+        const command = data as Command;
+        chain.current = chain.current.then(() => apply(command)).catch(() => {});
+      },
+      // A tablet that connects later (or one that came back) is told where the wall is again.
+      presence: (data) => {
+        setPaired(((data as { pad?: number } | null)?.pad ?? 0) > 0);
+        publish(true);
+      },
+      // Another wall page took over (this one was a stale tab): it must not go on acting as the wall.
+      replaced: () => { setPaired(false); },
+      ping: () => {},
+    },
+  });
 
   const it = useIterationStore();
   const playing = usePlayback((s) => s.playing);
   const rt = usePlayback((s) => s.rt);
   const reel = usePlayback((s) => s.reel);
   const position = usePlayback((s) => s.position);
-  const sim = useSimStore();
-  const loaded = sim.activeId ? sim.attempts[sim.activeId] : null;
-
-  const last = useRef('');
-  const latest = useRef<StageState>(IDLE_STATE);
-  const push = () => { void sendState(latest.current).catch(() => {}); };
+  const activeId = useSimStore((s) => s.activeId);
+  const loaded = useSimStore((s) => (activeId ? s.attempts[activeId] ?? null : null));
 
   const segment = position?.segment ?? null;
   const episode = reel && segment && segment.kind !== 'map' ? reel.episodes[segment.episode] : null;
-  const tasks = (reel?.episodes ?? []).filter((e) => e.firstOfRequest).map((e) => ({ startMs: e.startMs, title: e.title }));
   latest.current = describeStage({
     detail: it.detail, viewGenerationId: it.viewGenerationId, introStarted: it.introStarted, pathStarted: it.pathStarted,
     screen: it.screen, page: it.page, openActor: it.openActor, issues: it.issues, closing: it.closing,
     playing, rt, total: reel?.total ?? 0, atMs: position?.atMs ?? DAY_START_MS, dayEndMs: reel?.dayEndMs ?? DAY_START_MS,
-    tasks, sceneTitle: episode?.title ?? null,
+    tasks: (reel?.episodes ?? []).filter((e) => e.firstOfRequest).map((e) => ({ startMs: e.startMs, title: e.title })),
+    sceneTitle: episode?.title ?? null,
     events: loaded?.events ?? null, eventsAttemptId: loaded?.detail.attempt.id ?? null,
   });
 
-  // The playhead moves many times a second; the tablet needs about two. The rest of the state goes at once.
-  useEffect(() => {
-    const body = JSON.stringify({ ...latest.current, progress: Math.round(latest.current.progress * 200), atMs: Math.round(latest.current.atMs / 60_000) });
-    if (body === last.current) return;
-    last.current = body;
-    push();
-  });
+  // After every render: the cheap comparison above decides whether anything goes out.
+  useEffect(() => { publish(false); });
+  return { paired };
 }

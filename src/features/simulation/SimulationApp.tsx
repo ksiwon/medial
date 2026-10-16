@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import ChoiceScreen from './screens/ChoiceScreen';
 import EvaluationsScreen from './screens/EvaluationsScreen';
 import IdleScreen from './screens/IdleScreen';
+import PairScreen from './screens/PairScreen';
 import IntroScreen from './screens/IntroScreen';
 import ObserveScreen from './screens/ObserveScreen';
 import { useIterationStore } from './iterationStore';
@@ -74,7 +75,7 @@ const Notices = styled.div`
 export default function SimulationApp() {
   useUiScale();
   useAmbient();
-  useWall();
+  const { paired } = useWall();
   const s = useSimStore();
   const it = useIterationStore();
   const playing = usePlayback((state) => state.playing);
@@ -195,7 +196,10 @@ export default function SimulationApp() {
         </Notices>
       )}
 
-      {!current && !it.introStarted && <IdleScreen art={s.art} />}
+      {/* No tablet yet: the code to scan. Once one is paired the walk is whatever it was (a tablet that
+          drops out in the middle of a visit does not throw the visitor back; it comes back by itself). */}
+      {!paired && !current && !it.introStarted && <PairScreen />}
+      {(paired || current || it.introStarted) && !current && !it.introStarted && <IdleScreen art={s.art} />}
 
       {!current && it.introStarted && (
         <IntroScreen voices={s.voices}

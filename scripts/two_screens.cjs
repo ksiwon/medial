@@ -1,4 +1,5 @@
 // 전시장 두 화면 도우미 (Mac Studio · Windows 노트북 공통, node만 쓴다).
+//   node scripts/two_screens.cjs qr [포트]        터미널에 QR 코드와 주소를 찍는다 (iPad 카메라로 비춘다)
 //   node scripts/two_screens.cjs urls [포트]      iPad가 열 주소와 모니터 주소를 적는다
 //   node scripts/two_screens.cjs wall [포트]      모니터 창을 키오스크로 연다 (소리 자동 재생 허용)
 //   node scripts/two_screens.cjs check [포트]     iPad가 붙을 수 있는지 이 기계에서 확인한다
@@ -106,10 +107,39 @@ async function check(port) {
   return bad ? 1 : 0;
 }
 
+// 서버가 정한 짝짓기 주소(이번 실행의 토큰이 든 것)를 읽어 터미널에 QR로 찍는다. 모니터 화면의 QR과 같은 주소다.
+async function printQr(port) {
+  let info;
+  try {
+    const r = await fetch(`http://localhost:${port}/api/sim/stage/pairing`, { signal: AbortSignal.timeout(5000) });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    info = await r.json();
+  } catch (e) {
+    console.log(`연결 정보를 가져오지 못했습니다 (${e.message}). run-sim 이 떠 있는지 확인하세요.`);
+    return 1;
+  }
+  if (!info.addresses || info.addresses.length === 0) {
+    console.log('이 기계의 네트워크 주소를 찾지 못했습니다. 와이파이나 랜선이 연결됐는지 확인하세요.');
+    return 1;
+  }
+  const url = `http://${info.addresses[0]}:${port}/?role=pad&t=${encodeURIComponent(info.token)}`;
+  let text;
+  try {
+    text = await require('qrcode').toString(url, { type: 'terminal', small: true, errorCorrectionLevel: 'M' });
+  } catch { text = null; }
+  console.log('');
+  if (text) console.log(text);
+  console.log('iPad 카메라로 위 QR을 비추세요. 열린 페이지에서 "연결하기"를 누르면 모니터가 다음 화면으로 넘어갑니다.');
+  console.log(`(QR이 안 읽히면 이 주소를 iPad Safari에 입력: ${url})`);
+  if (info.addresses.length > 1) console.log(`다른 주소 후보: ${info.addresses.slice(1).join(', ')}`);
+  return 0;
+}
+
 const [cmd, arg] = process.argv.slice(2);
 const port = webPort(arg);
-if (cmd === 'urls') { printUrls(port); }
+if (cmd === 'qr') { printQr(port).then((c) => process.exit(c)); }
+else if (cmd === 'urls') { printUrls(port); }
 else if (cmd === 'wall') { process.exit(openWall(port)); }
 else if (cmd === 'check') { check(port).then((c) => process.exit(c)); }
-else { console.log('사용법: node scripts/two_screens.cjs urls|wall|check [포트]'); process.exit(2); }
+else { console.log('사용법: node scripts/two_screens.cjs qr|urls|wall|check [포트]'); process.exit(2); }
 

@@ -377,6 +377,25 @@ def compare(ids: str = Query(..., description="comma separated attempt ids")) ->
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+class SimWritesNothing:
+    """The sim version's rule as plain ASGI, not ``@app.middleware("http")``.
+
+    That decorator wraps every response in a body-streaming layer which hides a browser that has gone away
+    from the route underneath, so a live stream (api/stage.py) would never see its listener leave and would
+    go on counting it as connected for good. This looks only at the method and the path, and passes the
+    rest through untouched - the request body and the response are never read or wrapped here.
+    """
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope["type"] == "http" and refuses(get_service().mode, scope["method"], scope["path"]):
+            await JSONResponse(status_code=403, content={"detail": SIM_REFUSAL})(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="MEDial research simulator", version=ENGINE_VERSION)
     app.add_middleware(
@@ -389,11 +408,7 @@ def create_app() -> FastAPI:
     # The sim version's one rule, in one place: read anything, move a playback
     # cursor, write nothing else. Checked before any route runs, so no new
     # endpoint can forget it.
-    @app.middleware("http")
-    async def sim_writes_nothing(request: Request, call_next: Any) -> Any:
-        if refuses(get_service().mode, request.method, request.url.path):
-            return JSONResponse(status_code=403, content={"detail": SIM_REFUSAL})
-        return await call_next(request)
+    app.add_middleware(SimWritesNothing)
 
     app.include_router(router)
     app.include_router(iteration_router)

@@ -350,6 +350,11 @@ url="http://localhost:$WEB_PORT/"
 echo "화면 준비됨 · $url"
 echo "$API_PORT $WEB_PORT" >"$PORTS_FILE"
 
+# 두 화면 전시: iPad가 비출 QR을 터미널에도 찍는다(모니터 화면에도 같은 QR이 뜬다). 실패해도 서버는 계속 돈다.
+if command -v node >/dev/null 2>&1; then
+  node scripts/two_screens.cjs qr "$WEB_PORT" || true
+fi
+
 if [ "$open_browser" = 1 ]; then
   # Git Bash 는 start, 그 밖에는 xdg-open/open.
   (start "" "$url" 2>/dev/null || xdg-open "$url" 2>/dev/null || open "$url" 2>/dev/null) &

@@ -61,9 +61,16 @@ test('태블릿으로 걷는다: 시작 → 1일차 → 평가(한 사람의 인
   const wall = await wallCtx.newPage();
   const pad = await padCtx.newPage();
   await wall.goto(`${base}/?role=wall`);
-  await pad.goto(`${base}/?role=pad`);
 
-  // Waiting: the wall asks for the tablet, and has nothing to press.
+  // Pairing: the wall shows a code to scan; the tablet opens the address it carries and presses connect.
+  await expect(wall.getByLabel('태블릿 연결')).toBeVisible();
+  const pairing = await (await wall.request.get(`${base}/api/sim/stage/pairing`)).json();
+  expect(pairing.token.length).toBeGreaterThan(8);
+  await pad.goto(`http://localhost:5174/?role=pad&t=${encodeURIComponent(pairing.token)}`);
+  await expect(wall.getByLabel('태블릿 연결')).toBeVisible();   // not paired until the tablet says so
+  await pad.getByRole('button', { name: '연결하기' }).tap();
+
+  // Waiting: the wall asks for the tablet to start, and has nothing to press.
   await expect(wall.getByText(/태블릿에서 시작하기/)).toBeVisible();
   await expect(pad.getByRole('button', { name: '시작하기' })).toBeVisible({ timeout: 30_000 });
   await pad.getByRole('button', { name: '시작하기' }).tap();
@@ -94,11 +101,11 @@ test('태블릿으로 걷는다: 시작 → 1일차 → 평가(한 사람의 인
   await person.tap();
   await expect(wall.getByRole('heading', { name: `${name}의 인터뷰` })).toBeVisible();
   await expect(wall.locator('article')).toHaveCount(1);
-  await pad.getByRole('button', { name: /목록으로 돌아가기/ }).tap();
+  await pad.getByRole('button', { name: /목록으로/ }).tap();
   await expect(wall.locator('article')).toHaveCount(cards);
 
   // Then the revision to choose: read on the wall, chosen on the tablet with one touch.
-  await pad.getByRole('button', { name: /고칠지 고른다|결과 보러/ }).tap();
+  await pad.getByRole('button', { name: /고칠지 고르기|결과 보러/ }).tap();
   await expect(wall.getByRole('heading', { name: '무엇을 고칠 것인가' })).toBeVisible();
   await expect(wall.getByRole('button')).toHaveCount(0);
   await expect(wall.getByText('화면 속 사람과 대화는 전부 시뮬레이션입니다')).toBeVisible();
@@ -115,7 +122,7 @@ test('모니터는 2560 · 1440에서 가로로 넘치지 않고, 태블릿은 1
   for (const [role, width, height] of [['wall', 2560, 1440], ['wall', 1440, 900], ['pad', 1180, 820], ['pad', 1024, 768]] as const) {
     await page.setViewportSize({ width, height });
     await page.goto(`/?role=${role}`);
-    await expect(role === 'wall' ? page.getByText(/태블릿에서 시작하기|불러오는 중/) : page.getByText('MEDial').first()).toBeVisible();
+    await expect(role === 'wall' ? page.getByText(/태블릿을 연결해 주세요|불러오는 중/) : page.getByText('QR 코드를 스캔해 주세요')).toBeVisible();
     const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(over, `${role} ${width}px`).toBeLessThanOrEqual(0);
   }

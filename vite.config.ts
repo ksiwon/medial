@@ -17,7 +17,10 @@ export default defineConfig({
     proxy: {
       '/api/sim': {
         target: process.env.MEDIAL_SIM_URL ?? 'http://127.0.0.1:8010',
-        changeOrigin: true,
+        // Keep the page's own host name on the way through (X-Forwarded-Host): the API tells the
+        // wall's browser (localhost) from a tablet (this machine's network address) by it.
+        xfwd: true,
+        changeOrigin: false,
       },
     },
   },

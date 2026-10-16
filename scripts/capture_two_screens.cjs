@@ -33,7 +33,11 @@ async function main() {
   };
 
   await wall.goto(`${BASE}/?role=wall`);
-  await pad.goto(`${BASE}/?role=pad`);
+  // 카메라 대신: 서버가 모니터에게 주는 짝짓기 주소로 태블릿을 연다 (QR이 담은 주소와 같다).
+  const pairing = await (await fetch(`${BASE}/api/sim/stage/pairing`)).json();
+  const port = new URL(BASE).port;
+  await pad.goto(`http://${pairing.addresses[0]}:${port}/?role=pad&t=${encodeURIComponent(pairing.token)}`);
+  await pad.getByRole('button', { name: '연결하기' }).tap();
   await pad.getByText('시작하기').waitFor({ timeout: 30000 });
   await settle(1500);
   await shot(wall, '01-wall-idle');
@@ -64,11 +68,11 @@ async function main() {
   await shot(pad, '05-pad-interview');
   console.log('opened interview of:', name.split('\n')[0]);
 
-  await tap(pad, '목록으로 돌아가기');
+  await tap(pad, '목록으로');
   await settle(1500);
   await shot(wall, '06-wall-cards-again');
 
-  await tap(pad, '무엇을 고칠지 고른다');
+  await tap(pad, '무엇을 고칠지 고르기');
   await settle(2500);
   await shot(wall, '07-wall-choose');
   await shot(pad, '07-pad-choose');
