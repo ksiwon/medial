@@ -31,10 +31,9 @@ afterEach(cleanup);
 
 describe('the tablet starts the walk', () => {
   it('does nothing else until it has started: no press moves a day that is not on', async () => {
-    for (const name of ['togglePlay', 'skipScene', 'readEvaluations', 'goImprove', 'closing'] as const) {
+    for (const name of ['skipScene', 'skipLine', 'readEvaluations', 'goImprove'] as const) {
       await apply({ name });
     }
-    await apply({ name: 'seek', value: 6 * 3_600_000 });
     await apply({ name: 'evalOpen', id: asked[0]?.actorId ?? 'P1' });
     expect(walk()).toMatchObject({ introStarted: false, pathStarted: false, screen: 'case', openActor: null, closing: false });
   });

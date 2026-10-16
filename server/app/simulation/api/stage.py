@@ -44,9 +44,8 @@ Role = Literal["wall", "pad"]
 
 #: What a press can be. The wall refuses to guess at anything else.
 COMMANDS = (
-    "start", "skipIntro", "togglePlay", "skipScene", "seek", "commit",
-    "readEvaluations", "evalPage", "evalOpen", "evalClose", "evalIssues", "openScene",
-    "goImprove", "choose", "closing", "home",
+    "start", "skipIntro", "skipScene", "skipLine", "readEvaluations", "evalPage", "evalOpen", "evalClose",
+    "evalIssues", "openScene", "goImprove", "choose", "home",
 )
 
 PING_SECONDS = 8
@@ -57,7 +56,7 @@ CLOSE = "\0close"
 
 class StageCommand(BaseModel):
     name: Literal[COMMANDS]  # type: ignore[valid-type]
-    #: seek: milliseconds into the day. evalPage: -1 or 1.
+    #: evalPage: -1 or 1.
     value: int | None = None
     #: evalOpen: an actor id. openScene: an event id. choose: a generation id.
     id: str | None = Field(default=None, max_length=80)

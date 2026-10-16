@@ -263,7 +263,7 @@ const NO_ART: ReadonlySet<string> = new Set();
 export const SUMMARY_IDLE_S = 90;
 
 /** How long the three days stay on the page before the closing words take it, in seconds. */
-export const RESULT_S = 14;
+export const RESULT_S = 15;
 
 /** The end of the walk: the days taken, and the way back - by itself, if nobody takes it. */
 function Ending({ detail, current, closing, onClosing, onRestart, art, voices }: {

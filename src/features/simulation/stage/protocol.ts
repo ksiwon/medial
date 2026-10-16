@@ -13,10 +13,8 @@ export type Phase = 'idle' | 'intro' | 'day' | 'evaluations' | 'choose' | 'endin
 export type Command =
   | { name: 'start' }
   | { name: 'skipIntro' }
-  | { name: 'togglePlay' }
   | { name: 'skipScene' }
-  | { name: 'seek'; value: number }
-  | { name: 'commit' }
+  | { name: 'skipLine' }
   | { name: 'readEvaluations' }
   | { name: 'evalPage'; value: -1 | 1 }
   | { name: 'evalOpen'; id: string }
@@ -25,7 +23,6 @@ export type Command =
   | { name: 'openScene'; id: string }
   | { name: 'goImprove' }
   | { name: 'choose'; id: string }
-  | { name: 'closing' }
   | { name: 'home' };
 
 export type CommandName = Command['name'];

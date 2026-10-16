@@ -80,12 +80,18 @@ test('태블릿으로 걷는다: 시작 → 1일차 → 평가(한 사람의 인
   // The tablet skips the film; day one opens and plays on the wall.
   await pad.getByRole('button', { name: /건너뛰기/ }).tap();
   await expect(wall.getByLabel('오늘의 타임라인')).toBeVisible({ timeout: 30_000 });
-  await expect(pad.getByRole('button', { name: /정지|재생/ })).toBeVisible();
+  await expect(pad.getByRole('button', { name: '다음 장면으로 →' })).toBeVisible();
+  await expect(pad.getByRole('button', { name: '이 대화 건너뛰기' })).toBeVisible();
+  // The day has two things to press and nothing else: no play, pause or clock to steer.
+  await expect(pad.getByRole('button', { name: /재생|정지/ })).toHaveCount(0);
+  await expect(pad.locator('input[type=range]')).toHaveCount(0);
   await expect(wall.getByRole('button')).toHaveCount(0);
 
-  // A touch on the tablet moves the wall's day: pause there stops it too.
-  await pad.getByRole('button', { name: /정지/ }).tap();
-  await expect(pad.getByRole('button', { name: /재생/ })).toBeVisible();
+  // Skipping scenes from the tablet moves the wall's day on until it ends by itself.
+  for (let i = 0; i < 8 && !(await pad.getByRole('button', { name: /평가 보기/ }).isVisible().catch(() => false)); i += 1) {
+    await pad.getByRole('button', { name: '다음 장면으로 →' }).tap({ timeout: 3000 }).catch(() => {});
+    await pad.waitForTimeout(600);
+  }
 
   // To the evaluations, from the tablet.
   await pad.getByRole('button', { name: /평가 보기/ }).tap();
@@ -96,6 +102,7 @@ test('태블릿으로 걷는다: 시작 → 1일차 → 평가(한 사람의 인
   expect(cards).toBeGreaterThan(0);
 
   // One resident on the tablet: the wall shows that person's whole interview, and the cards come back.
+  await expect(pad.getByText(/평가를 남긴 주민/)).toBeVisible();   // the tablet follows the wall: its list is up
   const person = pad.locator('main button').first();
   const name = (await person.innerText()).split('\n')[0];
   await person.tap();

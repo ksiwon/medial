@@ -49,12 +49,16 @@ async function main() {
   await shot(pad, '02-pad-intro');
 
   await tap(pad, '건너뛰기');
-  await pad.getByText('▶ 재생').or(pad.getByText('⏸ 정지')).first().waitFor({ timeout: 30000 });
+  await pad.getByRole('button', { name: '다음 장면으로 →' }).waitFor({ timeout: 30000 });
   await settle(6000);
   await shot(wall, '03-wall-day');
   await shot(pad, '03-pad-day');
 
-  await tap(pad, '하루를 건너뛰고 평가 보기').catch(() => tap(pad, '주민 에이전트 평가 보기'));
+  for (let i = 0; i < 8 && !(await pad.getByRole('button', { name: /평가 보기/ }).isVisible().catch(() => false)); i += 1) {
+    await pad.getByRole('button', { name: '다음 장면으로 →' }).tap({ timeout: 3000 }).catch(() => {});
+    await settle(700);
+  }
+  await tap(pad, '주민 에이전트 평가 보기');
   await pad.getByText(/평가를 남긴 주민/).waitFor({ timeout: 30000 });
   await settle(2500);
   await shot(wall, '04-wall-evaluations');

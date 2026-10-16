@@ -70,7 +70,7 @@ def test_presence_says_who_is_listening_and_a_stalled_listener_cannot_block_the_
         wall = hub.subscribe("wall")
         assert hub.presence() == {"wall": 1, "pad": 0}
         for i in range(stage.QUEUE_SIZE + 10):
-            hub.command(stage.StageCommand(name="seek", value=i))
+            hub.command(stage.StageCommand(name="evalPage", value=1 if i % 2 else -1))
         assert wall.qsize() == stage.QUEUE_SIZE
         hub.unsubscribe(wall)
         assert hub.presence() == {"wall": 0, "pad": 0}
@@ -86,7 +86,7 @@ def _client() -> TestClient:
 def test_only_the_named_presses_are_accepted_and_the_sim_version_lets_them_through():
     client = _client()
     t = {"token": stage.hub.token}
-    assert client.post("/api/sim/stage/command", params=t, json={"name": "togglePlay"}).status_code == 200
+    assert client.post("/api/sim/stage/command", params=t, json={"name": "skipScene"}).status_code == 200
     assert client.post("/api/sim/stage/command", params=t, json={"name": "rerun"}).status_code == 422
     assert client.post("/api/sim/stage/state", json={"screen": "case"}).status_code == 200
     # and it is still a sim server: nothing that starts a run got easier to reach
@@ -96,7 +96,7 @@ def test_only_the_named_presses_are_accepted_and_the_sim_version_lets_them_throu
 
 def test_a_press_without_the_pairing_token_is_refused():
     client = _client()
-    body = {"name": "togglePlay"}
+    body = {"name": "skipScene"}
     assert client.post("/api/sim/stage/command", json=body).status_code == 403
     assert client.post("/api/sim/stage/command", params={"token": "wrong"}, json=body).status_code == 403
     assert client.get("/api/sim/stage/events", params={"role": "pad"}).status_code == 403
@@ -150,7 +150,7 @@ def test_a_reloaded_wall_replaces_the_old_one_so_no_press_is_done_twice():
         told = [n for n, _ in drain(old)]
         assert "replaced" in told and "close" in told
         assert hub.presence()["wall"] == 1
-        assert hub.command(stage.StageCommand(name="togglePlay")) == 1   # one wall hears it, once
+        assert hub.command(stage.StageCommand(name="skipScene")) == 1   # one wall hears it, once
         assert [n for n, _ in drain(new) if n == "command"] == ["command"]
         assert [n for n, _ in drain(old) if n == "command"] == []
     asyncio.run(run())

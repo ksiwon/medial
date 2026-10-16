@@ -7,9 +7,9 @@ import { accentA, font, inkA, night, px, radius } from '../ui/theme';
 import { pill } from '../ui/primitives';
 
 // 오늘의 타임라인: the right-hand column of the observe screen (2026-10-07).
-// On the two-screen exhibition (2026-10-16) it is read, not pressed: play, skip and
-// the time slider are on the tablet, which says "seek" to the wall; here the rail
-// only shows where the day is.
+// On the two-screen exhibition (2026-10-16) it is read, not pressed: the tablet has only
+// "next scene" and "skip this line", and the day plays by itself; here the rail only shows
+// where the day is.
 //
 // One line per Task down a rail, the way an incident log reads: what is over is
 // quiet, what is happening now is lit and says which request it belongs to, and

@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import type * as React from 'react';
+import { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { formatClock } from '../../positions';
 import { inkA, night, radius } from '../../ui/theme';
 import { PER_PAGE, type Command, type StageState } from '../protocol';
-import { Button, Card, Grid, Hint, Next, Page, Row, Spacer, Stage, TOUCH } from './kit';
+import { Button, Card, Grid, Hint, Next, Page, Row, Spacer, Stage } from './kit';
 
 // What the tablet shows at each stage of the walk. Every screen takes the wall's state and a `press`,
 // and nothing else: it keeps no copy of the walk. What a screen remembers by itself is only what a
@@ -45,104 +44,48 @@ const Track = styled.div<{ $p: number }>`
   > i { display: block; height: 100%; width: ${(p) => p.$p * 100}%; border-radius: ${radius.pill}; background: ${night.accent}; transition: width 0.4s linear; }
 `;
 
-const Clock = styled.time`
-  flex: none;
-  min-width: 128px;
-  font-size: 44px;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  font-variant-numeric: tabular-nums;
-`;
-
-/** The day's slider, drawn rather than left to the browser: a thick track that fills as the day goes, and a
- *  handle big enough for a finger. (The native one is a white hairline with a dot on a dark page.) */
-const Slider = styled.input`
-  --fill: 0%;
+/** What the wall is on right now, said big: the visitor looks up at the wall, and glances down to this. */
+const Now = styled.div`
   flex: 1;
-  min-width: 0;
-  height: ${TOUCH}px;
-  margin: 0;
-  background: transparent;
-  appearance: none;
-  -webkit-appearance: none;
-  touch-action: pan-y;
-  &:focus-visible { outline: 2px solid ${night.ink}; outline-offset: 4px; }
-  &::-webkit-slider-runnable-track {
-    height: 12px;
-    border-radius: ${radius.pill};
-    background: linear-gradient(to right, ${night.accent} var(--fill), ${inkA(0.16)} var(--fill));
-  }
-  &::-moz-range-track { height: 12px; border-radius: ${radius.pill}; background: ${inkA(0.16)}; }
-  &::-moz-range-progress { height: 12px; border-radius: ${radius.pill}; background: ${night.accent}; }
-  &::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 44px;
-    height: 44px;
-    margin-top: -16px;
-    border-radius: ${radius.round};
-    background: ${night.ink};
-    border: 4px solid ${night.accent};
-    box-sizing: border-box;
-  }
-  &::-moz-range-thumb { width: 44px; height: 44px; border-radius: ${radius.round}; background: ${night.ink}; border: 4px solid ${night.accent}; box-sizing: border-box; }
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+  > small { font-size: 20px; font-weight: 800; letter-spacing: 0.08em; color: ${night.accent}; }
+  > strong { font-size: 56px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.2; word-break: keep-all; }
+  > time { font-size: 28px; font-weight: 700; color: ${night.mute}; font-variant-numeric: tabular-nums; }
 `;
 
-/** While a finger is on the slider the clock follows the finger; once it lets go, the wall's clock again. */
-function useHeld(): [number | null, (ms: number | null) => void] {
-  const [held, setHeld] = useState<number | null>(null);
-  return [held, setHeld];
-}
+const Pair = styled.div`
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 16px;
+  > button { min-height: 120px; font-size: 32px; }
+`;
 
+/** The day plays by itself. The only things a visitor does in it are to go on to the next scene, or to
+ *  get past the line being said; everything else (play, pause, the clock, a list of the day) was taken
+ *  away because a visitor who is watching the wall does not need to steer it. */
 export function Day({ s, press }: { s: StageState; press: Press }) {
-  const [held, setHeld] = useHeld();
-  const sentAt = useRef(0);
-  const top = s.dayEndMs || s.dayStartMs + 1;
-  const shown = Math.min(Math.max(held ?? s.atMs, s.dayStartMs), top);
-  const move = (ms: number) => {
-    setHeld(ms);
-    // The wall follows the finger, but not every pixel of it: the bus keeps only the newest.
-    const now = performance.now();
-    if (now - sentAt.current > 120) { sentAt.current = now; press({ name: 'seek', value: ms }); }
-  };
-  const release = (ms: number) => {
-    press({ name: 'seek', value: ms });
-    press({ name: 'commit' });
-    setHeld(null);
-  };
   return (
     <Page>
       <Track $p={s.progress} aria-hidden><i /></Track>
-      <Row>
-        <Button $tone="primary" onClick={() => press({ name: 'togglePlay' })} disabled={s.dayOver} style={{ minWidth: 176 }}>
-          {s.playing ? '⏸ 정지' : '▶ 재생'}
-        </Button>
-        <Button onClick={() => press({ name: 'skipScene' })} disabled={s.dayOver}>다음 장면으로 →</Button>
-        <Spacer />
-        <Clock aria-live="off">{formatClock(shown)}</Clock>
-      </Row>
-      <Row>
-        <Slider type="range" aria-label="시각" min={s.dayStartMs} max={top} step={60_000} value={shown}
-          style={{ '--fill': `${((shown - s.dayStartMs) / Math.max(top - s.dayStartMs, 1)) * 100}%` } as React.CSSProperties}
-          onChange={(e) => move(Number(e.target.value))}
-          onPointerUp={(e) => release(Number((e.target as HTMLInputElement).value))}
-          onKeyUp={(e) => release(Number((e.target as HTMLInputElement).value))} />
-      </Row>
-      <Hint>{s.scene ? `지금 · ${s.scene}` : '아래 일을 누르면 큰 화면이 그 시각으로 갑니다.'}</Hint>
-      <Grid $cols={s.tasks.length > 4 ? 3 : 2}>
-        {s.tasks.map((t) => (
-          <Card key={`${t.startMs}:${t.title}`} $on={s.atMs >= t.startMs}
-            onClick={() => { press({ name: 'seek', value: t.startMs }); press({ name: 'commit' }); }}>
-            <b>{t.title}</b>
-            <span>{formatClock(t.startMs)}</span>
-          </Card>
-        ))}
-      </Grid>
-      <Row>
-        <Spacer />
-        {s.dayOver
-          ? <Next $big onClick={() => press({ name: 'readEvaluations' })}>주민 에이전트 평가 보기 →</Next>
-          : <Button $tone="quiet" onClick={() => press({ name: 'readEvaluations' })}>하루를 건너뛰고 평가 보기 →</Button>}
-      </Row>
+      <Now aria-live="off">
+        <small>{s.dayOver ? '하루가 끝났습니다' : s.scene ? '지금 이 장면' : '마을의 하루'}</small>
+        <strong>{s.dayOver ? `${s.day ?? ''}가 지나갔어요` : s.scene ?? '마을 지도를 보고 있어요'}</strong>
+        <time>{formatClock(s.atMs)}</time>
+      </Now>
+      {s.dayOver ? (
+        <Row><Spacer /><Next $big onClick={() => press({ name: 'readEvaluations' })}>주민 에이전트 평가 보기 →</Next><Spacer /></Row>
+      ) : (
+        <Pair>
+          <Button $tone="quiet" onClick={() => press({ name: 'skipLine' })} disabled={!s.scene}>이 대화 건너뛰기</Button>
+          <Button $tone="primary" onClick={() => press({ name: 'skipScene' })}>다음 장면으로 →</Button>
+        </Pair>
+      )}
     </Page>
   );
 }
@@ -241,13 +184,13 @@ export function Choose({ s, press }: { s: StageState; press: Press }) {
 // ---- the end ------------------------------------------------------------------
 
 export function Ending({ s, press }: { s: StageState; press: Press }) {
+  // Nothing to press until the end: the three days stay up for a while and the closing words follow by
+  // themselves (ChoiceScreen RESULT_S); a visitor reads, and does not have to ask for the next page.
   return (
     <Stage>
       <h1>{s.closing ? '체험이 끝났습니다' : '사흘이 끝났습니다'}</h1>
-      <p>{s.closing ? '다음 분을 위해 처음 화면으로 돌아갑니다.' : '고른 것과 마을이 어떻게 됐는지를 큰 화면에서 봐 주세요.'}</p>
-      {s.closing
-        ? <Button $tone="primary" $big onClick={() => press({ name: 'home' })}>처음으로</Button>
-        : <Next $big onClick={() => press({ name: 'closing' })}>마무리 보기 →</Next>}
+      <p>{s.closing ? '다음 분을 위해 처음 화면으로 돌아갑니다.' : '고른 것과 마을이 어떻게 됐는지를 큰 화면에서 봐 주세요. 곧 마무리가 이어집니다.'}</p>
+      {s.closing && <Button $tone="primary" $big onClick={() => press({ name: 'home' })}>처음으로</Button>}
     </Stage>
   );
 }

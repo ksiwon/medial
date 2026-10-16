@@ -3,10 +3,9 @@ import { STAGE_API, type Command } from './protocol';
 // How the tablet's presses reach the wall: one at a time, in the order they were pressed.
 //
 // Presses are separate HTTP requests, and two requests sent together can arrive in either order - a
-// "seek" that was meant to come first would then land last and put the day back where the finger
-// had already left. So the bus keeps one request in flight; while it is, a newer "seek" replaces an
-// older one that has not been sent yet (only where the finger ended up matters), and every other
-// press waits its turn. It also says what came of each press, so the tablet never has to assume.
+// "next scene" meant to come before "evaluations" would then land after it. So the bus keeps one request
+// in flight and every other press waits its turn. It also says what came of each press, so the tablet
+// never has to assume.
 
 export type PressResult =
   | { kind: 'ok' }
@@ -46,10 +45,6 @@ export function createBus(post: Post, onResult: (command: Command, result: Press
 
   return {
     send(command) {
-      if (command.name === 'seek') {
-        const stale = queue.findIndex((c) => c.name === 'seek');
-        if (stale >= 0) queue.splice(stale, 1);
-      }
       queue.push(command);
       void drain();
     },

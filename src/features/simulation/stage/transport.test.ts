@@ -29,27 +29,26 @@ describe('the press bus', () => {
   it('keeps one press in flight and sends the rest in the order they were pressed', async () => {
     const h = held();
     const bus = createBus(h.post, () => {});
-    bus.send({ name: 'togglePlay' });
+    bus.send({ name: 'skipLine' });
     bus.send({ name: 'skipScene' });
     bus.send({ name: 'readEvaluations' });
-    expect(h.sent.map((c) => c.name)).toEqual(['togglePlay']);
+    expect(h.sent.map((c) => c.name)).toEqual(['skipLine']);
     await h.answer();
-    expect(h.sent.map((c) => c.name)).toEqual(['togglePlay', 'skipScene']);
+    expect(h.sent.map((c) => c.name)).toEqual(['skipLine', 'skipScene']);
     await h.answer();
     await h.answer();
-    expect(h.sent.map((c) => c.name)).toEqual(['togglePlay', 'skipScene', 'readEvaluations']);
+    expect(h.sent.map((c) => c.name)).toEqual(['skipLine', 'skipScene', 'readEvaluations']);
   });
 
-  it('replaces a seek that has not been sent with the newer one, and never reorders around it', async () => {
+  it('sends every press: two skips pressed quickly are two skips, never one', async () => {
     const h = held();
     const bus = createBus(h.post, () => {});
-    bus.send({ name: 'togglePlay' });            // in flight
-    bus.send({ name: 'seek', value: 100 });
-    bus.send({ name: 'commit' });
-    bus.send({ name: 'seek', value: 300 });      // the finger moved on: the old seek is stale
+    bus.send({ name: 'skipScene' });             // in flight
+    bus.send({ name: 'skipScene' });
+    bus.send({ name: 'skipScene' });
     expect(bus.pending()).toBe(2);
     await h.answer(); await h.answer(); await h.answer();
-    expect(h.sent).toEqual([{ name: 'togglePlay' }, { name: 'commit' }, { name: 'seek', value: 300 }]);
+    expect(h.sent).toHaveLength(3);
   });
 
   it('says what came of each press, and a failed post does not stop the ones behind it', async () => {
@@ -60,12 +59,12 @@ describe('the press bus', () => {
       if (c.name === 'skipScene') throw new Error('network down');
       return c.name === 'goImprove' ? { kind: 'no-wall' } : { kind: 'ok' };
     }, (c, r) => results.push([c.name, r.kind]));
-    bus.send({ name: 'togglePlay' });
+    bus.send({ name: 'skipLine' });
     bus.send({ name: 'skipScene' });
     bus.send({ name: 'goImprove' });
     await new Promise((r) => setTimeout(r, 0));
-    expect(calls).toEqual(['togglePlay', 'skipScene', 'goImprove']);
-    expect(results).toEqual([['togglePlay', 'ok'], ['skipScene', 'failed'], ['goImprove', 'no-wall']]);
+    expect(calls).toEqual(['skipLine', 'skipScene', 'goImprove']);
+    expect(results).toEqual([['skipLine', 'ok'], ['skipScene', 'failed'], ['goImprove', 'no-wall']]);
   });
 });
 
@@ -73,7 +72,7 @@ describe('what the server answers to a press', () => {
   const reply = (status: number, body: unknown = {}) => (async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch;
 
   it('reads a refused code, a press nobody heard, a failure, and a press that was done', async () => {
-    const press: Command = { name: 'togglePlay' };
+    const press: Command = { name: 'skipScene' };
     expect(await postTo('t', reply(403))(press)).toEqual({ kind: 'refused' });
     expect(await postTo('t', reply(200, { delivered: 0 }))(press)).toEqual({ kind: 'no-wall' });
     expect(await postTo('t', reply(500))(press)).toEqual({ kind: 'failed', reason: 'HTTP 500' });

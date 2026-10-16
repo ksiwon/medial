@@ -35,18 +35,11 @@ export async function apply(command: Command): Promise<void> {
       if (first && it.introStarted && !it.pathStarted) await it.choose(first.id);
       return;
     }
-    case 'togglePlay':
-      if (!on('case')) return;
-      if (playback.playing) await playback.pause(); else await playback.play();
-      return;
     case 'skipScene':
       if (on('case')) await playback.skipScene();
       return;
-    case 'seek':
-      if (on('case')) playback.seekTime(command.value);
-      return;
-    case 'commit':
-      if (on('case')) await playback.commit();
+    case 'skipLine':
+      if (on('case')) await playback.skipLine();
       return;
     case 'readEvaluations':
       if (on('case')) { await playback.pause(); it.setScreen('evaluations'); }
@@ -82,9 +75,6 @@ export async function apply(command: Command): Promise<void> {
       if (runs.includes(command.id)) await it.choose(command.id);
       return;
     }
-    case 'closing':
-      if (on('improve') && day?.changeSets.length === 0) it.setClosing(true);
-      return;
     case 'home':
       if (it.pathStarted || it.introStarted) it.restartPath();
       return;
@@ -178,7 +168,7 @@ function coarse(state: StageState): string {
  *
  *  Two things keep the screens from tripping over each other:
  *  - presses are applied strictly one after another, in the order they arrived (a press that starts a day
- *    is awaited before the next one is looked at, so "choose" and a quick "seek" cannot interleave);
+ *    is awaited before the next one is looked at, so "choose" and a quick "skip" cannot interleave);
  *  - state goes out one request at a time and only the newest is kept while one is on its way. */
 export function useWall(): { paired: boolean } {
   const [paired, setPaired] = useState(false);

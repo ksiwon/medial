@@ -42,14 +42,13 @@ interface PlaybackState {
   play: () => Promise<void>;
   pause: () => Promise<void>;
   tick: (deltaMs: number) => void;
-  /** Move without recording; `commit` records where it stopped. */
-  seekTime: (ms: number) => void;
   seekSeq: (seq: number) => Promise<void>;
-  commit: () => Promise<void>;
   /** The previous or next scene, from wherever the playhead is. */
   jumpScene: (direction: -1 | 1) => Promise<void>;
   /** To the next scene, and on playing from there (jumpScene alone stops the clock). */
   skipScene: () => Promise<void>;
+  /** Past the line being said, to the next one (in the same scene, or the next scene's first), and on playing. */
+  skipLine: () => Promise<void>;
   restart: () => Promise<void>;
   dismissError: () => void;
 }
@@ -134,22 +133,11 @@ export const usePlayback = create<PlaybackState>((set, get) => {
       if (get().rt >= reel.total) void get().pause();
     },
 
-    seekTime: (ms) => {
-      const reel = get().reel;
-      if (!reel) return;
-      set({ playing: false });
-      at(reel.atTime(ms));
-    },
-
     seekSeq: async (seq) => {
       const reel = get().reel;
       if (!reel) return;
       set({ playing: false });
       at(reel.atSeq(seq));
-      await send('seek', cursor());
-    },
-
-    commit: async () => {
       await send('seek', cursor());
     },
 
@@ -164,6 +152,18 @@ export const usePlayback = create<PlaybackState>((set, get) => {
       set({ playing: false });
       at(target ? target.r0 : direction > 0 ? reel.total : 0);
       await send('seek', cursor());
+    },
+
+    skipLine: async () => {
+      const { reel, position } = get();
+      if (!reel || !position) return;
+      const here = position.segment.r0;
+      // The next stretch where someone speaks. A scene's lead-in (the picture arriving) counts as a stop too, so
+      // that a line at the end of a scene goes to the next scene's start and not past it.
+      const next = reel.segments.find((s) => (s.kind === 'line' || s.kind === 'lead') && s.r0 > here + 0.01);
+      at(next ? next.r0 : reel.total);
+      await send('seek', cursor());
+      if (get().rt < reel.total - 0.01) await get().play();
     },
 
     skipScene: async () => {
