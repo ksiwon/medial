@@ -1,13 +1,13 @@
-# MEDial 작업 지침
+# Dially 작업 지침
 
 작업 전에 다음 문서를 순서대로 읽는다.
 
 1. `docs/research/19_RESIDENT_AGENTS_AS_EVALUATORS.md` — 최우선 연구 기준
-2. `docs/research/22_MEDIAL_IMPROVEMENT_TARGETS.md` — MEDial 개선 대상과 편집 경계
+2. `docs/research/22_MEDIAL_IMPROVEMENT_TARGETS.md` — 서비스(AI 조율자) 개선 대상과 편집 경계
 3. `docs/research/23_QUEST_TASK_CHANGE_SET.md` — Quest/Task 최소 모델과 Change Set 계약
-4. `DEVELOPMENT.md` — 구현됨/부분 구현/미구현 상태. **"현재 상태" 절이 지금이고, "최근 기록"은
-   최신순이다.** 더 오래된 역사(v0.2~v0.4 · MAS 재구축)는 `docs/research/history/DEVELOPMENT_HISTORY.md`
-5. `docs/research/28_REFACTOR_LOG_2026-09-15.md` — 지금 구조가 왜 이런지, 무엇을 하지 않았는지
+4. `docs/research/30_WEEK_TIMELINE_REDESIGN.md` — 지금 구조(7일 주 · 사건 풀 · 평가→요청 연결)가 왜 이런지
+5. `DEVELOPMENT.md` — 구현됨/부분 구현/미구현 상태. **"현재 상태" 절이 지금이고, "최근 기록"은 최신순이다.**
+   더 오래된 역사는 `docs/research/history/DEVELOPMENT_HISTORY.md`
 6. 작업과 관련된 `docs/research/` 문서와 `DECISIONS.md`
 
 `docs/research/` 에는 지금 기준 문서만 있다. 지나온 기획·명세·프롬프트(01~12, 14~18, 24, 26, 27)는
@@ -20,11 +20,13 @@
 ## 연구의 중심
 
 - 주제: **Resident Agents as Evaluators**
-- 연구 아티팩트: **Simulated Rural Village**
-- 평가 대상: **MEDial** — an AI Care Orchestrator
-- 검증 사례: **Improving MEDial with a Simulated Rural Village**
+- 연구 아티팩트: **Dially** — 마을 주민 시뮬레이터(Simulated Rural Village). 사람들에게 연락한다는 *Dial*과
+  *Diary*의 결합어(연구자 정함, 2026-10-17).
+- 평가 대상: 이름 없는 **AI 조율자**(AI Care Orchestrator, 화면에서는 'AI 스피커'·'AI'). 서비스에 이름을 붙이지
+  않는다 — 연구의 중심이 서비스가 아니라 주민 시뮬레이터라서 이름이 시선을 나눈다(연구자 지시).
+- 검증 사례: **Improving an AI Care Orchestrator with a Simulated Rural Village**
 
-MEDial 자체, 범용 사회 시뮬레이터, 3D 마을, 자동 정책 최적화가 연구의 주제가
+AI 조율자 자체, 범용 사회 시뮬레이터, 3D 마을, 자동 정책 최적화가 연구의 주제가
 아니다. 주민 에이전트가 자신이 경험한 서비스를 어떤 근거로 평가하고, 그 평가가 시스템 수정에
 어떻게 쓰이며, 실제 주민 평가와 어디서 일치/충돌하는지가 중심이다.
 
@@ -68,15 +70,28 @@ MEDial 자체, 범용 사회 시뮬레이터, 3D 마을, 자동 정책 최적화
 예외는 연구자가 정한 인과 쌍 둘(E1→E8, E4→E6)뿐이며 거기서도 뒤 사건은 앞 사건에서 자기가 겪은 것만 안다.
 그 밖의 확장(30일 곡선, 학습·호감도 갱신)은 하지 않는다.
 
-기본 UI는 하나의 길이다: 소개 영상 → 관찰(사례와 서비스 경험) → 주민 평가 → 수정안 고르기(개선과 확인).
-화면은 저장된 기록을 **읽기만** 한다. 옛 준비 · 비교 · 변경 작성기 · 현장 기록지 화면은 2026-10-10에
-연구자 결정으로 지웠다 — 다시 만들지 않는다. 원시 로그, 해시, fork/rerun, 모델·예산, 전체 계보는 서버의
-감사 API와 `docs`에 있다.
+기본 UI는 하나의 길이다: 소개 영상 → **한 주**(요일 일곱 칸, 사건이 있는 날과 없는 날) → 사건 장면 → 주민 평가 →
+수정 요청 고르기 → 고른 요청이 반영된 장면과 주민 평가 → 다시 한 주. 사건은 관객이 고르고 전부 볼 필요가 없다.
+**응급 사건은 선택지가 없다** — 사람의 안전이 걸린 순간은 고르는 것이 아니라 일어난 일을 읽는다(연구자 결정,
+2026-10-18). 화면은 미리 만들어 둔 기록을 **읽기만** 한다. 이전 3일 구조(일차 · 사흘 분기 · 나무 걷기)와 옛 준비 ·
+비교 · 변경 작성기 · 현장 기록지 화면은 지웠다 — 다시 만들지 않는다. 그 구조와 엔진은 `audience-tablet-split`
+브랜치(v3)에 보존돼 있다.
 
-서버에서 새 실행을 만드는 경로는 **Change Set 확정 하나**다. 두 번째 실행 경로를 다시 만들지 않는다.
-운영 규칙은 `iteration/semantic_rules.py`의 타입에서만 나오고, 전후 문장과 실행 바인딩은 거기서
-생성된다 — 문장이나 바인딩을 따로 편집하는 입력을 다시 만들지 않는다. 공동체 자료(주민·역할·
-관계·장부·시나리오)는 `case_bundle.py`의 CaseBundle에 있고, 엔진에 특정 주민 id를 적지 않는다.
+사건 풀(`fixtures/week/`)이 연구 자료의 단일 출처다: 사건과 요청(`briefs.json`), 요일 배치(`schedule.json`),
+대화록(`dialogue.json`), 주민 평가와 평가→요청 연결(`evaluations.json`). 서버는 이것을 읽고 **검증해서 한 문서로
+내려줄 뿐**(`server/app/simulation/week.py`) 모델을 부르지 않는다. 모델을 부르는 것은 오프라인 도구
+`scripts/gen_week_dialogue.py` · `scripts/gen_week_evaluations.py` 뿐이다. 서버에서 새 실행을 만드는 경로는 없다
+— 두 번째 실행 경로를 만들지 않는다.
+
+- 요청은 규칙 9종(`briefs.json`의 `rules[].type`) 안에서만 번역한다. **요청 문장은 화면 레이블일 뿐 실행 입력이
+  아니다.** 규칙 밖의 변경은 요청으로 만들지 않는다.
+- **요청은 주민 평가에서 나온다.** 평가는 요청을 모르는 채 쓰이고, 그다음 `gen_week_evaluations.py link`가 요청마다
+  근거가 된 평가 대목을 찾는다. 근거가 없는 요청(`none`)은 서버가 읽기를 거부한다. 근거가 약한 요청(`weak`)은 화면에서
+  "근거가 약한 요청"으로 표시한다 — 숨기지 않는다. 평가를 요청에 맞춰 쓰지 않는다.
+- 주민 평가는 **겪은 대사만** 인용한다. 겪은 줄은 모델이 아니라 코드가 계산하고(`gen_week_evaluations.py`), 서버가
+  다시 검사한다(`week.py`).
+- 사건은 요일에 묶이지 않는다. 요일은 `schedule.json`에서만 정하고, 사건 내용에는 요일·"다음 날"·"어제" 같은 말을
+  쓰지 않는다. 다음 세션에는 다른 요일에 놓이거나 빠지거나 새 사건이 더해질 수 있다.
 
 ## 변경 완료 조건
 

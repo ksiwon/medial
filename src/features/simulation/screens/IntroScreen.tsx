@@ -466,7 +466,7 @@ function PlaceFilm() {
 
 /**
  * Drawn while the narrator says the Dially was built (scene 4), in the order of the work it stands for:
- * the designer conceives MEDial, the simulated village is built to apply it to, the real interviews raise its twelve
+ * the designer conceives the AI orchestrator, the simulated village is built to apply it to, the real interviews raise its twelve
  * residents (from `after`, when that sentence begins), and last the residents' evaluation travels back to the
  * designer. Every arrow is drawn after the thing it leaves and before the thing it reaches.
  */
@@ -486,7 +486,7 @@ function Diagram({ after }: { after: number }) {
   return (
     <Drawn viewBox="0 0 1200 540" aria-hidden style={{ left: '7vw', top: '8vh', width: '66vw', height: 'auto' }}>
 
-      {/* 1. The designer conceives MEDial. */}
+      {/* 1. The designer conceives the AI orchestrator. */}
       <g className="in" style={at(0.4)}>
         <rect x={10} y={185} width={210} height={120} rx={30} fill={PAPER} />
         {label(115, 240, 28, INK, '서비스 디자이너', 800)}

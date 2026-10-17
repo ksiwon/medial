@@ -1,29 +1,31 @@
-# Resident Agents as Evaluators
+# Dially — Resident Agents as Evaluators
 
-**Improving MEDial with a Simulated Rural Village.** 이 저장소의 연구 주제는 MEDial 자체가
-아니라, 인터뷰 기반 주민 에이전트가 자신이 경험한 서비스를 근거와 함께 평가하고 그 평가가
-AI Care Orchestrator 수정에 어떻게 쓰일 수 있는지 탐색하는 것입니다.
+**마을 주민 시뮬레이터.** 이 저장소의 연구 주제는 서비스(AI 조율자) 자체가 아니라, 인터뷰 기반 주민 에이전트가
+자신이 경험한 서비스를 근거와 함께 평가하고 그 평가가 서비스 수정에 어떻게 쓰일 수 있는지 탐색하는 것입니다.
+서비스에는 이름을 붙이지 않습니다 — 'AI 스피커', 'AI 조율자', 'AI'로 부릅니다.
 
-은점마을 12인의 하루를 원자료에서 가져와 재구성하고, "응답이 없는 안부 확인을 누구의 시간으로
-해결할 것인가" 같은 사례에서 **경험 사건 → 점수 없는 주민 평가 → 운영 규칙 하나의 수정 →
-연구자 확인 → 재실행 → 평가 차이 → 실제 주민에게 물을 것**을 봅니다.
+한 주(월~일) 동안 은점마을에서 있었던 **사건 8개**를 서비스 디자이너가 골라 봅니다. 사건은 요일마다 하나씩
+일어나지 않습니다 — 하루에 둘이 겹치기도 하고 아무 일 없는 날도 있습니다. 한 사건을 열면:
 
-화면은 하나의 길입니다: **소개 영상 → 1일차(관찰) → 주민 평가 → 수정안 고르기 → 다음 날**. 하루가 끝나면
-주민 평가로 안내하고, 바꿀 수 있는 것은 지원되는 운영 규칙의 **값**뿐이며, 화면의 문장과 실행되는
-값은 같은 규칙에서 만들어집니다. 화면은 저장된 기록을 **읽기만** 합니다 — 화면에서 새 실행을 만드는 길은
-없습니다(2026-10-10에 옛 준비 · 비교 · 현장 기록지 화면과 함께 지웠습니다).
+> **사건 장면 → 그 일을 겪은 주민의 평가(어느 대사를 근거로 삼았는지까지) → 평가에서 나온 수정 요청 →
+> 고른 요청대로 다시 펼쳐지는 장면 → 그 장면을 겪은 주민의 평가**
 
-- **두 버전이 있습니다.** `sim`은 미리 돌려 둔 기록을 재생하고 모델을 부르지 않습니다 — 지금은
-  전시 기록(은점마을 사흘 · 27경로)이고, real에서 얼린 기록으로 바꿀 수 있습니다.
-  `real`은 서버가 실시간으로 만든 기록을 읽는 버전입니다(서버에는 생성 API가 남아 있지만 화면에는 그것을
-  시작하는 곳이 없습니다).
-- 키는 real 서버 프로세스만 `server/.env` 에서 읽습니다. sim은 키를 읽지 않습니다. 키가 없으면
-  온라인 어댑터를 고를 수 없고, 호출 실패를 규칙 결과로 대체하지 않습니다.
-- 민감한 원자료는 저장소에도, 프론트 번들에도 들어가지 않습니다.
-- 합성 데이터로도 그대로 실행되며, 화면 상단 배지가 합성인지 원자료인지 항상 표시합니다.
+모든 요청에는 바라는 것과 함께 **따를 부담**이 있고, 주민의 말에 근거가 약한 요청은 "근거가 약한 요청"으로
+표시됩니다. 사람의 안전이 걸린 **응급 사건은 선택지가 없습니다** — 고르는 것이 아니라 일어난 일을 읽습니다.
+합성 주민의 평가는 실제 주민의 의견·만족도·동의가 아닙니다. 모든 평가에 그렇게 적혀 있고, 실제 주민이 나중에
+확인·반박·정정할 대상입니다.
 
-먼저 읽을 것: **[DEVELOPMENT.md](DEVELOPMENT.md)** (현재 상태 · 실행 방법 · 최근 기록),
-그다음 [docs/research/](docs/research/).
+- 화면은 미리 만들어 둔 기록을 **읽기만** 합니다. 서버에는 모델도 엔진도 실행 경로도 없습니다.
+- 대화록과 평가는 오프라인 도구가 쓰고(`scripts/gen_week_*.py`), 서버는 그것을 읽어 **연구 규칙을 검사한 뒤**
+  한 문서로 내려줍니다 — 규칙을 어긴 기록은 화면에 닿지 않고 오류와 이유로 멈춥니다.
+- 민감한 원자료는 저장소에도, 프론트 번들에도 들어가지 않습니다. 이름은 가명, 그림은 지어낸 인물입니다.
+
+먼저 읽을 것: **[AGENTS.md](AGENTS.md)** (작업 지침과 지켜야 할 경계), **[DEVELOPMENT.md](DEVELOPMENT.md)**
+(현재 상태 · 최근 기록), [docs/research/30_WEEK_TIMELINE_REDESIGN.md](docs/research/30_WEEK_TIMELINE_REDESIGN.md)
+(지금 구조가 왜 이런지).
+
+> **브랜치.** 이 브랜치(`v4-week-timeline`)는 한 주 · 사건 풀 구조입니다. 이전의 사흘 · 27경로 구조와 시뮬레이션
+> 엔진은 `audience-tablet-split`(v3, 두 화면)과 `single-screen`(한 화면)에 그대로 남아 있습니다.
 
 ---
 
@@ -32,172 +34,112 @@ AI Care Orchestrator 수정에 어떻게 쓰일 수 있는지 탐색하는 것�
 처음 한 번:
 
 ```bash
-python -m pip install -r server/requirements-sim.txt
+python -m pip install -r server/requirements.txt
 npm install
 ```
 
-그다음부터는 둘 중 하나를 띄웁니다. 서버와 화면을 함께 띄우고 브라우저를 엽니다.
+그다음 서버와 화면을 함께 띄우고 브라우저를 엽니다.
 
-**Windows:** 탐색기에서 `run-sim.cmd` 또는 `run-real.cmd` 를 더블클릭합니다. 창이 하나 열려 로그를
-보여 주고 브라우저가 열립니다. 끝낼 때는 그 창에서 **Ctrl+C**. 창을 그냥 닫았다면 서버가 남아 있을
-수 있는데, 다음 실행이 그것을 그대로 쓰고 `run-sim.cmd --stop` 으로 내릴 수 있습니다.
-Git for Windows(Git Bash)가 있어야 합니다 — `.cmd` 가 그 bash로 `scripts/launch.sh` 를 부릅니다.
-macOS·Linux·Git Bash에서는 `./run-sim.sh` · `./run-real.sh` 입니다.
+**Windows:** 탐색기에서 `run-exhibition.cmd` 를 더블클릭합니다. 끝낼 때는 그 창에서 **Ctrl+C**. 창을 그냥 닫았다면
+다음 실행이 떠 있는 것을 그대로 쓰고 `run-exhibition.cmd --stop` 으로 내립니다. Git for Windows(Git Bash)가 있어야
+합니다. macOS·Linux·Git Bash에서는 `./run-exhibition.sh` (`--no-open` 브라우저를 열지 않음 · `--stop` 내림).
 
-| | sim — 미리 돌려 둔 기록 | real — 실시간 생성 |
-|---|---|---|
-| 띄우기 | `./run-sim.sh` · `run-sim.cmd` | `./run-real.sh` · `run-real.cmd` |
-| 하는 일 | 미리 돌려 둔 기록을 그대로 재생 (지금은 전시 기록: 첫 설정 → 하루 → 주민 평가 → 수정안 → 다음 날, 사흘) | 서버가 만든 기록을 같은 화면으로 읽음 |
-| 모델·키 | 부르지 않음 · 읽지 않음 | `server/.env` 의 `OPENAI_API_KEY` 로 서버가 부름 (비용이 듭니다) |
-| 새 실행·수정안 확정·현장 기록 | 하지 않음 (서버가 403으로 거부) | 서버 API로만 가능 (화면에는 없음) |
-| 기록 | `local-data/runs/sim.sqlite3` (전시 기록, 또는 real의 얼린 사본) | `local-data/runs/real.sqlite3` |
-| 주소 | 서버 8020 · <http://localhost:5180> | 서버 8010 · <http://localhost:5173> |
+서버 <http://127.0.0.1:8020> · 화면 <http://localhost:5180> (`MEDIAL_SIM_PORT` · `MEDIAL_WEB_PORT` 로 바꿉니다).
+모니터는 `/?role=wall`, 태블릿은 모니터의 QR 코드로 엽니다. 직접 띄우려면 `python server/sim_main.py` 와
+`npm run dev`(프론트의 `/api/sim` 은 `MEDIAL_SIM_URL`, 기본 `127.0.0.1:8020` 으로 프록시됩니다).
 
-포트와 기록이 달라서 둘을 동시에 띄워 둘 수 있습니다. 표의 포트는 첫 후보입니다 — 거기에 같은
-버전의 MEDial 이 떠 있으면 그대로 쓰고, 다른 프로그램이나 다른 버전이 쓰고 있으면 다음 빈 포트
-(5181, 5182 …)로 옮겨 띄우고 창에 그 주소를 알립니다. `--stop` 은 지난 실행이 쓴 포트에서 MEDial 만
-내리고, `--no-open` 이면 브라우저를
-열지 않습니다. Ctrl+C 는 그 스크립트가 띄운 것만 정리합니다. 하는 일은 전부
-`scripts/launch.sh` 에 있습니다.
+### 대화록 · 평가 만들기 (모델을 부르는 유일한 곳)
 
-**sim이 재생하는 기록은 둘 중 하나입니다.** 지금은 전시 기록입니다 — 전시 생성기가 사흘 동안
-날마다 셋 중 하나를 고르는 27경로를 전부 미리 돌려 둔 것(대화·주민 평가·수정안 포함)이고, 앱의 엔진이
-만든 것이 아니라는 것을 기록과 화면이 함께 말합니다. 그 기록은 `local-data/runs/sim.sqlite3` 하나이며(git 밖),
-가져오는 스크립트는 없습니다(2026-10-10 삭제). 이 파일을 잃으면 다시 만들 수 없으니 따로 복사해 둡니다.
-
-real에서 돌린 실험을 대신 재생하려면 얼립니다 (전시 기록을 덮어씁니다):
+서버는 모델을 부르지 않습니다. 사건의 대화록과 주민 평가는 아래 도구가 `fixtures/week/` 에 씁니다(비용이 듭니다).
+키는 **`server/.env`** 의 `OPENAI_API_KEY` 에서만 읽습니다(양식은 `server/.env.example`). 모델은 `gpt-6.1-sol`.
 
 ```bash
-python scripts/freeze_sim.py             # real.sqlite3 → sim.sqlite3
-python scripts/freeze_sim.py --replace   # 이미 있는 sim 기록을 덮어쓸 때
+python scripts/gen_week_dialogue.py make --only E1 E4.B   # 사건 · 장면별로 다시 쓴다 (이미 있는 것은 그대로)
+python scripts/gen_week_dialogue.py read                  # dialogue.json → 검토용 dialogue.html · .md
+python scripts/gen_week_evaluations.py make --only E1     # 겪은 줄만 인용하는 주민 평가
+python scripts/gen_week_evaluations.py link               # 요청마다 근거가 된 평가 대목을 찾는다 (없으면 none)
 ```
 
-아직 돌고 있는 세션이 있으면 얼리지 않습니다. 얼린 뒤 real에서 더 돌린 것은 다시 얼리기
-전까지 sim에 나타나지 않습니다.
+검토용 `fixtures/week/dialogue.html` · `evaluations.html` 은 장면 · 평가마다 좋음/고침과 메모를 남기고 한 번에 복사할
+수 있는 한 장짜리 페이지입니다. **연구자가 읽고 확정하기 전에는 평가 · 음성 · 화면에 쓰지 않습니다.**
 
-직접 띄우려면 `python server/sim_main.py --mode sim|real` 과 `npm run dev` 를 각각 실행합니다.
-버전을 정하지 않으면 서버가 뜨지 않습니다. 프론트의 `/api/sim` 요청은 `MEDIAL_SIM_URL`
-(기본 `127.0.0.1:8010`)로 프록시됩니다. Windows의 `bash.exe`가 Linux Python을 먼저 찾더라도
-의존성이 설치된 Windows Python을 자동으로 사용합니다. 특정 Python을 고정하려면
-`MEDIAL_PYTHON=/path/to/python ./run-real.sh` 로 지정합니다.
-
-### 모델 키
-
-real 버전에만 필요합니다. 키는 **`server/.env` 에 두며 real 서버 프로세스만 읽습니다**
-(실행 스크립트는 키가 적혀 있는지만 보고 값은 읽지 않습니다). 양식은 `server/.env.example`.
-
-공급자는 OpenAI 하나입니다 (`OPENAI_API_KEY`). 판단이 결과인 자리는 `gpt-6.1-sol`, 가벼운 모델로
-충분한 자리는 `gpt-6-luna` — 리뷰·개선과 MEDial 머리·기관은 `gpt-6.1-sol`, 주민은 `gpt-6-luna`.
-고르는 기준은 [DEVELOPMENT.md](DEVELOPMENT.md) 의 "모델 키는 `server/.env` 에 있습니다".
-
-real의 준비 화면은 키가 있으면 네 층(마을·기관·리뷰·개선)을 모두 모델로 두고 호출 상한 300회로
-시작합니다. 층마다 규칙으로 되돌릴 수 있습니다. 키가 없으면 온라인 어댑터를 고를 수 없고
-(session 생성 400), 호출이 실패해도 규칙 결과로 대체하지 않습니다.
-
-### 원자료 없이 실행
-
-원자료가 없으면 자동으로 `fixtures/synthetic/` 의 합성 마을·합성 페르소나로 돕니다. 지형·이름·
-나이·관계가 전부 지어낸 값이고, 화면과 API가 `synthetic` 이라고 표시합니다.
-
-### 원자료로 실행
-
-`docs/research/source-manifest.json` 이 가리키는 로컬 경로에 원자료가 있을 때만 동작합니다.
-원자료 자체는 저장소 밖에 있고 커밋되지 않습니다.
-
-```bash
-cd scripts && python -m import_village
-```
-
-`local-data/normalized/` (git-ignored) 에 레지스트리와 지도 래스터를 만듭니다. 페르소나는
-서버가 실행 시점에 직접 컴파일하며, 이름·인터뷰 인용·역할 프롬프트는 컴파일 결과에 담기지
-않습니다.
+그림과 음성은 저장소 밖(`local-data/`)에 둡니다. 그림은 `node scripts/art.mjs`(`--add P1.resting` 처럼 새 컷을
+더함), 음성은 `scripts/tts_voices.py` · `scripts/tts_scenes.py` 입니다.
 
 ## 검증
 
 ```bash
-npm run build && npm test && python -m pytest server/tests/simulation -q
+npm run build && npm test && python -m pytest server/tests -q
 ```
 
-실제 브라우저까지 보려면:
+실제 브라우저까지 보려면 (진짜 서버 + 모니터 2560×1440 + 태블릿 1180×820으로 한 주를 끝까지 걷습니다):
 
 ```bash
 npm run e2e
 ```
 
-현재 기준선 (2026-10-10에 이 저장소에서 실행): build 통과 · vitest 91 · pytest 446 · Playwright 2건.
-테스트 수보다 실패 여부와 연구 경계 검사를 우선하며, 전부 합성 픽스처와 별도 DB(`.run/e2e/`)로
-실행됩니다 — 연구 DB는 건드리지 않습니다. e2e는 키를 비운 서버의 API로 기록 하나를 만든 뒤 화면이 소개부터
-수정안 고르기까지 걷는지 봅니다.
+테스트 수보다 실패 여부와 연구 경계 검사를 우선합니다. 서버 테스트는 한 주의 기록이 규칙(겪은 줄만 인용 · 시뮬레이션
+표기 · 근거 없는 요청 거부 · 인과 순서)을 어기면 읽기를 멈추는지, 서버가 읽기만 하는지를 봅니다.
 
 ## 저장소 구조
 
 | 경로 | 내용 |
 |---|---|
-| `server/app/simulation/` | 사건 엔진 · 관측 경계 · 정책 · 기관 · 동승 · 페르소나 컴파일러 · 사례 자료(CaseBundle) · SQLite |
-| `server/tests/simulation/` | 회귀 테스트 (전부 합성 픽스처 사용) |
-| `src/features/simulation/` | 세 화면 · 지도 · 장면 재생(`scene/`) · 주민 평가 · 규칙 편집기 · 비교 · 현장 기록 · sim의 기록 목록 |
-| `run-sim.*` · `run-real.*` · `scripts/launch.sh` | 두 버전의 실행 파일과 그 공통 스크립트 |
-| `scripts/freeze_sim.py` | real의 기록을 sim이 재생할 사본으로 얼린다 |
-| `scripts/gen_dialogue.py` · `tts_voices.py` · `tts_scenes.py` | 전시 대화록(장면 설명 → 줄) · 주민별 목소리 · 줄별 음성 만들기. 확정 대본은 `fixtures/exhibition/` |
-| `scripts/art.mjs` | 관찰 화면의 장면 그림(배경·인물 레이어)을 그린다 → `local-data/art/` |
-| `scripts/import_village/` | 원자료 → 정규화 레지스트리 (출처 검증 포함) |
-| `docs/research/` | 지금 기준인 연구 문서 · 데이터 계약 · 설계 결정 기록 |
-| `docs/research/history/` | 지나온 기획·명세·프롬프트 (역사. 지금 구조를 정당화하지 않습니다) |
-| `docs/presentations/` | 발표자료 · 연구노트 — `2026-09/`(9월 발표·연구노트) · `2026-10-07-exhibition/`(전시 발표·영상). 캡처와 PDF는 커밋하지 않습니다 |
-| `local-data/` | 원자료에서 파생된 레지스트리(`normalized/`), 두 버전의 실행 기록(`runs/`), 장면 그림(`art/`), 음성(`audio/`), 3안 영상(`video/`), 목소리 설정(`tts/`). **커밋하지 않습니다.** 어디에 무엇이 있는지는 `docs/README.md` |
+| `fixtures/week/` | **연구 자료의 단일 출처.** `briefs.json`(사건 풀 · 요청 · 규칙) · `schedule.json`(요일 배치) · `dialogue.json`(대화록) · `evaluations.json`(주민 평가 · 평가→요청 연결) |
+| `server/app/simulation/` | 읽기 전용 서버: `week.py`(검증해 한 문서로) · `assets.py`(그림 · 음성) · `api/routes.py` · `api/stage.py`(모니터↔태블릿 중계) |
+| `src/features/simulation/week/` | 한 주 · 장면 · 평가 · 요청 · 결과 화면과 걷기 상태 |
+| `src/features/simulation/stage/` | 모니터(`wall.ts`)와 태블릿(`PadApp`)이 주고받는 것 |
+| `scripts/gen_week_*.py` · `model.py` | 대화록 · 평가를 쓰는 오프라인 도구와 모델 호출 |
+| `scripts/art.mjs` · `tts_*.py` | 장면 그림 · 음성 만들기 |
+| `scripts/two_screens.cjs` · `stress_two_screens.cjs` · `capture_*.cjs` | 전시장 운영 도우미 · 두 화면 괴롭히기 · 캡처 |
+| `run-exhibition.*` | 서버와 화면을 함께 띄우는 단일 진입점 |
+| `docs/research/` | 지금 기준인 연구 문서 · 설계 결정 기록 (`history/` 는 지나온 것) |
+| `local-data/` | 장면 그림(`art/`), 음성(`audio/`), 원자료에서 파생된 것. **커밋하지 않습니다** |
 
+## 전시장 두 화면 (모니터 + 태블릿)
 
-## 전시장 두 화면 (모니터 + 태블릿) — `audience-tablet-split` 브랜치
-
-이 브랜치의 전시는 화면이 둘이다. 한 화면으로 걷는 판은 `single-screen` 브랜치에 그대로 있다(둘 다 남긴다).
+전시는 화면이 둘입니다. 한 화면으로 걷는 판은 `single-screen` 브랜치에 있습니다.
 
 | 화면 | 주소 | 기기 | 하는 일 |
 |---|---|---|---|
-| 모니터 | `/?role=wall` | Mac Studio에 붙은 2560px 이상 모니터 | 보여 주기만 한다. 눌리는 것이 없다. 소리(음성·배경음)도 여기서 난다 |
-| 태블릿 | `/?role=pad` | iPad Air 4세대 (가로, 1180×820) | 만지는 것은 전부 여기. 시작 · 재생 · 건너뛰기 · 시각 · 주민 고르기 · 수정안 고르기 · 처음으로 |
+| 모니터 | `/?role=wall` | 2560px 이상 모니터 | 보여 주기만 한다. 눌리는 것이 없다. 소리(음성 · 배경음)도 여기서 난다 |
+| 태블릿 | `/?role=pad` | iPad Air 4세대 (가로, 1180×820) | 만지는 것은 전부 여기. 시작 · 사건 고르기 · 줄 넘기기 · 주민 고르기 · 요청 고르기 · 처음으로 |
 
-흐름은 하나다. 태블릿 "시작하기" → 모니터에 소개 영상 → 1일차(태블릿: 재생·정지·다음 장면·시각 슬라이더) → 평가(태블릿에서 한 사람을 누르면
-모니터가 그 사람의 인터뷰 전체를 보여 주고, "목록으로"로 돌아온다) → 수정안 3개(태블릿에서 한 번 터치로 확정, 모니터에서 다음 날 시작) → 사흘 끝 → 처음으로.
-지도는 모니터에서 마을 전체로 고정되어 있고 태블릿에도 지도 조작이 없다.
+흐름은 하나입니다. 태블릿 "시작하기" → 모니터에 소개 영상 → **이번 주**(태블릿에서 사건 하나를 고름) → 사건 장면(한 줄씩
+저절로 넘어가고 태블릿으로 되돌리거나 건너뜀) → 주민 평가(한 사람을 누르면 모니터가 그 사람의 평가와 근거 대사를 보여 줌) →
+수정 요청(태블릿에서 한 번 터치로 확정) → 반영된 장면과 평가 → 이번 주(읽은 사건이 표시됨).
 
-**구조.** 모니터 브라우저가 기존 스토어·타이머를 그대로 쥐고, 태블릿은 누른 것을 서버에 알린다. 서버(`server/app/simulation/api/stage.py`)는
-태블릿의 명령을 모니터로, 모니터가 지금 보여 주는 것을 태블릿으로 전달만 하고(SSE) 아무것도 저장하지 않는다. 새 실행을 만드는 길은 늘지 않았다 —
-고른 수정안은 기록 안에 이미 돌려 둔 다음 날을 여는 것이다. 자동 넘김(관찰 끝 5초, 평가 15초, 인터뷰를 연 채로 60초 뒤 목록 복귀, 마무리 90초)은 모니터가 쥔다.
+**구조.** 모니터 브라우저가 걷기 상태와 타이머를 쥐고, 태블릿은 누른 것을 서버에 알립니다. 서버(`api/stage.py`)는 태블릿의
+명령을 모니터로, 모니터가 지금 보여 주는 것을 태블릿으로 전달만 하고(SSE) 아무것도 저장하지 않습니다.
 
-**띄우기와 짝짓기 (QR).** 기본은 Mac Studio이고, 갤럭시북5 Pro(Windows) 노트북에서도 같은 순서로 한다. 서버와 화면은 한 기계에서 돌리고, iPad는 같은 와이파이로 붙는다.
+**띄우기와 짝짓기 (QR).** 서버와 화면은 한 기계에서 돌리고, iPad는 같은 와이파이로 붙습니다.
 
 ```
-./run-sim.sh --no-open                 # (Windows: run-sim.cmd --no-open) 서버 8020 + 화면 5180, 끝에 터미널에 QR이 찍힌다
+./run-exhibition.sh --no-open          # (Windows: run-exhibition.cmd --no-open) 서버 8020 + 화면 5180
 node scripts/two_screens.cjs wall      # 모니터 창을 키오스크로 연다 (Chrome/Edge, 소리 자동 재생 허용)
-node scripts/two_screens.cjs qr        # QR을 다시 찍는다 (터미널을 지웠을 때)
+node scripts/two_screens.cjs qr        # QR을 터미널에 찍는다
 node scripts/two_screens.cjs check     # 서버 · 프록시가 이 기계에서 열리는지 확인한다
 ```
 
-1. 모니터가 열리면 **QR 코드 화면**이 뜬다(터미널의 QR과 같은 주소). 주소를 손으로 입력하는 일은 없다.
-2. iPad 카메라로 QR을 비추면 Safari가 열리고 **연결하기** 버튼이 나온다. 누르면 모니터가 대기 화면으로, 태블릿이 시작하기 화면으로 넘어간다.
-3. QR 속 토큰은 서버를 켤 때마다 새로 만들어진다. 토큰이 없는 접속은 거절되므로(같은 와이파이의 낯선 기기가 주소만 알아서 조작하는 것을 막는다) 매 실행마다 QR로 들어온다.
-4. 태블릿은 한 대만 붙는다. 다른 iPad가 QR로 들어오면 먼저 붙은 것은 "다른 태블릿이 연결되었습니다"가 되고 해제된다. 같은 iPad가 끊겼다 돌아오면 연결하기를 다시 묻지 않고 하던 자리에서 이어진다.
-5. QR이 안 읽히면 터미널의 "이 주소를 iPad Safari에 입력" 줄을 쓴다.
+1. 모니터가 열리면 **QR 코드 화면**이 뜹니다(터미널의 QR과 같은 주소). 주소를 손으로 입력하는 일은 없습니다.
+2. iPad 카메라로 QR을 비추면 Safari가 열리고 **연결하기** 버튼이 나옵니다. 누르면 모니터가 대기 화면으로, 태블릿이 시작하기 화면으로 넘어갑니다.
+3. QR 속 토큰은 서버를 켤 때마다 새로 만들어집니다. 토큰이 없는 접속은 거절되므로(같은 와이파이의 낯선 기기가 주소만 알아서 조작하는 것을 막습니다) 매 실행마다 QR로 들어옵니다.
+4. 태블릿은 한 대만 붙습니다. 다른 iPad가 QR로 들어오면 먼저 붙은 것은 "다른 태블릿이 연결되었습니다"가 되고 해제됩니다. 같은 iPad가 끊겼다 돌아오면 하던 자리에서 이어집니다.
+5. QR이 안 읽히면 터미널의 "이 주소를 iPad Safari에 입력" 줄을 씁니다. 주소를 잘못 고르면 `MEDIAL_LAN_HOST=192.168.0.x` 로 직접 지정합니다.
 
-QR의 주소는 서버가 이 기계의 네트워크 주소를 찾아 만든다. VirtualBox · Docker · WSL 같은 기계 안쪽 주소는 뺀다. 주소를 잘못 고르면 `MEDIAL_LAN_HOST=192.168.0.x` 로 직접 지정한다.
-iPad에서는 공유 → "홈 화면에 추가"로 전체 화면 앱처럼 쓸 수 있지만, 코드가 실행마다 바뀌므로 다음 실행에서는 다시 QR로 들어와야 한다.
+- **Windows 노트북**: 와이파이가 "공용"이면 Windows 방화벽이 iPad의 접속을 막습니다. 관리자 PowerShell에서 한 번
+  `powershell -ExecutionPolicy Bypass -File scripts/allow_tablet_firewall.ps1` (5180 포트, 같은 서브넷만 허용. 끝나면 `-Remove`). 절전 · 화면 끄기는 전시 동안 끕니다.
+- **Mac Studio**: 시스템 설정 → 네트워크 → 방화벽이 켜져 있으면 `node` 의 수신 연결을 허용합니다. iPad와 같은 와이파이(또는 같은 공유기의 유선)여야 합니다.
+- **전시장 와이파이**: 기기끼리 통신을 막는 와이파이(클라이언트 격리, 게스트망)에서는 QR을 읽어도 열리지 않습니다. 전시 전에 현장 와이파이로 한 번 시험하고, 안 되면 휴대용 공유기나 폰 핫스팟에 두 기기를 붙입니다.
+- 두 기계 모두: API(8020)는 `127.0.0.1` 에만 열려 있어 iPad는 5180의 프록시로만 들어옵니다. 연결 정보(토큰)를 읽는 호출은 `localhost` 로 연 모니터 화면에만 답합니다.
+  화면이 끊기면 태블릿에 "끊겼습니다"가 뜨고 브라우저가 스스로 다시 붙습니다.
 
-- **Windows 노트북**: 와이파이가 "공용"이면 Windows 방화벽이 iPad의 접속을 막는다. 관리자 PowerShell에서 한 번
-  `powershell -ExecutionPolicy Bypass -File scripts/allow_tablet_firewall.ps1` (5180 포트, 같은 서브넷만 허용. 끝나면 `-Remove`). 절전 · 화면 끄기는 전시 동안 끈다.
-  노트북 화면(1536×864 등)에서도 모니터 화면은 같은 배치로 줄어든다(캡처로 확인). 큰 모니터를 HDMI로 물리면 2560 이상에서 글자가 더 커진다.
-- **Mac Studio**: 시스템 설정 → 네트워크 → 방화벽이 켜져 있으면 `node`의 수신 연결을 허용한다. iPad와 같은 와이파이(또는 같은 공유기의 유선)여야 한다.
-- **전시장 와이파이**: 기기끼리 통신을 막는 와이파이(클라이언트 격리, 게스트망)에서는 QR을 읽어도 열리지 않는다. 전시 전에 현장 와이파이로 한 번 시험하고, 안 되면 휴대용 공유기나 폰 핫스팟에 두 기기를 붙인다.
-- 두 기계 모두: API(8020)는 `127.0.0.1`에만 열려 있어 iPad는 5180의 프록시로만 들어온다. 연결 정보(토큰)를 읽는 호출은 `localhost`로 연 모니터 화면에만 답한다.
-  화면이 끊기면 태블릿에 "끊겼습니다"가 뜨고 브라우저가 스스로 다시 붙는다(서버가 8초마다 신호를 보내고, 24초 동안 아무것도 안 오면 새로 연다).
-
-**눈으로 확인 · 괴롭히기.** `node scripts/capture_two_screens.cjs` 가 모니터(2560×1440)와 태블릿(1180×820)을 동시에 열어 끝까지 걷고 `.run/shots/` 에 캡처한다. `node scripts/capture_pairing.cjs` 는 QR 짝짓기(토큰 없음 · 연결하기 · 이어서 · 두 번째 태블릿)를, `node scripts/stress_two_screens.cjs` 는 모니터 새로고침 · 모니터 두 개 · 연결 끊김과 복귀 · 연타 · 낡은 눌림 · 토큰 없는 눌림을 시험한다(모두 sim 서버 필요).
+**눈으로 확인 · 괴롭히기.** `node scripts/capture_week.cjs` 가 모니터와 태블릿을 동시에 열어 한 사건을 끝까지 걷고 `.run/week/` 에
+캡처합니다(`[주소] [폴더] [사건id] [요청id]`). `node scripts/capture_pairing.cjs` 는 QR 짝짓기를, `node scripts/stress_two_screens.cjs` 는
+모니터 새로고침 · 모니터 두 개 · 연결 끊김과 복귀 · 연타 · 낡은 눌림 · 토큰 없는 눌림을 시험합니다(서버가 떠 있어야 합니다).
 
 ## 전시장 브라우저 (소리)
 
-장면의 대사는 미리 만들어 둔 음성(`local-data/audio/`, git 밖)을 화면이 틀어 준다. 브라우저는 사용자가 한 번 만지기 전에는 소리를 막으니, 전시장 PC의 브라우저는
-자동 재생을 허용해 띄운다. Chrome: `chrome --kiosk --autoplay-policy=no-user-gesture-required http://localhost:5180/`. 소리가 막혀도 장면은 소리 없이 계속 간다.
-음성 파일이 없으면(합성 마을 · 파일 없음) 대사는 읽는 시간만큼 조용히 흐른다.
-
-**영상 모드(3안)** — 주소 뒤에 `?video=1` 을 붙이면(`http://localhost:5180/?video=1`) 영상이 있는 대사 줄은 생성 영상으로 나온다
-(`local-data/video/clips/`, git 밖 · `python scripts/video3_manifest.py` 가 `manifest.json` 을 만든다). 영상이 없는 줄은 사진 그대로이고,
-`?video=1` 이 없으면 사진 모드로 영상 파일이 있어도 쓰지 않는다. 영상 소리도 위와 같이 자동 재생을 허용해야 난다.
+장면의 대사는 미리 만들어 둔 음성(`local-data/audio/`, git 밖)을 화면이 틀어 줍니다. 브라우저는 사용자가 한 번 만지기 전에는 소리를 막으니, 전시장 PC의 브라우저는
+자동 재생을 허용해 띄웁니다. Chrome: `chrome --kiosk --autoplay-policy=no-user-gesture-required http://localhost:5180/?role=wall`. 소리가 막혀도 장면은 소리 없이 계속 갑니다.
+음성 파일이 없으면 대사는 읽는 시간만큼 조용히 흐릅니다.
