@@ -155,7 +155,7 @@ export default function SimulationApp() {
       {showWeek && <WeekScreen week={week} art={s.art} now={null} seen={w.seen} />}
       {w.pathStarted && telling && scene && (
         <SceneView week={week} scene={scene} line={w.lineIndex - before} art={s.art}
-          seconds={(LINE_MS / 1000) * scene.lines.length} position={{ at: at.scene + 1, of: scenes.length }} />
+          seconds={(LINE_MS / 1000) * scene.lines.length} position={{ at: at.scene + 1, of: scenes.length }} voices={s.voices} />
       )}
       {w.pathStarted && event && w.step === 'evaluations' && (
         <EvaluationsScreen week={week} event={event} evaluations={evaluationsOf(event, w.step, w.requestId)}

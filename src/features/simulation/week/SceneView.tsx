@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import styled, { css, keyframes } from 'styled-components';
 import { api } from '../api/client';
+import type { VoiceClip } from '../api/types';
 import { Figure } from '../scene/Figure';
+import { useLineVoice } from '../scene/voice';
 import { backdropOf, figureOf, FIT, type Fit } from './art';
 import { pill } from '../ui/primitives';
 import { inkA, night, px, radius, shadeA } from '../ui/theme';
@@ -173,9 +175,11 @@ interface Props {
   seconds: number;
   /** "2 / 5": where this scene is in the telling. */
   position: { at: number; of: number };
+  /** The recorded voices, by 'speaker|text'. A line without one is read in silence. */
+  voices?: Record<string, VoiceClip> | null;
 }
 
-export default function SceneView({ week, scene, line, art, seconds, position }: Props) {
+export default function SceneView({ week, scene, line, art, seconds, position, voices = null }: Props) {
   const [pushed, setPushed] = useState(false);
   useEffect(() => {
     setPushed(false);
@@ -186,6 +190,7 @@ export default function SceneView({ week, scene, line, art, seconds, position }:
   const current: Line | null = line === null ? null : scene.lines[line] ?? null;
   const previous: Line | null = line !== null && line > 0 ? scene.lines[line - 1] : null;
   const speaking = current?.speaker ?? null;
+  useLineVoice(voices, speaking, current?.text ?? null);
   // The frame the AI's voice comes out of: the one with its device, else the first.
   const aiFrame = Math.max(0, scene.frames.findIndex((f) => f.device));
   /** Which frame a speaker is in. The AI has no body: it speaks from its device. */

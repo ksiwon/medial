@@ -25,8 +25,6 @@ export type Command =
   | { name: 'week' }
   | { name: 'home' };
 
-export type CommandName = Command['name'];
-
 /** One day of the week, for the tablet's list: which events fall on it. */
 export interface DayBrief {
   day: string;

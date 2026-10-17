@@ -1,4 +1,4 @@
-import type { Evaluation, Line, Week, WeekEvent, WeekRequest, WeekScene } from './types';
+import type { Line, Week, WeekEvent, WeekRequest, WeekScene } from './types';
 
 // What the screens ask of the week. Pure: the same week always answers the same.
 
@@ -35,12 +35,6 @@ export function positionIn(scenes: WeekScene[], index: number): { scene: number;
   }
   return { scene: Math.max(scenes.length - 1, 0), line: 0, total, done: true };
 }
-
-/**
- * The line numbers an evaluation cites, as they are numbered across the variant's scenes. Used to light those
- * lines wherever the telling is shown beside the evaluation.
- */
-export const citedSet = (evaluation: Evaluation): Set<number> => new Set(evaluation.citedLines);
 
 /** The number a line has across a variant's scenes (the evaluations count that way). */
 export function numberOf(scenes: WeekScene[], sceneIndex: number, lineIndex: number): number {
