@@ -59,7 +59,7 @@ const Card = styled.article<{ $off?: boolean }>`
   display: grid;
   grid-row: span 7;
   grid-template-rows: subgrid;
-  row-gap: ${space.md};
+  row-gap: ${space.sm};
   align-content: start;
   word-break: keep-all;
   opacity: ${(p) => (p.$off ? 0.5 : 1)};
@@ -118,18 +118,46 @@ const From = styled.div`
 `;
 
 /** The rule, as it was and as it would be: what the next day is run under. */
+/**
+ * The moment the visitor is here for: what the rule says now, and what it will say once they choose.
+ * Two blocks, the old one faded and the new one lit by the accent bar, so the change is the first thing read
+ * on a card rather than a line of small print under it. Colour and surface only - no outline on text.
+ */
 const Rule = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${space.sm};
-  padding-top: ${px(16)};
+  gap: ${space.xs};
+  padding-top: ${space.md};
   border-top: 1px solid ${night.line};
   font-size: ${px(16)};
-  line-height: 1.6;
-  > small { font-size: ${px(12)}; font-weight: 800; letter-spacing: 0.1em; color: ${night.faint}; }
-  > s { color: ${night.faint}; text-decoration-color: ${inkA(0.35)}; }
-  > i { font-style: normal; color: ${night.accent}; font-weight: 800; line-height: 1; }
-  > b { font-weight: 700; color: ${night.ink}; }
+  line-height: 1.5;
+  > small {
+    ${pill('xs')}
+    align-self: flex-start;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: ${night.mute};
+    background: ${inkA(0.08)};
+  }
+  > s {
+    display: block;
+    padding: ${space.sm} ${space.md};
+    border-radius: ${radius.card};
+    color: ${night.faint};
+    background: ${inkA(0.04)};
+    text-decoration-color: ${inkA(0.3)};
+  }
+  > i { font-style: normal; color: ${night.accent}; font-weight: 800; line-height: 1; padding-left: ${space.md}; font-size: ${px(20)}; }
+  > small:nth-of-type(2) { color: ${night.accent}; background: ${night.accentSoft}; }
+  > b {
+    display: block;
+    padding: ${space.sm} ${space.md};
+    border-radius: ${radius.card};
+    font-weight: 700;
+    color: ${night.ink};
+    background: ${night.accentSoft};
+    box-shadow: inset ${px(4)} 0 0 ${night.accent};
+  }
 `;
 
 /** The three days, one beside the next: the wall's closing page. */

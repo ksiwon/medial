@@ -662,7 +662,7 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
         <Picture $src={src('FARM')} $on={scene >= 0} />
         <Caption>
           <Eyebrow $on={on(0)}>하루의 풍경</Eyebrow>
-          <Line $on={on(0)}>{'Dially는 마을 주민 시뮬레이터입니다.\n시골의 낮, 병원은 읍내에 있고 주민들은 밭과 바다에 계시죠.'}</Line>
+          <Line $on={on(0)}>{'Dially는 마을 주민 시뮬레이터입니다.\n시골의 낮, 병원은 읍내에 있고\n주민들은 밭과 바다에 계시죠.'}</Line>
         </Caption>
       </Scene>
 

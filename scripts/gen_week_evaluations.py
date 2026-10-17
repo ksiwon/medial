@@ -2,6 +2,7 @@
 
     python scripts/gen_week_evaluations.py make                  # every resident in every scene variant
     python scripts/gen_week_evaluations.py make --only E1 E4.B   # an event, or one variant
+    python scripts/gen_week_evaluations.py link                  # which before-evaluation each request rests on
     python scripts/gen_week_evaluations.py read                  # evaluations.json -> evaluations.html, for the researcher
 
 One evaluation is one resident's paragraph about one *variant* of one event: the event as it ran (the *before*
@@ -14,6 +15,11 @@ What makes it an evaluation and not a summary is the evidence rule (AGENTS.md): 
 they were in the scene for and heard. ``experienced`` is computed here from the dialogue - never by the model - and
 the check refuses any citation outside it. The after-scene evaluations are read as "this decision, as it landed";
 the before and after are not compared line by line, because who is in the scene changes with the request.
+
+``link`` is the other half of the chain *before evaluation -> request -> after evaluation*. The evaluations are written
+without knowing the requests (so they are not tuned to them); ``link`` then asks, per request, which before-evaluation
+it rests on and quotes the passage - or says it rests on none. A request with no basis is not hidden: it is reported,
+and the event's before scenes are what get fixed (docs/research/30 section 11), never the evaluation.
 
 Writes only files. The record (sim.sqlite3) is the later build step, after the researcher has read the evaluations.
 """
@@ -177,6 +183,61 @@ def make(only: list[str] | None) -> None:
     read()
 
 
+LINK_SYSTEM = """당신은 서비스 디자이너의 조수다. 주민들의 평가(수정 전)를 읽고, 디자이너의 수정 요청 하나가 그 평가의 어느 대목에서 나왔는지 찾는다.
+
+규칙
+- 근거는 주어진 평가 단락과 changeWish 안의 말이어야 한다. 평가에 없는 내용을 지어내지 않는다.
+- 요청이 겨냥한 문제를 평가가 직접 말하면 'direct', 비슷한 불편을 돌려 말하면 'weak', 평가 어디에도 없으면 'none'.
+- direct/weak이면 근거가 된 평가의 id(actor)와 그 평가에서 그대로 옮긴 짧은 인용(basis)을 쓴다. none이면 actor는 빈 문자열, basis도 빈 문자열.
+- 요청을 정당화하려고 평가를 억지로 읽지 않는다. 확신이 없으면 weak이나 none이다.
+
+JSON으로 verdict, actor, basis만 돌려준다."""
+
+LINK_SCHEMA = {
+    "type": "object", "additionalProperties": False,
+    "properties": {"verdict": {"type": "string", "enum": ["direct", "weak", "none"]},
+                   "actor": {"type": "string"}, "basis": {"type": "string"}},
+    "required": ["verdict", "actor", "basis"],
+}
+
+
+def link(only: list[str] | None) -> None:
+    from app.simulation.agents.provider import ModelProvider, policy_from_env  # noqa: E402
+
+    env = dict(os.environ)
+    dotenv = ROOT / "server" / ".env"
+    if dotenv.exists():
+        for line in io.open(dotenv, encoding="utf-8"):
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                env.setdefault(k.strip(), v.strip())
+    client = ModelProvider.from_env(env)._client(policy_from_env(env, mode="off").headModelId)
+    briefs, _ = load()
+    data = json.loads(OUT.read_text(encoding="utf-8"))
+    made = data["evaluations"]
+    links = data.get("links", {})
+    for ev in briefs["events"]:
+        if only and ev["id"] not in only:
+            continue
+        before = {v["actor"]: v for v in made.values() if v["event"] == ev["id"] and v["variant"] == "before"}
+        for rid, r in ev["requests"].items():
+            payload = {
+                "수정 요청": r["label"],
+                "수정 전 평가들(actor: 단락 / 고치고 싶은 점)": ["%s: %s / %s" % (a, v["paragraph"], v["changeWish"]) for a, v in before.items()],
+            }
+            raw, _ = client._post(LINK_SYSTEM, payload, LINK_SCHEMA, "request_basis", 800)
+            res = raw if isinstance(raw, dict) else json.loads(raw)
+            quoted = res["basis"] and any(res["basis"] in (v["paragraph"] + v["changeWish"]) for v in before.values())
+            if res["verdict"] != "none" and not quoted:
+                res["verdict"] = "weak"
+                res["note"] = "인용이 평가 원문과 일치하지 않아 약함으로 내림"
+            links["%s.%s" % (ev["id"], rid)] = res
+            print("== %s.%s %s %s %s" % (ev["id"], rid, res["verdict"], res["actor"], res["basis"][:60]))
+    data["links"] = links
+    OUT.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
 def read() -> None:
     """evaluations.json -> evaluations.html: the same page the dialogue is read on, one card per resident."""
     from html import escape as e
@@ -225,8 +286,10 @@ def main() -> None:
     mk = sub.add_parser("make")
     mk.add_argument("--only", nargs="*")
     sub.add_parser("read")
+    lk = sub.add_parser("link")
+    lk.add_argument("--only", nargs="*")
     args = ap.parse_args()
-    read() if args.cmd == "read" else make(args.only)
+    {"read": lambda: read(), "make": lambda: make(args.only), "link": lambda: link(args.only)}[args.cmd]()
 
 
 if __name__ == "__main__":

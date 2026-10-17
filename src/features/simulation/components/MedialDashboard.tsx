@@ -169,7 +169,7 @@ export default function MedialDashboard({ ledger, next, holdsOf, routine }: Prop
   return (
     <Box aria-label="AI 현황">
       <Top>
-        <small>MEDIAL · 장면 사이</small>
+        <small>AI 조율자 · 장면 사이</small>
         <h2>{headline(ledger)}</h2>
         <p>
           오늘 접수 <b>{ledger.taken}</b><i>·</i>진행 <b>{ledger.open}</b><i>·</i>마무리 <b>{ledger.done}</b>
