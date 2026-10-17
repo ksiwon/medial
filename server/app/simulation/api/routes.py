@@ -164,6 +164,18 @@ def village_map() -> Any:
     return FileResponse(path, media_type="image/png")
 
 
+@router.get("/week")
+def week() -> dict[str, Any]:
+    """The week the exhibition reads (see ``week.py``): events, scenes, the residents' evaluations and the
+    requests that came of them, joined and checked once. Read-only, so it is the same on a sim server."""
+    from ..week import WeekError, load_week
+
+    try:
+        return load_week()
+    except WeekError as error:
+        raise HTTPException(status_code=500, detail=str(error)) from error
+
+
 @router.get("/village/art")
 def village_art_index() -> dict[str, Any]:
     """Which scene pictures exist. The screen falls back to a schematic figure

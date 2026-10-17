@@ -1,4 +1,5 @@
 import type { IterationSession, SessionDetail } from './iteration';
+import type { Week } from '../week/types';
 import type { AttemptDetail, CommandResult, DomainEvent, VideoClip, VillagePayload, VoiceClip } from './types';
 
 // What the screens read from the local API. Every call here is a read of a
@@ -47,6 +48,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   village: () => request<VillagePayload>('/village'),
+  /** The week the exhibition reads: events, scenes, evaluations, requests - joined and checked on the server. */
+  week: () => request<Week>('/week'),
   /** The raster is served by the local API from the git-ignored registry, so it
    *  is never part of the built bundle. */
   mapImageUrl: () => `${BASE}/village/map`,

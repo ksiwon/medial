@@ -99,6 +99,8 @@ const POSE = {
   drive: { size: SQUARE, body: 'Seen from the waist up in the driver\'s seat, the frame cropping at the waist: both arms reaching forward and down out of frame as if holding a steering wheel (do not draw the wheel), a seatbelt across the chest, eyes on the road ahead.' },
   seated: { size: SQUARE, body: 'Seen from the waist up in a car passenger seat, the frame cropping at the waist: a seatbelt across the chest, turned slightly toward the driver as if talking.' },
   lying: { size: WIDE, body: 'Lying unconscious on his back on a floor, eyes closed, arms loose at his sides, seen from the eye level of someone kneeling nearby. Calm and non-graphic: no injury, no blood.' },
+  // 감기로 누워 쉬는 모습. 쓰러진 것(lying)과 다르다: 눈을 감고, 모자를 벗고, 이불을 덮고, 편안히 옆으로.
+  resting: { size: WIDE, body: 'Lying on his side on a floor mat in a living room, asleep or half-asleep with eyes closed, a thin quilted blanket pulled up to his chest, his head on a small pillow, a damp cloth on his forehead. He is NOT wearing any hat, shoes or boots and is in plain indoor sleepwear (a faded long-sleeved grey top). Calm, tired and ill, not injured, not collapsed. Seen from the eye level of someone sitting beside him.' },
   'work.FARM': { size: TALL, body: 'Full body, crouching over a vegetable row, weeding with a short Korean hand hoe (homi) in one hand, work gloves, absorbed in the work and not looking up.' },
   'work.SEA': { size: TALL, body: 'Full body, standing with feet apart, pulling a wet fishing net hand over hand with rubber gloves, absorbed in the work and not looking up.' },
 };

@@ -42,7 +42,24 @@
       5,
       5
      ],
-     "importance": "mid"
+     "importance": "mid",
+     "time": "09:40",
+     "frames": [
+      {
+       "place": "HOME",
+       "who": {},
+       "device": "안부 스피커",
+       "label": "한상덕 댁"
+      },
+      {
+       "place": "PATROL",
+       "who": {
+        "P6": "phone"
+       },
+       "device": null,
+       "label": "마을 순찰"
+      }
+     ]
     },
     "s2": {
      "cast": [
@@ -64,7 +81,19 @@
       5,
       6
      ],
-     "importance": "mid"
+     "importance": "mid",
+     "time": "09:52",
+     "frames": [
+      {
+       "place": "FARM",
+       "who": {
+        "P6": "stand",
+        "P1": "work"
+       },
+       "device": null,
+       "label": "밭"
+      }
+     ]
     }
    },
    "requests": {
@@ -112,7 +141,18 @@
        5,
        6
       ],
-      "importance": "mid"
+      "importance": "mid",
+      "time": "09:50",
+      "frames": [
+       {
+        "place": "FARM",
+        "who": {
+         "P1": "work"
+        },
+        "device": "안부 스피커",
+        "label": "밭"
+       }
+      ]
      }
     },
     "C": {
@@ -157,7 +197,24 @@
        5,
        6
       ],
-      "importance": "mid"
+      "importance": "mid",
+      "time": "13:40",
+      "frames": [
+       {
+        "place": "HOME",
+        "who": {},
+        "device": "안부 스피커",
+        "label": "한상덕 댁"
+       },
+       {
+        "place": "PATROL",
+        "who": {
+         "P6": "phone"
+        },
+        "device": null,
+        "label": "마을 순찰"
+       }
+      ]
      }
     }
    }
@@ -188,7 +245,24 @@
       5,
       6
      ],
-     "importance": "mid"
+     "importance": "mid",
+     "time": "10:40",
+     "frames": [
+      {
+       "place": "SHOP",
+       "who": {},
+       "device": "안부 스피커",
+       "label": "식당"
+      },
+      {
+       "place": "PATROL",
+       "who": {
+        "P6": "phone"
+       },
+       "device": null,
+       "label": "마을 순찰"
+      }
+     ]
     },
     "s2": {
      "cast": [
@@ -209,7 +283,18 @@
       5,
       6
      ],
-     "importance": "mid"
+     "importance": "mid",
+     "time": "10:55",
+     "frames": [
+      {
+       "place": "SHOP",
+       "who": {
+        "P11": "stand"
+       },
+       "device": "안부 스피커",
+       "label": "식당"
+      }
+     ]
     }
    },
    "requests": {
@@ -248,7 +333,24 @@
        5,
        6
       ],
-      "importance": "mid"
+      "importance": "mid",
+      "time": "10:42",
+      "frames": [
+       {
+        "place": "SHOP",
+        "who": {},
+        "device": "안부 스피커",
+        "label": "식당"
+       },
+       {
+        "place": "TOWN",
+        "who": {
+         "P3": "phone"
+        },
+        "device": null,
+        "label": "읍내"
+       }
+      ]
      }
     },
     "C": {
@@ -284,7 +386,19 @@
        6,
        6
       ],
-      "importance": "mid"
+      "importance": "mid",
+      "time": "15:10",
+      "frames": [
+       {
+        "place": "SHOP",
+        "who": {
+         "P6": "stand",
+         "P11": "stand"
+        },
+        "device": null,
+        "label": "식당"
+       }
+      ]
      }
     }
    }
@@ -315,7 +429,18 @@
       5,
       6
      ],
-     "importance": "mid"
+     "importance": "mid",
+     "time": "07:48",
+     "frames": [
+      {
+       "place": "HOME",
+       "who": {
+        "P9": "phone"
+       },
+       "device": "안부 스피커",
+       "label": "임태식 댁"
+      }
+     ]
     },
     "s2": {
      "cast": [
@@ -335,7 +460,24 @@
       3,
       4
      ],
-     "importance": "low"
+     "importance": "low",
+     "time": "12:55",
+     "frames": [
+      {
+       "place": "CLINIC",
+       "who": {},
+       "device": "안부 스피커",
+       "label": "읍내 의원"
+      },
+      {
+       "place": "TOWN",
+       "who": {
+        "P3": "phone"
+       },
+       "device": null,
+       "label": "읍내"
+      }
+     ]
     }
    },
    "requests": {
@@ -372,7 +514,24 @@
        5,
        6
       ],
-      "importance": "mid"
+      "importance": "mid",
+      "time": "07:46",
+      "frames": [
+       {
+        "place": "HOME",
+        "who": {},
+        "device": "안부 스피커",
+        "label": "임태식 댁"
+       },
+       {
+        "place": "TOWN",
+        "who": {
+         "P12": "phone"
+        },
+        "device": null,
+        "label": "읍내 가는 길"
+       }
+      ]
      }
     },
     "B": {
@@ -408,7 +567,18 @@
        5,
        6
       ],
-      "importance": "mid"
+      "importance": "mid",
+      "time": "07:30",
+      "frames": [
+       {
+        "place": "HOME",
+        "who": {
+         "P9": "phone"
+        },
+        "device": "안부 스피커",
+        "label": "임태식 댁"
+       }
+      ]
      }
     }
    }
@@ -439,7 +609,18 @@
       3,
       4
      ],
-     "importance": "low"
+     "importance": "low",
+     "time": "07:10",
+     "frames": [
+      {
+       "place": "HOME",
+       "who": {
+        "P8": "lying"
+       },
+       "device": "안부 스피커",
+       "label": "고성재 댁"
+      }
+     ]
     },
     "s2": {
      "cast": [
@@ -460,7 +641,19 @@
       7,
       8
      ],
-     "importance": "high"
+     "importance": "high",
+     "time": "07:50",
+     "frames": [
+      {
+       "place": "HOME",
+       "who": {
+        "P7": "stand",
+        "P8": "lying"
+       },
+       "device": null,
+       "label": "고성재 댁"
+      }
+     ]
     }
    },
    "requests": {
@@ -499,7 +692,18 @@
        7,
        8
       ],
-      "importance": "high"
+      "importance": "high",
+      "time": "07:12",
+      "frames": [
+       {
+        "place": "HOME",
+        "who": {
+         "P8": "lying"
+        },
+        "device": "안부 스피커",
+        "label": "고성재 댁"
+       }
+      ]
      }
     },
     "C": {
@@ -536,7 +740,26 @@
        7,
        8
       ],
-      "importance": "high"
+      "importance": "high",
+      "time": "07:20",
+      "frames": [
+       {
+        "place": "CLINIC",
+        "who": {
+         "HC_HEAD": "desk"
+        },
+        "device": null,
+        "label": "보건소"
+       },
+       {
+        "place": "HOME",
+        "who": {
+         "P8": "lying"
+        },
+        "device": "안부 스피커",
+        "label": "고성재 댁"
+       }
+      ]
      }
     }
    }
@@ -566,7 +789,24 @@
       5,
       5
      ],
-     "importance": "mid"
+     "importance": "mid",
+     "time": "09:30",
+     "frames": [
+      {
+       "place": "CLINIC",
+       "who": {
+        "HC_HEAD": "desk"
+       },
+       "device": null,
+       "label": "보건소"
+      },
+      {
+       "place": "HALL",
+       "who": {},
+       "device": "마을 방송",
+       "label": "마을회관"
+      }
+     ]
     },
     "s2": {
      "cast": [
@@ -586,7 +826,19 @@
       5,
       6
      ],
-     "importance": "mid"
+     "importance": "mid",
+     "time": "11:20",
+     "frames": [
+      {
+       "place": "FARM",
+       "who": {
+        "P6": "stand",
+        "P1": "work"
+       },
+       "device": null,
+       "label": "밭 앞"
+      }
+     ]
     }
    },
    "requests": {
@@ -623,7 +875,18 @@
        5,
        6
       ],
-      "importance": "mid"
+      "importance": "mid",
+      "time": "10:35",
+      "frames": [
+       {
+        "place": "FARM",
+        "who": {
+         "P1": "work"
+        },
+        "device": "안부 스피커",
+        "label": "밭"
+       }
+      ]
      }
     },
     "B": {
@@ -659,7 +922,18 @@
        5,
        6
       ],
-      "importance": "mid"
+      "importance": "mid",
+      "time": "09:36",
+      "frames": [
+       {
+        "place": "HOME",
+        "who": {
+         "P1": "stand"
+        },
+        "device": "안부 스피커",
+        "label": "한상덕 댁"
+       }
+      ]
      }
     },
     "C": {
@@ -697,7 +971,18 @@
        5,
        6
       ],
-      "importance": "mid"
+      "importance": "mid",
+      "time": "11:00",
+      "frames": [
+       {
+        "place": "FARM",
+        "who": {
+         "P1": "work"
+        },
+        "device": "안부 스피커",
+        "label": "밭"
+       }
+      ]
      }
     }
    }
@@ -729,7 +1014,19 @@
       7,
       8
      ],
-     "importance": "high"
+     "importance": "high",
+     "time": "20:32",
+     "frames": [
+      {
+       "place": "HOME",
+       "who": {
+        "P7": "cpr",
+        "P8": "lying"
+       },
+       "device": "안부 스피커",
+       "label": "고성재 댁"
+      }
+     ]
     },
     "s2": {
      "cast": [
@@ -750,7 +1047,19 @@
       5,
       6
      ],
-     "importance": "mid"
+     "importance": "mid",
+     "time": "21:05",
+     "frames": [
+      {
+       "place": "HOME",
+       "who": {
+        "P7": "stand",
+        "P6": "stand"
+       },
+       "device": null,
+       "label": "고성재 댁 앞"
+      }
+     ]
     }
    },
    "requests": {},
@@ -781,7 +1090,18 @@
       5,
       6
      ],
-     "importance": "mid"
+     "importance": "mid",
+     "time": "16:00",
+     "frames": [
+      {
+       "place": "SHOP",
+       "who": {
+        "P11": "stand"
+       },
+       "device": "안부 스피커",
+       "label": "식당 안채"
+      }
+     ]
     },
     "s2": {
      "cast": [
@@ -801,7 +1121,19 @@
       5,
       6
      ],
-     "importance": "mid"
+     "importance": "mid",
+     "time": "20:30",
+     "frames": [
+      {
+       "place": "SHOP",
+       "who": {
+        "P10": "stand",
+        "P11": "stand"
+       },
+       "device": null,
+       "label": "식당 안채"
+      }
+     ]
     }
    },
    "requests": {
@@ -840,7 +1172,18 @@
        5,
        6
       ],
-      "importance": "mid"
+      "importance": "mid",
+      "time": "16:00",
+      "frames": [
+       {
+        "place": "SHOP",
+        "who": {
+         "P10": "stand"
+        },
+        "device": "안부 스피커",
+        "label": "식당 주방"
+       }
+      ]
      }
     },
     "C": {
@@ -878,7 +1221,18 @@
        5,
        6
       ],
-      "importance": "mid"
+      "importance": "mid",
+      "time": "16:20",
+      "frames": [
+       {
+        "place": "SHOP",
+        "who": {
+         "P11": "stand"
+        },
+        "device": "안부 스피커",
+        "label": "식당 안채"
+       }
+      ]
      }
     }
    }
@@ -909,7 +1263,24 @@
       5,
       5
      ],
-     "importance": "mid"
+     "importance": "mid",
+     "time": "09:40",
+     "frames": [
+      {
+       "place": "HOME",
+       "who": {},
+       "device": "안부 스피커",
+       "label": "한상덕 댁"
+      },
+      {
+       "place": "PATROL",
+       "who": {
+        "P6": "phone"
+       },
+       "device": null,
+       "label": "마을 순찰"
+      }
+     ]
     },
     "s2": {
      "cast": [
@@ -929,7 +1300,19 @@
       5,
       6
      ],
-     "importance": "mid"
+     "importance": "mid",
+     "time": "10:20",
+     "frames": [
+      {
+       "place": "HOME",
+       "who": {
+        "P6": "stand",
+        "P1": "resting"
+       },
+       "device": null,
+       "label": "한상덕 댁"
+      }
+     ]
     }
    },
    "requests": {
@@ -968,7 +1351,18 @@
        5,
        6
       ],
-      "importance": "mid"
+      "importance": "mid",
+      "time": "09:50",
+      "frames": [
+       {
+        "place": "HOME",
+        "who": {
+         "P1": "resting"
+        },
+        "device": "안부 스피커",
+        "label": "한상덕 댁"
+       }
+      ]
      }
     },
     "B": {
@@ -1006,7 +1400,19 @@
        5,
        6
       ],
-      "importance": "mid"
+      "importance": "mid",
+      "time": "09:50",
+      "frames": [
+       {
+        "place": "HOME",
+        "who": {
+         "P5": "stand",
+         "P1": "resting"
+        },
+        "device": null,
+        "label": "한상덕 댁 앞"
+       }
+      ]
      }
     },
     "C": {
@@ -1042,7 +1448,19 @@
        5,
        6
       ],
-      "importance": "mid"
+      "importance": "mid",
+      "time": "10:05",
+      "frames": [
+       {
+        "place": "HOME",
+        "who": {
+         "P6": "stand",
+         "P1": "resting"
+        },
+        "device": null,
+        "label": "한상덕 댁"
+       }
+      ]
      }
     }
    }
