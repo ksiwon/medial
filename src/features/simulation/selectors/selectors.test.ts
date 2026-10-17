@@ -71,7 +71,7 @@ describe('sentenceFor', () => {
     const relayed = sentenceFor(event({ type: 'request.relayed', actorId: 'P12',
       payload: { toActorId: 'P6', subjectId: 'P9' } }))!;
     expect(relayed.text).toContain('이장에게 P9 확인을 넘겼습니다');
-    expect(relayed.text).toContain('MEDial은 이것을 모릅니다');
+    expect(relayed.text).toContain('AI는 이것을 모릅니다');
   });
 });
 

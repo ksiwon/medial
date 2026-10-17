@@ -126,4 +126,4 @@ export const VERDICT_WORD: Record<Verdict, string> = {
   answered: '응답함', asking: '묻는 중',
 };
 
-export const nameOf = (id: string) => (id === MEDIAL ? 'MEDial' : personName(id));
+export const nameOf = (id: string) => (id === MEDIAL ? 'AI 조율자' : personName(id));

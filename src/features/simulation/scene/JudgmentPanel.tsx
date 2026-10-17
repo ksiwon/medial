@@ -178,8 +178,8 @@ export default function JudgmentPanel({ title, subtitle, tint, judgment, lit, ab
 }) {
   const j = judgment;
   return (
-    <Box $absent={absent} aria-label="MEDial의 판단">
-      <Kicker>MEDial의 판단</Kicker>
+    <Box $absent={absent} aria-label="AI의 판단">
+      <Kicker>AI의 판단</Kicker>
       <Title><i style={{ background: tint }} />{title}</Title>
       {subtitle && <Subtitle>{subtitle}</Subtitle>}
       <Steps>
@@ -227,7 +227,7 @@ export default function JudgmentPanel({ title, subtitle, tint, judgment, lit, ab
         </Step>
       </Steps>
       {absent && (
-        <Away>MEDial은 이 장면을 보지 못합니다<strong>{waiting ?? '결과 대기 중'}</strong></Away>
+        <Away>AI는 이 장면을 보지 못합니다<strong>{waiting ?? '결과 대기 중'}</strong></Away>
       )}
     </Box>
   );

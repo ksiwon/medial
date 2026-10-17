@@ -34,21 +34,21 @@ const ACCENT = night.accent;
  * The sub-lines and the chips are not read. A test keeps these and the fixture the same.
  */
 export const INTRO_SAY = [
-  '시골의 낮입니다. 병원은 읍내에 있고, 주민들은 밭과 바다에 계시죠.',
+  'Dially는 마을 주민 시뮬레이터입니다. 시골의 낮, 병원은 읍내에 있고 주민들은 밭과 바다에 계시죠.',
   '어르신들은 병원에 가야 할 일이 잦지만, 병원은 멀어서 웬만하면 참으십니다.',
   '문제는, 어르신을 살펴 줄 사람이 마을에 없다는 겁니다. 그 일은 이장님 한 분께 이미 몰려 있습니다.',
-  '이런 고충을 해결하고자, 서비스 디자이너가 어르신의 안부를 살피고 이웃과 병원을 이어 줄 조율자 AI, MEDial의 초안을 제안하며, 이를 도입하고자 합니다.',
+  '이런 고충을 해결하고자, 서비스 디자이너가 어르신의 안부를 살피고 이웃과 병원을 이어 줄 조율자 AI의 초안을 제안하며, 이를 도입하고자 합니다.',
   '도입에 앞서 주민 대상 실증 연구로 이 초안을 고쳐야 하지만, 마을이 멀어 자주 찾아가기도, 오래 묻기도 어렵습니다.',
-  '그래서 가기 어려운 한 시골마을을 시뮬레이션, Resident Simulator로 대신 만들었습니다. 실제 인터뷰를 바탕으로, 열두 분 모두를 스스로 판단하고 움직이는 AI 에이전트로 세웠습니다.',
+  '그래서 가기 어려운 한 시골마을을 시뮬레이션, Dially로 대신 만들었습니다. 실제 인터뷰를 바탕으로, 열두 분 모두를 스스로 판단하고 움직이는 AI 에이전트로 세웠습니다.',
   '이제 여러분이, 초안을 들고 온 서비스 디자이너가 되어 봅니다. 하루를 지켜보고, 주민 에이전트의 평가를 읽고, 수정 요청 하나를 골라 초안을 고칩니다. 직접 가지 못해도, 어르신들의 고충을 미리 확인할 수 있습니다.',
 ] as const;
 
 /** Scenes 4 and 5 are said in one go but shown a sentence at a time (INTRO_SAY joined). */
-const SAY_FOUR = ['그래서 가기 어려운 한 시골마을을 시뮬레이션, Resident Simulator로 대신 만들었습니다.', '실제 인터뷰를 바탕으로, 열두 분 모두를 스스로 판단하고 움직이는 AI 에이전트로 세웠습니다.'] as const;
+const SAY_FOUR = ['그래서 가기 어려운 한 시골마을을 시뮬레이션, Dially로 대신 만들었습니다.', '실제 인터뷰를 바탕으로, 열두 분 모두를 스스로 판단하고 움직이는 AI 에이전트로 세웠습니다.'] as const;
 /** Scene 2's second caption is one sentence of the narration shown in two pieces. */
 const SAY_MEDIAL = [
   '이런 고충을 해결하고자, 서비스 디자이너가 어르신의 안부를 살피고 이웃과 병원을 이어 줄',
-  '조율자 AI, MEDial의 초안을 제안하며, 이를 도입하고자 합니다.',
+  '조율자 AI의 초안을 제안하며, 이를 도입하고자 합니다.',
 ] as const;
 const SAY_FIVE = [
   '이제 여러분이, 초안을 들고 온 서비스 디자이너가 되어 봅니다.',
@@ -462,10 +462,10 @@ function PlaceFilm() {
   );
 }
 
-// ---- Scene 4: the Resident Simulator, as the people around it ---------------------
+// ---- Scene 4: the Dially, as the people around it ---------------------
 
 /**
- * Drawn while the narrator says the Resident Simulator was built (scene 4), in the order of the work it stands for:
+ * Drawn while the narrator says the Dially was built (scene 4), in the order of the work it stands for:
  * the designer conceives MEDial, the simulated village is built to apply it to, the real interviews raise its twelve
  * residents (from `after`, when that sentence begins), and last the residents' evaluation travels back to the
  * designer. Every arrow is drawn after the thing it leaves and before the thing it reaches.
@@ -496,8 +496,8 @@ function Diagram({ after }: { after: number }) {
       <g className="in" style={at(1.3)}>{label(260, 222, 20, PAPER, '초안', 700)}</g>
       <g className="in" style={at(1.6)}>
         <rect x={300} y={185} width={210} height={120} rx={30} fill={accentA(0.22)} stroke={ACCENT} strokeWidth={3} />
-        {label(405, 240, 34, PAPER, 'MEDial', 800)}
-        {label(405, 278, 21, 'rgba(246,241,232,0.8)', 'AI 조율자 · 초안', 700)}
+        {label(405, 240, 34, PAPER, 'AI 조율자', 800)}
+        {label(405, 278, 21, 'rgba(246,241,232,0.8)', '안부 확인 · 초안', 700)}
       </g>
 
       {/* 2. The village it will be applied to is built. */}
@@ -507,7 +507,7 @@ function Diagram({ after }: { after: number }) {
         <rect x={640} y={10} width={550} height={390} rx={36} fill="rgba(21,21,15,0.62)" stroke="rgba(246,241,232,0.55)"
           strokeWidth={2} strokeDasharray="10 10" />
         {label(915, 64, 32, PAPER, '시뮬레이션 마을', 800)}
-        {label(915, 98, 20, ACCENT, 'Resident Simulator · 주민 AI 에이전트 12', 700)}
+        {label(915, 98, 20, ACCENT, 'Dially · 주민 AI 에이전트 12', 700)}
       </g>
 
       {/* 3. The interviews it stands on, and the residents raised from them. */}
@@ -533,7 +533,7 @@ function Diagram({ after }: { after: number }) {
 
       {/* 4. The residents' evaluation travels back to the designer. */}
       {arrow('M 640 340 C 520 500, 249 513, 124 326', after + 1.9, ACCENT, [115, 313, -124], 0.7)}
-      <g className="in" style={at(after + 2.4)}>{label(380, 518, 22, PAPER, '주민 에이전트가 MEDial을 평가', 700)}</g>
+      <g className="in" style={at(after + 2.4)}>{label(380, 518, 22, PAPER, '주민 에이전트가 AI를 평가', 700)}</g>
     </Drawn>
   );
 }
@@ -652,8 +652,8 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
   const on = (i: number) => scene === i;
 
   return (
-    <Stage aria-label="MEDial 소개">
-      <Brand>MEDial</Brand>
+    <Stage aria-label="소개">
+      <Brand>Dially</Brand>
       <Corner>
         <Disclaimer>그림과 대화는 모두 시뮬레이션입니다 · 이름은 가명입니다</Disclaimer>
       </Corner>
@@ -662,7 +662,7 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
         <Picture $src={src('FARM')} $on={scene >= 0} />
         <Caption>
           <Eyebrow $on={on(0)}>하루의 풍경</Eyebrow>
-          <Line $on={on(0)}>{'시골의 낮입니다.\n병원은 읍내에 있고, 주민들은 밭과 바다에 계시죠.'}</Line>
+          <Line $on={on(0)}>{'Dially는 마을 주민 시뮬레이터입니다.\n시골의 낮, 병원은 읍내에 있고 주민들은 밭과 바다에 계시죠.'}</Line>
         </Caption>
       </Scene>
 
@@ -738,7 +738,7 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
         {SAY_FOUR.map((text, k) => (
           <Caption key={k}>
             <Timed $on={on(4)} $at={k === 0 ? 0.2 : layout.said.four[1] - 0.1} $until={k === 0 ? layout.said.four[1] - 0.2 : undefined}>
-              <Eyebrow $on={on(4)}>Resident Simulator</Eyebrow>
+              <Eyebrow $on={on(4)}>Dially</Eyebrow>
               <Line $on={on(4)} $delay={k === 0 ? 0.3 : layout.said.four[1]}>{text}</Line>
             </Timed>
           </Caption>
@@ -758,7 +758,7 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
                 {k === 1 && (
                   <Chain $on={on(5)} $delay={at + 0.9}>
                     <span>하루를 겪는다</span><i>→</i>
-                    <span>주민 에이전트가 MEDial을 평가한다</span><i>→</i>
+                    <span>주민 에이전트가 AI를 평가한다</span><i>→</i>
                     <span>요청 하나로 고친다</span><i>→</i>
                     <span>다시 돌린다</span>
                   </Chain>

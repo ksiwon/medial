@@ -497,7 +497,7 @@ export default function VillageMap({
           })}
         </Svg>
 
-        {medial && <ModeBadge>MEDial이 보고받은 위치만 표시 중</ModeBadge>}
+        {medial && <ModeBadge>AI가 보고받은 위치만 표시 중</ModeBadge>}
 
         <Compass>
           <div style={{ fontSize: `calc(12px * var(--k, 1))`, lineHeight: 1, transform: `rotate(${frame.northDeg}deg)` }}>▲</div>
@@ -521,7 +521,7 @@ export default function VillageMap({
           // sized to the village.
           <p key={where} title={ids.map(personName).join(', ')}><b>{where}</b>: {ids.join(', ')}</p>
         ))}
-        {projected && <p><b>MEDial이 위치를 모르는 사람</b>: {projected.unlocated.length}명</p>}
+        {projected && <p><b>AI가 위치를 모르는 사람</b>: {projected.unlocated.length}명</p>}
       </Outside>
     </>
   );

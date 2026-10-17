@@ -76,7 +76,7 @@ afterEach(cleanup);
 describe('ObserveScreen', () => {
   it('shows the village on the map when nothing is being said', () => {
     observe({ at: hour(6) });
-    expect(screen.queryByLabelText('MEDial의 판단')).toBeNull();
+    expect(screen.queryByLabelText('AI의 판단')).toBeNull();
   });
 
   it('separates the recording from the run', () => {
@@ -103,7 +103,7 @@ describe('ObserveScreen', () => {
   it("films a scene with MEDial's judgement where MEDial would stand", () => {
     const accepted = events.find((e) => e.type === 'request.accepted')!;
     observe({ at: { seq: accepted.seq } });
-    expect(screen.getByLabelText('MEDial의 판단')).toBeDefined();
+    expect(screen.getByLabelText('AI의 판단')).toBeDefined();
     for (const step of ['지금 아는 것', '걸린 규칙', '그래서 이렇게 말한다']) expect(screen.getByText(step)).toBeDefined();
     // The words on screen are the ones the log carries - in the bubble, and
     // again in the panel as what MEDial heard.
@@ -137,7 +137,7 @@ describe('ObserveScreen', () => {
   it('says where MEDial is not, and what it is waiting for', () => {
     const visit = events.find((e) => e.type === 'task.check_performed')!;
     observe({ at: { seq: visit.seq } });
-    expect(screen.getByText('MEDial은 이 장면을 보지 못합니다')).toBeDefined();
+    expect(screen.getByText('AI는 이 장면을 보지 못합니다')).toBeDefined();
     expect(screen.getByText(/확인 결과 대기 중$/)).toBeDefined();
   });
 
@@ -384,13 +384,13 @@ describe('what MEDial does not see', () => {
   it('is listed for the researcher, marked as unknown to MEDial', () => {
     render(<DayTimeline {...controls} items={items(true)} />);
     expect(screen.getByText('항구에서 한 말')).toBeDefined();
-    expect(screen.getByText('MEDial은 모름')).toBeDefined();
+    expect(screen.getByText('AI는 모름')).toBeDefined();
   });
 
   it('is not listed at all in the MEDial-only view', () => {
     render(<DayTimeline {...controls} items={items(false)} />);
     expect(screen.queryByText('항구에서 한 말')).toBeNull();
-    expect(screen.queryByText('MEDial은 모름')).toBeNull();
+    expect(screen.queryByText('AI는 모름')).toBeNull();
   });
 
   it('never reaches the dashboard, which holds only what MEDial holds', () => {

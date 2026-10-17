@@ -157,7 +157,7 @@ function headline(ledger: Ledger): string {
     const row = open[open.length - 1];
     return `${row.need}${row.subjectId ? ` · ${personName(row.subjectId)}` : ''} — 진행 중입니다.`;
   }
-  if (ledger.taken === 0) return '아직 MEDial에 들어온 요청이 없습니다.';
+  if (ledger.taken === 0) return '아직 AI에 들어온 요청이 없습니다.';
   const last = ledger.rows[ledger.rows.length - 1];
   const step = last.steps[last.steps.length - 1];
   return `열린 요청이 없습니다. 마지막 일은 ${formatClock(step.atMs)} ${step.title}.`;
@@ -167,7 +167,7 @@ export default function MedialDashboard({ ledger, next, holdsOf, routine }: Prop
   const open = ledger.rows.filter((row) => row.state === 'open');
   const peak = Math.max(1, ...ledger.load.map((l) => l.count));
   return (
-    <Box aria-label="MEDial 현황">
+    <Box aria-label="AI 현황">
       <Top>
         <small>MEDIAL · 장면 사이</small>
         <h2>{headline(ledger)}</h2>
@@ -203,7 +203,7 @@ export default function MedialDashboard({ ledger, next, holdsOf, routine }: Prop
               {routine.departed > 0 && <Legend><i />평소 일과와 다르게 움직이는 사람</Legend>}
             </>
           ) : (
-            <Quiet>MEDial은 주민이 어디에 있는지 모릅니다. 집에 있는지 없는지만 압니다.</Quiet>
+            <Quiet>AI는 주민이 어디에 있는지 모릅니다. 집에 있는지 없는지만 압니다.</Quiet>
           )}
         </Col>
 
@@ -220,7 +220,7 @@ export default function MedialDashboard({ ledger, next, holdsOf, routine }: Prop
                   <b>{row.need}{row.subjectId ? ` · ${personName(row.subjectId)}` : ''}</b>
                   {held && held.knows.length > 0 && (
                     <>
-                      <em>MEDial이 아는 것</em>
+                      <em>AI가 아는 것</em>
                       <ul>{held.knows.map((k) => <li key={k}>{k}</li>)}</ul>
                     </>
                   )}

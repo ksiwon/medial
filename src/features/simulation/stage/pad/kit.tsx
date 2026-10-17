@@ -173,7 +173,7 @@ export function TopBar({ day, index, count, line, home }: {
 }) {
   return (
     <BarBox>
-      <b>MEDial</b>
+      <b>AI 조율자</b>
       {day && (
         <>
           <Dots aria-label={`${count}일 가운데 ${index + 1}일째`}>

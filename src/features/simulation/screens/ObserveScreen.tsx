@@ -324,7 +324,7 @@ export default function ObserveScreen({ village, detail, events, art, dayEnd: en
             where it covered the people who live in the village's north end. */}
         <MapStrip>
           <div>
-            <b>MEDial</b>
+            <b>AI 조율자</b>
             {strip && <em>{strip.day}</em>}
           </div>
           {strip?.chosen && strip.chosen.length > 0 && (

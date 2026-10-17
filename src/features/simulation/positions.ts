@@ -145,7 +145,7 @@ export function posesAt(timeline: Timeline | null, atMs: number): ActorPose[] {
 }
 
 // ---------------------------------------------------------------------------
-// The 'MEDial이 아는 것' projection.
+// The 'AI가 아는 것' projection.
 // ---------------------------------------------------------------------------
 
 export interface MedialKnown {

@@ -346,7 +346,7 @@ export default function DayTimeline({ items, atMs, dayStartMs, dayEndMs, playing
                 </Detail>
               )}
               {item.state === 'planned' && <Tag $kind="planned">예정{item.subjectId ? ` · ${personName(item.subjectId)}` : ''}</Tag>}
-              {!item.medial && <Tag $kind="unseen">MEDial은 모름</Tag>}
+              {!item.medial && <Tag $kind="unseen">AI는 모름</Tag>}
             </Item>
           ))}
           <Item $state="edge" data-ms={dayEndMs}

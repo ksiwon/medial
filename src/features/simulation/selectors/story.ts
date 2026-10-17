@@ -79,7 +79,7 @@ export const personName = (id: string | null | undefined): string =>
   !id
     ? '누군가'
     : id === 'MEDial'
-      ? 'MEDial'
+      ? 'AI 조율자'
       : learnedPeople.has(id)
         ? `${id} ${learnedPeople.get(id)}`
       : id === 'P6'
@@ -220,7 +220,7 @@ export function sentenceFor(event: DomainEvent): { text: string; tone: StoryTone
       };
     case 'contact.attempted':
       return {
-        text: `MEDial이 ${to}에게 ${channelOf(p.channel)} 연락했습니다 (${String(
+        text: `AI가 ${to}에게 ${channelOf(p.channel)} 연락했습니다 (${String(
           p.attemptNumber ?? 1,
         )}번째).`,
         tone: 'plain',
@@ -238,10 +238,10 @@ export function sentenceFor(event: DomainEvent): { text: string; tone: StoryTone
       // A model head writes its own reading; a rule head has one fixed one.
       return {
         text: str(p.summary)
-          ? `MEDial의 상황 읽기: ${str(p.summary)}`
+          ? `AI의 상황 읽기: ${str(p.summary)}`
           : p.locationStatus === undefined
-            ? 'MEDial이 상황을 분류했습니다 (이 기록에는 위치·임상 상태 항목이 없습니다).'
-            : `MEDial은 어디 있는지도 몸 상태도 확인하지 못한 상태로 판단했습니다.`,
+            ? 'AI가 상황을 분류했습니다 (이 기록에는 위치·임상 상태 항목이 없습니다).'
+            : `AI는 어디 있는지도 몸 상태도 확인하지 못한 상태로 판단했습니다.`,
         tone: str(p.source) === 'adapter_error' ? 'bad' : 'plain',
       };
     case 'medial.decided':
@@ -253,12 +253,12 @@ export function sentenceFor(event: DomainEvent): { text: string; tone: StoryTone
       // read as one repeated.
       return {
         text: str(p.chosen)
-          ? `MEDial의 판단 — ${str(p.question) ?? '다음 상대'}: ${
+          ? `AI의 판단 — ${str(p.question) ?? '다음 상대'}: ${
               str(p.chosen) === str(p.subjectId)
                 ? `${personName(str(p.chosen))} 본인에게 다시 연락`
                 : personName(str(p.chosen))
             }`
-          : `MEDial의 판단 — ${str(p.question) ?? '다음 상대'}: 연락할 사람 없음`,
+          : `AI의 판단 — ${str(p.question) ?? '다음 상대'}: 연락할 사람 없음`,
         tone: str(p.chosen) ? 'plain' : 'attention',
       };
     case 'medial.waiting': {
@@ -266,7 +266,7 @@ export function sentenceFor(event: DomainEvent): { text: string; tone: StoryTone
       return {
         text: until
           ? `${formatClock(until)}에 다시 연락하기로 하고 기다립니다.`
-          : `MEDial이 기다립니다 (${reasonText(p.reason)}).`,
+          : `AI가 기다립니다 (${reasonText(p.reason)}).`,
         tone: 'plain',
       };
     }
@@ -313,12 +313,12 @@ export function sentenceFor(event: DomainEvent): { text: string; tone: StoryTone
       return {
         text: `${withParticle(who, 'subject')} ${to}에게 ${subject} 확인을 넘겼습니다${
           p.basis === 'copresent' ? ' (같이 있던 사람)' : ''
-        }. MEDial은 이것을 모릅니다.`,
+        }. AI는 이것을 모릅니다.`,
         tone: 'attention',
       };
     case 'world.relay_resolved':
       return {
-        text: `MEDial은 ${withParticle(person(str(p.reportedBy)), 'subject')} 확인했다고 알고 있지만, 실제로 간 사람은 ${person(str(p.performedBy))}입니다.`,
+        text: `AI는 ${withParticle(person(str(p.reportedBy)), 'subject')} 확인했다고 알고 있지만, 실제로 간 사람은 ${person(str(p.performedBy))}입니다.`,
         tone: 'attention',
       };
     case 'plan.modified':
@@ -376,7 +376,7 @@ export function sentenceFor(event: DomainEvent): { text: string; tone: StoryTone
         tone: 'plain',
       };
     case 'handoff.requested':
-      return { text: `MEDial이 ${to}에 넘겼습니다.`, tone: 'attention' };
+      return { text: `AI가 ${to}에 넘겼습니다.`, tone: 'attention' };
     case 'handoff.accepted':
       return { text: `${withParticle(who, 'subject')} 접수했습니다.`, tone: 'plain' };
     case 'institution.queued':
@@ -414,7 +414,7 @@ export function sentenceFor(event: DomainEvent): { text: string; tone: StoryTone
       };
     case 'institution.report_sent':
       return {
-        text: `MEDial이 보건소에 오늘의 보고를 보냈습니다 (주민 ${
+        text: `AI가 보건소에 오늘의 보고를 보냈습니다 (주민 ${
           Array.isArray(p.subjects) ? p.subjects.length : '?'
         }명).`,
         tone: 'plain',

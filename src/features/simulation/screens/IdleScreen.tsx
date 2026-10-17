@@ -34,11 +34,11 @@ const Stage = styled.div<{ $src: string | null }>`
 export default function IdleScreen({ art }: { art: ReadonlySet<string> }) {
   const picture = ['INTRO.village', 'FARM'].find((name) => art.has(name));
   return (
-    <Stage $src={picture ? api.artUrl(picture) : null} aria-label="MEDial 대기 화면">
+    <Stage $src={picture ? api.artUrl(picture) : null} aria-label="AI 대기 화면">
       <i />
       <div>
-        <strong>MEDial</strong>
-        <p>시골 마을의 하루를 살펴 주는 AI Care Orchestrator를<br />서비스 디자이너가 되어 고쳐 보는 체험입니다.</p>
+        <strong>Dially</strong>
+        <p>시골 마을의 하루를 살펴 주는 AI 조율자를<br />서비스 디자이너가 되어 고쳐 보는 체험입니다.</p>
         <small>옆의 태블릿에서 시작하기를 눌러 주세요</small>
       </div>
     </Stage>

@@ -257,7 +257,7 @@ export default function SceneStage({ beat, beatKey, village, art, line, typing, 
   const speaking = current?.speaker ?? null;
   const sharp = !speaking ? null : speaking === MEDIAL ? new Set(beat.cast) : new Set([speaking]);
   const device = beat.frames.find((f) => f.device);
-  const medName = `MEDial${device ? ` · ${device.label} ${device.device}` : ''}`;
+  const medName = `AI 조율자${device ? ` · ${device.label} ${device.device}` : ''}`;
 
   // Which bubbles are up: the current said line (or its typing dots) and the
   // said line just before it.
