@@ -101,38 +101,6 @@
    "problems": [],
    "retries": 0
   },
-  "E1.B": {
-   "event": "E1",
-   "kind": "after",
-   "cast": [
-    "P5",
-    "P1"
-   ],
-   "lines": [
-    {
-     "speaker": "P5",
-     "text": "AI가 연락이 안 된다 캐서 하던 일 놓고 건너왔다."
-    },
-    {
-     "speaker": "P1",
-     "text": "밭일하느라 AI 소리를 못 들었제, 몸은 멀쩡하다 아이가."
-    },
-    {
-     "speaker": "P5",
-     "text": "멀쩡해서 됐다만 옆 밭이라도 번번이 오기는 힘들제."
-    },
-    {
-     "speaker": "P1",
-     "text": "미안하다마는 그만 좀 툴툴대라."
-    },
-    {
-     "speaker": "P5",
-     "text": "다음에는 이장한테 시키라."
-    }
-   ],
-   "problems": [],
-   "retries": 0
-  },
   "E1.C": {
    "event": "E1",
    "kind": "after",
@@ -272,34 +240,6 @@
     {
      "speaker": "P3",
      "text": "내한테만 몰리지 않게 다른 사람도 좀 돌려 써라."
-    }
-   ],
-   "problems": [],
-   "retries": 0
-  },
-  "E2.B": {
-   "event": "E2",
-   "kind": "after",
-   "cast": [
-    "AI",
-    "P5"
-   ],
-   "lines": [
-    {
-     "speaker": "AI",
-     "text": "어르신을 포함해 세 이웃께 동시에 약 심부름을 부탁드려요."
-    },
-    {
-     "speaker": "P5",
-     "text": "나는 오늘 배에 나가야 해서 못 간다 아이가."
-    },
-    {
-     "speaker": "AI",
-     "text": "유병찬 어르신이 가기로 해서 어르신께 드린 부탁은 취소할게요."
-    },
-    {
-     "speaker": "P5",
-     "text": "괜히 부탁만 받았네, 이런 부탁 자꾸 오면 귀찮제."
     }
    ],
    "problems": [],
@@ -477,42 +417,6 @@
    "problems": [],
    "retries": 0
   },
-  "E3.C": {
-   "event": "E3",
-   "kind": "after",
-   "cast": [
-    "AI",
-    "P9"
-   ],
-   "lines": [
-    {
-     "speaker": "AI",
-     "text": "가장 가까운 남대현 어르신은 아침에 부탁드려 유병찬 어르신께 부탁했어요."
-    },
-    {
-     "speaker": "P9",
-     "text": "진료는 마쳤는데, 그라믄 돌아갈 차는 언제 오겠습니꺼?"
-    },
-    {
-     "speaker": "AI",
-     "text": "읍내에서 오셔서 13:55쯤 병원 앞에 도착하세요."
-    },
-    {
-     "speaker": "P9",
-     "text": "아이고, 한 시간 가까이, 30분 더 기다리네예."
-    },
-    {
-     "speaker": "AI",
-     "text": "그동안 병원 로비에서 기다리실 수 있으세요?"
-    },
-    {
-     "speaker": "P9",
-     "text": "네예, 기다려야지예."
-    }
-   ],
-   "problems": [],
-   "retries": 1
-  },
   "E4.s1": {
    "event": "E4",
    "kind": "before",
@@ -624,50 +528,6 @@
     {
      "speaker": "P8",
      "text": "내가 뭐 이래 됐노."
-    }
-   ],
-   "problems": [],
-   "retries": 0
-  },
-  "E4.B": {
-   "event": "E4",
-   "kind": "after",
-   "cast": [
-    "P7",
-    "P8"
-   ],
-   "lines": [
-    {
-     "speaker": "P7",
-     "text": "아이고, 바닥에 누워 계셔서 놀라 숨이 찹니더."
-    },
-    {
-     "speaker": "P8",
-     "text": "별거 아이다."
-    },
-    {
-     "speaker": "P7",
-     "text": "AI가 07:10 통화 때 목소리 이상하다고 먼저 연락했습니더."
-    },
-    {
-     "speaker": "P8",
-     "text": "새벽에 다리가 풀려 넘어져서 못 일어났다."
-    },
-    {
-     "speaker": "P7",
-     "text": "아침도 못 먹고 뛰어왔습니더, 제가 일으켜 드립니더."
-    },
-    {
-     "speaker": "P8",
-     "text": "이래 니한테 기대야 일어나네."
-    },
-    {
-     "speaker": "P7",
-     "text": "이른 아침에 불려 나오니 힘듭니더, 미리 말하이소."
-    },
-    {
-     "speaker": "P8",
-     "text": "미안하다."
     }
    ],
    "problems": [],
@@ -969,94 +829,6 @@
    "problems": [],
    "retries": 0
   },
-  "E6.A": {
-   "event": "E6",
-   "kind": "after",
-   "cast": [
-    "AI",
-    "P7"
-   ],
-   "lines": [
-    {
-     "speaker": "P7",
-     "text": "가슴을 누르고 있는데 겁이 납니더."
-    },
-    {
-     "speaker": "AI",
-     "text": "어르신의 알림을 받는 동시에 제가 119를 불렀어요."
-    },
-    {
-     "speaker": "P7",
-     "text": "그라믄 구급대가 오는 데 몇 분 걸립니꺼?"
-    },
-    {
-     "speaker": "AI",
-     "text": "10분 뒤인 20:46에 도착해요."
-    },
-    {
-     "speaker": "P7",
-     "text": "아직 겁나도 곧 온다니 숨 좀 고르겠습니더."
-    },
-    {
-     "speaker": "AI",
-     "text": "구급대가 올 때까지 제가 전화로 안내할게요."
-    },
-    {
-     "speaker": "P7",
-     "text": "그라믄 지금은 우째 하면 됩니꺼?"
-    },
-    {
-     "speaker": "AI",
-     "text": "계속 가슴 가운데를 세게 빨리 눌러 주세요."
-    }
-   ],
-   "problems": [],
-   "retries": 0
-  },
-  "E6.B": {
-   "event": "E6",
-   "kind": "after",
-   "cast": [
-    "P7",
-    "AI"
-   ],
-   "lines": [
-    {
-     "speaker": "P7",
-     "text": "아이고, 동생이 쓰러져 있습니더."
-    },
-    {
-     "speaker": "AI",
-     "text": "이장님보다 먼저 연락드렸어요."
-    },
-    {
-     "speaker": "P7",
-     "text": "연락받고 2분 만에 왔는데 응급처치는 배운 적이 없습니더."
-    },
-    {
-     "speaker": "AI",
-     "text": "동생 이름을 부르며 어깨를 가볍게 두드려 반응을 보세요."
-    },
-    {
-     "speaker": "P7",
-     "text": "혼자서 하려니 겁이 납니더."
-    },
-    {
-     "speaker": "AI",
-     "text": "구급대가 오고 있으니 한 번에 하나씩 안내할게요."
-    },
-    {
-     "speaker": "P7",
-     "text": "그라믄 이장님도 불러 주이소."
-    },
-    {
-     "speaker": "AI",
-     "text": "이장님께도 연락했어요."
-    }
-   ],
-   "problems": [],
-   "retries": 0
-  },
   "E6.C": {
    "event": "E6",
    "kind": "after",
@@ -1229,42 +1001,6 @@
    "problems": [],
    "retries": 0
   },
-  "E7.C": {
-   "event": "E7",
-   "kind": "after",
-   "cast": [
-    "HC_HEAD",
-    "P11"
-   ],
-   "lines": [
-    {
-     "speaker": "HC_HEAD",
-     "text": "AI가 약 시간 확인을 10분 만에 보건소로 넘겼는데, 드셨어요?"
-    },
-    {
-     "speaker": "P11",
-     "text": "약은 아직 못 먹었다 아이가."
-    },
-    {
-     "speaker": "HC_HEAD",
-     "text": "그러면 허리 통증은 어떠세요?"
-    },
-    {
-     "speaker": "P11",
-     "text": "허리가 아프네."
-    },
-    {
-     "speaker": "HC_HEAD",
-     "text": "방문 간호사를 곧 보내드릴게요."
-    },
-    {
-     "speaker": "P11",
-     "text": "집에 낯선 사람 오는 게 불편해도, 그래, 오라 케라."
-    }
-   ],
-   "problems": [],
-   "retries": 1
-  },
   "E8.s1": {
    "event": "E8",
    "kind": "before",
@@ -1432,6 +1168,42 @@
     {
      "speaker": "P1",
      "text": "그래도 찾아 줘서 고맙다."
+    }
+   ],
+   "problems": [],
+   "retries": 0
+  },
+  "E7.C": {
+   "event": "E7",
+   "kind": "after",
+   "cast": [
+    "AI",
+    "P11"
+   ],
+   "lines": [
+    {
+     "speaker": "AI",
+     "text": "16:00에 이따 드신다던 약, 16:20인 지금 드셨어요?"
+    },
+    {
+     "speaker": "P11",
+     "text": "아이고, 깜빡했다 아이가, 이제야 생각나네."
+    },
+    {
+     "speaker": "AI",
+     "text": "어르신, 약 챙겨 드시고 알려 주세요."
+    },
+    {
+     "speaker": "P11",
+     "text": "지금 먹었다마는, 같은 걸 또 물으니 번거롭네."
+    },
+    {
+     "speaker": "AI",
+     "text": "네, 드신 것으로 확인했어요."
+    },
+    {
+     "speaker": "P11",
+     "text": "그래도 안 거르고 먹었으니 마음이 놓이네."
     }
    ],
    "problems": [],
