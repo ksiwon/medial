@@ -54,8 +54,9 @@ SPECS: dict[str, tuple[str, str]] = {
     "P7": ("male", "A 58-year-old man who works on a fishing boat. Mild, soft-spoken, mid-low voice; shy and careful." + LIFE),
     "P8": ("male", "A 57-year-old man who works on a fishing boat. Lighter, higher-pitched voice, brisk and easygoing." + LIFE),
     "P9": ("male", man(58, "pension owner") + "Smooth, polite soft baritone; mild and slightly tired, more refined than the others."),
-    "P10": ("female", "A 75-year-old woman who runs a small restaurant" + FROM % ("she", "her") + "Thin, high-pitched, raspy old woman voice; warm, motherly, talkative and quick."),
-    "P11": ("male", man(79, "restaurant owner") + "Elderly but sturdy and healthy voice; low, gravelly and firm, a little slower than younger men but clear and steady, with a stubborn old-timer's authority."),
+    # Sex follows the interview record (2026-09-28): P11 is the only woman, P10 is a man. Names do not tell.
+    "P10": ("male", man(75, "restaurant owner who also farms") + "Steady, quietly capable old man's voice; mid-low, calm and unhurried, with a plain practical tone."),
+    "P11": ("female", "A 79-year-old woman who runs a small restaurant with her husband" + FROM % ("she", "her") + "Thin, slightly raspy old woman voice; warm, motherly, talkative and quick, a little worn by aches."),
     "P12": ("male", man(63, "shop owner") + "Smooth, slightly nasal mid-high voice; quick-witted, sly, businesslike."),
     # Not residents: the system's voice and the health centre's nurse speak standard Korean.
     "MEDIAL": ("female", "A composed, bright woman in her mid-30s speaking clear standard Korean at a brisk, natural conversational pace, with a crisp, friendly, matter-of-fact tone; confident and efficient, not soft, not breathy, not sing-song."),
