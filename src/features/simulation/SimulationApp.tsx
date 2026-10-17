@@ -1,37 +1,35 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect } from 'react';
 import styled from 'styled-components';
-import ChoiceScreen from './screens/ChoiceScreen';
-import EvaluationsScreen from './screens/EvaluationsScreen';
 import IdleScreen from './screens/IdleScreen';
-import PairScreen from './screens/PairScreen';
 import IntroScreen from './screens/IntroScreen';
-import ObserveScreen from './screens/ObserveScreen';
-import { useIterationStore } from './iterationStore';
-import { usePlayback } from './scene/playback';
-import { changedRuleNames, chosenRequests, dayFacts, dayLine, dayName, openingOf } from './selectors/tree';
-import { useWall } from './stage/wall';
-import { useSimStore } from './store';
+import PairScreen from './screens/PairScreen';
+import { evaluationsOf, scenesOf, useWall } from './stage/wall';
+import { useAssets } from './assets';
 import { useAmbient } from './ui/ambient';
 import { preloadArt } from './ui/Portrait';
 import { Callout, Mono } from './ui/primitives';
 import { font, night } from './ui/theme';
 import { useUiScale } from './ui/uiScale';
+import { ChooseScreen, EvaluationsScreen, ResultScreen } from './week/ReviewScreens';
+import SceneView from './week/SceneView';
+import { eventOf, positionIn, requestOf } from './week/selectors';
+import { useWeekStore } from './week/store';
+import WeekScreen from './week/WeekScreen';
 
-// The wall: the big screen of the exhibition's two screens. It shows the walk and
-// nothing on it can be touched; the tablet (stage/PadApp) presses, and stage/wall.ts
-// does what was pressed and says what is on screen. The walk is:
+// The wall: the big screen of the exhibition's two screens. It shows the walk and nothing on it can be
+// touched; the tablet (stage/PadApp) presses, and stage/wall.ts does what was pressed and says what is on
+// screen. The walk is one path through a week (week/):
 //
-//   소개 영상          - why this exists, and who the visitor is; it starts when the
-//                        tablet says start and ends by opening day one;
-//   관찰               - the day, as a scene, a map and a timeline;
-//   주민 에이전트 평가 - the residents who went through the day, in their words;
-//   수정 요청 고르기      - the revision that becomes the next day's rule.
+//   소개 영상    - what Dially is and who the visitor is;
+//   이번 주      - seven days, an event on some of them; the visitor picks one;
+//   사건 장면    - the event as it ran, a line at a time;
+//   주민 평가    - the residents in it, in their words, with the lines each rests on;
+//   수정 요청    - what the designer may change, with the resident words behind each (none for an emergency);
+//   반영된 결과  - the same event with the request in force, and what the residents made of it.
 //
-// Every day shown was run when the record was made (selectors/tree): choosing a
-// revision opens that day, it starts nothing. The old second flow - preparing a
-// run, comparing versions, the field sheet - was removed on 2026-10-10 with the
-// rest of the interface that created runs; one path is left to read. The one-screen
-// version of this exhibition is on the `single-screen` branch.
+// Every scene and evaluation was written and checked before the exhibition (server/app/simulation/week.py):
+// choosing a request opens what it already says, it starts nothing. The earlier three-day walk (a tree of
+// versions run day after day) lives on the `audience-tablet-split` branch.
 
 const Root = styled.div`
   position: relative;
@@ -72,70 +70,38 @@ const Notices = styled.div`
   padding: 12px 20px 0;
 `;
 
+/** How long a line of a telling stays before the next one (the exhibition's pace). */
+const LINE_MS = 4500;
+
 export default function SimulationApp() {
   useUiScale();
   useAmbient();
   const { paired } = useWall();
-  const s = useSimStore();
-  const it = useIterationStore();
-  const playing = usePlayback((state) => state.playing);
-  const playbackError = usePlayback((state) => state.error);
-  const raf = useRef<number | null>(null);
-  const last = useRef<number>(0);
+  const s = useAssets();
+  const w = useWeekStore();
 
   useEffect(() => {
-    void s.bootstrap();
-    void it.init();
+    void s.load();
+    void w.init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // requestAnimationFrame moves the playhead of a stored recording; it never
-  // advances the simulation itself.
-  useEffect(() => {
-    if (!playing) {
-      if (raf.current) cancelAnimationFrame(raf.current);
-      raf.current = null;
-      return;
-    }
-    last.current = performance.now();
-    const loop = (now: number) => {
-      const delta = now - last.current;
-      last.current = now;
-      usePlayback.getState().tick(delta);
-      raf.current = requestAnimationFrame(loop);
-    };
-    raf.current = requestAnimationFrame(loop);
-    return () => {
-      if (raf.current) cancelAnimationFrame(raf.current);
-    };
-  }, [playing]);
-
-  const loaded = s.activeId ? s.attempts[s.activeId] : null;
-
-  // The opening film is waiting time: day one's record is read during it.
-  const prefetch = s.prefetch;
-  useEffect(() => {
-    if (!it.detail || it.pathStarted) return;
-    const first = openingOf(it.detail)?.attemptIds[0];
-    if (first) void prefetch(first);
-  }, [it.detail, it.pathStarted, prefetch]);
-
-  // The version being read is the version of the day that is loaded: a scene
-  // opened from an evaluation loads another day, and the screens follow it.
-  const setViewGeneration = it.setViewGeneration;
-  useEffect(() => {
-    const owner = it.detail?.generations.find((g) => s.activeId && g.attemptIds.includes(s.activeId));
-    if (owner && owner.id !== it.viewGenerationId) setViewGeneration(owner.id);
-  }, [s.activeId, it.detail, it.viewGenerationId, setViewGeneration]);
-
-  // Every drawing, fetched while the film plays: the first scene of a day and the
-  // evaluation faces are then already here.
+  // Every drawing, fetched while the film plays: the first scene and the evaluation faces are already here.
   useEffect(() => { preloadArt(s.art); }, [s.art]);
 
-  const viewGeneration = useMemo(
-    () => it.detail?.generations.find((g) => g.id === it.viewGenerationId) ?? null,
-    [it.detail, it.viewGenerationId],
-  );
+  const week = w.week;
+  const event = week ? eventOf(week, w.eventId) : null;
+  const telling = w.step === 'before' || w.step === 'after';
+  const scenes = scenesOf(event, w.step, w.requestId);
+  const at = positionIn(scenes, w.lineIndex);
+
+  // The wall has no pointer, so a telling goes on by itself: a line for a few seconds, then the next. The
+  // tablet's presses move the same line, and they restart this clock.
+  useEffect(() => {
+    if (!w.pathStarted || !telling || at.done) return undefined;
+    const timer = window.setTimeout(() => w.setLine(w.lineIndex + 1), LINE_MS);
+    return () => window.clearTimeout(timer);
+  }, [w.pathStarted, telling, at.done, w.lineIndex, w.eventId, w.step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (s.status === 'error') {
     return (
@@ -146,8 +112,7 @@ export default function SimulationApp() {
               <strong>시뮬레이션 서버에 연결하지 못했습니다.</strong>
               <div style={{ marginTop: 8 }}>{s.error}</div>
               <div style={{ marginTop: 8 }}>
-                <Mono>python server/sim_main.py --mode sim</Mono> 를 실행한 뒤 새로고침하세요. API 키는 필요
-                없습니다.
+                <Mono>python server/sim_main.py --mode sim</Mono> 를 실행한 뒤 새로고침하세요. API 키는 필요 없습니다.
               </div>
             </div>
           </Callout>
@@ -156,92 +121,54 @@ export default function SimulationApp() {
     );
   }
 
-  if (!s.village || !it.loaded) {
-    return (
-      <Root>
-        <Notices>
-          <Callout>불러오는 중…</Callout>
-        </Notices>
-      </Root>
-    );
+  if (!w.loaded || s.status === 'idle' || s.status === 'loading') {
+    return <Root><Notices><Callout>불러오는 중…</Callout></Notices></Root>;
   }
 
-  if (!it.detail) {
+  if (!week) {
     return (
       <Root>
-        <Notices>
-          <Callout>
-            <div>
-              <strong>읽을 기록이 없습니다.</strong>
-              <div style={{ marginTop: 8 }}>
-                서버가 읽는 기록(<Mono>local-data/runs/sim.sqlite3</Mono>)이 비어 있습니다. 기록을 채운 뒤 다시 여세요.
-              </div>
-            </div>
-          </Callout>
-        </Notices>
-      </Root>
-    );
-  }
-
-  const detail = it.detail;
-  const current = it.pathStarted ? viewGeneration : null;
-  const screen = it.screen;
-  return (
-    <Root>
-      {(playbackError || s.error || it.error) && (
         <Notices>
           <Callout $tone="error">
-            <div style={{ flex: 1 }}>{playbackError ?? s.error ?? it.error}</div>
+            <div>
+              <strong>읽을 한 주의 기록이 없습니다.</strong>
+              <div style={{ marginTop: 8 }}>{w.error ?? '서버가 fixtures/week 를 읽지 못했습니다.'}</div>
+            </div>
           </Callout>
         </Notices>
+      </Root>
+    );
+  }
+
+  const scene = scenes[at.scene];
+  const before = scenes.slice(0, at.scene).reduce((n, sc) => n + sc.lines.length, 0);
+  const request = event ? requestOf(event, w.requestId) : null;
+  const showWeek = w.pathStarted && w.step === 'week';
+  return (
+    <Root>
+      {(s.error || w.error) && <Notices><Callout $tone="error"><div style={{ flex: 1 }}>{s.error ?? w.error}</div></Callout></Notices>}
+
+      {!paired && !w.pathStarted && !w.introStarted && <PairScreen />}
+      {(paired || w.pathStarted || w.introStarted) && !w.pathStarted && !w.introStarted && <IdleScreen art={s.art} />}
+      {!w.pathStarted && w.introStarted && <IntroScreen voices={s.voices} onFinish={w.enterWeek} />}
+
+      {showWeek && <WeekScreen week={week} art={s.art} now={null} seen={w.seen} />}
+      {w.pathStarted && telling && scene && (
+        <SceneView week={week} scene={scene} line={w.lineIndex - before} art={s.art}
+          seconds={(LINE_MS / 1000) * scene.lines.length} position={{ at: at.scene + 1, of: scenes.length }} />
+      )}
+      {w.pathStarted && event && w.step === 'evaluations' && (
+        <EvaluationsScreen week={week} event={event} evaluations={evaluationsOf(event, w.step, w.requestId)}
+          scenes={event.before.scenes} art={s.art} openActor={w.openActor}
+          eyebrow={`${event.title} · 주민 평가`} title="서비스를 겪은 주민의 말"
+          lead="이 일에 있었던 주민이 자기가 겪은 것을 어떻게 읽었는지, 그리고 어느 대사를 근거로 삼았는지 보입니다." />
+      )}
+      {w.pathStarted && event && w.step === 'choose' && <ChooseScreen week={week} event={event} art={s.art} />}
+      {w.pathStarted && event && w.step === 'result' && (
+        <ResultScreen week={week} event={event} request={request} art={s.art} openActor={w.openActor} />
       )}
 
-      {/* No tablet yet: the code to scan. Once one is paired the walk is whatever it was (a tablet that
-          drops out in the middle of a visit does not throw the visitor back; it comes back by itself). */}
-      {!paired && !current && !it.introStarted && <PairScreen />}
-      {(paired || current || it.introStarted) && !current && !it.introStarted && <IdleScreen art={s.art} />}
-
-      {!current && it.introStarted && (
-        <IntroScreen voices={s.voices}
-          onFinish={() => { const first = openingOf(detail); if (first) void it.choose(first.id); }} />
-      )}
-
-      {current && screen === 'case' && loaded && (
-        <ObserveScreen
-          village={s.village}
-          detail={loaded.detail}
-          events={loaded.events}
-          art={s.art}
-          dayEnd={{ text: `${dayName(current)}가 끝났습니다`, action: '주민 에이전트 평가를 보시겠습니까',
-                    note: dayFacts(current) ? dayLine(dayFacts(current)!) : null }}
-          onReadEvaluations={() => it.setScreen('evaluations')}
-          strip={{ day: dayName(current), chosen: chosenRequests(detail, current.id) }}
-          changedRules={changedRuleNames(detail, current.id)}
-        />
-      )}
-
-      {current && screen === 'evaluations' && (
-        <EvaluationsScreen
-          detail={detail}
-          generation={current}
-          residents={s.village.residents.map((r) => r.id)}
-          eyebrow={`${dayName(current)}가 끝났습니다`}
-          page={it.page}
-          openActor={it.openActor}
-          issues={it.issues}
-          onPage={it.setPage}
-          onGoToImprove={() => it.setScreen('improve')}
-          onCloseOpen={() => { it.setOpenActor(null); it.setIssues(false); }}
-          events={loaded ? { attemptId: loaded.detail.attempt.id, list: loaded.events } : null}
-          art={s.art}
-        />
-      )}
-
-      {current && screen === 'improve' && (
-        <ChoiceScreen detail={detail} current={current} art={s.art} voices={s.voices}
-          closing={it.closing} onClosing={() => it.setClosing(true)} onRestart={it.restartPath} />
-      )}
-      {current && (
+      {w.pathStarted && (
         <Foot>
           <span>화면 속 사람과 대화는 전부 시뮬레이션입니다 · 이름은 가명, 모습은 지어낸 그림입니다</span>
         </Foot>

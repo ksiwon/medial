@@ -1,15 +1,14 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { api } from '../api/client';
-import { artIdOf } from '../scene/art';
-import { personName } from '../selectors/story';
+import { artIdOf } from '../week/art';
 import { inkA, night, px, radius } from './theme';
 
 // A resident's face on a reading page: the head and shoulders of the drawn
 // standing figure (the same picture the scene uses), on a warm disc. Someone
 // nobody drew gets their number on the same disc - never another person's face.
 
-const POSES = ['stand', 'phone', 'seated', 'drive'];
+const POSES = ['stand', 'phone'];
 
 export function portraitOf(actorId: string, art: ReadonlySet<string>): string | null {
   const id = artIdOf(actorId);
@@ -71,7 +70,7 @@ export default function Portrait({ actorId, art, size = 72 }: { actorId: string;
     if (img.current?.complete && img.current.naturalWidth > 0) setShown(true);
   }, [url]);
   return (
-    <Disc $size={size} role="img" aria-label={personName(actorId)}>
+    <Disc $size={size} role="img" aria-label={actorId}>
       {/* The number stays until the picture is in: never an empty disc. */}
       {(!picture || !shown) && actorId}
       {picture && <img ref={img} src={url ?? undefined} alt="" draggable={false} onLoad={() => { if (url) loaded.add(url); setShown(true); }}

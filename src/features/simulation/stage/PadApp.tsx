@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createBus, postTo, type PressResult } from './bus';
 import { Button, Notice, Screen, TopBar } from './pad/kit';
-import { Choose, Day, Ending, Evaluations, Join, Scan, Waiting, Watching, type Press } from './pad/screens';
+import { Choose, Evaluations, Join, Result, Scan, Telling, Waiting, Watching, Week, type Press } from './pad/screens';
 import {
   IDLE_STATE, STAGE_API, forgetPadToken, hasJoined, padToken, rememberJoined, type Command, type Link, type Phase, type StageState,
 } from './protocol';
@@ -18,10 +18,12 @@ const NOTICE_MS = 4000;
 const HEADLINE: Record<Phase, (s: StageState) => string> = {
   idle: () => '대기 중',
   intro: () => '소개 영상을 보는 중',
-  day: (s) => (s.scene ? `지금 · ${s.scene}` : s.dayOver ? '하루가 끝났습니다' : '마을의 하루'),
-  evaluations: (s) => (s.openActor ? '주민의 인터뷰를 읽는 중' : '주민 에이전트 평가'),
+  week: () => '이번 주',
+  before: (s) => (s.toldAll ? '이야기가 끝났어요' : s.scene ? `지금 · ${s.scene.time}` : '사건을 보는 중'),
+  evaluations: (s) => (s.openActor ? '주민의 평가를 읽는 중' : '주민 평가'),
   choose: () => '무엇을 고칠 것인가',
-  ending: (s) => (s.closing ? '마무리' : '사흘이 끝났습니다'),
+  after: (s) => (s.toldAll ? '이야기가 끝났어요' : '고른 요청대로 다시 보는 중'),
+  result: (s) => (s.event?.noChoice ? '응급 · 일어난 일을 읽는 중' : '반영된 결과'),
 };
 
 export default function PadApp() {
@@ -92,7 +94,7 @@ export default function PadApp() {
 
   return (
     <Screen>
-      <TopBar day={state.day} index={state.dayIndex} count={state.dayCount} line={HEADLINE[state.phase](state)} home={home} />
+      <TopBar place={state.event ? `${state.event.day ?? ''} · ${state.event.title}` : null} line={HEADLINE[state.phase](state)} home={home} />
       {link === 'lost' && <Notice>큰 화면과의 연결이 끊겼습니다. 다시 연결하는 중입니다…</Notice>}
       {link === 'live' && !wall && <Notice>큰 화면이 아직 연결되지 않았습니다.</Notice>}
       {notice === 'no-wall' && <Notice>큰 화면이 그것을 받지 못했습니다. 잠시 뒤 다시 눌러 주세요.</Notice>}
@@ -106,9 +108,11 @@ function PadStage({ s, press }: { s: StageState; press: Press }) {
   switch (s.phase) {
     case 'idle': return <Waiting press={press} />;
     case 'intro': return <Watching press={press} />;
-    case 'day': return <Day s={s} press={press} />;
+    case 'week': return <Week s={s} press={press} />;
+    case 'before': return <Telling s={s} press={press} after={false} />;
     case 'evaluations': return <Evaluations s={s} press={press} />;
     case 'choose': return <Choose s={s} press={press} />;
-    case 'ending': return <Ending s={s} press={press} />;
+    case 'after': return <Telling s={s} press={press} after />;
+    case 'result': return <Result s={s} press={press} />;
   }
 }

@@ -7,105 +7,78 @@
 // about where the walk is. (The one-screen version of the exhibition lives on the
 // `single-screen` branch; this branch has the two screens only.)
 
-export type Phase = 'idle' | 'intro' | 'day' | 'evaluations' | 'choose' | 'ending';
+export type Phase = 'idle' | 'intro' | 'week' | 'before' | 'evaluations' | 'choose' | 'after' | 'result';
 
-/** A press. `value` and `id` are only what the named press needs. */
+/** A press. `id` is only what the named press needs. */
 export type Command =
   | { name: 'start' }
   | { name: 'skipIntro' }
+  | { name: 'openEvent'; id: string }
+  | { name: 'line'; value: -1 | 1 }
   | { name: 'skipScene' }
-  | { name: 'skipLine' }
-  | { name: 'readEvaluations' }
-  | { name: 'evalPage'; value: -1 | 1 }
-  | { name: 'evalOpen'; id: string }
-  | { name: 'evalClose' }
-  | { name: 'evalIssues' }
-  | { name: 'goImprove' }
+  | { name: 'toEvaluations' }
+  | { name: 'openResident'; id: string }
+  | { name: 'closeResident' }
+  | { name: 'toChoose' }
   | { name: 'choose'; id: string }
-  | { name: 'closing' }
+  | { name: 'toResult' }
+  | { name: 'week' }
   | { name: 'home' };
 
 export type CommandName = Command['name'];
 
+/** One day of the week, for the tablet's list: which events fall on it. */
+export interface DayBrief {
+  day: string;
+  events: { id: string; title: string; noChoice: boolean; seen: boolean }[];
+}
+
 export interface ResidentBrief {
   id: string;
   name: string;
-  /** The first thing they asked to change, else the start of what they said. */
+  /** The first line of what they said: enough to tell the cards apart. */
   said: string;
 }
 
-export interface TaskBrief {
-  startMs: number;
-  title: string;
-}
-
-/** One thing a resident went through, as the evaluation's own list says it: a time and a title. Read, not pressed. */
-export interface WentBrief {
+export interface RequestBrief {
   id: string;
-  time: string;
-  title: string;
-}
-
-export interface ChoiceBrief {
-  /** The version that choosing it opens; null for an option that was never run. */
-  id: string | null;
   label: string;
-  kind: string;
-  goal: string | null;
-  rule: { before: string; after: string } | null;
-  /** Whose experience the request came from: the link from an evaluation to a revision. */
-  from: string[];
+  expect: string;
+  cost: string;
+  /** How well the residents' own words support it: shown, never hidden. */
+  basis: 'direct' | 'weak';
+  /** Whose words it came from. */
+  from: string | null;
 }
 
 /** What the wall is showing, as the tablet needs it. Small on purpose: where the walk is, and the things to press. */
 export interface StageState {
   phase: Phase;
-  /** "1일차", "2일차" ...; null before the walk starts. */
-  day: string | null;
-  /** Which day of how many (0-based index), for the tablet's day dots. */
-  dayIndex: number;
-  dayCount: number;
-  /** The scene's title while one is on, else null. */
-  scene: string | null;
-  playing: boolean;
-  /** 0..1 through the day's reel. */
-  progress: number;
-  /** The day's clock, in ms since midnight, and its two ends, for the time slider. */
-  atMs: number;
-  dayStartMs: number;
-  dayEndMs: number;
-  dayOver: boolean;
-  /** The day's requests, in time order: the timeline the visitor used to press on the wall. */
-  tasks: TaskBrief[];
-  /** Evaluations: everyone who was asked, which page the wall shows, and what is open on it. */
+  /** The week, always: the tablet's list of events to pick from. */
+  week: DayBrief[];
+  seen: number;
+  total: number;
+  /** The open event, and the weekday it falls on this session. */
+  event: { id: string; title: string; day: string | null; noChoice: boolean } | null;
+  /** Reading a telling (before / after): the scene it is in, how far through, and whether it is done. */
+  scene: { time: string; place: string | null; index: number; of: number } | null;
+  line: number;
+  lines: number;
+  toldAll: boolean;
+  /** Evaluations: the residents who were asked, and whose card is open. */
   residents: ResidentBrief[];
-  page: number;
-  pages: number;
   openActor: string | null;
-  issues: boolean;
-  /** Issue groups exist for this day. */
-  hasIssues: boolean;
-  /** What the open resident went through, in the order it happened: the tablet draws it as a timeline. */
-  went: WentBrief[];
-  /** Whether the day's evaluations lead to a choice (otherwise to the result). */
-  hasChoice: boolean;
-  choices: ChoiceBrief[];
-  /** The requests the visitor chose on the way to this day, in their words. */
-  chosen: string[];
-  /** The ending: the closing words have taken the page. */
-  closing: boolean;
+  /** Choose: the requests (none for an emergency). After: the one that was chosen. */
+  requests: RequestBrief[];
+  chosen: string | null;
 }
 
 export const IDLE_STATE: StageState = {
-  phase: 'idle', day: null, dayIndex: 0, dayCount: 0, scene: null, playing: false, progress: 0, atMs: 0,
-  dayStartMs: 0, dayEndMs: 0, dayOver: false, tasks: [], residents: [], page: 0, pages: 0, openActor: null,
-  issues: false, hasIssues: false, went: [], hasChoice: false, choices: [], chosen: [], closing: false,
+  phase: 'idle', week: [], seen: 0, total: 0, event: null, scene: null, line: 0, lines: 0, toldAll: false,
+  residents: [], openActor: null, requests: [], chosen: null,
 };
 
 export const STAGE_API = '/api/sim/stage';
-
-/** Residents to a page of the wall's evaluations: five columns on a wall screen. The tablet pages the same way. */
-export const PER_PAGE = 5;
 
 /** The tablet's connection to the exhibition, as the page can tell it. */
 export type Link = 'connecting' | 'live' | 'lost' | 'released' | 'refused';

@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { formatClock } from '../../positions';
 import { inkA, night, radius } from '../../ui/theme';
-import { PER_PAGE, type Command, type StageState } from '../protocol';
+import type { Command, StageState } from '../protocol';
 import { Button, Card, Grid, Hint, Next, Page, Row, Spacer, Stage } from './kit';
 
 // What the tablet shows at each stage of the walk. Every screen takes the wall's state and a `press`,
@@ -17,7 +16,7 @@ export function Waiting({ press }: { press: Press }) {
   return (
     <Stage>
       <h1>서비스 디자이너가 되어 보세요</h1>
-      <p>마을의 하루를 보고, 주민 에이전트의 평가를 읽고, 고칠 것을 하나 골라 다음 날을 다시 봅니다.</p>
+      <p>한 주 동안 마을에 있었던 일 가운데 보고 싶은 것을 골라 보고, 주민의 평가를 읽고, 고칠 것을 하나 골라 그 일이 어떻게 달라지는지 봅니다.</p>
       <Button $tone="primary" $big onClick={() => press({ name: 'start' })}>시작하기</Button>
     </Stage>
   );
@@ -27,13 +26,72 @@ export function Watching({ press }: { press: Press }) {
   return (
     <Stage>
       <h1>큰 화면을 봐 주세요</h1>
-      <p>소개 영상이 끝나면 첫날이 열립니다.</p>
+      <p>소개 영상이 끝나면 이번 주가 열립니다.</p>
       <Button $tone="quiet" onClick={() => press({ name: 'skipIntro' })}>건너뛰기 →</Button>
     </Stage>
   );
 }
 
-// ---- the day -----------------------------------------------------------------
+// ---- the week ----------------------------------------------------------------
+
+/** The week, down the page: a day, and the events on it. The whole row of an event is the target. A day with
+ *  nothing is left empty on purpose: the week is not one event a day. */
+const WeekList = styled.div`
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+`;
+
+const DayRow = styled.div<{ $empty: boolean }>`
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+  min-height: 0;
+  ${(p) => p.$empty && 'opacity: 0.5;'}
+  > b { display: grid; place-items: center; font-size: 24px; font-weight: 800; border-radius: ${radius.card}; border: 1px solid ${night.line}; background: ${(p) => (p.$empty ? 'transparent' : night.panel)}; }
+  > div { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; min-height: 0; }
+  > div > em { display: flex; align-items: center; padding: 0 16px; font-style: normal; font-size: 16px; color: ${night.faint}; border: 1px dashed ${night.line}; border-radius: ${radius.card}; }
+`;
+
+const EventButton = styled(Card)<{ $seen: boolean }>`
+  min-height: 0;
+  height: 100%;
+  padding: 8px 16px;
+  justify-content: center;
+  gap: 2px;
+  ${(p) => p.$seen && 'opacity: 0.6;'}
+  > b { font-size: 20px; }
+  > small { font-size: 12px; color: ${night.mute}; }
+`;
+
+export function Week({ s, press }: { s: StageState; press: Press }) {
+  return (
+    <Page>
+      <Hint>보고 싶은 사건을 하나 누르세요. 큰 화면에서 그 일이 펼쳐집니다. ({s.seen} / {s.total}개 봤어요)</Hint>
+      <WeekList>
+        {s.week.map((d) => (
+          <DayRow key={d.day} $empty={d.events.length === 0}>
+            <b>{d.day}</b>
+            <div>
+              {d.events.length === 0 && <em>이날은 조용했습니다</em>}
+              {d.events.map((e) => (
+                <EventButton key={e.id} $seen={e.seen} onClick={() => press({ name: 'openEvent', id: e.id })}>
+                  <b>{e.title}</b>
+                  <small>{e.noChoice ? '응급 · 읽기만' : e.seen ? '읽음' : '고를 수 있어요'}</small>
+                </EventButton>
+              ))}
+            </div>
+          </DayRow>
+        ))}
+      </WeekList>
+    </Page>
+  );
+}
+
+// ---- a telling ---------------------------------------------------------------
 
 const Track = styled.div<{ $p: number }>`
   flex: none;
@@ -61,28 +119,30 @@ const Now = styled.div`
 const Pair = styled.div`
   flex: none;
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: 1fr 1fr 2fr;
   gap: 16px;
   > button { min-height: 120px; font-size: 32px; }
 `;
 
-/** The day plays by itself. The only things a visitor does in it are to go on to the next scene, or to
- *  get past the line being said; everything else (play, pause, the clock, a list of the day) was taken
- *  away because a visitor who is watching the wall does not need to steer it. */
-export function Day({ s, press }: { s: StageState; press: Press }) {
+/** The event plays by itself, a line at a time. The only things a visitor does in it are to go back or on by a
+ *  line, to skip the scene, or - once it has been told - to read what the residents made of it. */
+export function Telling({ s, press, after }: { s: StageState; press: Press; after: boolean }) {
   return (
     <Page>
-      <Track $p={s.progress} aria-hidden><i /></Track>
+      <Track $p={s.lines > 0 ? (s.line + 1) / s.lines : 0} aria-hidden><i /></Track>
       <Now aria-live="off">
-        <small>{s.dayOver ? '하루가 끝났습니다' : s.scene ? '지금 이 장면' : '마을의 하루'}</small>
-        <strong>{s.dayOver ? `${s.day ?? ''}가 지나갔어요` : s.scene ?? '마을 지도를 보고 있어요'}</strong>
-        <time>{formatClock(s.atMs)}</time>
+        <small>{after ? '고른 요청대로 다시 펼쳐지는 일' : s.toldAll ? '이야기가 끝났어요' : '지금 이 장면'}</small>
+        <strong>{s.event?.title ?? ''}</strong>
+        <time>{s.scene ? `${s.scene.time} · ${s.scene.index + 1} / ${s.scene.of}` : ''}</time>
       </Now>
-      {s.dayOver ? (
-        <Row><Spacer /><Next $big onClick={() => press({ name: 'readEvaluations' })}>주민 에이전트 평가 보기 →</Next><Spacer /></Row>
+      {s.toldAll ? (
+        <Row><Spacer /><Next $big onClick={() => press({ name: after ? 'toResult' : 'toEvaluations' })}>
+          {after ? '반영된 평가 보기 →' : '주민 평가 보기 →'}
+        </Next><Spacer /></Row>
       ) : (
         <Pair>
-          <Button $tone="quiet" onClick={() => press({ name: 'skipLine' })} disabled={!s.scene}>이 대화 건너뛰기</Button>
+          <Button $tone="quiet" onClick={() => press({ name: 'line', value: -1 })} disabled={s.line <= 0}>← 이전 줄</Button>
+          <Button $tone="quiet" onClick={() => press({ name: 'line', value: 1 })}>다음 줄 →</Button>
           <Button $tone="primary" onClick={() => press({ name: 'skipScene' })}>다음 장면으로 →</Button>
         </Pair>
       )}
@@ -92,79 +152,38 @@ export function Day({ s, press }: { s: StageState; press: Press }) {
 
 // ---- the residents' evaluations ----------------------------------------------
 
-/** What the open resident went through, one line each, down a rail: a thing to read. It is not pressable and
- *  does not look it - no card, no arrow - because the wall is where the scenes are. */
-const Went = styled.ol`
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  overflow: hidden;
-  &::before { content: ''; position: absolute; left: 8px; margin-left: -1px; top: 12px; bottom: 12px; width: 2px; background: ${inkA(0.22)}; }
-  > li { position: relative; display: flex; align-items: baseline; gap: 20px; padding-left: 40px; }
-  > li::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 12px;
-    width: 16px;
-    height: 16px;
-    border-radius: ${radius.round};
-    background: ${night.ground};
-    border: 4px solid ${night.ink};
-    box-sizing: border-box;
-  }
-  > li > time { flex: none; min-width: 88px; font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; }
-  > li > span { min-width: 0; font-size: 28px; line-height: 1.4; color: ${night.mute}; word-break: keep-all; }
-`;
-
-export function Evaluations({ s, press }: { s: StageState; press: Press }) {
+export function Evaluations({ s, press, result = false }: { s: StageState; press: Press; result?: boolean }) {
   const open = s.openActor ? s.residents.find((r) => r.id === s.openActor) ?? null : null;
-  if (open || s.issues) {
+  const emergency = s.event?.noChoice ?? false;
+  if (open) {
     return (
       <Page>
         <Row>
-          <Button $tone="primary" onClick={() => press({ name: 'evalClose' })}>← 목록으로</Button>
-          <Hint style={{ fontSize: 28, fontWeight: 800, color: night.ink }}>{open ? `${open.name}의 인터뷰` : '쟁점 묶음'}</Hint>
+          <Button $tone="primary" onClick={() => press({ name: 'closeResident' })}>← 목록으로</Button>
+          <Hint style={{ fontSize: 28, fontWeight: 800, color: night.ink }}>{open.name}의 평가</Hint>
         </Row>
-        <Hint>큰 화면에서 읽어 주세요. 한동안 누르지 않으면 목록으로 돌아갑니다.</Hint>
-        {open && s.went.length > 0 && (
-          <>
-            <Hint>{open.name}이 이날 겪은 일</Hint>
-            <Went>
-              {s.went.map((w) => (
-                <li key={w.id}><time>{w.time}</time><span>{w.title}</span></li>
-              ))}
-            </Went>
-          </>
-        )}
+        <Hint>큰 화면에서 읽어 주세요. 평가가 어느 대사를 근거로 삼았는지도 함께 보입니다.</Hint>
       </Page>
     );
   }
-  const first = s.page * PER_PAGE;
   return (
     <Page>
-      <Hint>평가를 남긴 주민 {s.residents.length}명. 한 분을 누르면 큰 화면에 인터뷰 전체가 펼쳐집니다.</Hint>
+      <Hint>
+        {result ? '고른 요청이 반영된 일을 겪은 주민입니다.' : '이 일을 겪은 주민입니다.'} 한 분을 누르면 큰 화면에 그분의 평가가 펼쳐집니다.
+      </Hint>
       <Grid $cols={1}>
-        {s.residents.slice(first, first + PER_PAGE).map((r) => (
-          <Card key={r.id} onClick={() => press({ name: 'evalOpen', id: r.id })}>
+        {s.residents.map((r) => (
+          <Card key={r.id} onClick={() => press({ name: 'openResident', id: r.id })}>
             <b>{r.name}</b>
             <span>{r.said}</span>
           </Card>
         ))}
       </Grid>
       <Row>
-        <Button onClick={() => press({ name: 'evalPage', value: -1 })} disabled={s.page <= 0}>← 앞</Button>
-        <Button onClick={() => press({ name: 'evalPage', value: 1 })} disabled={s.page >= s.pages - 1}>다음 →</Button>
-        <Hint>{s.page + 1} / {Math.max(s.pages, 1)}</Hint>
-        {s.hasIssues && <Button $tone="quiet" onClick={() => press({ name: 'evalIssues' })}>쟁점 묶음</Button>}
+        <Button $tone="quiet" onClick={() => press({ name: 'week' })}>← 이번 주로</Button>
         <Spacer />
-        <Next onClick={() => press({ name: 'goImprove' })}>{s.hasChoice ? '무엇을 고칠지 고르기 →' : '결과 보러 가기 →'}</Next>
+        {!result && !emergency && <Next onClick={() => press({ name: 'toChoose' })}>무엇을 고칠지 고르기 →</Next>}
+        {!result && emergency && <Next onClick={() => press({ name: 'toChoose' })}>마치기 →</Next>}
       </Row>
     </Page>
   );
@@ -179,28 +198,26 @@ const Pick = styled(Card)`
   > b { font-size: 28px; }
   > span { -webkit-line-clamp: 4; }
   > div { margin-top: auto; width: 100%; padding-top: 16px; border-top: 1px solid ${night.line}; font-size: 20px; line-height: 1.5; color: ${night.mute}; word-break: keep-all; }
-  > div > s { color: ${night.faint}; display: block; }
-  > div > strong { color: ${night.ink}; display: block; margin-top: 4px; }
+  > div > strong { color: ${night.ink}; display: block; }
   > em { font-style: normal; font-size: 16px; color: ${night.faint}; }
+  > em.weak { color: #e8c46a; font-weight: 800; }
 `;
 
 export function Choose({ s, press }: { s: StageState; press: Press }) {
   // One touch chooses, and a choice cannot be taken back: from the touch on, nothing else on this page answers.
   const [sent, setSent] = useState<string | null>(null);
-  useEffect(() => { setSent(null); }, [s.day]);
+  useEffect(() => { setSent(null); }, [s.event?.id]);
   return (
     <Page>
-      <Hint>하나를 고르면 그것이 내일의 규칙이 되어 큰 화면에서 다음 날이 시작됩니다. 나머지 조건은 그대로입니다.</Hint>
-      <Grid $cols={Math.max(1, Math.min(3, s.choices.length))}>
-        {s.choices.map((c, i) => (
-          <Pick key={c.id ?? c.label} $on={sent === c.id} disabled={c.id === null || sent !== null}
-            onClick={() => { if (c.id) { setSent(c.id); press({ name: 'choose', id: c.id }); } }}>
-            <small>{i + 1} · {c.kind}</small>
-            <b>{c.label}</b>
-            {c.goal && <span>{c.goal}</span>}
-            {c.from.length > 0 && <em>{c.from.slice(0, 3).join(' · ')}의 경험에서</em>}
-            {c.rule && <div><s>{c.rule.before}</s><strong>→ {c.rule.after}</strong></div>}
-            {c.id === null && <span>이 기록에서는 돌리지 않은 안</span>}
+      <Hint>하나를 고르면 같은 일이 그 요청대로 다시 펼쳐집니다. 모든 요청에는 바라는 것과 따를 부담이 있어요.</Hint>
+      <Grid $cols={Math.max(1, Math.min(3, s.requests.length))}>
+        {s.requests.map((r, i) => (
+          <Pick key={r.id} $on={sent === r.id} disabled={sent !== null}
+            onClick={() => { setSent(r.id); press({ name: 'choose', id: r.id }); }}>
+            <small>{i + 1}</small>
+            <b>{r.label}</b>
+            {r.from && <em className={r.basis === 'weak' ? 'weak' : undefined}>{r.basis === 'weak' ? '근거가 약한 요청' : `${r.from}의 평가에서`}</em>}
+            <div><strong>바라는 것 · {r.expect}</strong>따를 부담 · {r.cost}</div>
           </Pick>
         ))}
       </Grid>
@@ -208,20 +225,10 @@ export function Choose({ s, press }: { s: StageState; press: Press }) {
   );
 }
 
-// ---- the end ------------------------------------------------------------------
+// ---- the end of an event -------------------------------------------------------
 
-export function Ending({ s, press }: { s: StageState; press: Press }) {
-  // The three days stay up for a while and the closing words follow by themselves (ChoiceScreen RESULT_S);
-  // the button is for the visitor who has read enough and does not want to wait.
-  return (
-    <Stage>
-      <h1>{s.closing ? '체험이 끝났습니다' : '사흘이 끝났습니다'}</h1>
-      <p>{s.closing ? '다음 분을 위해 처음 화면으로 돌아갑니다.' : '고른 것과 마을이 어떻게 됐는지를 큰 화면에서 봐 주세요. 잠시 뒤 마무리가 이어집니다.'}</p>
-      {s.closing
-        ? <Button $tone="primary" $big onClick={() => press({ name: 'home' })}>처음으로</Button>
-        : <Next $big onClick={() => press({ name: 'closing' })}>마무리 화면 보기 →</Next>}
-    </Stage>
-  );
+export function Result({ s, press }: { s: StageState; press: Press }) {
+  return <Evaluations s={s} press={press} result />;
 }
 
 // ---- not (or no longer) the tablet --------------------------------------------

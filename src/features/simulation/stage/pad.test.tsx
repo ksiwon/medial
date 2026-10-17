@@ -1,89 +1,152 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { Day, Ending, Evaluations } from './pad/screens';
+import { Choose, Evaluations, Result, Telling, Week } from './pad/screens';
 import { IDLE_STATE, type Command, type StageState } from './protocol';
 
-// What the tablet offers at the points the visitor asked to keep simple. Each screen is its state and a
-// `press`: a test says what is on it and what pressing it sends.
+// What the tablet offers at each point of the walk. Each screen is its state and a `press`: a test says what is on
+// it and what pressing it sends.
 
 afterEach(cleanup);
 
-const state = (over: Partial<StageState> = {}): StageState => ({ ...IDLE_STATE, phase: 'day', day: '1일차', dayIndex: 0, dayCount: 3, ...over });
+const event = { id: 'E1', title: '연락이 안 되어 찾아보기', day: '월', noChoice: false };
+const state = (over: Partial<StageState> = {}): StageState => ({ ...IDLE_STATE, phase: 'before', event, ...over });
 const pressed = () => { const sent: Command[] = []; return { sent, press: (c: Command) => { sent.push(c); } }; };
 const names = (container: HTMLElement) => [...container.querySelectorAll('button')].map((b) => b.textContent?.trim());
 
-describe('the day', () => {
-  it('has two things to press while it plays, and nothing else', () => {
+describe('the week', () => {
+  const week = [
+    { day: '월', events: [{ id: 'E1', title: '연락이 안 되어 찾아보기', noChoice: false, seen: true }] },
+    { day: '화', events: [] },
+    { day: '금', events: [{ id: 'E5', title: '보건소장의 안내 전달', noChoice: false, seen: false }, { id: 'E6', title: '119 구급 상황', noChoice: true, seen: false }] },
+  ];
+
+  it('lists every day, leaves a quiet day empty, and has one button per event', () => {
+    const { press } = pressed();
+    const { container } = render(<Week s={state({ phase: 'week', week, seen: 1, total: 3 })} press={press} />);
+    expect(screen.getByText('이날은 조용했습니다')).toBeDefined();
+    expect(names(container).filter((n) => n && !/^[월화수목금토일]$/.test(n))).toHaveLength(3);
+    expect(screen.getByText(/1 \/ 3개 봤어요/)).toBeDefined();
+  });
+
+  it('says what is read and what is an emergency', () => {
+    const { press } = pressed();
+    render(<Week s={state({ phase: 'week', week })} press={press} />);
+    expect(screen.getByText('읽음')).toBeDefined();
+    expect(screen.getByText('응급 · 읽기만')).toBeDefined();
+  });
+
+  it('opens the event that was touched', () => {
     const { press, sent } = pressed();
-    const { container } = render(<Day s={state({ scene: '본인에게 연락' })} press={press} />);
-    expect(names(container)).toEqual(['이 대화 건너뛰기', '다음 장면으로 →']);
-    expect(container.querySelector('input')).toBeNull();
-    fireEvent.click(screen.getByText('이 대화 건너뛰기'));
+    render(<Week s={state({ phase: 'week', week })} press={press} />);
+    fireEvent.click(screen.getByText('119 구급 상황'));
+    expect(sent).toEqual([{ name: 'openEvent', id: 'E6' }]);
+  });
+});
+
+describe('a telling', () => {
+  const told = { time: '09:40', place: '밭', index: 0, of: 2 };
+
+  it('has three things to press while it plays, and nothing else', () => {
+    const { press, sent } = pressed();
+    const { container } = render(<Telling s={state({ scene: told, line: 1, lines: 8 })} press={press} after={false} />);
+    expect(names(container)).toEqual(['← 이전 줄', '다음 줄 →', '다음 장면으로 →']);
+    fireEvent.click(screen.getByText('다음 줄 →'));
+    fireEvent.click(screen.getByText('← 이전 줄'));
     fireEvent.click(screen.getByText('다음 장면으로 →'));
-    expect(sent).toEqual([{ name: 'skipLine' }, { name: 'skipScene' }]);
+    expect(sent).toEqual([{ name: 'line', value: 1 }, { name: 'line', value: -1 }, { name: 'skipScene' }]);
   });
 
-  it('cannot skip a line when nobody is speaking (the map between scenes)', () => {
+  it('cannot go back from the first line', () => {
     const { press } = pressed();
-    render(<Day s={state({ scene: null })} press={press} />);
-    expect((screen.getByText('이 대화 건너뛰기') as HTMLButtonElement).disabled).toBe(true);
+    render(<Telling s={state({ scene: told, line: 0, lines: 8 })} press={press} after={false} />);
+    expect((screen.getByText('← 이전 줄') as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('offers only the way on to the evaluations once the day is over', () => {
+  it('offers only the way on to the evaluations once it has been told', () => {
     const { press, sent } = pressed();
-    const { container } = render(<Day s={state({ dayOver: true })} press={press} />);
-    expect(names(container)).toEqual(['주민 에이전트 평가 보기 →']);
-    fireEvent.click(screen.getByText('주민 에이전트 평가 보기 →'));
-    expect(sent).toEqual([{ name: 'readEvaluations' }]);
+    const { container } = render(<Telling s={state({ toldAll: true, line: 7, lines: 8 })} press={press} after={false} />);
+    expect(names(container)).toEqual(['주민 평가 보기 →']);
+    fireEvent.click(screen.getByText('주민 평가 보기 →'));
+    expect(sent).toEqual([{ name: 'toEvaluations' }]);
+  });
+
+  it('after a chosen request, the way on is to what the residents made of it', () => {
+    const { press, sent } = pressed();
+    render(<Telling s={state({ phase: 'after', toldAll: true })} press={press} after />);
+    fireEvent.click(screen.getByText('반영된 평가 보기 →'));
+    expect(sent).toEqual([{ name: 'toResult' }]);
   });
 });
 
-describe("a resident's interview, on the tablet", () => {
-  const open = state({
-    phase: 'evaluations', openActor: 'P1',
-    residents: [{ id: 'P1', name: 'P1 한상덕', said: '말' }],
-    went: [{ id: 'e1', time: '09:30', title: '본인에게 연락' }, { id: 'e2', time: '09:40', title: '이장에게 확인을 부탁' }],
+describe('the evaluations', () => {
+  const residents = [{ id: 'P1', name: '한상덕', said: '밭일하느라 못 들었다' }, { id: 'P6', name: '남기웅', said: '걱정이 됐다' }];
+
+  it('lists who was in the event; a touch opens that resident on the wall', () => {
+    const { press, sent } = pressed();
+    render(<Evaluations s={state({ phase: 'evaluations', residents })} press={press} />);
+    fireEvent.click(screen.getByText('한상덕'));
+    expect(sent).toEqual([{ name: 'openResident', id: 'P1' }]);
   });
 
-  it('shows that person day as a timeline and a way back to the list, and nothing else to press', () => {
-    const { press } = pressed();
-    const { container } = render(<Evaluations s={open} press={press} />);
+  it('shows one open resident with the one way back to the list', () => {
+    const { press, sent } = pressed();
+    const { container } = render(<Evaluations s={state({ phase: 'evaluations', residents, openActor: 'P1' })} press={press} />);
     expect(names(container)).toEqual(['← 목록으로']);
-    expect(screen.getByText('09:30')).toBeDefined();
-    expect(screen.getByText('본인에게 연락')).toBeDefined();
-    expect(screen.getByText('이장에게 확인을 부탁')).toBeDefined();
-  });
-
-  it('pressing an event does nothing: there is no way from an event back into the scene', () => {
-    const { press, sent } = pressed();
-    render(<Evaluations s={open} press={press} />);
-    fireEvent.click(screen.getByText('본인에게 연락'));
-    fireEvent.click(screen.getByText('09:40'));
-    expect(sent).toEqual([]);
-    expect(screen.queryByText(/장면 보기|그 장면/)).toBeNull();
-  });
-
-  it('goes back to the list with the one button', () => {
-    const { press, sent } = pressed();
-    render(<Evaluations s={open} press={press} />);
     fireEvent.click(screen.getByText('← 목록으로'));
-    expect(sent).toEqual([{ name: 'evalClose' }]);
+    expect(sent).toEqual([{ name: 'closeResident' }]);
+  });
+
+  it('goes on to the choice of what to change, or - for an emergency - simply ends', () => {
+    const a = pressed();
+    render(<Evaluations s={state({ phase: 'evaluations', residents })} press={a.press} />);
+    fireEvent.click(screen.getByText('무엇을 고칠지 고르기 →'));
+    expect(a.sent).toEqual([{ name: 'toChoose' }]);
+    cleanup();
+    const b = pressed();
+    render(<Evaluations s={state({ phase: 'evaluations', residents, event: { ...event, noChoice: true } })} press={b.press} />);
+    expect(screen.queryByText('무엇을 고칠지 고르기 →')).toBeNull();
+    fireEvent.click(screen.getByText('마치기 →'));
+    expect(b.sent).toEqual([{ name: 'toChoose' }]);
+  });
+
+  it('the way back to the week is always there', () => {
+    const { press, sent } = pressed();
+    render(<Evaluations s={state({ phase: 'evaluations', residents })} press={press} />);
+    fireEvent.click(screen.getByText('← 이번 주로'));
+    expect(sent).toEqual([{ name: 'week' }]);
   });
 });
 
-describe('the end', () => {
-  it('has a button for the closing page, which brings it before the wait is over', () => {
-    const { press, sent } = pressed();
-    render(<Ending s={state({ phase: 'ending' })} press={press} />);
-    fireEvent.click(screen.getByText('마무리 화면 보기 →'));
-    expect(sent).toEqual([{ name: 'closing' }]);
+describe('choosing', () => {
+  const requests = [
+    { id: 'A', label: '본인에게 먼저 기회를 주세요', expect: '불려 다니지 않는다', cost: '위급하면 늦는다', basis: 'direct' as const, from: '한상덕' },
+    { id: 'C', label: '간격을 두세요', expect: '피로가 준다', cost: '진짜 무응답이 묻힌다', basis: 'weak' as const, from: '남기웅' },
+  ];
+
+  it('shows each request with what is hoped and what it costs, and marks a weakly supported one', () => {
+    const { press } = pressed();
+    render(<Choose s={state({ phase: 'choose', requests })} press={press} />);
+    expect(screen.getByText(/불려 다니지 않는다/)).toBeDefined();
+    expect(screen.getByText(/진짜 무응답이 묻힌다/)).toBeDefined();
+    expect(screen.getByText('한상덕의 평가에서')).toBeDefined();
+    expect(screen.getByText('근거가 약한 요청')).toBeDefined();
   });
 
-  it('after the closing words the one thing left is the way back to the start', () => {
+  it('one touch chooses, and from then on nothing else answers', () => {
     const { press, sent } = pressed();
-    const { container } = render(<Ending s={state({ phase: 'ending', closing: true })} press={press} />);
-    expect(names(container)).toEqual(['처음으로']);
-    fireEvent.click(screen.getByText('처음으로'));
-    expect(sent).toEqual([{ name: 'home' }]);
+    render(<Choose s={state({ phase: 'choose', requests })} press={press} />);
+    fireEvent.click(screen.getByText('본인에게 먼저 기회를 주세요'));
+    fireEvent.click(screen.getByText('간격을 두세요'));
+    expect(sent).toEqual([{ name: 'choose', id: 'A' }]);
+  });
+});
+
+describe('the result', () => {
+  it('is the residents of the scene that followed, and the way back to the week', () => {
+    const { press, sent } = pressed();
+    render(<Result s={state({ phase: 'result', residents: [{ id: 'P1', name: '한상덕', said: '말' }] })} press={press} />);
+    expect(screen.queryByText('무엇을 고칠지 고르기 →')).toBeNull();
+    fireEvent.click(screen.getByText('← 이번 주로'));
+    expect(sent).toEqual([{ name: 'week' }]);
   });
 });

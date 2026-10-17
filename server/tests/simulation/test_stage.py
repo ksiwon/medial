@@ -70,7 +70,7 @@ def test_presence_says_who_is_listening_and_a_stalled_listener_cannot_block_the_
         wall = hub.subscribe("wall")
         assert hub.presence() == {"wall": 1, "pad": 0}
         for i in range(stage.QUEUE_SIZE + 10):
-            hub.command(stage.StageCommand(name="evalPage", value=1 if i % 2 else -1))
+            hub.command(stage.StageCommand(name="line", value=1 if i % 2 else -1))
         assert wall.qsize() == stage.QUEUE_SIZE
         hub.unsubscribe(wall)
         assert hub.presence() == {"wall": 0, "pad": 0}

@@ -29,15 +29,15 @@ describe('the press bus', () => {
   it('keeps one press in flight and sends the rest in the order they were pressed', async () => {
     const h = held();
     const bus = createBus(h.post, () => {});
-    bus.send({ name: 'skipLine' });
+    bus.send({ name: 'line', value: 1 });
     bus.send({ name: 'skipScene' });
-    bus.send({ name: 'readEvaluations' });
-    expect(h.sent.map((c) => c.name)).toEqual(['skipLine']);
+    bus.send({ name: 'toEvaluations' });
+    expect(h.sent.map((c) => c.name)).toEqual(['line']);
     await h.answer();
-    expect(h.sent.map((c) => c.name)).toEqual(['skipLine', 'skipScene']);
+    expect(h.sent.map((c) => c.name)).toEqual(['line', 'skipScene']);
     await h.answer();
     await h.answer();
-    expect(h.sent.map((c) => c.name)).toEqual(['skipLine', 'skipScene', 'readEvaluations']);
+    expect(h.sent.map((c) => c.name)).toEqual(['line', 'skipScene', 'toEvaluations']);
   });
 
   it('sends every press: two skips pressed quickly are two skips, never one', async () => {
@@ -57,14 +57,14 @@ describe('the press bus', () => {
     const bus = createBus(async (c) => {
       calls.push(c.name);
       if (c.name === 'skipScene') throw new Error('network down');
-      return c.name === 'goImprove' ? { kind: 'no-wall' } : { kind: 'ok' };
+      return c.name === 'toChoose' ? { kind: 'no-wall' } : { kind: 'ok' };
     }, (c, r) => results.push([c.name, r.kind]));
-    bus.send({ name: 'skipLine' });
+    bus.send({ name: 'line', value: 1 });
     bus.send({ name: 'skipScene' });
-    bus.send({ name: 'goImprove' });
+    bus.send({ name: 'toChoose' });
     await new Promise((r) => setTimeout(r, 0));
-    expect(calls).toEqual(['skipLine', 'skipScene', 'goImprove']);
-    expect(results).toEqual([['skipLine', 'ok'], ['skipScene', 'failed'], ['goImprove', 'no-wall']]);
+    expect(calls).toEqual(['line', 'skipScene', 'toChoose']);
+    expect(results).toEqual([['line', 'ok'], ['skipScene', 'failed'], ['toChoose', 'no-wall']]);
   });
 });
 

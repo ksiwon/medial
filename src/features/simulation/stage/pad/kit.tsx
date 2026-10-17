@@ -168,22 +168,11 @@ const Dots = styled.ol`
   > li[data-state='done'] { background: ${inkA(0.7)}; }
 `;
 
-export function TopBar({ day, index, count, line, home }: {
-  day: string | null; index: number; count: number; line: string; home: React.ReactNode;
-}) {
+export function TopBar({ place, line, home }: { place: string | null; line: string; home: React.ReactNode }) {
   return (
     <BarBox>
-      <b>AI 조율자</b>
-      {day && (
-        <>
-          <Dots aria-label={`${count}일 가운데 ${index + 1}일째`}>
-            {Array.from({ length: count }, (_, i) => (
-              <li key={i} data-state={i < index ? 'done' : i === index ? 'now' : 'todo'} />
-            ))}
-          </Dots>
-          <em>{day}</em>
-        </>
-      )}
+      <b>Dially</b>
+      {place && <em>{place}</em>}
       <span>{line}</span>
       {home}
     </BarBox>

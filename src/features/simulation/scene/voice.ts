@@ -1,17 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { api } from '../api/client';
-import type { VideoClip, VoiceClip } from '../api/types';
+import type { VoiceClip } from '../api/types';
 import { duckAmbient } from '../ui/ambient';
-import type { Position } from './types';
 
-// The voices of the scenes. Every said line of a played scene was spoken once ahead of time
-// (scripts/tts_scenes.py) and nothing is generated while the screen runs. A line that has a
-// recording is paced by it (reel.ts: its length is the clip's) and plays when its "typing" dots
-// are done; a line without one is read, silently, as before.
+// The voices of the exhibition. Every line of every scene, and the opening and closing narration, is spoken once
+// ahead of time (scripts/tts_scenes.py) and nothing is generated while the screen runs. A line that has a
+// recording plays as it appears; a line without one is read, silently, at the pace of the screen.
 //
-// A browser may refuse sound before anyone has touched the page. play() then rejects and the
-// scene simply goes on in silence; the wall's browser is started with autoplay allowed
-// (README, "전시장 브라우저").
+// A browser may refuse sound before anyone has touched the page. play() then rejects and the scene simply goes on
+// in silence; the wall's browser is started with autoplay allowed (README, "전시장 브라우저").
 
 const pool = new Map<string, HTMLAudioElement>();
 
@@ -26,33 +23,6 @@ export function preloadVoices(clips: Record<string, VoiceClip>) {
   }
 }
 
-/**
- * The video mode (3안) is a switch in the address, `?video=1`: the lines that have a clip play as video and every
- * other line stays a picture. Without it the screen is the picture mode, whether or not clips exist.
- */
-export const videoMode = () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('video') === '1';
-
-const filmBlobs = new Map<string, string>();
-
-/**
- * Fetch every clip into memory now. A clip streamed when its line starts shows (and speaks) a moment late, and the line's
- * time, which runs from its start, then ends before the speech does; from memory it starts at once.
- */
-export function preloadVideos(clips: Record<string, VideoClip>) {
-  if (typeof window === 'undefined') return;
-  for (const file of new Set(Object.values(clips).map((c) => c.file))) {
-    if (filmBlobs.has(file)) continue;
-    filmBlobs.set(file, '');
-    fetch(api.videoUrl(file))
-      .then((r) => r.blob())
-      .then((blob) => filmBlobs.set(file, URL.createObjectURL(blob)))
-      .catch(() => filmBlobs.delete(file));
-  }
-}
-
-/** Where a clip is read from: its copy in memory once that has arrived, else the server. */
-export const videoSrc = (file: string) => filmBlobs.get(file) || api.videoUrl(file);
-
 const audioOf = (file: string) => {
   let audio = pool.get(file);
   if (!audio && typeof Audio !== 'undefined') {
@@ -62,32 +32,22 @@ const audioOf = (file: string) => {
   return audio ?? null;
 };
 
-/** Plays the recording of the line under the playhead while the day is playing, and stops it when it stops. */
-export function useLineVoice(position: Position | null, playing: boolean) {
-  const current = useRef<HTMLAudioElement | null>(null);
-  const lastIndex = useRef<number | null>(null);
-  const segment = position?.segment ?? null;
-  const file = segment?.kind === 'line' ? segment.audio ?? null : null;
-  const started = segment?.kind === 'line' && position !== null && position.offset >= segment.typing;
-  const index = position?.index ?? null;
+/** The recording of a spoken line, by who said it and what: the manifest keys it 'speaker|text'. */
+export const clipOf = (voices: Record<string, VoiceClip> | null | undefined, speaker: string, text: string): VoiceClip | null =>
+  voices?.[`${speaker}|${text}`] ?? null;
 
+/** Plays the recording of the line on screen, and stops it when the line goes. A line with no recording is silent. */
+export function useLineVoice(voices: Record<string, VoiceClip> | null | undefined, speaker: string | null, text: string | null) {
   useEffect(() => {
-    if (!playing || !file || !started) {
-      current.current?.pause();
-      return;
-    }
-    const audio = audioOf(file);
-    if (!audio) return;
-    if (current.current !== audio) current.current?.pause();
-    // A new line starts from its beginning; the same line resumed after a pause goes on from where it stopped.
-    if (lastIndex.current !== index) audio.currentTime = 0;
-    lastIndex.current = index;
-    current.current = audio;
+    if (!speaker || !text) return undefined;
+    const clip = clipOf(voices, speaker, text);
+    const audio = clip ? audioOf(clip.file) : null;
+    if (!audio) return undefined;
+    audio.currentTime = 0;
     const result = audio.play() as Promise<void> | undefined;
     if (result && typeof result.catch === 'function') result.catch(() => {});
-  }, [playing, file, started, index]);
-
-  useEffect(() => () => current.current?.pause(), []);
+    return () => audio.pause();
+  }, [voices, speaker, text]);
 }
 
 /**
@@ -108,4 +68,4 @@ export function playNarration(file: string): () => void {
 
 /** The clip of a narrator's line, by its text (the manifest keys it 'NARRATOR|text'). */
 export const narrationOf = (voices: Record<string, VoiceClip> | null | undefined, text: string): VoiceClip | null =>
-  voices?.[`NARRATOR|${text}`] ?? null;
+  clipOf(voices, 'NARRATOR', text);
