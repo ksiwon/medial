@@ -32,6 +32,7 @@ WEEK = ROOT / "fixtures" / "week"
 BRIEFS = WEEK / "briefs.json"
 LINES = WEEK / "dialogue.json"
 READ = WEEK / "dialogue.md"
+HTML = WEEK / "dialogue.html"
 RETRIES = 3
 
 SYSTEM = """당신은 경남 남해군 은점마을(경상도 해안 마을)의 일상 대화를 쓰는 작가다. 이 대화는 전시 화면에 한 줄씩 말풍선으로 나오고 음성으로도 읽힌다. 주어진 '장면 설명'만 보고 대화를 쓴다.
@@ -233,7 +234,61 @@ def read() -> None:
                     "- 기대: %s" % r["expect"], "- 부담: %s" % r["cost"], ""]
             out += _scene(made.get("%s.%s" % (ev["id"], k)), r["scene"]["scene"])
     READ.write_text("\n".join(out), encoding="utf-8")
-    print("wrote", READ.relative_to(ROOT), "(%d events)" % len(names))
+    HTML.write_text(_html(data, made), encoding="utf-8")
+    print("wrote", READ.relative_to(ROOT), HTML.relative_to(ROOT), "(%d events)" % len(names))
+
+
+def _html(data: dict, made: dict) -> str:
+    """One self-contained page for reading and marking the lines. Notes live in the browser (localStorage) and are
+    copied out as text; nothing is sent anywhere."""
+    from html import escape as e
+
+    def scene(key: str, situation: str) -> str:
+        sc = made.get(key)
+        rows = "".join('<p class="l %s"><b>%s</b><span>%s</span></p>' % ("ai" if l["speaker"] == "AI" else "", e(l["speaker"]), e(l["text"]))
+                       for l in (sc["lines"] if sc else []))
+        return ('<div class="sc" data-k="%s"><p class="sit">%s</p>%s<div class="mk"><button data-v="ok">좋음</button>'
+                '<button data-v="fix">고침</button><input placeholder="메모"></div></div>' % (key, e(situation), rows))
+
+    body = []
+    for ev in data["events"]:
+        body.append('<section><h2>%s · %s</h2><p class="gist">%s</p><h3>수정 전</h3>' % (ev["id"], e(ev["title"]), e(ev["gist"])))
+        body += [scene("%s.%s" % (ev["id"], k), s["scene"]) for k, s in ev["scenes"].items()]
+        for k, r in ev["requests"].items():
+            body.append('<h3>요청 %s <small>%s</small></h3><p class="meta">규칙: %s · 기대: %s · 부담: %s</p>' % (
+                k, e(r["label"]), e(", ".join(x["type"] for x in r["rules"])), e(r["expect"]), e(r["cost"])))
+            body.append(scene("%s.%s" % (ev["id"], k), r["scene"]["scene"]))
+        body.append("</section>")
+    return PAGE.replace("@@BODY@@", "".join(body))
+
+
+PAGE = """<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>대화록 검토</title><style>
+:root{--bg:#fbf8f2;--ink:#231f1a;--mut:#6f675c;--card:#fff;--line:#e4dccd;--ai:#2c5f7c;--ok:#2f7d4f;--fix:#b4531a}
+@media(prefers-color-scheme:dark){:root{--bg:#171512;--ink:#eee7da;--mut:#a39a8b;--card:#211e1a;--line:#3a352e;--ai:#8cc0dc;--ok:#74c595;--fix:#e59a6a}}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,"Malgun Gothic",sans-serif}
+main{max-width:760px;margin:0 auto;padding:16px 16px 96px}h1{font-size:22px}h2{margin:40px 0 4px;font-size:20px}
+h3{margin:22px 0 6px;font-size:15px;color:var(--mut)}h3 small{font-weight:400;color:var(--ink);font-size:15px;margin-left:6px}
+.gist,.meta{color:var(--mut);font-size:14px;margin:0 0 6px}.sc{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:8px 0}
+.sit{margin:0 0 8px;color:var(--mut);font-size:13px}.l{display:flex;gap:10px;margin:3px 0}.l b{flex:none;width:64px;font-size:12px;color:var(--mut);padding-top:3px}
+.l.ai b{color:var(--ai)}.mk{display:flex;gap:6px;margin-top:10px}.mk button{border:1px solid var(--line);background:none;color:var(--ink);border-radius:6px;padding:4px 10px;cursor:pointer}
+.mk button.on[data-v=ok]{background:var(--ok);color:#fff;border-color:var(--ok)}.mk button.on[data-v=fix]{background:var(--fix);color:#fff;border-color:var(--fix)}
+.mk input{flex:1;min-width:0;border:1px solid var(--line);background:none;color:var(--ink);border-radius:6px;padding:4px 8px;font:inherit}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 16px;display:flex;gap:10px;align-items:center;justify-content:center}
+.bar button{border:1px solid var(--line);background:var(--ink);color:var(--bg);border-radius:6px;padding:6px 14px;cursor:pointer}
+</style></head><body><main><h1>7일 타임라인 대화록 · 검토</h1>
+<p class="meta">장면마다 좋음/고침과 메모를 남기세요. 이 브라우저에만 저장되고, 아래 버튼으로 한 번에 복사합니다. 화자 AI = AI 스피커.</p>
+@@BODY@@</main><div class="bar"><span id="n"></span><button id="copy">메모 복사</button></div>
+<script>
+const K="week-dialogue-review",g=()=>{try{return JSON.parse(localStorage.getItem(K)||"{}")}catch(e){return{}}},st=g();
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(st))}catch(e){}};
+const count=()=>{const v=Object.values(st);document.getElementById("n").textContent="좋음 "+v.filter(x=>x.v==="ok").length+" · 고침 "+v.filter(x=>x.v==="fix").length+" · 메모 "+v.filter(x=>x.t).length};
+document.querySelectorAll(".sc").forEach(sc=>{const k=sc.dataset.k,s=st[k]||(st[k]={}),b=sc.querySelectorAll("button"),i=sc.querySelector("input");
+i.value=s.t||"";b.forEach(x=>{x.classList.toggle("on",s.v===x.dataset.v);x.onclick=()=>{s.v=s.v===x.dataset.v?"":x.dataset.v;b.forEach(y=>y.classList.toggle("on",s.v===y.dataset.v));save();count()}});
+i.oninput=()=>{s.t=i.value;save();count()}});count();
+document.getElementById("copy").onclick=()=>{const t=Object.entries(st).filter(([k,v])=>v.v||v.t).map(([k,v])=>k+" ["+(v.v==="ok"?"좋음":v.v==="fix"?"고침":"-")+"] "+(v.t||"")).join(String.fromCharCode(10));
+navigator.clipboard.writeText(t||"(표시한 것 없음)").then(()=>{document.getElementById("copy").textContent="복사됨";setTimeout(()=>document.getElementById("copy").textContent="메모 복사",1500)})};
+</script></body></html>"""
 
 
 def _scene(scene: dict | None, situation: str) -> list[str]:
