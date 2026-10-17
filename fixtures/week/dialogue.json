@@ -829,42 +829,6 @@
    "problems": [],
    "retries": 0
   },
-  "E6.C": {
-   "event": "E6",
-   "kind": "after",
-   "cast": [
-    "AI",
-    "P7"
-   ],
-   "lines": [
-    {
-     "speaker": "AI",
-     "text": "119에 고성재 어르신 이름과 드시는 고혈압 약을 알렸어요."
-    },
-    {
-     "speaker": "P7",
-     "text": "동생이 고혈압인 것을 남한테 말했습니꺼?"
-    },
-    {
-     "speaker": "AI",
-     "text": "위급한 상황이라 꼭 필요한 정보만 119에 알렸어요."
-    },
-    {
-     "speaker": "P7",
-     "text": "알겠습니더만, 동생이 알면 싫어하겠습니더."
-    },
-    {
-     "speaker": "AI",
-     "text": "병력을 알고 온 구급대가 20:56에 도착해 바로 처치했어요."
-    },
-    {
-     "speaker": "P7",
-     "text": "내가 책임지겠습니더."
-    }
-   ],
-   "problems": [],
-   "retries": 0
-  },
   "E7.s1": {
    "event": "E7",
    "kind": "before",
@@ -928,42 +892,6 @@
     {
      "speaker": "P10",
      "text": "말을 해야 알지."
-    }
-   ],
-   "problems": [],
-   "retries": 0
-  },
-  "E7.A": {
-   "event": "E7",
-   "kind": "after",
-   "cast": [
-    "AI",
-    "P11"
-   ],
-   "lines": [
-    {
-     "speaker": "AI",
-     "text": "16:00, 16:10에 답이 없어 16:20에 약 시간을 다시 알려요."
-    },
-    {
-     "speaker": "P11",
-     "text": "손님 받는 홀에서 이리 울리면 민망하제."
-    },
-    {
-     "speaker": "AI",
-     "text": "어르신, 약은 드셨어요?"
-    },
-    {
-     "speaker": "P11",
-     "text": "약은 먹었다."
-    },
-    {
-     "speaker": "AI",
-     "text": "그러면 시간을 다시 맞춰 조용히 알려 드릴게요."
-    },
-    {
-     "speaker": "P11",
-     "text": "그래, 그리 해라."
     }
    ],
    "problems": [],
