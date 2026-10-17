@@ -1,32 +1,11 @@
-// The single palette and scale for the research workspace, from doc 15 section 7.
+// The single palette and scale of the exhibition.
 //
-// One file rather than colours inlined per component: the whole point of the
-// screen is that "measured", "simulated" and "unknown" look different from each
-// other and the same everywhere. That stops being true the moment two panels
-// pick their own green.
+// One file rather than colours inlined per component: a screen that picks its own orange or its own corner makes
+// two screens drift apart one number at a time (ui/theme.test.ts checks for exactly that).
 
-export const colour = {
-  app: '#F7F8FA',
-  surface: '#FFFFFF',
-  text: '#1D2935',
-  secondary: '#596775',
-  border: '#DDE3E8',
-  primary: '#25665B',
-  selected: '#EAF3F0',
-  warn: '#9A651D',
-  warnSurface: '#FBF4E7',
-  error: '#B23A35',
-  errorSurface: '#FBEDEC',
-  /** Anything the run did not establish. Deliberately neutral: "no basis to
-   *  judge" is not a bad result and must not be coloured as one. */
-  unknown: '#8B96A1',
-} as const;
-
-/** The exhibition's night palette (2026-10-07): the opening film and the observe
- *  screen share it, so watching the village reads as one piece with the film
- *  rather than a dark player beside a light admin panel. The village map is the
- *  one light object on it. `accent` is "now" everywhere - the lit timeline line,
- *  the ring on the map where the stage is, the open request. */
+/** The exhibition's night palette: the opening film, the week, the scenes and the reading pages share it, so the walk
+ *  is one piece from the first frame to the last. `accent` is "now" everywhere - the event being read, the line
+ *  being told, the request in force. */
 export const night = {
   ground: '#121310',
   panel: '#1b1c18',
@@ -57,13 +36,8 @@ export const px = (n: number) => `calc(${n}px * ${K})`;
 export const font = {
   family:
     '"Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", Roboto, sans-serif',
-  page: `calc(24px * ${K})`,
-  section: `calc(20px * ${K})`,
-  brand: `calc(20px * ${K})`,
   body: `calc(16px * ${K})`,
   small: `calc(12px * ${K})`,
-  /** Map place names and required attribution only. Never primary information. */
-  micro: `calc(12px * ${K})`,
 } as const;
 
 /** The scale every gap, padding and margin on the reading pages is picked from.
@@ -76,7 +50,6 @@ export const space = {
   lg: px(16),
   xl: px(24),
   xxl: px(32),
-  huge: px(48),
 } as const;
 
 /** The corner scale. A rectangle (a card, a panel, a bar) is nearly square-cornered -

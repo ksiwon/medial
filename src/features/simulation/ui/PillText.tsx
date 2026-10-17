@@ -14,14 +14,6 @@ import { useLayoutEffect, useRef, useState } from 'react';
 const HEIGHT = 1.82;
 const SIDE = 0.82;
 
-/** A label's plate size before it is drawn, for laying labels out around other
- *  marks (the plate itself is always drawn from the measured text). Hangul is
- *  about an em wide, everything else about six tenths. */
-export function plateSize(text: string, size: number): { w: number; h: number } {
-  const w = [...text].reduce((n, ch) => n + (/[\uac00-\ud7af]/.test(ch) ? 0.96 : ch === ' ' ? 0.3 : 0.6) * size, 0);
-  return { w: w + size * SIDE * 2, h: size * HEIGHT };
-}
-
 interface Props {
   x: number;
   /** The text's baseline. */
