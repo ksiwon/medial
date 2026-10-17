@@ -59,7 +59,7 @@ SYSTEM = """당신은 경남 남해군 은점마을(경상도 해안 마을)의 
 - "공개 동의", "등록된 일과", "한도", "규칙" 같은 시스템 용어를 마을 사람이 입에 올리지 않는다. 마을 사람은 자기 눈으로 본 것, 느낀 것, 하려는 것을 말한다.
 
 형식
-- 화자는 장면 설명의 인물만. 줄 수는 '줄 수'를 따른다. 번갈아 말하고, 같은 사람이 연달아 두 줄 말하지 않는다.
+- 화자는 장면 설명의 인물만. 줄 수는 '줄 수'를 따른다. 사실이 적으면 줄을 억지로 늘리지 말고 짧게 맺는다. 번갈아 말하고, 같은 사람이 연달아 두 줄 말하지 않는다.
 - 마을 사람의 한 줄은 한 호흡, 공백 포함 30자 안팎(최대 36자). AI의 한 줄은 40자 안팎(최대 44자). 한 줄은 한 문장.
 - 시각은 09:30처럼 쓴다. 따옴표, 괄호 설명, 이모지는 쓰지 않는다.
 JSON으로 lines만 돌려준다. 각 줄의 speaker에는 '인물과 말투'에 적힌 **id만**(예: AI, P6) 쓴다. 이름이나 설명을 붙이지 않는다."""
@@ -105,7 +105,7 @@ def _bigrams(text: str) -> set[str]:
 def problems(brief: dict, lines: list[dict]) -> list[str]:
     """What a scene must satisfy before it is kept."""
     cast = brief["cast"]
-    lo, hi = brief["turns"]
+    lo, hi = brief["lines"]
     bad: list[str] = []
     count = {c: 0 for c in cast}
     for ln in lines:
@@ -121,10 +121,10 @@ def problems(brief: dict, lines: list[dict]) -> list[str]:
         if ln["speaker"] == "AI" and "곁에" in ln["text"]:
             bad.append("AI는 곁에 있다고 말하지 않는다: %s" % ln["text"])
     for c, n in count.items():
-        if not lo <= n <= hi:
-            bad.append("%s가 %d번 말함(%d~%d번)" % (c, n, lo, hi))
-    if len(lines) > brief.get("maxLines", 6):
-        bad.append("전체 %d줄(%d줄 이내)" % (len(lines), brief.get("maxLines", 6)))
+        if n < 2:
+            bad.append("%s가 %d번만 말함(적어도 2번)" % (c, n))
+    if not lo <= len(lines) <= hi:
+        bad.append("전체 %d줄(%d~%d줄)" % (len(lines), lo, hi))
     for i in range(len(lines)):
         for j in range(i + 1, len(lines)):
             a, b = _bigrams(lines[i]["text"]), _bigrams(lines[j]["text"])
@@ -144,7 +144,8 @@ def payload_of(data: dict, ev: dict, kind: str, brief: dict) -> dict:
         "반드시 나오는 사실(이것만. 새 사실 금지)": brief["facts"],
         "흐름": brief["order"],
         "끝": brief["ending"],
-        "줄 수": "전체 %d줄 이내, 각자 %d~%d번" % (brief.get("maxLines", 6), *brief["turns"]),
+        "줄 수": ("정확히 %d줄" % brief["lines"][0]) if brief["lines"][0] == brief["lines"][1]
+        else "%d줄 또는 %d줄 중 사실의 양에 맞게(줄을 채우려고 새 사실을 만들지 않는다). 이 장면의 중요도는 %s" % (*brief["lines"], brief["importance"]),
     }
     if kind == "after":
         p["이 장면의 성격"] = "규칙이 바뀐 뒤의 장면: 바뀐 동작이 말과 행동으로 드러나게, 부담도 한 번 나오게"
