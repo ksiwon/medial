@@ -16,7 +16,7 @@ export default defineConfig({
     port: process.env.PORT ? Number(process.env.PORT) : 5173,
     proxy: {
       '/api/sim': {
-        target: process.env.MEDIAL_SIM_URL ?? 'http://127.0.0.1:8010',
+        target: process.env.MEDIAL_SIM_URL ?? 'http://127.0.0.1:8020',
         // Keep the page's own host name on the way through (X-Forwarded-Host): the API tells the
         // wall's browser (localhost) from a tablet (this machine's network address) by it.
         xfwd: true,

@@ -1,175 +1,41 @@
-"""HTTP surface for the research simulator.
+"""HTTP surface of the exhibition server.
 
-Which version this server is - ``sim`` (plays what was run earlier, never calls a
-model) or ``real`` (generates as it goes) - is decided once, from ``MEDIAL_MODE``,
-and enforced here: a sim server answers reads and moves playback cursors, and
-turns every other write away (see ``mode.py``). A real server can pick an online
-adapter only when its process was given a key (see server/.env.example).
+It reads. What the screens show - the week, its scenes, the residents' evaluations and the requests that came of
+them - was written and checked ahead of time (``fixtures/week/``, see ``week.py``), and the pictures and the
+spoken lines were made ahead of time too (``assets.py``). Nothing here runs a model or starts a run, and the only
+writes a request may make are the two relays of the two screens (``stage.py``): a press from the tablet and the
+wall's account of what it shows. Every other write is refused in one place, before any route runs, so no new
+endpoint can forget it.
 """
 from __future__ import annotations
 
+import re
 from typing import Any
 
-from fastapi import APIRouter, FastAPI, HTTPException, Query, Request
+from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-from pydantic import BaseModel, Field
 
-from ..contracts import ContactStrategy, ENGINE_VERSION
-from ..iteration.api import router as iteration_router, set_iteration_service
+from ..assets import art_dir, art_index, voice_dir, voice_index
+from ..week import WeekError, load_week
 from .stage import router as stage_router
-from ..iteration.service import IterationService
-from ..mode import REAL, SIM_REFUSAL, database_path, refuses, server_mode
-from ..persistence.store import AttemptExists, CommandConflict
-from ..village import art_dir, video_dir, voice_dir
-from ..service import (
-    ForkPrefixMismatch,
-    SimulationService,
-    UnsupportedPolicyField,
-    build_comparison,
-)
 
-router = APIRouter(prefix="/api/sim", tags=["simulation"])
-_service: SimulationService | None = None
+router = APIRouter(prefix="/api/sim", tags=["exhibition"])
 
-
-def get_service() -> SimulationService:
-    if _service is None:
-        # Only the real version reads its model configuration from the
-        # environment (server/.env via run-real). The sim version builds no
-        # provider at all, so a key left in its environment reaches nothing.
-        # Tests inject a service instead.
-        from ..agents.provider import ModelProvider, policy_from_env
-        from ..persistence.store import Store
-        mode = server_mode()
-        provider = ModelProvider.from_env() if mode == REAL else None
-        set_service(SimulationService(
-            store=Store(database_path(mode)),
-            provider=provider if provider is not None and provider.available else None,
-            model_policy=policy_from_env(mode="off"), mode=mode))
-    return _service  # type: ignore[return-value]
-
-
-def set_service(service: SimulationService) -> None:
-    """Used by tests to inject an in-memory store."""
-    global _service
-    _service = service
-    # The iteration service is built on the same store and the same village, so
-    # a test that injects one gets a matching one for the loop rather than a
-    # second service quietly pointing at the default database.
-    set_iteration_service(IterationService(service))
-
-
-class CreateAttemptBody(BaseModel):
-    policyId: str
-    scenarioDeckId: str = "deck-p1-no-response-v1"
-    resourceRevisionId: str = "assumed-resources-v1"
-    label: str | None = None
-    seed: int = 17
-    adapter: str = "rule"
-    institutionAdapter: str = "rule"
-
-
-class CommandBody(BaseModel):
-    commandId: str = Field(min_length=1)
-    name: str
-    seq: int | None = None
-
-
-class RerunBody(BaseModel):
-    """Same initial state, edited policy. Not a branch in time."""
-
-    reason: str = Field(min_length=1)
-    label: str | None = None
-    contactStrategy: ContactStrategy | None = None
-    params: dict[str, Any] = Field(default_factory=dict)
-
-
-class ForkBody(RerunBody):
-    """Branch at a point in the parent's log and change the policy there."""
-
-    atSeq: int = Field(ge=1)
-
-
-class PolicyBody(BaseModel):
-    baseId: str
-    reason: str = Field(min_length=1)
-    label: str | None = None
-    contactStrategy: ContactStrategy | None = None
-    params: dict[str, Any] = Field(default_factory=dict)
-
-
-class FindingBody(BaseModel):
-    coreItem: str = Field(min_length=1)
-    comparedAttemptIds: list[str] = Field(min_length=1)
-    observation: str = Field(min_length=1)
-    interpretation: str = Field(min_length=1)
-    nextChange: str = Field(min_length=1)
-    fromPolicyId: str
-
-
-class ApplyFindingBody(BaseModel):
-    attemptId: str
-    mode: str = "rerun"
-    atSeq: int | None = None
-    contactStrategy: ContactStrategy | None = None
-    params: dict[str, Any] = Field(default_factory=dict)
+#: The two writes the server accepts: relays of a press and of the wall's state. Neither is a research record.
+_RELAY = re.compile(r"^/api/sim/stage/(command|state)$")
+_READS = frozenset({"GET", "HEAD", "OPTIONS"})
+REFUSAL = "이 서버는 미리 만들어 둔 기록만 보여 줍니다. 새로 만들려면 scripts/gen_week_*.py 를 쓰세요."
 
 
 @router.get("/health")
 def health() -> dict[str, Any]:
-    service = get_service()
-    from ..iteration.api import get_iteration_service
-
-    model = get_iteration_service().llm.describe()
-    return {
-        "status": "ok",
-        "mode": service.mode,
-        "engineVersion": ENGINE_VERSION,
-        "dataSource": service.village.data_source,
-        "isSynthetic": service.village.is_synthetic,
-        # Say what is actually configured rather than a fixed "none": the loop
-        # runs offline by default, and reports honestly when a model is wired.
-        "modelCalls": "available" if model["configured"] else "none",
-        "model": model,
-        "note": (SIM_REFUSAL if service.mode != REAL else
-                 "규칙 어댑터만 쓰면 API 키가 필요 없습니다. 온라인 어댑터는 서버 환경변수에 "
-                 "키가 있을 때만 선택할 수 있습니다."),
-    }
-
-
-@router.get("/catalog")
-def catalog() -> dict[str, Any]:
-    return get_service().catalog()
-
-
-@router.get("/village")
-def village() -> dict[str, Any]:
-    return get_service().village_payload()
-
-
-@router.get("/village/map")
-def village_map() -> Any:
-    """The source's own map raster.
-
-    Served from the git-ignored registry rather than bundled: it is research
-    material, so it stays out of the repository and out of the front-end build.
-    """
-    path = get_service().village.map_image_path()
-    if path is None:
-        raise HTTPException(
-            status_code=404,
-            detail=("이 레지스트리에는 원본 지도 래스터가 없다. "
-                    "python -m import_village 로 다시 만들면 포함된다."))
-    return FileResponse(path, media_type="image/png")
+    return {"status": "ok", "reads": "fixtures/week", "modelCalls": "none"}
 
 
 @router.get("/week")
 def week() -> dict[str, Any]:
-    """The week the exhibition reads (see ``week.py``): events, scenes, the residents' evaluations and the
-    requests that came of them, joined and checked once. Read-only, so it is the same on a sim server."""
-    from ..week import WeekError, load_week
-
+    """The week the exhibition reads (see ``week.py``), joined and checked once."""
     try:
         return load_week()
     except WeekError as error:
@@ -177,252 +43,56 @@ def week() -> dict[str, Any]:
 
 
 @router.get("/village/art")
-def village_art_index() -> dict[str, Any]:
-    """Which scene pictures exist. The screen falls back to a schematic figure
-    for any name missing here; nothing is fetched speculatively."""
-    return {"names": sorted(get_service().village.art_index())}
+def art() -> dict[str, Any]:
+    """Which scene pictures exist. The screen draws a schematic figure for any name missing here."""
+    return {"names": sorted(art_index())}
 
 
 @router.get("/village/art/{name}")
-def village_art(name: str) -> Any:
-    index = get_service().village.art_index()
+def art_file(name: str) -> Any:
+    index = art_index()
     if name not in index:
         raise HTTPException(status_code=404, detail="이 그림은 없다: %s" % name)
     return FileResponse(art_dir() / index[name], media_type="image/webp")
 
 
 @router.get("/village/voice")
-def village_voice_index() -> dict[str, Any]:
-    """The spoken lines: which line has a recording and how long it is. A line missing here is
-    paced by reading time and played silently."""
-    return {"lines": get_service().village.voice_index()}
+def voices() -> dict[str, Any]:
+    """The spoken lines: which line has a recording and how long it is. A line missing here is read in silence."""
+    return {"lines": voice_index()}
 
 
 @router.get("/village/voice/{file}")
-def village_voice(file: str) -> Any:
-    index = get_service().village.voice_index()
-    if file not in {row["file"] for row in index.values()}:
+def voice_file(file: str) -> Any:
+    if file not in {row["file"] for row in voice_index().values()}:
         raise HTTPException(status_code=404, detail="이 음성은 없다: %s" % file)
     return FileResponse(voice_dir() / file, media_type="audio/wav")
 
 
-@router.get("/village/video")
-def village_video_index() -> dict[str, Any]:
-    """The video mode's clips, by 'speaker|text'. A line missing here stays a picture."""
-    return {"lines": get_service().village.video_index()}
-
-
-@router.get("/village/video/{file}")
-def village_video(file: str) -> Any:
-    index = get_service().village.video_index()
-    if file not in {row["file"] for row in index.values()}:
-        raise HTTPException(status_code=404, detail="이 영상은 없다: %s" % file)
-    return FileResponse(video_dir() / file, media_type="video/mp4")
-
-
-@router.post("/attempts")
-def create_attempt(body: CreateAttemptBody) -> dict[str, Any]:
-    try:
-        return get_service().create_attempt(
-            body.policyId, body.scenarioDeckId, body.resourceRevisionId,
-            label=body.label, seed=body.seed, adapter=body.adapter,
-            institution_adapter=body.institutionAdapter)
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@router.get("/attempts")
-def list_attempts() -> dict[str, Any]:
-    return {"attempts": [r["attempt"] for r in get_service().store.list_attempts()]}
-
-
-@router.get("/attempts/{attempt_id}")
-def get_attempt(attempt_id: str) -> dict[str, Any]:
-    try:
-        return get_service().get_attempt(attempt_id)
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-
-
-@router.get("/attempts/{attempt_id}/events")
-def get_events(attempt_id: str, after: int = 0) -> dict[str, Any]:
-    service = get_service()
-    if service.store.get_attempt(attempt_id) is None:
-        raise HTTPException(status_code=404, detail="unknown attempt")
-    return {"events": service.events(attempt_id, after=after)}
-
-
-@router.get("/attempts/{attempt_id}/observations")
-def get_observations(attempt_id: str, actorId: str | None = None) -> dict[str, Any]:
-    service = get_service()
-    if service.store.get_attempt(attempt_id) is None:
-        raise HTTPException(status_code=404, detail="unknown attempt")
-    return {"observations": service.observations(attempt_id, actorId),
-            "note": "actorId를 주면 그 행위자가 실제로 볼 수 있었던 것만 반환한다."}
-
-
-@router.get("/attempts/{attempt_id}/snapshot")
-def snapshot(attempt_id: str, atMs: int | None = Query(default=None),
-             seq: int | None = Query(default=None)) -> dict[str, Any]:
-    """``seq`` is the authoritative cursor; ``atMs`` is kept for the map scrub."""
-    if atMs is None and seq is None:
-        raise HTTPException(status_code=400, detail="snapshot needs seq or atMs")
-    try:
-        return get_service().snapshot(attempt_id, at_ms=atMs, seq=seq)
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-
-
-@router.post("/attempts/{attempt_id}/commands")
-def command(attempt_id: str, body: CommandBody) -> dict[str, Any]:
-    try:
-        return get_service().command(attempt_id, body.commandId, body.name, body.seq)
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except CommandConflict as exc:
-        # 409, not 200 with somebody else's result: the same commandId with
-        # different arguments is a client bug, not a duplicate.
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-def _changes(body: Any) -> dict[str, Any]:
-    changes: dict[str, Any] = {"params": body.params}
-    if body.contactStrategy is not None:
-        changes["contactStrategy"] = body.contactStrategy
-    if getattr(body, "label", None):
-        changes["label"] = body.label
-    return changes
-
-
-@router.post("/attempts/{attempt_id}/rerun")
-def rerun(attempt_id: str, body: RerunBody) -> dict[str, Any]:
-    try:
-        return get_service().rerun_attempt(attempt_id, _changes(body), body.reason,
-                                           body.label)
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except UnsupportedPolicyField as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@router.post("/attempts/{attempt_id}/fork")
-def fork(attempt_id: str, body: ForkBody) -> dict[str, Any]:
-    try:
-        return get_service().fork_attempt(attempt_id, body.atSeq, _changes(body),
-                                          body.reason, body.label)
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except UnsupportedPolicyField as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except ForkPrefixMismatch as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except AttemptExists as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-
-
-@router.get("/policies")
-def list_policies() -> dict[str, Any]:
-    return {"policies": get_service().list_policies()}
-
-
-@router.post("/policies")
-def create_policy(body: PolicyBody) -> dict[str, Any]:
-    """Edit a policy. Unsupported conditions are refused, never stored."""
-    try:
-        revision = get_service().create_policy(body.baseId, _changes(body), body.reason,
-                                               label=body.label)
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except UnsupportedPolicyField as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return revision.model_dump(mode="json")
-
-
-@router.get("/personas")
-def personas() -> dict[str, Any]:
-    """Compiled profiles and evidence cards. Names and quotes never leave the
-    local source file, so nothing here can carry them."""
-    return get_service().personas_payload()
-
-
-@router.get("/findings")
-def list_findings() -> dict[str, Any]:
-    return {"findings": get_service().list_findings()}
-
-
-@router.post("/findings")
-def create_finding(body: FindingBody) -> dict[str, Any]:
-    return get_service().create_finding(
-        body.coreItem, body.comparedAttemptIds, body.observation,
-        body.interpretation, body.nextChange, body.fromPolicyId)
-
-
-@router.post("/findings/{finding_id}/apply")
-def apply_finding(finding_id: str, body: ApplyFindingBody) -> dict[str, Any]:
-    """Turn a finding into the next revision and the next attempt."""
-    try:
-        return get_service().apply_finding(
-            finding_id, body.attemptId, _changes(body), mode=body.mode,
-            at_seq=body.atSeq)
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except UnsupportedPolicyField as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except ForkPrefixMismatch as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-
-
-@router.get("/compare")
-def compare(ids: str = Query(..., description="comma separated attempt ids")) -> dict[str, Any]:
-    wanted = [i for i in ids.split(",") if i]
-    if len(wanted) < 2:
-        raise HTTPException(status_code=400, detail="compare needs at least two attempts")
-    try:
-        return build_comparison(get_service(), wanted)
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-
-
-class SimWritesNothing:
-    """The sim version's rule as plain ASGI, not ``@app.middleware("http")``.
-
-    That decorator wraps every response in a body-streaming layer which hides a browser that has gone away
-    from the route underneath, so a live stream (api/stage.py) would never see its listener leave and would
-    go on counting it as connected for good. This looks only at the method and the path, and passes the
-    rest through untouched - the request body and the response are never read or wrapped here.
-    """
+class ReadsOnly:
+    """The one write rule, as plain ASGI rather than ``@app.middleware("http")``: that wraps the body and the
+    response, and a live stream (api/stage.py) must never see its listener's disconnect swallowed. This looks only at
+    the method and the path and passes the rest through untouched."""
 
     def __init__(self, app: Any) -> None:
         self.app = app
 
     async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
-        if scope["type"] == "http" and refuses(get_service().mode, scope["method"], scope["path"]):
-            await JSONResponse(status_code=403, content={"detail": SIM_REFUSAL})(scope, receive, send)
+        if scope["type"] == "http" and scope["method"] not in _READS and not _RELAY.match(scope["path"]):
+            await JSONResponse(status_code=403, content={"detail": REFUSAL})(scope, receive, send)
             return
         await self.app(scope, receive, send)
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="MEDial research simulator", version=ENGINE_VERSION)
+    app = FastAPI(title="Dially exhibition server", version="4")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
-    # The sim version's one rule, in one place: read anything, move a playback
-    # cursor, write nothing else. Checked before any route runs, so no new
-    # endpoint can forget it.
-    app.add_middleware(SimWritesNothing)
-
+    app.add_middleware(ReadsOnly)
     app.include_router(router)
-    app.include_router(iteration_router)
     app.include_router(stage_router)
     return app

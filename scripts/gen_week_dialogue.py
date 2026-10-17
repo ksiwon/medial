@@ -18,15 +18,15 @@ exhibition's first script and stays until ``tts_scenes.py`` reads this one inste
 from __future__ import annotations
 
 import argparse
-import io
 import json
-import os
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "server"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.stdout.reconfigure(encoding="utf-8")
+
+from model import Model  # noqa: E402
 
 WEEK = ROOT / "fixtures" / "week"
 BRIEFS = WEEK / "briefs.json"
@@ -162,8 +162,7 @@ def write(client, data: dict, key: str, ev: dict, kind: str, brief: dict) -> dic
         tries = attempt
         if feedback:
             payload["지난번 시도에서 고칠 것"] = feedback
-        raw, _usage = client._post(SYSTEM, payload, SCHEMA, "scene_lines", 3000)
-        lines = (raw if isinstance(raw, dict) else json.loads(raw))["lines"]
+        lines = client.ask(SYSTEM, payload, SCHEMA, "scene_lines", 3000)["lines"]
         bad = problems(brief, lines)
         if best is None or len(bad) <= len(best[1]):
             best = (lines, bad)
@@ -175,8 +174,7 @@ def write(client, data: dict, key: str, ev: dict, kind: str, brief: dict) -> dic
     lines, bad = best
     # An editor's pass over the checked scene: repetition, answers, dragging endings, the effect and its cost.
     edit = dict(payload_of(data, ev, kind, brief), **{"지금 대화": lines})
-    raw, _usage = client._post(EDIT, edit, SCHEMA, "scene_edit", 3000)
-    edited = (raw if isinstance(raw, dict) else json.loads(raw))["lines"]
+    edited = client.ask(EDIT, edit, SCHEMA, "scene_edit", 3000)["lines"]
     edited_bad = problems(brief, edited)
     if not edited_bad or len(edited_bad) <= len(bad):
         lines, bad = edited, edited_bad
@@ -185,20 +183,8 @@ def write(client, data: dict, key: str, ev: dict, kind: str, brief: dict) -> dic
 
 
 def make(only: list[str] | None) -> None:
-    from app.simulation.agents.provider import ModelProvider, policy_from_env  # noqa: E402
-
-    env = dict(os.environ)
-    dotenv = ROOT / "server" / ".env"
-    if dotenv.exists():
-        for line in io.open(dotenv, encoding="utf-8"):
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, value = line.split("=", 1)
-                env.setdefault(key.strip(), value.strip())
-    provider = ModelProvider.from_env(env)
-    policy = policy_from_env(env, mode="off")
-    client = provider._client(policy.headModelId)
-    print("model:", policy.headModelId)
+    client = Model()
+    print("model:", client.id)
 
     data = load()
     # What is already written stays; only the scenes asked for are written again.
@@ -208,7 +194,7 @@ def make(only: list[str] | None) -> None:
         print("== %s %s (다시 쓴 횟수 %d)" % (key, "통과" if not made[key]["problems"] else made[key]["problems"], made[key]["retries"]))
         for ln in made[key]["lines"]:
             print("  %-8s %s" % (ln["speaker"], ln["text"]))
-        LINES.write_text(json.dumps({"model": policy.headModelId, "scenes": made}, ensure_ascii=False, indent=1),
+        LINES.write_text(json.dumps({"model": client.id, "scenes": made}, ensure_ascii=False, indent=1),
                          encoding="utf-8")
     read()
 

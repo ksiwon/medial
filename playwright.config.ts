@@ -1,57 +1,34 @@
 import { defineConfig } from '@playwright/test';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-// Real browser, real server, synthetic village.
+// A real browser against the real server. The mount tests (vitest + jsdom) prove a screen does not throw and keeps
+// its rules; they cannot see layout, and they cannot see the server and the screens disagree - a press the server
+// refuses, a state the tablet cannot read. This runs both processes and walks the week the way the exhibition does,
+// a wall and a tablet, so a change is looked at rather than reasoned about.
 //
-// The mount tests (vitest + jsdom) prove a screen does not throw and does not
-// print an internal name where a sentence belongs. They cannot see layout, and
-// they cannot see the API and the screen disagree. This runs both processes
-// and drives a headless Chromium through the walk the exhibition shows (opening
-// film, the day, the evaluations, the revision to choose), so a change can be
-// looked at rather than reasoned about. The interface only reads a stored
-// record; the test makes one through the server's API first.
-//
-// It uses the rule adapters and no key: nothing here calls a model.
-//
-// Everything points away from the researcher's data: the API is given its own
-// database under .run/ and the SYNTHETIC village and personas, so the run
-// never writes into local-data/runs and a screenshot never carries a real
-// place name. .run/ is gitignored; nothing here is committed.
+// Nothing here calls a model or needs a key: the server only reads fixtures/week and local-data/.
 
-const API_PORT = 8011;
-const WEB_PORT = 5174;
-const ROOT = dirname(fileURLToPath(import.meta.url));
-const RUN_DIR = resolve(ROOT, '.run', 'e2e');
+const API_PORT = 8021;
+const WEB_PORT = 5181;
 
 export default defineConfig({
   testDir: 'e2e',
-  outputDir: resolve(RUN_DIR, 'results'),
   fullyParallel: false,
   workers: 1,
-  timeout: 60_000,
+  timeout: 120_000,
   reporter: [['list']],
   use: {
     baseURL: `http://localhost:${WEB_PORT}`,
-    viewport: { width: 1440, height: 900 },
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },
   webServer: [
     {
-      command: 'node e2e/reset-db.mjs && python server/sim_main.py --mode real',
+      command: 'python server/sim_main.py',
       url: `http://127.0.0.1:${API_PORT}/api/sim/health`,
       reuseExistingServer: false,
       timeout: 60_000,
-      env: {
-        MEDIAL_SIM_PORT: String(API_PORT),
-        // Set, and empty: the real server reads server/.env only for keys that
-        // are not already in its environment, so this keeps the key out.
-        OPENAI_API_KEY: '',
-        MEDIAL_SIM_DB: resolve(RUN_DIR, 'simulation.sqlite3'),
-        MEDIAL_VILLAGE_PATH: resolve(ROOT, 'fixtures', 'synthetic', 'village.synthetic.json'),
-        MEDIAL_PERSONA_PATH: resolve(ROOT, 'fixtures', 'synthetic', 'personas.synthetic.json'),
-      },
+      // Set, and empty: the exhibition server never reads a key; this keeps one out of its environment anyway.
+      env: { MEDIAL_SIM_PORT: String(API_PORT), OPENAI_API_KEY: '' },
     },
     {
       command: `npx vite --port ${WEB_PORT} --strictPort`,

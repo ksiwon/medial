@@ -1969,8 +1969,7 @@
        {
         "place": "HOME",
         "who": {
-         "P7": "cpr",
-         "P8": "lying"
+         "P7": "cpr"
         },
         "device": "안부 스피커",
         "label": "고성재 댁"

@@ -1,9 +1,8 @@
 """The exhibition's two screens, joined: a wall that shows, a tablet that touches.
 
-The wall is a browser that plays the stored record exactly as the single screen
-did - it owns the playhead, the timers and every choice's consequence. The
-tablet owns nothing: it sends what the visitor pressed and draws what the wall
-says it is showing. This module only carries those two things between them.
+The wall is a browser that reads the week - it owns the line the telling has reached, the timers and every
+choice's consequence. The tablet owns nothing: it sends what the visitor pressed and draws what the wall says it
+is showing. This module only carries those two things between them.
 
   tablet --POST /stage/command--> server --SSE "command"--> wall
   wall   --POST /stage/state----> server --SSE "state"----> tablet
@@ -15,9 +14,8 @@ network that only knows the address cannot drive the exhibition. A second tablet
 scans the code takes over and the first is told it was released. The token is kept in
 memory only and is new every run.
 
-Nothing is stored and nothing here starts a run. A command is a press, not a
-research record; the sim version lets these two paths through for that reason
-(mode.py), and no other write.
+Nothing is stored and nothing here starts a run. A command is a press, not a research record; these two
+paths are the only writes the server lets through (routes.py), and no other.
 """
 from __future__ import annotations
 

@@ -26,16 +26,16 @@ Writes only files. The record (sim.sqlite3) is the later build step, after the r
 from __future__ import annotations
 
 import argparse
-import io
 import json
-import os
 import re
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "server"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.stdout.reconfigure(encoding="utf-8")
+
+from model import Model  # noqa: E402
 
 WEEK = ROOT / "fixtures" / "week"
 BRIEFS = WEEK / "briefs.json"
@@ -123,20 +123,8 @@ def problems(paragraph: str, cited: list[int], allowed: set[int]) -> list[str]:
 
 
 def make(only: list[str] | None) -> None:
-    from app.simulation.agents.provider import ModelProvider, policy_from_env  # noqa: E402
-
-    env = dict(os.environ)
-    dotenv = ROOT / "server" / ".env"
-    if dotenv.exists():
-        for line in io.open(dotenv, encoding="utf-8"):
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                env.setdefault(k.strip(), v.strip())
-    provider = ModelProvider.from_env(env)
-    policy = policy_from_env(env, mode="off")
-    client = provider._client(policy.headModelId)
-    print("model:", policy.headModelId)
+    client = Model()
+    print("model:", client.id)
 
     briefs, dialogue = load()
     made = json.loads(OUT.read_text(encoding="utf-8"))["evaluations"] if OUT.exists() else {}
@@ -161,8 +149,7 @@ def make(only: list[str] | None) -> None:
                 for attempt in range(RETRIES + 1):
                     if feedback:
                         payload["지난번 시도에서 고칠 것"] = feedback
-                    raw, _usage = client._post(SYSTEM, payload, SCHEMA, "resident_evaluation", 1500)
-                    r = raw if isinstance(raw, dict) else json.loads(raw)
+                    r = client.ask(SYSTEM, payload, SCHEMA, "resident_evaluation", 1500)
                     bad = problems(r["paragraph"], r["citedLines"], allowed)
                     if best is None or len(bad) <= len(best[1]):
                         best = (r, bad)
@@ -178,7 +165,7 @@ def make(only: list[str] | None) -> None:
                 }
                 print("== %s %s %s" % (tag, actor, "통과" if not bad else bad))
                 print("   ", r["paragraph"])
-                OUT.write_text(json.dumps({"model": policy.headModelId, "evaluations": made},
+                OUT.write_text(json.dumps({"model": client.id, "evaluations": made},
                                           ensure_ascii=False, indent=1), encoding="utf-8")
     read()
 
@@ -202,17 +189,7 @@ LINK_SCHEMA = {
 
 
 def link(only: list[str] | None) -> None:
-    from app.simulation.agents.provider import ModelProvider, policy_from_env  # noqa: E402
-
-    env = dict(os.environ)
-    dotenv = ROOT / "server" / ".env"
-    if dotenv.exists():
-        for line in io.open(dotenv, encoding="utf-8"):
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                env.setdefault(k.strip(), v.strip())
-    client = ModelProvider.from_env(env)._client(policy_from_env(env, mode="off").headModelId)
+    client = Model()
     briefs, _ = load()
     data = json.loads(OUT.read_text(encoding="utf-8"))
     made = data["evaluations"]
@@ -226,8 +203,7 @@ def link(only: list[str] | None) -> None:
                 "수정 요청": r["label"],
                 "수정 전 평가들(actor: 단락 / 고치고 싶은 점)": ["%s: %s / %s" % (a, v["paragraph"], v["changeWish"]) for a, v in before.items()],
             }
-            raw, _ = client._post(LINK_SYSTEM, payload, LINK_SCHEMA, "request_basis", 800)
-            res = raw if isinstance(raw, dict) else json.loads(raw)
+            res = client.ask(LINK_SYSTEM, payload, LINK_SCHEMA, "request_basis", 800)
             quoted = res["basis"] and any(res["basis"] in (v["paragraph"] + v["changeWish"]) for v in before.values())
             if res["verdict"] != "none" and not quoted:
                 res["verdict"] = "weak"

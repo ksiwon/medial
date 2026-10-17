@@ -14,15 +14,8 @@ sys.path.insert(0, str(REPO_ROOT / "server"))
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app.simulation import mode as modes  # noqa: E402
 from app.simulation.api import stage  # noqa: E402
-from app.simulation.api.routes import create_app, set_service  # noqa: E402
-from app.simulation.persistence.store import Store  # noqa: E402
-from app.simulation.service import SimulationService  # noqa: E402
-from app.simulation.village import load_village  # noqa: E402
-
-SYNTHETIC = REPO_ROOT / "fixtures" / "synthetic" / "village.synthetic.json"
-PERSONAS = str(REPO_ROOT / "fixtures" / "synthetic" / "personas.synthetic.json")
+from app.simulation.api.routes import create_app  # noqa: E402
 
 
 def drain(queue: "asyncio.Queue[str]") -> list[tuple[str, dict]]:
@@ -78,8 +71,6 @@ def test_presence_says_who_is_listening_and_a_stalled_listener_cannot_block_the_
 
 
 def _client() -> TestClient:
-    set_service(SimulationService(store=Store(":memory:"), village=load_village(SYNTHETIC),
-                                  persona_path=PERSONAS, mode="sim"))
     return TestClient(create_app())
 
 
@@ -87,11 +78,12 @@ def test_only_the_named_presses_are_accepted_and_the_sim_version_lets_them_throu
     client = _client()
     t = {"token": stage.hub.token}
     assert client.post("/api/sim/stage/command", params=t, json={"name": "skipScene"}).status_code == 200
+    assert client.post("/api/sim/stage/command", params=t, json={"name": "openEvent", "id": "E1"}).status_code == 200
     assert client.post("/api/sim/stage/command", params=t, json={"name": "rerun"}).status_code == 422
     assert client.post("/api/sim/stage/state", json={"screen": "case"}).status_code == 200
-    # and it is still a sim server: nothing that starts a run got easier to reach
+    # and the server still reads only: nothing else is a write it will take
     assert client.post("/api/sim/attempts", json={}).status_code == 403
-    assert modes.refuses("sim", "POST", "/api/sim/stage/other") is True
+    assert client.post("/api/sim/stage/other", json={}).status_code == 403
 
 
 def test_a_press_without_the_pairing_token_is_refused():
@@ -201,7 +193,7 @@ def test_the_stream_says_it_is_alive_with_a_named_event_the_page_can_see():
 
 
 def test_a_browser_that_leaves_is_noticed_through_the_whole_app_not_only_the_router():
-    """The sim write guard once wrapped every response in a layer that hid a dropped browser from the stream
+    """The write guard once wrapped every response in a layer that hid a dropped browser from the stream
     underneath, so a tablet that went away stayed "connected" for ever and the next one was told it had been
     replaced. This runs the app as it is served - guard and all - and drops the connection."""
     import socket
@@ -210,8 +202,6 @@ def test_a_browser_that_leaves_is_noticed_through_the_whole_app_not_only_the_rou
 
     import uvicorn
 
-    set_service(SimulationService(store=Store(":memory:"), village=load_village(SYNTHETIC),
-                                  persona_path=PERSONAS, mode="sim"))
     stage.hub = stage.StageHub()
     saved = stage.WATCH_SECONDS
     stage.WATCH_SECONDS = 0.2
