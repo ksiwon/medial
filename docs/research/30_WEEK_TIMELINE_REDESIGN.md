@@ -229,3 +229,22 @@
 - **사건은 풀이다.** 요일은 `fixtures/week/schedule.json`에서만 정하고, 다음 세션에서 다른 요일에 놓이거나
   빠지거나 새 사건이 더해질 수 있다.
 
+
+## 10. 사건 구조로 바꿀 때 지워야 할 "다음 날" 계열 표현 (2026-10-17 목록)
+
+이전에는 한 마을의 연속된 다음 날이었지만 이제 사건마다 새 환경이다. 아래는 화면·로직이 그 구조에 묶여 있어 **6단계(화면·나무 걷기 정리)에서 로직과 함께** 바꾼다. 문구만 먼저 바꾸지 않는다(지금 동작하는 화면이 어긋난다).
+
+| 위치 | 표현 | 바꿀 방향 |
+|---|---|---|
+| `selectors/tree.ts` | `dayName` "N일차", `dayLine` "오늘 요청 …", 주석 | 사건 이름(요일·제목) |
+| `screens/ChoiceScreen.tsx` | "사흘이 끝났습니다", "N일차 → N+1일차 · 수정 요청 고르기", "내일의 시뮬레이션", "오늘 주민들이 겪은 일" | 사건 안의 "수정 전 → 수정 후", "같은 사건" |
+| `screens/ObserveScreen.tsx` | "N일차 끝에 고른 수정 요청" | 사건 이름 기준 |
+| `components/DayTimeline.tsx` | "하루 끝 · 주민 에이전트 평가" | "사건 끝" |
+| `stage/PadApp.tsx`, `stage/pad/screens.tsx` | "마을의 하루", "하루가 끝났습니다", "사흘이 끝났습니다", "다음 날을 …", "내일의 규칙", "첫날이 열립니다" | 사건 선택·사건 끝 |
+| `stage/protocol.ts` | `day`, `dayIndex`, `dayCount`, "N일차" 주석 | `event` 계열 |
+| `screens/IntroScreen.tsx`·`narration.json`·`IdleScreen.tsx` | "하루를 지켜보고", "하루를 겪는다", "마을의 하루" | "사건을 지켜보고" (내레이션이 바뀌면 TTS도 다시) |
+| `README.md` | 흐름 설명 "1일차 → … → 다음 날", "사흘·27경로" | 새 흐름 |
+| `server/app/simulation/iteration/service.py:124` | "보건소의 다음 날 방문" | 서버 문구(감사용) — 사건 구조 서버 정리 때 |
+| `scripts/gen_dialogue.py` | 옛 전시 브리프의 "1일차·2일차·3일차" | 옛 생성기를 지울 때 함께 |
+
+`MEDial` 코드 id와 `MedialDashboard`도 같은 때에 바꾼다(저장된 기록을 다시 만들면서).
