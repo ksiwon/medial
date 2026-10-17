@@ -46,7 +46,9 @@ SYSTEM = """당신은 경남 남해군 은점마을(경상도 해안 마을)의 
 - 모든 줄은 바로 앞 줄에 반응한다. 물으면 바로 답하고, 앞 줄의 말끝이나 단어를 받아 이어 간다. 앞 줄과 상관없는 말을 불쑥 꺼내지 않는다. 이음말("그라믄", "아니", "그래서")을 자연스럽게 쓴다.
 - 한 사실은 장면에서 한 번만 말한다. 같은 질문·변명·불만·안심을 되풀이하지 않는다. 모든 줄이 새 정보, 반응, 결정 중 하나를 더한다.
 - 끝은 짧게 맺는다. 사실이 다 나오면 수고·작별 인사로 늘이지 않는다. 마지막 줄은 마음에 남는 한마디(불만, 안도, 결정)로 끝낸다.
-- 장면 설명의 '반드시 나오는 사실'은 모두 담고, 그 밖의 새 사실(새 사건·인물·시각·병명·약 이름)은 만들지 않는다. 이미 아는 것을 새로 묻지 않는다.
+- 장면 설명의 '반드시 나오는 사실'은 모두 담고, 그 밖의 새 사실(새 사건·인물·시각·병명·약 이름)은 만들지 않는다. 이미 아는 것을 새로 묻지 않는다. 사실에 없는 부탁·다짐·인사를 덧붙여 줄을 늘이지 않는다.
+- 서로 부르는 말은 말투 지시에 적힌 것만 쓴다(예: 이장은 한상덕을 '형님'). 지시에 없는 이름이나 별명으로 부르지 않는다. 호칭은 그 밖에 직함이나 '어르신'으로.
+- 번역투·한자어 투(예: '마뜩잖다', '~하니 ~하다')를 쓰지 않고 어르신이 실제로 할 법한 쉬운 말로 쓴다.
 - 규칙이 바뀐 뒤의 장면이면, 바뀐 동작이 **장면 안의 말과 행동**으로 한눈에 드러나야 한다(요약하지 않는다). 그리고 장면 설명이 적은 부담(번거로움·민망함·미안함·늦어짐)도 대사에 한 번 나온다. 한쪽만 좋게 쓰지 않는다.
 - 등장인물은 앞 장면이나 지난 일을 기억하는 듯 말하지 않는다. 장면 설명이 '앞서'라고 적은 것만 말한다.
 - "공개 동의", "등록된 일과", "한도", "규칙" 같은 시스템 용어를 마을 사람이 입에 올리지 않는다. 마을 사람은 자기 눈으로 본 것, 느낀 것, 하려는 것을 말한다.
@@ -55,7 +57,7 @@ SYSTEM = """당신은 경남 남해군 은점마을(경상도 해안 마을)의 
 - 화자는 장면 설명의 인물만. 줄 수는 '줄 수'를 따른다. 번갈아 말하고, 같은 사람이 연달아 두 줄 말하지 않는다.
 - 마을 사람의 한 줄은 한 호흡, 공백 포함 30자 안팎(최대 36자). AI의 한 줄은 40자 안팎(최대 44자). 한 줄은 한 문장.
 - 시각은 09:30처럼 쓴다. 따옴표, 괄호 설명, 이모지는 쓰지 않는다.
-JSON으로 lines(화자 speaker, 대사 text)만 돌려준다."""
+JSON으로 lines만 돌려준다. 각 줄의 speaker에는 '인물과 말투'에 적힌 **id만**(예: AI, P6) 쓴다. 이름이나 설명을 붙이지 않는다."""
 
 EDIT = SYSTEM.replace(
     "주어진 '장면 설명'만 보고 대화를 쓴다.",
@@ -130,10 +132,10 @@ def problems(brief: dict, lines: list[dict]) -> list[str]:
 
 
 def payload_of(data: dict, ev: dict, kind: str, brief: dict) -> dict:
-    voices = [data["voices"][c] for c in brief["cast"]]
+    voices = {c: data["voices"][c] for c in brief["cast"]}
     p = {
         "장면 설명": brief["scene"],
-        "인물과 말투": voices,
+        "인물과 말투(speaker에는 키만 쓴다)": voices,
         "반드시 나오는 사실(이것만. 새 사실 금지)": brief["facts"],
         "흐름": brief["order"],
         "끝": brief["ending"],
@@ -149,7 +151,9 @@ def write(client, data: dict, key: str, ev: dict, kind: str, brief: dict) -> dic
     payload = payload_of(data, ev, kind, brief)
     best: tuple[list[dict], list[str]] | None = None
     feedback = None
+    tries = 0
     for attempt in range(RETRIES + 1):
+        tries = attempt
         if feedback:
             payload["지난번 시도에서 고칠 것"] = feedback
         raw, _usage = client._post(SYSTEM, payload, SCHEMA, "scene_lines", 3000)
@@ -170,7 +174,8 @@ def write(client, data: dict, key: str, ev: dict, kind: str, brief: dict) -> dic
     edited_bad = problems(brief, edited)
     if not edited_bad or len(edited_bad) <= len(bad):
         lines, bad = edited, edited_bad
-    return {"event": ev["id"], "kind": kind, "cast": brief["cast"], "lines": lines, "problems": bad}
+    return {"event": ev["id"], "kind": kind, "cast": brief["cast"], "lines": lines, "problems": bad,
+            "retries": tries}
 
 
 def make(only: list[str] | None) -> None:
@@ -194,7 +199,7 @@ def make(only: list[str] | None) -> None:
     made = json.loads(LINES.read_text(encoding="utf-8"))["scenes"] if LINES.exists() else {}
     for key, ev, kind, brief in scenes_of(data, only):
         made[key] = write(client, data, key, ev, kind, brief)
-        print("== %s %s" % (key, "통과" if not made[key]["problems"] else made[key]["problems"]))
+        print("== %s %s (다시 쓴 횟수 %d)" % (key, "통과" if not made[key]["problems"] else made[key]["problems"], made[key]["retries"]))
         for ln in made[key]["lines"]:
             print("  %-8s %s" % (ln["speaker"], ln["text"]))
         LINES.write_text(json.dumps({"model": policy.headModelId, "scenes": made}, ensure_ascii=False, indent=1),
