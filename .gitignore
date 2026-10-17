@@ -36,3 +36,4 @@ Thumbs.db
 
 # 빌드 캐시
 *.tsbuildinfo
+test-results/
