@@ -1,5 +1,5 @@
 {
- "note": "7일 타임라인의 사건 8개. 설계는 docs/research/30_WEEK_TIMELINE_REDESIGN.md. 브리프는 사실·순서·끝만 적고 말은 모델이 쓴다(scripts/gen_dialogue.py의 틀). 요청은 규칙 9종(retry_before_help, quiet_period, helper_daily_cap, neighbour_ask_limit, disclosure_scope, institution_deadline, contact_order, ride_candidate_order, ride_detour_limit) 안에서만 번역한다. 요청 문장은 화면 레이블일 뿐 실행 입력이 아니다. 화자 AI = AI 스피커(코드 id MEDial). 사건은 요일에 묶이지 않는 풀이다. 요일은 세션 배치(fixtures/week/schedule.json)에서만 정하고 사건 내용은 시각만 가진다. 인과 쌍은 'precedes'/'precededBy'로 순서만 지킨다. 확정(2026-10-17): 보건소장은 기존 보건소 담당자(HC_NURSE)와 같은 인물이고 화면·대본의 호칭은 '보건소장'이다. 신규 사건에 쓸 수 있는 병력은 고혈압·감기까지이며 그 밖의 병명·약 이름은 만들지 않는다.",
+ "note": "7일 타임라인의 사건 8개. 설계는 docs/research/30_WEEK_TIMELINE_REDESIGN.md. 브리프는 사실·순서·끝만 적고 말은 모델이 쓴다(scripts/gen_dialogue.py의 틀). 요청은 규칙 9종(retry_before_help, quiet_period, helper_daily_cap, neighbour_ask_limit, disclosure_scope, institution_deadline, contact_order, ride_candidate_order, ride_detour_limit) 안에서만 번역한다. 요청 문장은 화면 레이블일 뿐 실행 입력이 아니다. 화자 AI = AI 스피커(코드 id MEDial). 사건은 요일에 묶이지 않는 풀이다. 요일은 세션 배치(fixtures/week/schedule.json)에서만 정하고 사건 내용은 시각만 가진다. 인과 쌍은 'precedes'/'precededBy'로 순서만 지킨다. 확정(2026-10-17): 보건소장은 기존 보건소 담당자(HC_NURSE)와 같은 인물이고 화면·대본의 호칭은 '보건소장'이다. 신규 사건의 병력은 자유롭게 정한다. 고혈압·감기 정도의 흔한 수준이 기준이고 상한은 아니다. 병명은 브리프의 사실에만 적고, 대화를 쓰는 모델이 사실 밖의 병명·약 이름을 더하지는 않는다.",
  "voices": {
   "AI": "AI 스피커: 표준어 해요체, 또렷하고 간결하게 다정. 사람이 아니니 '곁에 있겠다'는 말은 하지 않는다",
   "P1": "P1 한상덕(72세 농부): 퉁명스러운 반말체. 거칠지만 정은 있다",
@@ -980,7 +980,7 @@
    "id": "E7",
    "title": "퇴원 후 집에서의 돌봄",
    "subject": "P11",
-   "gist": "허리가 아파 입원했던 조기범이 퇴원해 집에 왔다. 약 시간과 통증 확인, 외래 동행이 필요한데 남편은 식당을 비울 수 없다.",
+   "gist": "허리 수술로 입원했던 조기범이 퇴원해 집에 왔다. 약 시간과 통증 확인, 외래 동행이 필요한데 남편은 식당을 비울 수 없다.",
    "basis": "조기범의 약 놓침 · 남편 조복순의 표현이 서툰 걱정 · 퇴원 후 확인 공백",
    "scenes": {
     "s1": {
