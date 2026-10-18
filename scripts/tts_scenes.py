@@ -51,7 +51,10 @@ WEEK = ROOT / "fixtures" / "week"
 STYLES = WEEK / "tts-styles.json"
 DIALOGUE = WEEK / "dialogue.json"
 BRIEFS = WEEK / "briefs.json"
-NARRATION = ROOT / "fixtures" / "exhibition" / "narration.json"  # the opening film's and the closing page's big captions
+NARRATION = ROOT / "fixtures" / "exhibition" / "narration.json"  # the opening film's big captions (and the closing page's)
+#: The narration scenes a screen plays. ``outro`` is the closing page's, which the week's walk no longer has: its
+#: recordings would have nowhere to play, so none is made until a closing page exists again.
+NARRATION_PLAYED = ("intro",)
 
 NOTES = """당신은 음성 연출가다. 마을 장면의 대사 한 줄마다 '연기 지시'를 짧은 영어로 쓴다. 이 지시는 Gemini TTS의 speech_metadata.style 로 들어가 그 줄의 감정·속도·세기만 정한다. 화자 AI는 안부를 살피고 이웃과 보건소를 잇는 AI 스피커다.
 
@@ -114,7 +117,8 @@ def planned():
     One line, one file: ``<scene>_<NN>_<speaker>.wav`` (E1.s1_03_P6.wav is the third line of scene E1.s1, spoken by
     P6). Nothing is bundled, so the code can pick any line by itself.
     """
-    scenes = {**json.load(open(DIALOGUE, encoding="utf-8"))["scenes"], **json.load(open(NARRATION, encoding="utf-8"))["scenes"]}
+    narration = {k: v for k, v in json.load(open(NARRATION, encoding="utf-8"))["scenes"].items() if k in NARRATION_PLAYED}
+    scenes = {**json.load(open(DIALOGUE, encoding="utf-8"))["scenes"], **narration}
     voices = json.load(open(VOICES, encoding="utf-8")) if VOICES.exists() else {}
     notes = styles_of_record()
     for scene, body in scenes.items():
@@ -253,10 +257,10 @@ def check_ready(todo) -> list[str]:
     if missing:
         out.append("목소리가 없다: %s (python scripts/tts_voices.py make %s)" % (", ".join(missing), " ".join(missing)))
     sys.path.insert(0, str(ROOT / "scripts"))
-    from tts_voices import STALE
-    stale = [s for s in speakers if s in STALE and s in voices]
+    from tts_voices import stale_voices
+    stale = [s for s in speakers if s in stale_voices() and s in voices]
     if stale:
-        out.append("옛 명세로 만든 목소리라 쓸 수 없다(성별이 그림과 반대): %s (python scripts/tts_voices.py make %s)"
+        out.append("지금 명세와 다르게 만든 목소리라 쓸 수 없다: %s (python scripts/tts_voices.py make %s)"
                    % (", ".join(stale), " ".join(stale)))
     unstyled = [it for it in todo if it["speaker"] not in STYLE and not it["style"]]
     if unstyled:

@@ -17,6 +17,7 @@ refusal; ``make`` tries again, and a different wording usually passes.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import io
 import json
 import sys
@@ -63,15 +64,41 @@ SPECS: dict[str, tuple[str, str]] = {
     # The narrator of the opening film and the closing page: not a resident, not the AI (a bright woman), so the
     # audience never takes the narration for the AI speaking. Low, standard Korean, brisk because time is short.
     "NARRATOR": ("male", "A man in his 40s narrating a design exhibition film in clear standard Seoul Korean: a low, calm, steady voice with a smooth documentary delivery, brisk and confident, no dialect, no sing-song."),
-    # The head of the health centre (the one who used to be called the nurse). A man in his 50s is a guess of this
-    # file's author, not the interview record's: confirm it with the researcher before it is made.
-    "HC_HEAD": ("male", "A man in his early 50s who runs a small rural health centre in South Korea, speaking clear standard Korean with a calm, courteous, composed voice; measured and concise, reassuring without being soft."),
+    # The head of the health centre (the one who used to be called the nurse): a woman in her mid-40s, as the
+    # picture of the health practitioner is drawn (scripts/art.mjs, CLINIC).
+    "HC_HEAD": ("female", "A woman in her mid-40s who runs a small rural health centre in South Korea, speaking clear standard Korean with a calm, courteous, composed voice; measured and concise, reassuring without being soft."),
 }
 
 
-#: Voices made from a description that has since changed. Their ids still sit in voices.json until ``make`` replaces
-#: them, and a line must not be spoken with one: the picture and the sound would disagree (P10 a man, P11 a woman).
-STALE = {"P10", "P11"}
+#: voices.json keeps ``{name: id}`` for the screens and tts_scenes.py. Beside it, ``voices.specs.json`` keeps
+#: ``{name: hash of the description it was made from}``. A voice whose description has changed since (or whose hash was
+#: never recorded) is *stale*: its id is still there, but a line must not be spoken with it - the picture and the sound
+#: would disagree (P10 a man, P11 a woman, when they were made from the sex-swapped descriptions).
+SPEC_FILE = ROOT / "local-data" / "tts" / "voices.specs.json"
+
+
+def spec_hash(name: str) -> str:
+    return hashlib.sha1(json.dumps(SPECS[name], ensure_ascii=False).encode()).hexdigest()[:12]
+
+
+def stale_voices() -> set[str]:
+    """Names with an id whose description is not the one in SPECS now (a voice never recorded counts as stale)."""
+    made = json.load(open(SPEC_FILE)) if SPEC_FILE.exists() else {}
+    have = json.load(open(FILE)) if FILE.exists() else {}
+    return {n for n in have if n in SPECS and made.get(n) != spec_hash(n)}
+
+
+def approve(names):
+    """Record that these voices (already in voices.json) match their description as it is now. Used once, for the
+    voices the researcher approved by ear that were made before the hash was kept; it makes no call."""
+    have = json.load(open(FILE)) if FILE.exists() else {}
+    made = json.load(open(SPEC_FILE)) if SPEC_FILE.exists() else {}
+    for name in names:
+        if name not in have:
+            raise SystemExit("%s 는 voices.json 에 없다" % name)
+        made[name] = spec_hash(name)
+        print("approved", name)
+    SPEC_FILE.write_text(json.dumps(made), encoding="utf-8")
 
 
 def key() -> str:
@@ -109,9 +136,11 @@ def make(names):
             except urllib.error.HTTPError:
                 pass
         ids[name] = new
-        STALE.discard(name)
         print(name, new)
         FILE.write_text(json.dumps(ids), encoding="utf-8")
+        made = json.load(open(SPEC_FILE)) if SPEC_FILE.exists() else {}
+        made[name] = spec_hash(name)
+        SPEC_FILE.write_text(json.dumps(made), encoding="utf-8")
 
 
 #: The median pitch (Hz) each voice had when the researcher approved it by ear (2026-10-13). A voice
@@ -180,11 +209,15 @@ def main():
     mk.add_argument("names", nargs="+")
     cal = sub.add_parser("calibrate")
     cal.add_argument("names", nargs="+")
+    ap_ = sub.add_parser("approve")
+    ap_.add_argument("names", nargs="+")
     args = ap.parse_args()
     if args.cmd == "list":
         have = json.load(open(FILE)) if FILE.exists() else {}
         for name, (gender, text) in SPECS.items():
             print("%-9s %-6s %s %s" % (name, gender, have.get(name, "(none)"), text[:60]))
+    elif args.cmd == "approve":
+        approve(args.names)
     elif args.cmd == "calibrate":
         calibrate(args.names)
     else:
