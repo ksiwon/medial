@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createBus, postTo, type PressResult } from './bus';
 import { Button, Notice, Screen, TopBar } from './pad/kit';
-import { AutoNote, Choose, Closing, Evaluations, Join, Result, Scan, Telling, Waiting, Watching, Week, type Press } from './pad/screens';
+import { Choose, Closing, Evaluations, Join, Result, Scan, Telling, Waiting, Watching, Week, type Press } from './pad/screens';
 import {
   IDLE_STATE, STAGE_API, forgetPadToken, hasJoined, padToken, rememberJoined, type Command, type Link, type Phase, type StageState,
 } from './protocol';
@@ -14,18 +14,6 @@ import { useStream } from './stream';
 const HOME_ASK_MS = 3000;
 /** How long a "the wall did not hear that" stays on screen. */
 const NOTICE_MS = 4000;
-
-const HEADLINE: Record<Phase, (s: StageState) => string> = {
-  idle: () => '대기 중',
-  intro: () => '소개 영상을 보는 중',
-  week: () => '이번 주',
-  before: (s) => (s.toldAll ? '이야기가 끝났어요' : s.scene ? `지금 · ${s.scene.time}` : '사건을 보는 중'),
-  evaluations: (s) => (s.openActor ? '주민의 평가를 읽는 중' : '주민 평가'),
-  choose: () => '무엇을 고칠 것인가',
-  after: (s) => (s.toldAll ? '이야기가 끝났어요' : '고른 요청대로 다시 보는 중'),
-  result: (s) => (s.event?.noChoice ? '응급 · 일어난 일을 읽는 중' : '반영된 결과'),
-  closing: (s) => (s.closingWords ? '마무리' : '이번에 고친 것'),
-};
 
 export default function PadApp() {
   const [token] = useState(() => padToken());
@@ -87,7 +75,8 @@ export default function PadApp() {
     return <Screen><Join onJoin={() => { if (token) rememberJoined(token); setJoined(true); }} /></Screen>;
   }
 
-  const home = state.phase === 'idle' ? null : (
+  // The closing has its own way back in the middle of the page: the corner one would be the same press twice.
+  const home = state.phase === 'idle' || state.phase === 'closing' ? null : (
     <Button $tone="quiet" onClick={() => { if (asking) { setAsking(false); press({ name: 'home' }); } else setAsking(true); }}>
       {asking ? '한 번 더 누르면 처음으로' : '↺ 처음으로'}
     </Button>
@@ -95,13 +84,12 @@ export default function PadApp() {
 
   return (
     <Screen>
-      <TopBar place={state.event ? `${state.event.day ?? ''} · ${state.event.title}` : null} line={HEADLINE[state.phase](state)} home={home} />
+      <TopBar place={state.event ? `${state.event.day ?? ''} · ${state.event.title}` : null} home={home} />
       {link === 'lost' && <Notice>큰 화면과의 연결이 끊겼습니다. 다시 연결하는 중입니다…</Notice>}
       {link === 'live' && !wall && <Notice>큰 화면이 아직 연결되지 않았습니다.</Notice>}
       {notice === 'no-wall' && <Notice>큰 화면이 그것을 받지 못했습니다. 잠시 뒤 다시 눌러 주세요.</Notice>}
       {notice === 'failed' && <Notice>방금 누른 것이 전달되지 않았습니다. 다시 눌러 주세요.</Notice>}
       <PadStage s={state} press={press} />
-      {state.auto && <AutoNote auto={state.auto} />}
     </Screen>
   );
 }

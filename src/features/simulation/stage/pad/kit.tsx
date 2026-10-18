@@ -139,6 +139,7 @@ export const Row = styled.div`
 
 export const Spacer = styled.span`flex: 1;`;
 
+/** One short line that says what a press here does. Never a paragraph: the wall is where things are read. */
 export const Hint = styled.p`
   margin: 0;
   font-size: 20px;
@@ -147,7 +148,7 @@ export const Hint = styled.p`
   word-break: keep-all;
 `;
 
-/** The top bar: where the visitor is in the three days, and the way back. One quiet line. */
+/** The top bar: which event the wall is on, and the way back. No sentence: the wall says what is happening. */
 const BarBox = styled.header`
   flex: none;
   display: flex;
@@ -156,26 +157,15 @@ const BarBox = styled.header`
   min-height: ${TOUCH}px;
   > b { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; }
   > em { font-style: normal; font-size: 20px; font-weight: 800; color: ${night.accent}; }
-  > span { flex: 1; min-width: 0; font-size: 20px; color: ${night.mute}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  > span { flex: 1; }
 `;
 
-const Dots = styled.ol`
-  display: flex;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  > li { width: 32px; height: 8px; border-radius: ${radius.pill}; background: ${inkA(0.16)}; transition: background 0.3s ease; }
-  > li[data-state='now'] { background: ${night.accent}; }
-  > li[data-state='done'] { background: ${inkA(0.7)}; }
-`;
-
-export function TopBar({ place, line, home }: { place: string | null; line: string; home: React.ReactNode }) {
+export function TopBar({ place, home }: { place: string | null; home: React.ReactNode }) {
   return (
     <BarBox>
       <b>Dially</b>
       {place && <em>{place}</em>}
-      <span>{line}</span>
+      <span />
       {home}
     </BarBox>
   );

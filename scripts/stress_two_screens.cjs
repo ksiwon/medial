@@ -26,13 +26,13 @@ const check = (ok, name, detail = '') => { results.push(ok); console.log(ok ? ' 
   await pad.getByRole('button', { name: '시작하기' }).waitFor({ timeout: 20000 });
 
   // 소개를 건너뛰어 이번 주로, 거기서 첫 사건을 연다. 이야기는 혼자 흘러서 느린 시험에서는 벌써 끝나
-  // "주민 평가 보기" 가 나와 있을 수 있다.
+  // "주민 평가 →" 가 나와 있을 수 있다.
   const enterEvent = async () => {
     await pad.getByRole('button', { name: '시작하기' }).tap();
     await pad.getByRole('button', { name: /건너뛰기/ }).waitFor();
     await pad.getByRole('button', { name: /건너뛰기/ }).tap();
     await pad.getByRole('button', { name: /연락이 안 되어 찾아보기/ }).tap({ timeout: 20000 });
-    await pad.getByRole('button', { name: /다음 장면으로|주민 평가 보기/ }).first().waitFor({ timeout: 30000 });
+    await pad.getByRole('button', { name: /넘기기|주민 평가/ }).first().waitFor({ timeout: 30000 });
   };
 
   // 어디까지 걸어갔든 처음으로 돌아가 알려진 자리에서 시작한다 (처음으로 는 두 번 눌러야 한다).
@@ -71,12 +71,12 @@ const check = (ok, name, detail = '') => { results.push(ok); console.log(ok ? ' 
   blocked = false;
   await pad.getByText(/큰 화면과의 연결이 끊겼습니다/).waitFor({ state: 'hidden', timeout: 30000 });
   check(true, '돌아오면 알림이 사라진다');
-  check((await pad.getByRole('button', { name: /다음 장면|건너뛰기|시작하기|평가 보기/ }).count()) > 0, '그리고 같은 화면에서 이어진다');
+  check((await pad.getByRole('button', { name: /넘기기|건너뛰기|시작하기|주민 평가/ }).count()) > 0, '그리고 같은 화면에서 이어진다');
 
   console.log('· 빠른 연타에도 순서가 지켜진다');
   await startOver();
   await enterEvent();
-  await pad.getByRole('button', { name: /다음 장면으로|주민 평가 보기/ }).first().waitFor({ timeout: 30000 });
+  await pad.getByRole('button', { name: /넘기기|주민 평가/ }).first().waitFor({ timeout: 30000 });
   for (let i = 0; i < 6; i += 1) await pad.getByRole('button', { name: /다음 장면으로/ }).tap({ timeout: 1500 }).catch(() => {});
   await wait(2000);
   check(errors.length === 0, '연타 뒤에도 페이지 오류가 없다', errors.join('; '));
@@ -87,11 +87,11 @@ const check = (ok, name, detail = '') => { results.push(ok); console.log(ok ? ' 
   await homeBtn.tap(); await homeBtn.tap();
   await pad.getByRole('button', { name: '시작하기' }).waitFor({ timeout: 20000 });
   await enterEvent();
-  for (let i = 0; i < 12 && !(await pad.getByRole('button', { name: /주민 평가 보기/ }).isVisible().catch(() => false)); i += 1) {
+  for (let i = 0; i < 12 && !(await pad.getByRole('button', { name: /주민 평가 →/ }).isVisible().catch(() => false)); i += 1) {
     await pad.getByRole('button', { name: '다음 장면으로 →' }).tap({ timeout: 3000 }).catch(() => {});
     await wait(600);
   }
-  await pad.getByRole('button', { name: /주민 평가 보기/ }).tap({ timeout: 30000 });
+  await pad.getByRole('button', { name: /주민 평가 →/ }).tap({ timeout: 30000 });
   await pad.getByText(/이 일을 겪은 주민/).waitFor({ timeout: 30000 });
   await wall.getByText('서비스를 겪은 주민의 말').waitFor({ timeout: 15000 });
   const stale = await fetch(`${BASE}/api/sim/stage/command?token=${encodeURIComponent(pairing.token)}`, {

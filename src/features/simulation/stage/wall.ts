@@ -5,7 +5,7 @@ import type { Evaluation, Week, WeekEvent, WeekScene } from '../week/types';
 import { postState } from './bus';
 import { IDLE_STATE, type Command, type DayBrief, type Phase, type RequestBrief, type ResidentBrief, type StageState } from './protocol';
 import { useStream } from './stream';
-import { autoOf, type AutoAction } from '../week/auto';
+import type { AutoAction } from '../week/auto';
 
 // The wall's side of the two screens: it does what the tablet pressed, and says what it shows.
 //
@@ -108,14 +108,10 @@ function run(command: Command): void {
   }
 }
 
-const requestBrief = (event: WeekEvent, week: Week): RequestBrief[] =>
-  event.requests.map((r) => ({
-    id: r.id, label: r.label, expect: r.expect, cost: r.cost, basis: r.basis.verdict,
-    from: r.basis.actor ? nameOf(week, r.basis.actor) : null,
-  }));
+const requestBrief = (event: WeekEvent): RequestBrief[] => event.requests.map((r) => ({ id: r.id, label: r.label }));
 
 const residentBrief = (week: Week, list: Evaluation[]): ResidentBrief[] =>
-  list.map((e) => ({ id: e.actor, name: nameOf(week, e.actor), said: e.paragraph }));
+  list.map((e) => ({ id: e.actor, name: nameOf(week, e.actor), marks: e.claims.map((c) => c.kind) }));
 
 const weekBrief = (week: Week, seen: string[], chosen: Record<string, string | null>): DayBrief[] =>
   week.days.map((d) => ({
@@ -131,40 +127,33 @@ const weekBrief = (week: Week, seen: string[], chosen: Record<string, string | n
 export function describeStage(args: {
   week: Week | null; introStarted: boolean; pathStarted: boolean; step: string; eventId: string | null;
   requestId: string | null; lineIndex: number; openActor: string | null; seen: string[];
-  considering?: string | null; closingWords?: boolean; lastPress?: number; chosen?: Record<string, string | null>;
+  considering?: string | null; closingWords?: boolean; chosen?: Record<string, string | null>;
 }): StageState {
   const { week } = args;
   if (!week) return IDLE_STATE;
   if (!args.pathStarted) return { ...IDLE_STATE, phase: args.introStarted ? 'intro' : 'idle' };
   const phase = args.step as Phase;
   const event = eventOf(week, args.eventId);
-  const scenes = scenesOf(event, phase, args.requestId);
-  const told = (phase === 'before' || phase === 'after') && positionIn(scenes, args.lineIndex).done;
-  const auto = autoOf({
-    pathStarted: true, step: phase, eventId: args.eventId, openActor: args.openActor, toldAll: told,
-    noChoice: event?.noChoice ?? false, seen: args.seen.length, closingWords: args.closingWords ?? false, lastPress: args.lastPress ?? 0,
-  });
   const base: StageState = {
     ...IDLE_STATE, phase, week: weekBrief(week, args.seen, args.chosen ?? {}), seen: args.seen.length,
     total: week.days.reduce((n, d) => n + d.events.length, 0),
     event: event ? { id: event.id, title: event.title, day: dayOf(week, event.id), noChoice: event.noChoice } : null,
-    auto: auto ? { key: auto.key, seconds: auto.seconds, say: auto.say } : null,
     closingWords: args.closingWords ?? false,
   };
   if (!event) return base;
   if (phase === 'before' || phase === 'after') {
+    const scenes = scenesOf(event, phase, args.requestId);
     const at = positionIn(scenes, args.lineIndex);
     const scene = scenes[at.scene];
     return {
       ...base, line: args.lineIndex, lines: at.total, toldAll: at.done,
-      scene: scene ? { time: scene.time, place: scene.frames[0]?.label ?? null, index: at.scene, of: scenes.length } : null,
-      chosen: args.requestId,
+      scene: scene ? { time: scene.time, index: at.scene, of: scenes.length } : null,
     };
   }
   if (phase === 'evaluations' || phase === 'result') {
-    return { ...base, residents: residentBrief(week, evaluationsOf(event, phase, args.requestId)), openActor: args.openActor, chosen: args.requestId };
+    return { ...base, residents: residentBrief(week, evaluationsOf(event, phase, args.requestId)), openActor: args.openActor };
   }
-  if (phase === 'choose') return { ...base, requests: requestBrief(event, week), considering: args.considering ?? null };
+  if (phase === 'choose') return { ...base, requests: requestBrief(event), considering: args.considering ?? null };
   return base;
 }
 
@@ -223,7 +212,7 @@ export function useWall(): { paired: boolean } {
   latest.current = describeStage({
     week: w.week, introStarted: w.introStarted, pathStarted: w.pathStarted, step: w.step, eventId: w.eventId,
     requestId: w.requestId, lineIndex: w.lineIndex, openActor: w.openActor, seen: w.seen,
-    considering: w.considering, closingWords: w.closingWords, lastPress: w.lastPress, chosen: w.chosen,
+    considering: w.considering, closingWords: w.closingWords, chosen: w.chosen,
   });
 
   // After every render: the cheap comparison above decides whether anything goes out.

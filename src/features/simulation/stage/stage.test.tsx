@@ -205,15 +205,10 @@ describe('what the wall says it shows', () => {
     expect(s.openActor).toBe(event.before.evaluations[0].actor);
   });
 
-  it('offers each request with its hope and its cost, and says how well the residents support it', () => {
+  it('offers each request by its place in the event: the tablet shows its number, the wall shows the card', () => {
     const s = state({ step: 'choose', eventId: 'E1' });
     const event = week.events.find((e) => e.id === 'E1')!;
-    expect(s.requests).toHaveLength(event.requests.length);
-    for (const r of s.requests) {
-      expect(r.expect).not.toBe('');
-      expect(r.cost).not.toBe('');
-      expect(['direct', 'weak']).toContain(r.basis);
-    }
+    expect(s.requests).toEqual(event.requests.map((r) => ({ id: r.id, label: r.label })));
   });
 
   it('offers an emergency no requests', () => {

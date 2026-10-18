@@ -35,25 +35,21 @@ export interface DayBrief {
   events: { id: string; title: string; noChoice: boolean; seen: boolean; chosen: number | null }[];
 }
 
+/** A resident to open on the wall: the name, and the kinds of what they said as marks - their words are on the wall. */
 export interface ResidentBrief {
   id: string;
   name: string;
-  /** What they said, whole (the tablet shows up to three lines of it). */
-  said: string;
+  marks: ('good' | 'bad' | 'neutral' | 'unknown' | 'wish')[];
 }
 
+/** A request to pick: its number and its sentence - what it hopes for, what it costs and its basis are on the wall. */
 export interface RequestBrief {
   id: string;
   label: string;
-  expect: string;
-  cost: string;
-  /** How well the residents' own words support it: shown, never hidden. */
-  basis: 'direct' | 'weak';
-  /** Whose words it came from. */
-  from: string | null;
 }
 
-/** What the wall is showing, as the tablet needs it. Small on purpose: where the walk is, and the things to press. */
+/** What the wall is showing, as the tablet needs it: where the walk is, the things to press, and as many words as it
+ *  takes to know what a press does - no more: the tablet is touched, the wall is read (2026-10-18). */
 export interface StageState {
   phase: Phase;
   /** The week, always: the tablet's list of events to pick from. */
@@ -63,27 +59,24 @@ export interface StageState {
   /** The open event, and the weekday it falls on this session. */
   event: { id: string; title: string; day: string | null; noChoice: boolean } | null;
   /** Reading a telling (before / after): the scene it is in, how far through, and whether it is done. */
-  scene: { time: string; place: string | null; index: number; of: number } | null;
+  scene: { time: string; index: number; of: number } | null;
   line: number;
   lines: number;
   toldAll: boolean;
   /** Evaluations: the residents who were asked, and whose card is open. */
   residents: ResidentBrief[];
   openActor: string | null;
-  /** Choose: the requests (none for an emergency). After: the one that was chosen. */
+  /** Choose: the requests (none for an emergency). */
   requests: RequestBrief[];
-  chosen: string | null;
   /** Choose: the request a finger rests on, not yet confirmed. */
   considering: string | null;
-  /** The clock the wall's page is on (week/auto.ts), so the tablet can say it too; a new key is a new count. */
-  auto: { key: string; seconds: number; say: string } | null;
   /** Closing: the closing words are up (rather than the list of what was changed). */
   closingWords: boolean;
 }
 
 export const IDLE_STATE: StageState = {
   phase: 'idle', week: [], seen: 0, total: 0, event: null, scene: null, line: 0, lines: 0, toldAll: false,
-  residents: [], openActor: null, requests: [], chosen: null, considering: null, auto: null, closingWords: false,
+  residents: [], openActor: null, requests: [], considering: null, closingWords: false,
 };
 
 export const STAGE_API = '/api/sim/stage';
