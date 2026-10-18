@@ -50,7 +50,8 @@ DISCLAIMER = "시뮬레이션 산출물이다. 실제 주민의 발언·만족�
 SYSTEM = """당신은 경남 남해군 은점마을의 한 주민이다. 방금 겪은 일을 되돌아보며, 안부를 살피고 이웃을 이어 주는 AI에 대한 생각을 짧게 말한다. 이것은 전시에서 '시뮬레이션 주민의 평가'로 읽힌다. 실제 주민의 의견이 아니다.
 
 쓰는 법
-- 본인 말투(인물과 말투)로, 1인칭으로, 한 단락(80~140자)으로 쓴다. 번역투를 쓰지 않는다.
+- 평가 기록의 문체로 쓴다. 문장은 모두 '~임', '~함', '~음', '~됨' 같은 명사형으로 끝낸다('~다', '~요', '~제', '~네'로 끝내지 않는다). 사투리와 구어체 말투를 쓰지 않는다. 1인칭 시점(내가 겪은 일)은 유지하되 '나는' 같은 주어는 꼭 필요할 때만 쓴다. 한 단락(60~120자)으로 쓴다. 번역투를 쓰지 않는다.
+- 인물 설명은 무엇을 겪었고 어떤 처지인지 알려 주는 용도이다. 그 사람의 말투를 흉내 내지 않는다.
 - 겪은 줄(ㄱ~) 안에서만 말한다. 자기가 없던 장면, 듣지 못한 말, 대화에 없는 사실(새 병명·시각·이름)은 말하지 않는다.
 - 단락 다음에 claims를 쓴다. claims는 겪은 일 하나하나에 대한 짧은 말(한 문장, 15~60자)이고, 각각 kind를 붙인다.
   good: 도움이 됐거나 안심이 된 점 / bad: 불편하거나 걱정되거나 아쉬운 점 / neutral: 좋다 나쁘다 하기 어려운 점 / unknown: 겪은 것만으로는 알 수 없는 점 / wish: 이렇게 고쳐 줬으면 하는 점.
@@ -63,6 +64,8 @@ SYSTEM = """당신은 경남 남해군 은점마을의 한 주민이다. 방금 
 
 JSON으로 paragraph와 claims(kind, text, citedLines)만 돌려준다."""
 
+# A sentence ending in one of these is spoken style (~다 ~요 ~제 ~네 ...), not the record style (~함 ~임 ~음).
+ENDINGS_NOT_ALLOWED = "다요죠제네어아지라나군걸데까"
 KIND_LABEL = {"good": "좋았던 점", "bad": "불편했던 점", "neutral": "어느 쪽도 아님", "unknown": "알 수 없었던 점", "wish": "고치고 싶은 점"}
 KINDS = ["good", "bad", "neutral", "unknown", "wish"]
 SCHEMA = {
@@ -119,8 +122,12 @@ def residents_of(keys: list[str], dialogue: dict) -> list[str]:
 def problems(paragraph: str, claims: list[dict], allowed: set[int]) -> list[str]:
     bad: list[str] = []
     n = len(paragraph)
-    if not 60 <= n <= 170:
-        bad.append("단락이 %d자(80~140자 안팎)" % n)
+    if not 40 <= n <= 150:
+        bad.append("단락이 %d자(60~120자 안팎)" % n)
+    for sentence in [paragraph] + [c["text"] for c in claims]:
+        for part in re.split(r"(?<=[.!?])\s+", sentence.strip()):
+            if part and part.rstrip(".!? ")[-1] in ENDINGS_NOT_ALLOWED:
+                bad.append("명사형(~함·~임)으로 끝나지 않음: %s" % part[-14:])
     if not 1 <= len(claims) <= 4:
         bad.append("claims가 %d개(1~4개)" % len(claims))
     if sum(c["kind"] == "wish" for c in claims) > 1:
@@ -131,7 +138,7 @@ def problems(paragraph: str, claims: list[dict], allowed: set[int]) -> list[str]
             bad.append("겪지 않은 줄을 인용: %s" % outside)
         if not c["citedLines"]:
             bad.append("인용한 줄이 없는 주장: %s" % c["text"][:20])
-        if not 8 <= len(c["text"]) <= 80:
+        if not 6 <= len(c["text"]) <= 80:
             bad.append("주장 길이 %d자: %s" % (len(c["text"]), c["text"][:20]))
     text = paragraph + " ".join(c["text"] for c in claims)
     if re.search(r"[0-9]\s*점|별\s*[0-9]|[0-9]\s*등급|만족도|최고|최악", text):
@@ -157,7 +164,7 @@ def make(only: list[str] | None) -> None:
                 lines = experienced(actor, keys, dialogue)
                 allowed = {x["n"] for x in lines}
                 payload = {
-                    "인물과 말투": briefs["voices"][actor],
+                    "인물(처지만 참고하고 말투는 따르지 않는다)": briefs["voices"][actor],
                     "겪은 줄(번호: 말한 사람: 말)": ["%d: %s: %s" % (x["n"], x["speaker"], x["text"]) for x in lines],
                     "사건": ev["title"],
                     "상황": ("AI의 규칙이 바뀐 뒤의 일" if request else "AI가 평소대로 한 일"),
