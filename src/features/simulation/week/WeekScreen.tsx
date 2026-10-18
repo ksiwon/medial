@@ -158,12 +158,12 @@ const Chosen = styled.div`
 const SAY = 3;
 
 /**
- * The feedback a card shows: what the residents said, each resident in turn so no one fills the card, and within a
- * resident what bothered them or what they wish before what helped. Never a count or a score - their words.
+ * The feedback a card shows: what the residents said, each resident in turn so no one fills the card, and each
+ * resident's claims in the order they said them. Nothing is picked by its kind: putting what bothered them first
+ * made the service read worse than the residents put it (2026-10-18). Never a count or a score - their words.
  */
 export function feedbackOf(evaluations: Evaluation[], limit = SAY): Claim[] {
-  const order: Claim['kind'][] = ['bad', 'wish', 'unknown', 'good', 'neutral'];
-  const queues = evaluations.map((ev) => [...ev.claims].sort((x, y) => order.indexOf(x.kind) - order.indexOf(y.kind)));
+  const queues = evaluations.map((ev) => ev.claims);
   const out: Claim[] = [];
   for (let round = 0; out.length < limit && queues.some((q) => q.length > round); round += 1) {
     for (const q of queues) if (q[round] && out.length < limit) out.push(q[round]);
@@ -203,7 +203,7 @@ function EventCard({ week, block, art, now, seen, chosen }: {
       </Title>
       {request && <Chosen>고른 요청 · {request.label}</Chosen>}
       <Feedback aria-label="주민의 피드백">
-        <small>{request ? '반영 후 주민의 피드백' : '주민의 피드백'}</small>
+        <small>{request ? '반영 후 · 시뮬레이션 주민의 피드백' : '시뮬레이션 주민의 피드백'}</small>
         {feedbackOf(voices).map((c, i) => (
           <Voice key={i}>
             <b style={{ color: claimTone[c.kind].color }} aria-label={claimTone[c.kind].label}>{claimTone[c.kind].mark}</b>

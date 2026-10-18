@@ -124,6 +124,10 @@ const Missing = styled.div`
   word-break: keep-all;
 `;
 
+/** A pin's place in %, kept `margin` inside the map: a house at the village's south end was drawn past the map's
+ *  edge, over the column's caption. */
+const pct = (f: number, margin: number) => Math.min(Math.max(f, margin), 1 - margin) * 100;
+
 export default function VillageMap({ village, frames, people, art }: {
   village: Village; frames: Frame[]; people: Record<string, string>; art: ReadonlySet<string>;
 }) {
@@ -155,7 +159,7 @@ export default function VillageMap({ village, frames, people, art }: {
               ))}
             </svg>
             {spots.filter((s) => s.at).map((s) => (
-              <Pin key={s.key} style={{ left: `${((s.at!.x - box[0]) / box[2]) * 100}%`, top: `${((s.at!.y - box[1]) / box[3]) * 100}%` }}>
+              <Pin key={s.key} style={{ left: `${pct((s.at!.x - box[0]) / box[2], 0.12)}%`, top: `${pct((s.at!.y - box[1]) / box[3], 0.06)}%` }}>
                 {s.who.length > 0 && <div>{s.who.map((id) => <Portrait key={id} actorId={id} art={art} size={32} />)}</div>}
                 <i />
                 <span>{s.label}</span>

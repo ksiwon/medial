@@ -72,11 +72,12 @@ const None = styled.div`
   word-break: keep-all;
 `;
 
-/** What it said and heard, newest last; the oldest fall off the top so the newest is always in view. */
+/** What it said and heard, from the top, newest last; past LOG lines the oldest give way so the newest stays in view.
+ *  (It used to sit at the bottom, and a telling began with an empty box above one line.) */
 const Log = styled.div`
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: ${space.sm};
   min-height: 0;
   flex: 1 1 auto;

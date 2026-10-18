@@ -37,7 +37,7 @@ export interface DayBrief {
 export interface ResidentBrief {
   id: string;
   name: string;
-  /** The first line of what they said: enough to tell the cards apart. */
+  /** What they said, whole (the tablet shows up to three lines of it). */
   said: string;
 }
 

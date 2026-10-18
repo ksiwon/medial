@@ -107,13 +107,14 @@ describe('the week as a timetable', () => {
 });
 
 describe("a week card's feedback", () => {
-  it("takes each resident in turn, what bothered them first, and never more than the card holds", () => {
+  it("takes each resident in turn, in the order they said things, and never more than the card holds", () => {
     const E5 = eventOf(week, 'E5')!;
     const said = feedbackOf(E5.before.evaluations, 3);
     expect(said).toHaveLength(3);
     // one from each of the three residents in the first round
     expect(said).toEqual(E5.before.evaluations.map((ev) => feedbackOf([ev], 1)[0]));
-    expect(feedbackOf([E1.before.evaluations[0]], 1)[0].kind).toBe('bad');
+    // their first claim, whatever its kind: the card does not pick the discomfort out
+    for (const ev of week.events.flatMap((e) => e.before.evaluations)) expect(feedbackOf([ev], 1)[0]).toBe(ev.claims[0]);
   });
 });
 

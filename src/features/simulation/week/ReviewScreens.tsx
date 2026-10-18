@@ -231,8 +231,6 @@ const Because = styled.blockquote<{ $weak: boolean }>`
   padding: ${space.md} ${space.lg};
   border-radius: ${radius.card};
   background: ${inkA(0.05)};
-  flex: 1;
-  justify-content: center;
   font-size: ${px(16)};
   line-height: 1.55;
   word-break: keep-all;
@@ -295,14 +293,18 @@ export function ChooseScreen({ week, event, art, considering }: {
   return (
     <Page aria-label="무엇을 고칠 것인가">
       <Head>
-        <small>{event.title} · 수정 요청 고르기</small>
+        <small>{event.title} · 수정 요청 {event.requests.length > 1 ? '고르기' : '살펴보기'}</small>
         <h1>무엇을 고칠 것인가</h1>
+        {/* One request is not a choice among requests: it is said as what it is, a change to apply or not. */}
         <p>
-          주민들이 겪은 일에서 나온 요청입니다. 하나만 고를 수 있고, 고르면 같은 일이 그 요청대로 다시 펼쳐집니다.
-          모든 요청에는 바라는 것과 함께 따를 부담이 있습니다.
+          {event.requests.length > 1
+            ? `주민들이 겪은 일에서 나온 요청 ${event.requests.length}개입니다. 하나만 고를 수 있고, 고르면 같은 일이 그 요청대로 다시 펼쳐집니다.`
+            : '이 사건에서는 주민들이 겪은 일에서 요청이 하나 나왔습니다. 반영하면 같은 일이 그 요청대로 다시 펼쳐집니다.'}
+          {' '}모든 요청에는 바라는 것과 함께 따를 부담이 있습니다.
         </p>
       </Head>
-      <Cards $n={event.requests.length}>
+      {/* One request is one card at its own height, not a column stretched over the page. */}
+      <Cards $n={event.requests.length} style={event.requests.length === 1 ? { gridAutoRows: 'auto', alignContent: 'start' } : undefined}>
         {event.requests.map((r, i) => <RequestCard key={r.id} week={week} request={r} index={i} art={art} chosen={r.id === considering} />)}
       </Cards>
       <Foot>합성 평가입니다. 실제 주민의 만족도나 동의가 아니며, 나중에 실제 주민이 확인·반박할 대상입니다.</Foot>

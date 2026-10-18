@@ -180,7 +180,7 @@ export function Evaluations({ s, press, result = false }: { s: StageState; press
         {s.residents.map((r) => (
           <Card key={r.id} onClick={() => press({ name: 'openResident', id: r.id })}>
             <b>{r.name}</b>
-            <span>{r.said}</span>
+            <span style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', whiteSpace: 'normal' }}>{r.said}</span>
           </Card>
         ))}
       </Grid>
@@ -217,7 +217,10 @@ export function Choose({ s, press }: { s: StageState; press: Press }) {
   const picked = s.considering;
   return (
     <Page>
-      <Hint>요청을 하나 누르고, 아래 버튼으로 확정하세요. 확정하면 같은 일이 그 요청대로 다시 펼쳐지고 되돌릴 수 없어요.</Hint>
+      <Hint>
+        {s.requests.length > 1 ? '요청을 하나 누르고, 아래 버튼으로 확정하세요.' : '이 사건의 요청은 하나예요. 눌러서 살펴본 뒤 아래 버튼으로 반영하세요.'}
+        {' '}확정하면 같은 일이 그 요청대로 다시 펼쳐지고 되돌릴 수 없어요.
+      </Hint>
       <Grid $cols={Math.max(1, Math.min(3, s.requests.length))}>
         {s.requests.map((r, i) => (
           <Pick key={r.id} $on={picked === r.id} disabled={sent !== null}

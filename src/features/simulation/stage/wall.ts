@@ -115,7 +115,7 @@ const requestBrief = (event: WeekEvent, week: Week): RequestBrief[] =>
   }));
 
 const residentBrief = (week: Week, list: Evaluation[]): ResidentBrief[] =>
-  list.map((e) => ({ id: e.actor, name: nameOf(week, e.actor), said: e.paragraph.length > 44 ? `${e.paragraph.slice(0, 42)}…` : e.paragraph }));
+  list.map((e) => ({ id: e.actor, name: nameOf(week, e.actor), said: e.paragraph }));
 
 const weekBrief = (week: Week, seen: string[]): DayBrief[] =>
   week.days.map((d) => ({
