@@ -58,8 +58,11 @@ describe('the week', () => {
     // The first line of the second scene follows the last of the first.
     expect(numberOf(event.before.scenes, 1, 0)).toBe(event.before.scenes[0].lines.length + 1);
     for (const ev of event.before.evaluations) {
-      for (const n of ev.citedLines) expect(n).toBeGreaterThanOrEqual(1);
-      expect(Math.max(...ev.citedLines)).toBeLessThanOrEqual(lines.length);
+      for (const claim of ev.claims) {
+        expect(claim.citedLines.length).toBeGreaterThan(0);
+        for (const n of claim.citedLines) expect(n).toBeGreaterThanOrEqual(1);
+        expect(Math.max(...claim.citedLines)).toBeLessThanOrEqual(lines.length);
+      }
     }
   });
 

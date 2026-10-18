@@ -20,6 +20,16 @@ export const night = {
   accentSoft: 'rgba(226, 84, 44, 0.16)',
 } as const;
 
+/** What a resident's claim was: one tone and one mark per kind, so it never rests on colour alone. `wish` takes the
+ *  accent because a wish is what becomes a request. */
+export const claimTone = {
+  good: { mark: '＋', label: '좋았던 점', color: '#8fbf8a' },
+  bad: { mark: '－', label: '불편했던 점', color: '#e08a6a' },
+  neutral: { mark: '○', label: '어느 쪽도 아님', color: 'rgba(246, 241, 232, 0.66)' },
+  unknown: { mark: '？', label: '알 수 없었던 점', color: '#8fa9c4' },
+  wish: { mark: '→', label: '고치고 싶은 점', color: '#e2542c' },
+} as const;
+
 const K = 'var(--k, 1)';
 
 /** The type scale's multiplier: 1 on a laptop, larger on a wall screen

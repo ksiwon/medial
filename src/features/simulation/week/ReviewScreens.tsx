@@ -1,9 +1,9 @@
 import styled, { css } from 'styled-components';
 import Portrait from '../ui/Portrait';
 import { pill } from '../ui/primitives';
-import { accentA, inkA, night, px, radius, space } from '../ui/theme';
+import { accentA, claimTone, inkA, night, px, radius, space } from '../ui/theme';
 import { nameOf } from './selectors';
-import type { Evaluation, Line, Week, WeekEvent, WeekRequest, WeekScene } from './types';
+import type { Claim, Evaluation, Line, Week, WeekEvent, WeekRequest, WeekScene } from './types';
 
 // The three pages that read what the residents said and what came of it:
 //
@@ -86,30 +86,37 @@ const Quote = styled.blockquote`
   &::before { content: '“'; position: absolute; left: 0; top: ${px(-8)}; font-size: ${px(56)}; line-height: 1; font-weight: 800; color: ${night.accent}; }
 `;
 
-const Wish = styled.p`
-  margin: 0;
-  padding: ${space.md} ${space.lg};
-  border-radius: ${radius.card};
-  background: ${night.accentSoft};
-  box-shadow: inset ${px(4)} 0 0 ${night.accent};
-  font-size: ${px(16)};
-  line-height: 1.5;
-  font-weight: 700;
-  word-break: keep-all;
-  > small { display: block; margin-bottom: ${space.xs}; font-size: ${px(12)}; font-weight: 800; letter-spacing: 0.06em; color: ${night.accent}; }
-`;
-
-const Cited = styled.ul`
+/** What they made of it, one thing at a time. The tone and the mark both say the kind; the lines it rests on sit under it. */
+const Claims = styled.ul`
   margin: 0;
   padding: ${space.md} 0 0;
   list-style: none;
   border-top: 1px solid ${night.line};
   display: flex;
   flex-direction: column;
+  gap: ${space.xl};
+  min-height: 0;
+  overflow: hidden;
+`;
+
+const ClaimRow = styled.li<{ $color: string }>`
+  display: grid;
+  grid-template-columns: ${px(32)} minmax(0, 1fr);
+  gap: ${space.md};
+  > b { font-size: ${px(24)}; line-height: 1.3; font-weight: 800; color: ${(p) => p.$color}; text-align: center; }
+  > div { display: flex; flex-direction: column; gap: ${space.xs}; min-width: 0; }
+  > div > small { font-size: ${px(12)}; font-weight: 800; letter-spacing: 0.06em; color: ${(p) => p.$color}; }
+  > div > p { margin: 0; font-size: ${px(28)}; line-height: 1.45; font-weight: 600; word-break: keep-all; }
+`;
+
+const Heard = styled.div`
+  display: flex;
+  flex-direction: column;
   gap: ${space.xs};
-  > small { font-size: ${px(12)}; font-weight: 800; letter-spacing: 0.06em; color: ${night.faint}; margin-bottom: ${space.xs}; }
-  > li { display: flex; gap: ${space.sm}; font-size: ${px(16)}; line-height: 1.45; color: ${night.mute}; word-break: keep-all; }
-  > li > b { flex: none; min-width: ${px(56)}; font-weight: 800; color: ${night.ink}; }
+  padding-left: ${space.md};
+  border-left: 2px solid ${night.line};
+  > span { display: flex; gap: ${space.sm}; font-size: ${px(16)}; line-height: 1.4; color: ${night.mute}; word-break: keep-all; }
+  > span > b { flex: none; font-weight: 800; color: ${night.ink}; }
 `;
 
 const Foot = styled.p`
@@ -131,10 +138,28 @@ const lineOf = (scenes: WeekScene[], n: number): { speaker: string; text: string
   return null;
 };
 
+function ClaimItem({ week, claim, scenes, open }: { week: Week; claim: Claim; scenes: WeekScene[]; open: boolean }) {
+  const tone = claimTone[claim.kind];
+  const heard = claim.citedLines.map((n) => lineOf(scenes, n)).filter((l): l is { speaker: string; text: string } => !!l);
+  return (
+    <ClaimRow $color={tone.color}>
+      <b aria-hidden>{tone.mark}</b>
+      <div>
+        <small>{tone.label}</small>
+        <p>{claim.text}</p>
+        <Heard aria-label="이 말이 근거로 든 대사">
+          {heard.slice(0, open ? heard.length : 1).map((l, i) => (
+            <span key={i}><b>{l.speaker === 'AI' ? 'AI' : nameOf(week, l.speaker)}</b>{l.text}</span>
+          ))}
+        </Heard>
+      </div>
+    </ClaimRow>
+  );
+}
+
 function EvaluationCard({ week, evaluation, scenes, art, open }: {
   week: Week; evaluation: Evaluation; scenes: WeekScene[]; art: ReadonlySet<string>; open: boolean;
 }) {
-  const cited = evaluation.citedLines.map((n) => ({ n, line: lineOf(scenes, n) })).filter((c) => c.line);
   return (
     <Card $lit={open}>
       <Who>
@@ -145,15 +170,9 @@ function EvaluationCard({ week, evaluation, scenes, art, open }: {
         </div>
       </Who>
       <Quote>{evaluation.paragraph}</Quote>
-      {evaluation.changeWish && <Wish><small>고치고 싶은 점</small>{evaluation.changeWish}</Wish>}
-      {cited.length > 0 && (
-        <Cited aria-label="이 평가가 근거로 든 대사">
-          <small>이 평가가 근거로 든 대사</small>
-          {cited.slice(0, open ? cited.length : 4).map(({ n, line }) => (
-            <li key={n}><b>{line!.speaker === 'AI' ? 'AI' : nameOf(week, line!.speaker)}</b><span>{line!.text}</span></li>
-          ))}
-        </Cited>
-      )}
+      <Claims aria-label="주민이 겪은 일에 대해 한 말">
+        {evaluation.claims.map((c, i) => <ClaimItem key={i} week={week} claim={c} scenes={scenes} open={open} />)}
+      </Claims>
     </Card>
   );
 }
@@ -233,6 +252,15 @@ const Trade = styled.div`
   > div.cost > small { color: ${night.deep}; background: #e8c46a; }
 `;
 
+/** Which kind of claim a request grew out of: a discomfort, a wish, or something else the resident said. */
+const Kind = styled.span<{ $color: string }>`
+  ${pill('xs')}
+  align-self: flex-start;
+  font-weight: 800;
+  color: ${(p) => p.$color};
+  background: ${inkA(0.08)};
+`;
+
 export function RequestCard({ week, request, index, art, chosen }: {
   week: Week; request: WeekRequest; index: number; art: ReadonlySet<string>; chosen?: boolean;
 }) {
@@ -246,6 +274,7 @@ export function RequestCard({ week, request, index, art, chosen }: {
           <header>
             <Portrait actorId={request.basis.actor} art={art} size={56} />
             <Chip $tone={weak ? 'warn' : undefined}>{weak ? '근거가 약한 요청' : `${nameOf(week, request.basis.actor)}의 평가에서`}</Chip>
+            {request.basis.kind && <Kind $color={claimTone[request.basis.kind].color}>{claimTone[request.basis.kind].mark} {claimTone[request.basis.kind].label}</Kind>}
           </header>
           {request.basis.quote && <p>“{request.basis.quote}”</p>}
         </Because>

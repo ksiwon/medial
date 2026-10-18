@@ -53,16 +53,36 @@ def test_every_evaluation_is_simulated_and_cites_only_lines_the_resident_was_in(
         for pool in pools:
             for ev in pool:
                 assert ev["source"] == "simulated" and ev["disclaimer"] == DISCLAIMER
-                assert ev["citedLines"]
+                assert ev["claims"]
+                for claim in ev["claims"]:
+                    assert claim["kind"] in {"good", "bad", "neutral", "unknown", "wish"} and claim["citedLines"]
 
 
 def test_a_citation_outside_what_the_resident_heard_stops_the_read(copy: Path):
     def cite_a_line_nobody_in_the_scene_heard(data):
         ev = next(v for v in data["evaluations"].values() if v["event"] == "E1" and v["variant"] == "before" and v["actor"] == "P1")
-        ev["citedLines"] = [1]  # line 1 is the AI and the head on the phone: P1 was not there
+        ev["claims"][0]["citedLines"] = [1]  # line 1 is the AI and the head on the phone: P1 was not there
 
     edit(copy / "evaluations.json", cite_a_line_nobody_in_the_scene_heard)
     with pytest.raises(WeekError, match="겪지 않은 줄"):
+        load_week(copy)
+
+
+def test_a_claim_without_a_cited_line_stops_the_read(copy: Path):
+    def uncite(data):
+        next(iter(data["evaluations"].values()))["claims"][0]["citedLines"] = []
+
+    edit(copy / "evaluations.json", uncite)
+    with pytest.raises(WeekError, match="인용한 줄이 없습니다"):
+        load_week(copy)
+
+
+def test_an_unknown_claim_kind_stops_the_read(copy: Path):
+    def retag(data):
+        next(iter(data["evaluations"].values()))["claims"][0]["kind"] = "great"
+
+    edit(copy / "evaluations.json", retag)
+    with pytest.raises(WeekError, match="주장 종류"):
         load_week(copy)
 
 

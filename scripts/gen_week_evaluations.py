@@ -7,9 +7,11 @@
 
 One evaluation is one resident's paragraph about one *variant* of one event: the event as it ran (the *before*
 scenes) or as it ran after one request (the *after* scene of request A, B or C). It follows
-docs/research/20_STRUCTURED_RESIDENT_EVALUATION.md as far as the screen reads it: a paragraph, the lines it rests
-on, what the resident would change, and a disclaimer. It is a simulated resident's reading, never a real
-resident's opinion, and no score, grade or verdict comes out of it.
+docs/research/20_STRUCTURED_RESIDENT_EVALUATION.md as far as the screen reads it: a paragraph, and claims - each one
+tagged good / bad / neutral / unknown / wish and resting on the lines it cites - and a disclaimer. The tag is the
+simulated resident's own reading of one thing they went through, never a verdict on the whole and never a score; a
+claim of any kind may cite only lines the resident was in the scene for. It is a simulated resident's reading, never a
+real resident's opinion.
 
 What makes it an evaluation and not a summary is the evidence rule (AGENTS.md): a resident may cite only the lines
 they were in the scene for and heard. ``experienced`` is computed here from the dialogue - never by the model - and
@@ -49,23 +51,32 @@ SYSTEM = """당신은 경남 남해군 은점마을의 한 주민이다. 방금 
 
 쓰는 법
 - 본인 말투(인물과 말투)로, 1인칭으로, 한 단락(80~140자)으로 쓴다. 번역투를 쓰지 않는다.
-- 겪은 줄(ㄱ~) 안에서만 말한다. 자기가 없던 장면, 듣지 못한 말, 대화에 없는 사실(새 병명·시각·이름)은 말하지 않는다. 겪은 줄이 아니면 인용하지 않는다.
-- 좋았던 점과 불편하거나 아쉬웠던 점이 있으면 둘 다 말한다. 한쪽만 부풀리지 않는다. 점수나 등급, 별점을 말하지 않는다. '좋다/나쁘다'로 단정하지 않고 겪은 일로 말한다.
+- 겪은 줄(ㄱ~) 안에서만 말한다. 자기가 없던 장면, 듣지 못한 말, 대화에 없는 사실(새 병명·시각·이름)은 말하지 않는다.
+- 단락 다음에 claims를 쓴다. claims는 겪은 일 하나하나에 대한 짧은 말(한 문장, 15~60자)이고, 각각 kind를 붙인다.
+  good: 도움이 됐거나 안심이 된 점 / bad: 불편하거나 걱정되거나 아쉬운 점 / neutral: 좋다 나쁘다 하기 어려운 점 / unknown: 겪은 것만으로는 알 수 없는 점 / wish: 이렇게 고쳐 줬으면 하는 점.
+- 겪은 대로만 kind를 고른다. 종류를 골고루 채우려 하지 않는다. 한 종류만 있어도, 좋은 점만 또는 불편한 점만 있어도 자연스럽다. 없는 종류를 지어내지 않는다. claims는 1~4개.
+- claim은 AI가 한 일이나 AI를 통해 겪은 일에 대한 말만 쓴다. 자기 사정이나 사건 설명을 claim으로 옮기지 않는다. neutral은 정말 좋다 나쁘다 하기 어려웠던 AI의 동작에만 쓴다. wish는 많아야 1개.
+- 모든 claim은 citedLines에 자기가 겪은 줄 번호를 1개 이상 단다. wish도 그 바람이 나온 겪은 줄을 단다. 겪은 줄이 아니면 인용하지 않는다.
+- 점수나 등급, 별점을 말하지 않는다. 한 사람 전체를 '좋다/나쁘다'로 단정하지 않는다.
 - 규칙이 바뀐 뒤의 일이면 바뀐 동작이 어땠는지 겪은 대로 말한다. 이전 일은 기억하는 것처럼 말하지 않는다.
-- 고치고 싶은 점이 있으면 changeWish에 한 줄로 쓴다. 없으면 빈 문자열.
 - 시스템 용어('규칙', '한도', '공개 범위')를 쓰지 않고 일상말로 옮긴다.
 
-JSON으로 paragraph, citedLines(인용한 겪은 줄의 번호 목록), changeWish만 돌려준다."""
+JSON으로 paragraph와 claims(kind, text, citedLines)만 돌려준다."""
 
+KIND_LABEL = {"good": "좋았던 점", "bad": "불편했던 점", "neutral": "어느 쪽도 아님", "unknown": "알 수 없었던 점", "wish": "고치고 싶은 점"}
+KINDS = ["good", "bad", "neutral", "unknown", "wish"]
 SCHEMA = {
     "type": "object",
     "additionalProperties": False,
     "properties": {
         "paragraph": {"type": "string"},
-        "citedLines": {"type": "array", "items": {"type": "integer"}},
-        "changeWish": {"type": "string"},
+        "claims": {"type": "array", "items": {
+            "type": "object", "additionalProperties": False,
+            "properties": {"kind": {"type": "string", "enum": KINDS}, "text": {"type": "string"},
+                           "citedLines": {"type": "array", "items": {"type": "integer"}}},
+            "required": ["kind", "text", "citedLines"]}},
     },
-    "required": ["paragraph", "citedLines", "changeWish"],
+    "required": ["paragraph", "claims"],
 }
 
 
@@ -105,19 +116,27 @@ def residents_of(keys: list[str], dialogue: dict) -> list[str]:
     return seen
 
 
-def problems(paragraph: str, cited: list[int], allowed: set[int]) -> list[str]:
+def problems(paragraph: str, claims: list[dict], allowed: set[int]) -> list[str]:
     bad: list[str] = []
     n = len(paragraph)
     if not 60 <= n <= 170:
         bad.append("단락이 %d자(80~140자 안팎)" % n)
-    outside = [c for c in cited if c not in allowed]
-    if outside:
-        bad.append("겪지 않은 줄을 인용: %s" % outside)
-    if not cited:
-        bad.append("인용한 줄이 없음")
-    if re.search(r"[0-9]\s*점|별\s*[0-9]|[0-9]\s*등급|만족도|최고|최악", paragraph):
+    if not 1 <= len(claims) <= 4:
+        bad.append("claims가 %d개(1~4개)" % len(claims))
+    if sum(c["kind"] == "wish" for c in claims) > 1:
+        bad.append("wish가 둘 이상")
+    for c in claims:
+        outside = [x for x in c["citedLines"] if x not in allowed]
+        if outside:
+            bad.append("겪지 않은 줄을 인용: %s" % outside)
+        if not c["citedLines"]:
+            bad.append("인용한 줄이 없는 주장: %s" % c["text"][:20])
+        if not 8 <= len(c["text"]) <= 80:
+            bad.append("주장 길이 %d자: %s" % (len(c["text"]), c["text"][:20]))
+    text = paragraph + " ".join(c["text"] for c in claims)
+    if re.search(r"[0-9]\s*점|별\s*[0-9]|[0-9]\s*등급|만족도|최고|최악", text):
         bad.append("점수·등급 표현")
-    if re.search(r"MEDial|메디얼|한도|공개 범위|규칙이", paragraph):
+    if re.search(r"MEDial|메디얼|한도|공개 범위|규칙이", text):
         bad.append("시스템 용어/옛 이름")
     return bad
 
@@ -150,7 +169,7 @@ def make(only: list[str] | None) -> None:
                     if feedback:
                         payload["지난번 시도에서 고칠 것"] = feedback
                     r = client.ask(SYSTEM, payload, SCHEMA, "resident_evaluation", 1500)
-                    bad = problems(r["paragraph"], r["citedLines"], allowed)
+                    bad = problems(r["paragraph"], r["claims"], allowed)
                     if best is None or len(bad) <= len(best[1]):
                         best = (r, bad)
                     if not bad:
@@ -160,11 +179,13 @@ def make(only: list[str] | None) -> None:
                 r, bad = best
                 made["%s.%s" % (tag, actor)] = {
                     "event": ev["id"], "variant": vid, "actor": actor, "source": "simulated",
-                    "experiencedLines": lines, "paragraph": r["paragraph"], "citedLines": r["citedLines"],
-                    "changeWish": r["changeWish"], "problems": bad, "disclaimer": DISCLAIMER,
+                    "experiencedLines": lines, "paragraph": r["paragraph"], "claims": r["claims"],
+                    "problems": bad, "disclaimer": DISCLAIMER,
                 }
                 print("== %s %s %s" % (tag, actor, "통과" if not bad else bad))
                 print("   ", r["paragraph"])
+                for c in r["claims"]:
+                    print("    [%s] %s %s" % (c["kind"], c["text"], c["citedLines"]))
                 OUT.write_text(json.dumps({"model": client.id, "evaluations": made},
                                           ensure_ascii=False, indent=1), encoding="utf-8")
     read()
@@ -173,18 +194,19 @@ def make(only: list[str] | None) -> None:
 LINK_SYSTEM = """당신은 서비스 디자이너의 조수다. 주민들의 평가(수정 전)를 읽고, 디자이너의 수정 요청 하나가 그 평가의 어느 대목에서 나왔는지 찾는다.
 
 규칙
-- 근거는 주어진 평가 단락과 changeWish 안의 말이어야 한다. 평가에 없는 내용을 지어내지 않는다.
+- 근거는 주어진 평가의 주장(claims) 안의 말이어야 한다. bad나 wish 주장이 가장 알맞고, 다른 종류는 약한 근거다. 평가에 없는 내용을 지어내지 않는다.
 - 요청이 겨냥한 문제를 평가가 직접 말하면 'direct', 비슷한 불편을 돌려 말하면 'weak', 평가 어디에도 없으면 'none'.
-- direct/weak이면 근거가 된 평가의 id(actor)와 그 평가에서 그대로 옮긴 짧은 인용(basis)을 쓴다. none이면 actor는 빈 문자열, basis도 빈 문자열.
+- direct/weak이면 근거가 된 평가의 id(actor)와 그 평가의 주장 text에서 그대로 옮긴 짧은 인용(basis)과 그 주장의 종류(kind)을 쓴다. none이면 actor, basis, kind는 빈 문자열.
 - 요청을 정당화하려고 평가를 억지로 읽지 않는다. 확신이 없으면 weak이나 none이다.
 
-JSON으로 verdict, actor, basis만 돌려준다."""
+JSON으로 verdict, actor, basis, kind만 돌려준다."""
 
 LINK_SCHEMA = {
     "type": "object", "additionalProperties": False,
     "properties": {"verdict": {"type": "string", "enum": ["direct", "weak", "none"]},
-                   "actor": {"type": "string"}, "basis": {"type": "string"}},
-    "required": ["verdict", "actor", "basis"],
+                   "actor": {"type": "string"}, "basis": {"type": "string"},
+                   "kind": {"type": "string", "enum": KINDS + [""]}},
+    "required": ["verdict", "actor", "basis", "kind"],
 }
 
 
@@ -201,10 +223,13 @@ def link(only: list[str] | None) -> None:
         for rid, r in ev["requests"].items():
             payload = {
                 "수정 요청": r["label"],
-                "수정 전 평가들(actor: 단락 / 고치고 싶은 점)": ["%s: %s / %s" % (a, v["paragraph"], v["changeWish"]) for a, v in before.items()],
+                "수정 전 평가들(actor: 단락 / 주장 종류: 주장)": [
+                    "%s: %s / %s" % (a, v["paragraph"], " | ".join("%s: %s" % (c["kind"], c["text"]) for c in v["claims"]))
+                    for a, v in before.items()],
             }
             res = client.ask(LINK_SYSTEM, payload, LINK_SCHEMA, "request_basis", 800)
-            quoted = res["basis"] and any(res["basis"] in (v["paragraph"] + v["changeWish"]) for v in before.values())
+            quoted = res["basis"] and res["actor"] in before and any(
+                res["basis"] in c["text"] and c["kind"] == res["kind"] for c in before[res["actor"]]["claims"])
             if res["verdict"] != "none" and not quoted:
                 res["verdict"] = "weak"
                 res["note"] = "인용이 평가 원문과 일치하지 않아 약함으로 내림"
@@ -234,10 +259,12 @@ def read() -> None:
                 head += ' <small>%s</small>' % e(r["label"])
             body.append("<h3>%s</h3>" % head)
             for c in cards:
-                body.append('<div class="sc" data-k="%s.%s.%s"><p class="sit"><b>%s</b> · 인용 줄 %s</p><p class="para">%s</p>%s'
+                claims = "".join('<li class="k-%s"><b>%s</b> %s <small>줄 %s</small></li>'
+                                 % (x["kind"], KIND_LABEL[x["kind"]], e(x["text"]), ", ".join(str(n) for n in x["citedLines"]))
+                                 for x in c["claims"])
+                body.append('<div class="sc" data-k="%s.%s.%s"><p class="sit"><b>%s</b></p><p class="para">%s</p><ul class="cl">%s</ul>'
                             '<div class="mk"><button data-v="ok">좋음</button><button data-v="fix">고침</button><input placeholder="메모"></div></div>'
-                            % (ev["id"], vid, c["actor"], e(c["actor"]), ", ".join(str(x) for x in c["citedLines"]), e(c["paragraph"]),
-                               ('<p class="wish">고치고 싶은 점: %s</p>' % e(c["changeWish"])) if c["changeWish"] else ""))
+                            % (ev["id"], vid, c["actor"], e(c["actor"]), e(c["paragraph"]), claims))
         body.append("</section>")
     page = _PAGE().replace("@@BODY@@", "".join(body))
     HTML.write_text(page, encoding="utf-8")
@@ -250,7 +277,7 @@ def _PAGE() -> str:
     import gen_week_dialogue as g
 
     page = g.PAGE.replace("대화록 검토", "주민 평가 검토").replace("7일 타임라인 대화록 · 검토", "주민 평가 · 검토")
-    page = page.replace(".mk{display:flex", ".para{margin:4px 0 6px;font-size:16px}.wish{margin:4px 0 0;color:var(--fix);font-size:14px}.mk{display:flex")
+    page = page.replace(".mk{display:flex", ".para{margin:4px 0 6px;font-size:16px}.cl{margin:4px 0 6px;padding:0;list-style:none;font-size:14px}.cl li{margin:2px 0}.cl b{display:inline-block;min-width:92px}.cl small{color:#888}.k-bad b,.k-wish b{color:var(--fix)}.mk{display:flex")
     page = page.replace('const K="week-dialogue-review"', 'const K="week-evaluation-review"')
     page = page.replace("장면마다 좋음/고침과 메모를 남기세요.", "평가마다 좋음/고침과 메모를 남기세요. 모든 평가는 시뮬레이션 주민의 것이며 실제 주민의 의견이 아닙니다.")
     return page

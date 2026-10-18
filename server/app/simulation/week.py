@@ -9,6 +9,8 @@ The rules it keeps (AGENTS.md):
 
 * a resident cites only the lines they were in the scene for (``experiencedLines`` is recomputed from the dialogue
   here, never trusted from the evaluation file);
+* every claim in an evaluation (good / bad / neutral / unknown / wish) cites at least one line, and only lines the
+  resident was in; the kind is the simulated resident's reading of one thing, never a verdict on the whole;
 * an evaluation says it is simulated and carries the disclaimer;
 * a request says honestly how well the residents' own words support it (``basis``) - it is never dressed up;
 * an event marked ``noChoice`` has no request cards: some moments are read, not chosen;
@@ -25,6 +27,7 @@ DISCLAIMER = "시뮬레이션 산출물이다. 실제 주민의 발언·만족�
 DAYS = ["월", "화", "수", "목", "금", "토", "일"]
 #: 'direct' = a resident said it, 'weak' = said around it, 'none' = nobody did (such a request is not shown).
 VERDICTS = {"direct", "weak"}
+KINDS = {"good", "bad", "neutral", "unknown", "wish"}
 
 
 class WeekError(ValueError):
@@ -79,8 +82,7 @@ def _evaluation(ev: dict[str, Any], names: dict[str, str]) -> dict[str, Any]:
         "name": names.get(ev["actor"], ev["actor"]),
         "source": "simulated",
         "paragraph": ev["paragraph"],
-        "citedLines": ev["citedLines"],
-        "changeWish": ev["changeWish"] or None,
+        "claims": [{"kind": c["kind"], "text": c["text"], "citedLines": c["citedLines"]} for c in ev["claims"]],
         "disclaimer": ev["disclaimer"],
     }
 
@@ -100,9 +102,16 @@ def load_week(weeks_dir: Path = WEEK_DIR) -> dict[str, Any]:
             if ev["event"] != event_id or ev["variant"] != variant:
                 continue
             allowed = set(_heard(ev["actor"], scene_keys, dialogue))
-            outside = [c for c in ev["citedLines"] if c not in allowed]
-            if outside:
-                raise WeekError("%s.%s %s 가 겪지 않은 줄 %s 를 인용했습니다" % (event_id, variant, ev["actor"], outside))
+            if not ev["claims"]:
+                raise WeekError("%s.%s %s 의 평가에 주장이 없습니다" % (event_id, variant, ev["actor"]))
+            for claim in ev["claims"]:
+                if claim["kind"] not in KINDS:
+                    raise WeekError("%s.%s %s 의 주장 종류 %r 를 모릅니다" % (event_id, variant, ev["actor"], claim["kind"]))
+                if not claim["citedLines"]:
+                    raise WeekError("%s.%s %s 의 주장에 인용한 줄이 없습니다" % (event_id, variant, ev["actor"]))
+                outside = [c for c in claim["citedLines"] if c not in allowed]
+                if outside:
+                    raise WeekError("%s.%s %s 가 겪지 않은 줄 %s 를 인용했습니다" % (event_id, variant, ev["actor"], outside))
             if ev.get("disclaimer") != DISCLAIMER or ev.get("source") != "simulated":
                 raise WeekError("%s.%s %s 의 평가에 시뮬레이션 표기가 없습니다" % (event_id, variant, ev["actor"]))
             out.append(_evaluation(ev, names))
@@ -125,7 +134,8 @@ def load_week(weeks_dir: Path = WEEK_DIR) -> dict[str, Any]:
                 "expect": req["expect"],
                 "cost": req["cost"],
                 "rules": req["rules"],
-                "basis": {"verdict": link["verdict"], "actor": link["actor"] or None, "quote": link["basis"] or None},
+                "basis": {"verdict": link["verdict"], "actor": link["actor"] or None, "quote": link["basis"] or None,
+                          "kind": link.get("kind") or None},
                 "after": {"scene": _scene(key, req["scene"], dialogue), "evaluations": evals_of(eid, rid, [key])},
             })
         if ev.get("noChoice") and requests:

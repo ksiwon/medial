@@ -55,7 +55,8 @@ test('한 주를 걷는다: 사건 → 장면 → 평가 → 요청 → 반영�
   // the telling goes on by itself too; whichever way, it ends at the way on to the evaluations
   await expect(pad.getByRole('button', { name: /주민 평가 보기/ })).toBeVisible({ timeout: 60_000 });
   await tap(pad, /주민 평가 보기/);
-  await expect(wall.getByText('이 평가가 근거로 든 대사').first()).toBeVisible();
+  await expect(wall.getByLabel('주민이 겪은 일에 대해 한 말').first()).toBeVisible();
+  await expect(wall.getByLabel('이 말이 근거로 든 대사').first()).toBeVisible();
   await expect(wall.getByText('시뮬레이션 주민의 평가').first()).toBeVisible();
 
   // one resident's card

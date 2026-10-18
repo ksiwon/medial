@@ -32,10 +32,23 @@ export interface Evaluation {
   name: string;
   source: 'simulated';
   paragraph: string;
-  /** The line numbers of the variant's scenes this paragraph rests on: only lines the resident was in. */
-  citedLines: number[];
-  changeWish: string | null;
+  /** What they made of it, one thing at a time. A resident may have only good claims, only bad ones, or a mix. */
+  claims: Claim[];
   disclaimer: string;
+}
+
+/**
+ * good: it helped · bad: it was uncomfortable or worrying · neutral: neither · unknown: what they went through
+ * could not tell · wish: what they would have changed. The kind is the simulated resident's reading of one thing,
+ * never a verdict on the whole and never a score.
+ */
+export type ClaimKind = 'good' | 'bad' | 'neutral' | 'unknown' | 'wish';
+
+export interface Claim {
+  kind: ClaimKind;
+  text: string;
+  /** Line numbers of the variant's scenes this claim rests on: only lines the resident was in. */
+  citedLines: number[];
 }
 
 export type Basis = 'direct' | 'weak';
@@ -48,7 +61,7 @@ export interface WeekRequest {
   cost: string;
   rules: { type: string; before: Record<string, unknown>; after: Record<string, unknown> }[];
   /** How well the residents' own words support this request. 'weak' is shown as such, never hidden. */
-  basis: { verdict: Basis; actor: string | null; quote: string | null };
+  basis: { verdict: Basis; actor: string | null; quote: string | null; kind: ClaimKind | null };
   after: { scene: WeekScene; evaluations: Evaluation[] };
 }
 
