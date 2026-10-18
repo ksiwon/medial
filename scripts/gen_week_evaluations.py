@@ -193,7 +193,9 @@ def make(only: list[str] | None) -> None:
                 print("   ", r["paragraph"])
                 for c in r["claims"]:
                     print("    [%s] %s %s" % (c["kind"], c["text"], c["citedLines"]))
-                OUT.write_text(json.dumps({"model": client.id, "evaluations": made},
+                # Keep the links: they belong to the evaluations written before, and `make` only rewrites some.
+                links = json.loads(OUT.read_text(encoding="utf-8")).get("links", {}) if OUT.exists() else {}
+                OUT.write_text(json.dumps({"model": client.id, "evaluations": made, "links": links},
                                           ensure_ascii=False, indent=1), encoding="utf-8")
     read()
 
