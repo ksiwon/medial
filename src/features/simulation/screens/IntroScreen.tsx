@@ -757,10 +757,10 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
                 <Line $on={on(5)} $delay={k === 0 ? 0.3 : at}>{text}</Line>
                 {k === 1 && (
                   <Chain $on={on(5)} $delay={at + 0.9}>
-                    <span>하루를 겪는다</span><i>→</i>
+                    <span>사건을 본다</span><i>→</i>
                     <span>주민 에이전트가 AI를 평가한다</span><i>→</i>
                     <span>요청 하나로 고친다</span><i>→</i>
-                    <span>다시 돌린다</span>
+                    <span>바뀐 모습을 본다</span>
                   </Chain>
                 )}
               </Timed>

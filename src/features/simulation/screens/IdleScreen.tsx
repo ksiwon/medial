@@ -38,7 +38,7 @@ export default function IdleScreen({ art }: { art: ReadonlySet<string> }) {
       <i />
       <div>
         <strong>Dially</strong>
-        <p>시골 마을의 하루를 살펴 주는 AI 조율자를<br />서비스 디자이너가 되어 고쳐 보는 체험입니다.</p>
+        <p>시골 마을 어르신을 살펴 주는 AI 조율자를<br />서비스 디자이너가 되어 고쳐 보는 체험입니다.</p>
         <small>옆의 태블릿에서 시작하기를 눌러 주세요</small>
       </div>
     </Stage>

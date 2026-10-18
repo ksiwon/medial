@@ -92,7 +92,7 @@ const check = (ok, name, detail = '') => { results.push(ok); console.log(ok ? ' 
     await wait(600);
   }
   await pad.getByRole('button', { name: /주민 평가 →/ }).tap({ timeout: 30000 });
-  await pad.getByText(/이 일을 겪은 주민/).waitFor({ timeout: 30000 });
+  await pad.getByRole('button', { name: /^고르기/ }).waitFor({ timeout: 30000 });
   await wall.getByText('서비스를 겪은 주민의 말').waitFor({ timeout: 15000 });
   const stale = await fetch(`${BASE}/api/sim/stage/command?token=${encodeURIComponent(pairing.token)}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'choose', id: 'nope' }),
