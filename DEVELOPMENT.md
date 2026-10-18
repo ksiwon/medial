@@ -58,7 +58,7 @@ v3까지(사흘 · 27경로 · 시뮬레이션 엔진 · 반복 루프 · sim/re
   원칙이므로, 평가 30건은 *현재 대화록 기준*이며 대화록이 바뀌면 해당 장면의 평가를 다시 만들어야 한다.
 - **음성(TTS)은 생성 직전까지 준비됐고 음성은 만들지 않았다(2026-10-18).** 장면 줄마다 `speaker|text` 음성을 틀어 주는 코드는 있고(`scene/voice.ts`의 `useLineVoice`), 음성 파일이 없으면 조용히 흐른다.
   `tts_scenes.py`는 새 주 구조로 옮겼다: 대사 160줄 + 나레이션 intro 7줄 = **167줄**, 화자 `AI`·`HC_HEAD`, 모델 호출은 `scripts/model.py`, 읽기 변환(`12시`·`11시~13시`·시각·분·`AI`·`Dially`)은 `server/tests/simulation/test_tts_spoken.py`로 검사한다.
-  `python scripts/tts_scenes.py check`가 호출 없이 무엇이 막혔는지 말한다. **지금 막힌 것은 하나: 연기 지시가 없는 줄 104개**(`python scripts/tts_scenes.py styles`, 모델 호출 27장면).
+  `python scripts/tts_scenes.py check`가 호출 없이 무엇이 막혔는지 말한다. **`check`가 준비됨을 알린다(2026-10-18).** 연기 지시 160줄은 `fixtures/week/tts-styles.json`에 있다(모델이 쓰고 저자가 3줄을 고침: AI의 사실만 전하는 줄 둘의 "a little sorry"→"concerned", E6.s1 P7의 겁이 세 번 겹치는 것 하나를 "worried"로).
   목소리는 모두 갖췄다. `AI`·`HC_HEAD`(40대 중반 여성, 그림과 같음)·`P10`(남)·`P11`(여)을 새로 만들었고(옛 `voices.json`은 `voices.before-2026-10-18.json`으로 백업), 나머지는 연구자가 귀로 승인한 것을 그대로 쓴다. 목소리가 지금 명세로 만든 것인지는 `voices.specs.json`의 해시로 가린다(`tts_voices.py approve`는 호출 없이 승인된 기존 목소리를 등록). 새 목소리의 음높이(Hz)는 AI 189 · HC_HEAD 169 · P10 119 · P11 200이고 귀로 확인한 목표값은 아직 없다.
   `outro`(닫는 화면)는 한 주 구조에 닫는 화면이 없어 재생할 곳이 없으므로 음성 대상에서 뺐다(`NARRATION_PLAYED`). 닫는 화면을 다시 둘지는 연구자가 정한다.
   옛 사흘 대본의 음성 80개는 `local-data/audio/gemini-3.8-flash-tts.v2-3day-2026-10-17/`에 보존했다. 새 폴더는 비어 있다.
@@ -100,6 +100,13 @@ README의 "실행" 절을 따른다. 요약: `./run-exhibition.sh`(또는 `run-e
 대화록 · 평가를 새로 쓸 때만 `server/.env`의 `OPENAI_API_KEY`가 필요하고 서버는 키를 읽지 않는다.
 
 # 최근 기록 (최신순)
+
+## 2026-10-18 · 연기 지시 160줄 생성 · `check`가 준비됨 — `v4-week-timeline`
+
+- `tts_scenes.py styles`로 160줄의 연기 지시를 만들었다(모델 호출 27장면). 형식 검사(2~6단어, 음색·나이·사투리 표현 없음, 과한 감정 없음)는 모두 통과했다.
+- 읽어 보고 세 줄을 직접 고쳤다: 사실만 전하는 AI 줄 둘의 "sorry" → "concerned", 응급 장면 P7의 겁이 연달아 세 번 강해지는 것을 한 단계 낮춤(센 사투리에 겁먹은 감정이 얹히면 발음이 뭉개질 수 있어서). 나머지는 장면 흐름에 맞아 그대로 뒀다.
+- 이 점검은 *내용을 읽은 것*이고 소리로 확인한 것이 아니다. 실제로 어떻게 들리는지는 음성을 만든 뒤 들어야 안다.
+- 열린 질문: 새로 만든 `AI`·`HC_HEAD` 목소리는 옛 `MEDIAL`·`HC_NURSE`와 같은 설명이지만 다른 목소리다. 2안에서 좋았던 AI 목소리가 `MEDIAL`이면 `AI`를 옛 id로 되돌리는 편이 일관된다(연구자 답 대기). 옛 id는 `voices.json`에 그대로 있다.
 
 ## 2026-10-18 · TTS를 새 주 구조로 · 목소리 4개 새로 · 나레이션 한 주 구조에 맞춤 — `v4-week-timeline`
 
