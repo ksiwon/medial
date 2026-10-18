@@ -111,3 +111,44 @@ def test_when_every_key_that_holds_the_voice_is_spent_the_run_stops_and_says_so(
     out = capsys.readouterr().out
     assert "NEW" not in calls[:3]      # P1's lines were never given to the key of the other project
     assert "stopped" in out and "P1" in out
+
+
+def wav_of(seconds: float) -> bytes:
+    import io
+    import wave
+
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(24000)
+        w.writeframes(b"\x00\x00" * int(24000 * seconds))
+    return buf.getvalue()
+
+
+def test_cost_is_counted_from_the_audio_returned():
+    # 100 s of audio = 2500 tokens at $9 per million = $0.0225, plus a little for the text; at 1400 won per dollar
+    assert t.cost_won(100, 0) == pytest.approx(0.0225 * 1400)
+    assert t.wav_seconds(wav_of(2.0)) == pytest.approx(2.0)
+    assert t.wav_seconds(b"not a wav") == 0.0
+
+
+def test_the_run_stops_before_it_would_pass_the_budget(monkeypatch, tmp_path, capsys):
+    items = [item("s", i, "P1") for i in range(1, 11)]
+    monkeypatch.setattr(t, "planned", lambda: iter(items))
+    monkeypatch.setattr(t, "check_ready", lambda todo: [])
+    monkeypatch.setattr(t, "speak", lambda *a, **k: wav_of(40.0))   # each call returns 40 s of audio: about 0.18 won
+    monkeypatch.setattr(t, "trim", lambda path: None)
+    monkeypatch.setattr(t, "check", lambda path, text: None)
+    monkeypatch.setattr(t, "seconds", lambda path: 1.0)
+    monkeypatch.setattr(t.time, "sleep", lambda s: None)
+    monkeypatch.setattr(t, "AUDIO_ROOT", tmp_path / "audio")
+    monkeypatch.setattr(v, "keys", lambda: {"K": "k"})
+    monkeypatch.setattr(v, "usable", lambda name, voice_id: ["K"])
+    monkeypatch.setattr(Path, "write_bytes", lambda self, data: self.parent.mkdir(parents=True, exist_ok=True) or self.write_text("x"))
+    monkeypatch.setattr(sys, "argv", ["tts_scenes.py", "make", "--budget-won", "0.5"])
+    t.main()
+    out = capsys.readouterr().out
+    assert "past 0 won" in out or "past 0.5 won" in out or "stopped: the next line would take the run past" in out
+    made = [l for l in out.splitlines() if l.startswith("made ")]
+    assert made and int(made[0].split()[1].rstrip(",")) < 10      # it did not make all ten

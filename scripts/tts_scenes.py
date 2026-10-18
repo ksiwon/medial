@@ -5,6 +5,7 @@
     python scripts/tts_scenes.py styles            # each line's acting note -> fixtures/week/tts-styles.json (model calls)
     python scripts/tts_scenes.py make              # missing audio only -> local-data/audio/<model>/<scene>_<NN>_<speaker>.wav
     python scripts/tts_scenes.py make --limit 40   # at most this many calls per key (the daily quota is 100 per project)
+    python scripts/tts_scenes.py make --budget-won 500   # also stop before spending more than this (default 1000 won)
 
 What is spoken is the week's dialogue (``fixtures/week/dialogue.json``: the scenes before and after each request)
 and the narration of the opening film and the closing page (``fixtures/exhibition/narration.json``). Each line is
@@ -70,6 +71,37 @@ NOTE_SCHEMA = {
     "properties": {"styles": {"type": "array", "items": {"type": "string"}}},
     "required": ["styles"],
 }
+
+# What a call costs, so a run can be stopped by money and not only by quota (a personal account). Standard tier, paid,
+# through 2026-12-31 (https://ai.google.dev/gemini-api/docs/pricing); both prices double on 2027-01-01. The exchange
+# rate is an assumption: it only turns dollars into the won the budget is written in.
+PRICE_AUDIO_PER_M = 9.00     # USD per million output audio tokens, gemini-3.8-flash-tts
+PRICE_TEXT_PER_M = 0.50      # USD per million input text tokens
+AUDIO_TOKENS_PER_SECOND = 25
+WON_PER_USD = 1400
+SECONDS_PER_CHARACTER = 0.181  # measured on the earlier 78 recordings of this project, for estimates before a call
+
+
+def cost_won(audio_seconds: float, input_characters: int) -> float:
+    """The cost of one synthesis in won. Input is counted at one token per character, which over-counts a little."""
+    usd = audio_seconds * AUDIO_TOKENS_PER_SECOND * PRICE_AUDIO_PER_M / 1e6 + input_characters * PRICE_TEXT_PER_M / 1e6
+    return usd * WON_PER_USD
+
+
+def wav_seconds(data: bytes) -> float:
+    """The length of the audio a call returned, before trimming: that is what is billed. 0 when it is not a WAV."""
+    try:
+        with wave.open(io.BytesIO(data)) as w:
+            return w.getnframes() / w.getframerate()
+    except (wave.Error, EOFError, ZeroDivisionError):
+        return 0.0
+
+
+def estimate_won(todo) -> float:
+    """What the lines still without a recording would cost, from the length the earlier recordings had per character."""
+    return sum(cost_won(len(it["spoken"].replace(" ", "")) * SECONDS_PER_CHARACTER, len(it["spoken"]) + len(it["style"]))
+               for it in todo)
+
 
 NATIVE_HOUR = {0: "영", 1: "한", 2: "두", 3: "세", 4: "네", 5: "다섯", 6: "여섯", 7: "일곱", 8: "여덟", 9: "아홉",
                10: "열", 11: "열한", 12: "열두", 13: "열세", 14: "열네", 15: "열다섯", 16: "열여섯", 17: "열일곱",
@@ -281,6 +313,8 @@ def main():
     mk = sub.add_parser("make")
     mk.add_argument("--limit", type=int, default=90, help="calls per key (the daily quota is 100 per project)")
     mk.add_argument("--model", default=MODEL)
+    mk.add_argument("--budget-won", type=float, default=1000.0,
+                    help="stop before the run would spend more than this many won (default 1000; counted from the audio actually returned)")
     args = ap.parse_args()
     if args.cmd == "styles":
         write_styles()
@@ -299,6 +333,8 @@ def main():
         for p in problems:
             print("막힘:", p)
         print("준비됨" if not problems else "준비 안 됨: %d가지" % len(problems))
+        print("예상 비용: 약 %.0f원 (오디오 %.0f초 추정, 상한 기본 1000원)" % (
+            estimate_won(todo), sum(len(it["spoken"].replace(" ", "")) for it in todo) * SECONDS_PER_CHARACTER))
         return
     if problems:
         raise SystemExit("만들 수 없다:\n- " + "\n- ".join(problems))
@@ -313,6 +349,7 @@ def main():
     spent = {name: 0 for name in pool}      # calls made with each key this run (the quota is per project)
     full: set[str] = set()                  # keys that answered 429 and are left alone for the rest of the run
     made, failures, rejected, kept = 0, 0, [], {}
+    spent_won = 0.0                         # what this run has been billed, from the audio the calls returned
     for it in todo:
         path = AUDIO / it["file"]
         legacy = AUDIO / ("%s.wav" % it["hash"])  # the earlier, hash-named file of the same voice, text and style
@@ -325,19 +362,32 @@ def main():
             # worse, nothing guarantees it is the same voice. Among those, the first with quota left (GEMINI_API_KEY
             # first, then GEMINI_API_KEY_SUB ...). A key that answers 429 is set aside and the *same line* goes on to
             # the next key that holds the voice; nothing is skipped.
-            key_name, broken = None, False
+            key_name, broken, over_budget = None, False, False
             while True:
                 usable_keys = [k for k in holders[it["speaker"]] if k not in full and spent[k] < args.limit]
                 if not usable_keys:
                     break
                 key_name = usable_keys[0]
+                expected = cost_won(len(it["spoken"].replace(" ", "")) * SECONDS_PER_CHARACTER, len(it["spoken"]) + len(it["style"]))
+                if spent_won + expected > args.budget_won:
+                    print("stopped: the next line would take the run past %.0f won (spent %.1f so far)" % (args.budget_won, spent_won))
+                    key_name, over_budget = None, True
+                    break
                 try:
-                    for tries in range(3):  # a read timeout or a dropped connection is retried; a quota or a bad request is not
+                    for tries in range(4):  # a read timeout, a dropped connection or a 5xx is retried; a quota or a bad request is not
                         try:
-                            path.write_bytes(speak(pool[key_name], it["voice"], it["spoken"], it["style"], args.model))
+                            audio = speak(pool[key_name], it["voice"], it["spoken"], it["style"], args.model)
+                            spent_won += cost_won(wav_seconds(audio) or len(it["spoken"].replace(" ", "")) * SECONDS_PER_CHARACTER,
+                                                  len(it["spoken"]) + len(it["style"]))
+                            path.write_bytes(audio)
                             break
+                        except urllib.error.HTTPError as e:
+                            if e.code < 500 or tries == 3:   # 429 and the 4xx are for the caller; a 5xx is the service's
+                                raise
+                            print("retry %s: HTTP %d" % (it["file"], e.code))
+                            time.sleep(5 * (tries + 1))
                         except (TimeoutError, ConnectionError, urllib.error.URLError) as e:
-                            if isinstance(e, urllib.error.HTTPError) or tries == 2:
+                            if tries == 3:
                                 raise
                             print("retry %s: %s" % (it["file"], type(e).__name__))
                             time.sleep(3)
@@ -354,13 +404,21 @@ def main():
                     failures += 1
                     key_name, broken = None, True
                     break
+                except (TimeoutError, ConnectionError, urllib.error.URLError) as e:
+                    print("gave up on %s after the retries: %s" % (it["file"], type(e).__name__))
+                    failures += 1
+                    key_name, broken = None, True
+                    break
             if key_name is None:
-                if broken and failures < 3:
-                    continue  # a broken request on this line: leave it, go on to the next
+                if over_budget:
+                    break
+                if broken and failures < 5:
+                    continue  # this line failed even after the retries: leave it for the next run, go on to the next
                 print("stopped: no key with quota left holds %s's voice (%s); run again later or add that project's key"
                       % (it["speaker"], ", ".join("%s %d/%d" % (k, spent[k], args.limit) for k in holders[it["speaker"]]) or "no key"))
                 break
             spent[key_name] += 1
+            failures = 0   # five failures *in a row* stop a run; a success starts the count again
             made += 1
             why = check(path, it["spoken"])
             if why:
@@ -375,6 +433,7 @@ def main():
                 "style": it["style"], "voice": it["voice"], "hash": it["hash"], "file": it["file"],
                 "seconds": round(seconds(path), 2)})
     print("calls per key:", ", ".join("%s %d" % (k, n) for k, n in spent.items()))
+    print("billed this run: about %.1f won (budget %.0f won)" % (spent_won, args.budget_won))
     # scenes.json: the lines of each scene in order. manifest.json: the same by 'speaker|text', which is what the screen reads.
     index.write_text(json.dumps(kept, ensure_ascii=False, indent=1), encoding="utf-8")
     manifest = {"%s|%s" % (row["speaker"], row["text"]): {"file": row["file"], "seconds": row["seconds"]}
