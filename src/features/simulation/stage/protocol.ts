@@ -31,7 +31,8 @@ export type Command =
 /** One day of the week, for the tablet's list: which events fall on it. */
 export interface DayBrief {
   day: string;
-  events: { id: string; title: string; noChoice: boolean; seen: boolean }[];
+  /** chosen: the number of the request chosen when it was read (1-based), else null. */
+  events: { id: string; title: string; noChoice: boolean; seen: boolean; chosen: number | null }[];
 }
 
 export interface ResidentBrief {

@@ -117,12 +117,13 @@ const requestBrief = (event: WeekEvent, week: Week): RequestBrief[] =>
 const residentBrief = (week: Week, list: Evaluation[]): ResidentBrief[] =>
   list.map((e) => ({ id: e.actor, name: nameOf(week, e.actor), said: e.paragraph }));
 
-const weekBrief = (week: Week, seen: string[]): DayBrief[] =>
+const weekBrief = (week: Week, seen: string[], chosen: Record<string, string | null>): DayBrief[] =>
   week.days.map((d) => ({
     day: d.day,
     events: d.events.map((id) => {
       const e = eventOf(week, id)!;
-      return { id, title: e.title, noChoice: e.noChoice, seen: seen.includes(id) };
+      const at = e.requests.findIndex((r) => r.id === chosen[id]);
+      return { id, title: e.title, noChoice: e.noChoice, seen: seen.includes(id), chosen: at >= 0 ? at + 1 : null };
     }),
   }));
 
@@ -130,7 +131,7 @@ const weekBrief = (week: Week, seen: string[]): DayBrief[] =>
 export function describeStage(args: {
   week: Week | null; introStarted: boolean; pathStarted: boolean; step: string; eventId: string | null;
   requestId: string | null; lineIndex: number; openActor: string | null; seen: string[];
-  considering?: string | null; closingWords?: boolean; lastPress?: number;
+  considering?: string | null; closingWords?: boolean; lastPress?: number; chosen?: Record<string, string | null>;
 }): StageState {
   const { week } = args;
   if (!week) return IDLE_STATE;
@@ -144,7 +145,7 @@ export function describeStage(args: {
     noChoice: event?.noChoice ?? false, seen: args.seen.length, closingWords: args.closingWords ?? false, lastPress: args.lastPress ?? 0,
   });
   const base: StageState = {
-    ...IDLE_STATE, phase, week: weekBrief(week, args.seen), seen: args.seen.length,
+    ...IDLE_STATE, phase, week: weekBrief(week, args.seen, args.chosen ?? {}), seen: args.seen.length,
     total: week.days.reduce((n, d) => n + d.events.length, 0),
     event: event ? { id: event.id, title: event.title, day: dayOf(week, event.id), noChoice: event.noChoice } : null,
     auto: auto ? { key: auto.key, seconds: auto.seconds, say: auto.say } : null,
@@ -222,7 +223,7 @@ export function useWall(): { paired: boolean } {
   latest.current = describeStage({
     week: w.week, introStarted: w.introStarted, pathStarted: w.pathStarted, step: w.step, eventId: w.eventId,
     requestId: w.requestId, lineIndex: w.lineIndex, openActor: w.openActor, seen: w.seen,
-    considering: w.considering, closingWords: w.closingWords, lastPress: w.lastPress,
+    considering: w.considering, closingWords: w.closingWords, lastPress: w.lastPress, chosen: w.chosen,
   });
 
   // After every render: the cheap comparison above decides whether anything goes out.

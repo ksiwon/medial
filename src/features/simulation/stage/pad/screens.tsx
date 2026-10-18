@@ -70,11 +70,7 @@ const EventButton = styled(Card)<{ $seen: boolean }>`
 export function Week({ s, press }: { s: StageState; press: Press }) {
   return (
     <Page>
-      <Row>
-        <Hint>보고 싶은 사건을 하나 누르세요. 큰 화면에서 그 일이 펼쳐집니다. ({s.seen} / {s.total}개 봤어요)</Hint>
-        <Spacer />
-        {s.seen > 0 && <Button $tone="quiet" onClick={() => press({ name: 'finish' })}>마치기 →</Button>}
-      </Row>
+      <Hint>보고 싶은 사건을 하나 누르세요. 큰 화면에서 그 일이 펼쳐집니다. ({s.seen} / {s.total}개 봤어요)</Hint>
       <WeekList>
         {s.week.map((d) => (
           <DayRow key={d.day} $empty={d.events.length === 0}>
@@ -84,13 +80,20 @@ export function Week({ s, press }: { s: StageState; press: Press }) {
               {d.events.map((e) => (
                 <EventButton key={e.id} $seen={e.seen} onClick={() => press({ name: 'openEvent', id: e.id })}>
                   <b>{e.title}</b>
-                  <small>{e.noChoice ? '응급 · 읽기만' : e.seen ? '읽음' : '고를 수 있어요'}</small>
+                  {(e.noChoice || e.seen) && (
+                    <small>{e.noChoice ? (e.seen ? '응급 · 읽음' : '응급 · 읽기만') : e.chosen ? `읽음 · 고른 요청 ${e.chosen}번` : '읽음'}</small>
+                  )}
                 </EventButton>
               ))}
             </div>
           </DayRow>
         ))}
       </WeekList>
+      {/* Finishing is this page's own action, at its foot like every other page's - not a second button beside
+          처음으로 at the top, which looked the same and threw the visit away. */}
+      {s.seen > 0 && (
+        <Row><Spacer /><Button onClick={() => press({ name: 'finish' })}>다 봤어요 · 마치기 →</Button></Row>
+      )}
     </Page>
   );
 }
@@ -181,6 +184,7 @@ export function Evaluations({ s, press, result = false }: { s: StageState; press
           <Card key={r.id} onClick={() => press({ name: 'openResident', id: r.id })}>
             <b>{r.name}</b>
             <span style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', whiteSpace: 'normal' }}>{r.said}</span>
+            <small>큰 화면에서 보기 →</small>
           </Card>
         ))}
       </Grid>
@@ -267,9 +271,9 @@ const Countdown = styled.div`
   flex: none;
   align-self: flex-end;
   margin-top: -8px;
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 700;
-  color: ${night.faint};
+  color: ${night.mute};
   font-variant-numeric: tabular-nums;
 `;
 

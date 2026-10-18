@@ -15,33 +15,33 @@ const names = (container: HTMLElement) => [...container.querySelectorAll('button
 
 describe('the week', () => {
   const week = [
-    { day: '월', events: [{ id: 'E1', title: '연락이 안 되어 찾아보기', noChoice: false, seen: true }] },
+    { day: '월', events: [{ id: 'E1', title: '연락이 안 되어 찾아보기', noChoice: false, seen: true, chosen: 2 }] },
     { day: '화', events: [] },
-    { day: '금', events: [{ id: 'E5', title: '보건소장의 안내 전달', noChoice: false, seen: false }, { id: 'E6', title: '119 구급 상황', noChoice: true, seen: false }] },
+    { day: '금', events: [{ id: 'E5', title: '보건소장의 안내 전달', noChoice: false, seen: false, chosen: null }, { id: 'E6', title: '119 구급 상황', noChoice: true, seen: false, chosen: null }] },
   ];
 
   it('lists every day, leaves a quiet day empty, and has one button per event', () => {
     const { press } = pressed();
     const { container } = render(<Week s={state({ phase: 'week', week, seen: 1, total: 3 })} press={press} />);
     expect(screen.getByText('이날은 조용했습니다')).toBeDefined();
-    expect(names(container).filter((n) => n && !/^[월화수목금토일]$/.test(n) && n !== '마치기 →')).toHaveLength(3);
+    expect(names(container).filter((n) => n && !/^[월화수목금토일]$/.test(n) && n !== '다 봤어요 · 마치기 →')).toHaveLength(3);
     expect(screen.getByText(/1 \/ 3개 봤어요/)).toBeDefined();
   });
 
   it('can be finished once something has been read, and not before', () => {
     const a = pressed();
     render(<Week s={state({ phase: 'week', week, seen: 1, total: 3 })} press={a.press} />);
-    fireEvent.click(screen.getByText('마치기 →'));
+    fireEvent.click(screen.getByText('다 봤어요 · 마치기 →'));
     expect(a.sent).toEqual([{ name: 'finish' }]);
     cleanup();
     render(<Week s={state({ phase: 'week', week, seen: 0, total: 3 })} press={pressed().press} />);
-    expect(screen.queryByText('마치기 →')).toBeNull();
+    expect(screen.queryByText('다 봤어요 · 마치기 →')).toBeNull();
   });
 
   it('says what is read and what is an emergency', () => {
     const { press } = pressed();
     render(<Week s={state({ phase: 'week', week })} press={press} />);
-    expect(screen.getByText('읽음')).toBeDefined();
+    expect(screen.getByText('읽음 · 고른 요청 2번')).toBeDefined();
     expect(screen.getByText('응급 · 읽기만')).toBeDefined();
   });
 

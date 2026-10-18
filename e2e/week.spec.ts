@@ -87,7 +87,7 @@ test('한 주를 걷는다: 사건 → 장면 → 평가 → 요청 → 반영�
   await tap(pad, /이번 주로/);
   await expect(wall.getByLabel('이번 주')).toBeVisible();
   await expect(pad.getByText(/1 \/ 8개 봤어요/)).toBeVisible();
-  await expect(pad.getByText('읽음')).toBeVisible();
+  await expect(pad.getByText(/읽음 · 고른 요청 1번/)).toBeVisible();
 
   // and the visitor can finish: what was changed, then the closing words
   await tap(pad, /마치기/);

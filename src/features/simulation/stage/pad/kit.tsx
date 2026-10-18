@@ -94,6 +94,8 @@ export const Button = styled.button<{ $tone?: Tone; $big?: boolean }>`
 /** The press that carries the walk forward: it breathes until pressed, as the wall's "beckon" does. */
 export const Next = styled(Button).attrs({ $tone: 'primary' })`
   animation: ${pulse} 2.2s ease-in-out infinite;
+  /* Not yet pressable: an outline, not a dimmed orange that still read as the button to press. */
+  &:disabled { opacity: 1; animation: none; color: ${night.mute}; background: transparent; border-color: ${inkA(0.24)}; }
   @media (prefers-reduced-motion: reduce) { animation: none; }
 `;
 
