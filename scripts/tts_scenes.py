@@ -53,9 +53,9 @@ STYLES = WEEK / "tts-styles.json"
 DIALOGUE = WEEK / "dialogue.json"
 BRIEFS = WEEK / "briefs.json"
 NARRATION = ROOT / "fixtures" / "exhibition" / "narration.json"  # the opening film's big captions (and the closing page's)
-#: The narration scenes a screen plays. ``outro`` is the closing page's, which the week's walk no longer has: its
-#: recordings would have nowhere to play, so none is made until a closing page exists again.
-NARRATION_PLAYED = ("intro",)
+#: The narration scenes a screen plays: the opening film's (``intro``) and the closing page's (``outro``,
+#: week/ClosingScreen.tsx - brought back 2026-10-18 at the researcher's word).
+NARRATION_PLAYED = ("intro", "outro")
 
 NOTES = """당신은 음성 연출가다. 마을 장면의 대사 한 줄마다 '연기 지시'를 짧은 영어로 쓴다. 이 지시는 Gemini TTS의 speech_metadata.style 로 들어가 그 줄의 감정·속도·세기만 정한다. 화자 AI는 안부를 살피고 이웃과 보건소를 잇는 AI 스피커다.
 

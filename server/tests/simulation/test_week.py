@@ -111,6 +111,37 @@ def test_a_cause_placed_after_its_effect_stops_the_read(copy: Path):
         load_week(copy)
 
 
+def test_every_rule_is_said_in_words_and_a_request_says_what_it_changes():
+    for event in load_week()["events"]:
+        now = {r["type"]: r["sentence"] for r in event["rules"]}
+        assert all(r["label"] and r["sentence"] for r in event["rules"])
+        for request in event["requests"]:
+            for change in request["rules"]:
+                # The judgment panel shows the event's rule and, once chosen, the request's change to it.
+                assert now[change["type"]] == change["beforeSentence"]
+                assert change["afterSentence"] and change["afterSentence"] != change["beforeSentence"]
+    by_id = {e["id"]: e for e in load_week()["events"]}
+    assert by_id["E6"]["rules"] == []
+
+
+def test_requests_that_disagree_about_how_the_ai_ran_stop_the_read(copy: Path):
+    def change(data):
+        e1 = next(e for e in data["events"] if e["id"] == "E1")
+        e1["requests"]["C"]["rules"].append({"type": "disclosure_scope", "before": {"level": "minimal"}, "after": {"level": "named"}})
+    edit(copy / "briefs.json", change)
+    with pytest.raises(WeekError, match="수정 전 값"):
+        load_week(copy)
+
+
+def test_a_rule_nobody_wrote_a_sentence_for_stops_the_read(copy: Path):
+    def change(data):
+        e1 = next(e for e in data["events"] if e["id"] == "E1")
+        e1["requests"]["A"]["rules"][0]["type"] = "no_such_rule"
+    edit(copy / "briefs.json", change)
+    with pytest.raises(WeekError, match="말로 옮길 수 없습니다"):
+        load_week(copy)
+
+
 def test_nothing_in_the_document_is_a_score():
     text = json.dumps(load_week(), ensure_ascii=False)
     for word in ("점수", "별점", "만족도"):

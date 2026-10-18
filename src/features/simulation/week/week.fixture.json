@@ -64,6 +64,28 @@
    "noChoice": false,
    "precededBy": null,
    "precedes": "E8",
+   "rules": [
+    {
+     "type": "retry_before_help",
+     "label": "본인 재연락",
+     "sentence": "응답이 없으면 본인에게 10분 간격으로 1회 다시 연락한 뒤 다음 단계로 간다."
+    },
+    {
+     "type": "disclosure_scope",
+     "label": "제3자에게 알리는 범위",
+     "sentence": "제3자에게 연락 시각과 공개 동의된 평소 일과까지 함께 전달한다."
+    },
+    {
+     "type": "quiet_period",
+     "label": "연락 최소 간격",
+     "sentence": "같은 사람에게 다시 연락하기까지 비워 두는 시간이 없다."
+    },
+    {
+     "type": "helper_daily_cap",
+     "label": "한 사람이 받는 부탁 상한",
+     "sentence": "한 사람이 하루에 받는 조율 부탁은 3번까지다. 넘으면 그 사람에게는 묻지 않는다."
+    }
+   ],
    "before": {
     "scenes": [
      {
@@ -233,6 +255,7 @@
      "rules": [
       {
        "type": "retry_before_help",
+       "label": "본인 재연락",
        "before": {
         "count": 1,
         "intervalMinutes": 10
@@ -240,16 +263,21 @@
        "after": {
         "count": 3,
         "intervalMinutes": 10
-       }
+       },
+       "beforeSentence": "응답이 없으면 본인에게 10분 간격으로 1회 다시 연락한 뒤 다음 단계로 간다.",
+       "afterSentence": "응답이 없으면 본인에게 10분 간격으로 3회 다시 연락한 뒤 다음 단계로 간다."
       },
       {
        "type": "disclosure_scope",
+       "label": "제3자에게 알리는 범위",
        "before": {
         "level": "named"
        },
        "after": {
         "level": "minimal"
-       }
+       },
+       "beforeSentence": "제3자에게 연락 시각과 공개 동의된 평소 일과까지 함께 전달한다.",
+       "afterSentence": "제3자에게는 응답이 없었다는 사실만 전달한다."
       }
      ],
      "basis": {
@@ -349,21 +377,27 @@
      "rules": [
       {
        "type": "quiet_period",
+       "label": "연락 최소 간격",
        "before": {
         "minutes": 0
        },
        "after": {
         "minutes": 90
-       }
+       },
+       "beforeSentence": "같은 사람에게 다시 연락하기까지 비워 두는 시간이 없다.",
+       "afterSentence": "같은 사람에게 다시 연락하려면 적어도 90분을 비워 둔다."
       },
       {
        "type": "helper_daily_cap",
+       "label": "한 사람이 받는 부탁 상한",
        "before": {
         "perDay": 3
        },
        "after": {
         "perDay": 1
-       }
+       },
+       "beforeSentence": "한 사람이 하루에 받는 조율 부탁은 3번까지다. 넘으면 그 사람에게는 묻지 않는다.",
+       "afterSentence": "한 사람이 하루에 받는 조율 부탁은 1번까지다. 넘으면 그 사람에게는 묻지 않는다."
       }
      ],
      "basis": {
@@ -469,6 +503,13 @@
    "noChoice": false,
    "precededBy": null,
    "precedes": null,
+   "rules": [
+    {
+     "type": "disclosure_scope",
+     "label": "제3자에게 알리는 범위",
+     "sentence": "제3자에게 연락 시각과 공개 동의된 평소 일과까지 함께 전달한다."
+    }
+   ],
    "before": {
     "scenes": [
      {
@@ -645,12 +686,15 @@
      "rules": [
       {
        "type": "disclosure_scope",
+       "label": "제3자에게 알리는 범위",
        "before": {
         "level": "named"
        },
        "after": {
         "level": "minimal"
-       }
+       },
+       "beforeSentence": "제3자에게 연락 시각과 공개 동의된 평소 일과까지 함께 전달한다.",
+       "afterSentence": "제3자에게는 응답이 없었다는 사실만 전달한다."
       }
      ],
      "basis": {
@@ -778,6 +822,13 @@
    "noChoice": false,
    "precededBy": null,
    "precedes": null,
+   "rules": [
+    {
+     "type": "neighbour_ask_limit",
+     "label": "한 건에 묻는 이웃 수",
+     "sentence": "한 건에 대해 이웃 1명까지 차례로 물어본다."
+    }
+   ],
    "before": {
     "scenes": [
      {
@@ -943,12 +994,15 @@
      "rules": [
       {
        "type": "neighbour_ask_limit",
+       "label": "한 건에 묻는 이웃 수",
        "before": {
         "people": 1
        },
        "after": {
         "people": 3
-       }
+       },
+       "beforeSentence": "한 건에 대해 이웃 1명까지 차례로 물어본다.",
+       "afterSentence": "한 건에 대해 이웃 3명까지 차례로 물어본다."
       }
      ],
      "basis": {
@@ -1049,6 +1103,18 @@
    "noChoice": false,
    "precededBy": null,
    "precedes": "E6",
+   "rules": [
+    {
+     "type": "retry_before_help",
+     "label": "본인 재연락",
+     "sentence": "응답이 없으면 본인에게 다시 연락하지 않고 바로 다음 단계로 간다."
+    },
+    {
+     "type": "institution_deadline",
+     "label": "기관 인계 기한",
+     "sentence": "접수 후 60분 안에 풀리지 않으면 기관으로 넘긴다."
+    }
+   ],
    "before": {
     "scenes": [
      {
@@ -1225,6 +1291,7 @@
      "rules": [
       {
        "type": "retry_before_help",
+       "label": "본인 재연락",
        "before": {
         "count": 0,
         "intervalMinutes": 10
@@ -1232,7 +1299,9 @@
        "after": {
         "count": 2,
         "intervalMinutes": 10
-       }
+       },
+       "beforeSentence": "응답이 없으면 본인에게 다시 연락하지 않고 바로 다음 단계로 간다.",
+       "afterSentence": "응답이 없으면 본인에게 10분 간격으로 2회 다시 연락한 뒤 다음 단계로 간다."
       }
      ],
      "basis": {
@@ -1353,12 +1422,15 @@
      "rules": [
       {
        "type": "institution_deadline",
+       "label": "기관 인계 기한",
        "before": {
         "afterMinutes": 60
        },
        "after": {
         "afterMinutes": 10
-       }
+       },
+       "beforeSentence": "접수 후 60분 안에 풀리지 않으면 기관으로 넘긴다.",
+       "afterSentence": "접수 후 10분 안에 풀리지 않으면 기관으로 넘긴다."
       }
      ],
      "basis": {
@@ -1505,6 +1577,23 @@
    "noChoice": false,
    "precededBy": null,
    "precedes": null,
+   "rules": [
+    {
+     "type": "disclosure_scope",
+     "label": "제3자에게 알리는 범위",
+     "sentence": "제3자에게는 응답이 없었다는 사실만 전달한다."
+    },
+    {
+     "type": "institution_deadline",
+     "label": "기관 인계 기한",
+     "sentence": "접수 후 60분 안에 풀리지 않으면 기관으로 넘긴다."
+    },
+    {
+     "type": "retry_before_help",
+     "label": "본인 재연락",
+     "sentence": "응답이 없으면 본인에게 10분 간격으로 1회 다시 연락한 뒤 다음 단계로 간다."
+    }
+   ],
    "before": {
     "scenes": [
      {
@@ -1690,12 +1779,15 @@
      "rules": [
       {
        "type": "disclosure_scope",
+       "label": "제3자에게 알리는 범위",
        "before": {
         "level": "minimal"
        },
        "after": {
         "level": "named"
-       }
+       },
+       "beforeSentence": "제3자에게는 응답이 없었다는 사실만 전달한다.",
+       "afterSentence": "제3자에게 연락 시각과 공개 동의된 평소 일과까지 함께 전달한다."
       }
      ],
      "basis": {
@@ -1802,12 +1894,15 @@
      "rules": [
       {
        "type": "institution_deadline",
+       "label": "기관 인계 기한",
        "before": {
         "afterMinutes": 60
        },
        "after": {
         "afterMinutes": 5
-       }
+       },
+       "beforeSentence": "접수 후 60분 안에 풀리지 않으면 기관으로 넘긴다.",
+       "afterSentence": "접수 후 5분 안에 풀리지 않으면 기관으로 넘긴다."
       }
      ],
      "basis": {
@@ -1907,6 +2002,7 @@
      "rules": [
       {
        "type": "retry_before_help",
+       "label": "본인 재연락",
        "before": {
         "count": 1,
         "intervalMinutes": 10
@@ -1914,7 +2010,9 @@
        "after": {
         "count": 3,
         "intervalMinutes": 30
-       }
+       },
+       "beforeSentence": "응답이 없으면 본인에게 10분 간격으로 1회 다시 연락한 뒤 다음 단계로 간다.",
+       "afterSentence": "응답이 없으면 본인에게 30분 간격으로 3회 다시 연락한 뒤 다음 단계로 간다."
       }
      ],
      "basis": {
@@ -2016,6 +2114,7 @@
    "noChoice": true,
    "precededBy": "E4",
    "precedes": null,
+   "rules": [],
    "before": {
     "scenes": [
      {
@@ -2188,6 +2287,13 @@
    "noChoice": false,
    "precededBy": null,
    "precedes": null,
+   "rules": [
+    {
+     "type": "retry_before_help",
+     "label": "본인 재연락",
+     "sentence": "응답이 없으면 본인에게 10분 간격으로 1회 다시 연락한 뒤 다음 단계로 간다."
+    }
+   ],
    "before": {
     "scenes": [
      {
@@ -2348,6 +2454,7 @@
      "rules": [
       {
        "type": "retry_before_help",
+       "label": "본인 재연락",
        "before": {
         "count": 1,
         "intervalMinutes": 10
@@ -2355,7 +2462,9 @@
        "after": {
         "count": 2,
         "intervalMinutes": 30
-       }
+       },
+       "beforeSentence": "응답이 없으면 본인에게 10분 간격으로 1회 다시 연락한 뒤 다음 단계로 간다.",
+       "afterSentence": "응답이 없으면 본인에게 30분 간격으로 2회 다시 연락한 뒤 다음 단계로 간다."
       }
      ],
      "basis": {
@@ -2457,6 +2566,13 @@
    "noChoice": false,
    "precededBy": "E1",
    "precedes": null,
+   "rules": [
+    {
+     "type": "retry_before_help",
+     "label": "본인 재연락",
+     "sentence": "응답이 없으면 본인에게 10분 간격으로 1회 다시 연락한 뒤 다음 단계로 간다."
+    }
+   ],
    "before": {
     "scenes": [
      {
@@ -2623,6 +2739,7 @@
      "rules": [
       {
        "type": "retry_before_help",
+       "label": "본인 재연락",
        "before": {
         "count": 1,
         "intervalMinutes": 10
@@ -2630,7 +2747,9 @@
        "after": {
         "count": 3,
         "intervalMinutes": 10
-       }
+       },
+       "beforeSentence": "응답이 없으면 본인에게 10분 간격으로 1회 다시 연락한 뒤 다음 단계로 간다.",
+       "afterSentence": "응답이 없으면 본인에게 10분 간격으로 3회 다시 연락한 뒤 다음 단계로 간다."
       }
      ],
      "basis": {

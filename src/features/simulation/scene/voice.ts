@@ -36,6 +36,13 @@ const audioOf = (file: string) => {
 export const clipOf = (voices: Record<string, VoiceClip> | null | undefined, speaker: string, text: string): VoiceClip | null =>
   voices?.[`${speaker}|${text}`] ?? null;
 
+/** How long a line stays on screen: the screen's pace, or its recording and a breath after it when that is longer.
+ *  A fixed pace cut the long lines off mid-word (a 9 s line under a 4.5 s pace). */
+export function lineMs(voices: Record<string, VoiceClip> | null | undefined, speaker: string, text: string, pace: number): number {
+  const clip = clipOf(voices, speaker, text);
+  return clip ? Math.max(pace, Math.round((clip.seconds + 0.8) * 1000)) : pace;
+}
+
 /** Plays the recording of the line on screen, and stops it when the line goes. A line with no recording is silent. */
 export function useLineVoice(voices: Record<string, VoiceClip> | null | undefined, speaker: string | null, text: string | null) {
   useEffect(() => {

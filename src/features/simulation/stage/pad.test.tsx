@@ -24,8 +24,18 @@ describe('the week', () => {
     const { press } = pressed();
     const { container } = render(<Week s={state({ phase: 'week', week, seen: 1, total: 3 })} press={press} />);
     expect(screen.getByText('이날은 조용했습니다')).toBeDefined();
-    expect(names(container).filter((n) => n && !/^[월화수목금토일]$/.test(n))).toHaveLength(3);
+    expect(names(container).filter((n) => n && !/^[월화수목금토일]$/.test(n) && n !== '마치기 →')).toHaveLength(3);
     expect(screen.getByText(/1 \/ 3개 봤어요/)).toBeDefined();
+  });
+
+  it('can be finished once something has been read, and not before', () => {
+    const a = pressed();
+    render(<Week s={state({ phase: 'week', week, seen: 1, total: 3 })} press={a.press} />);
+    fireEvent.click(screen.getByText('마치기 →'));
+    expect(a.sent).toEqual([{ name: 'finish' }]);
+    cleanup();
+    render(<Week s={state({ phase: 'week', week, seen: 0, total: 3 })} press={pressed().press} />);
+    expect(screen.queryByText('마치기 →')).toBeNull();
   });
 
   it('says what is read and what is an emergency', () => {
@@ -49,10 +59,10 @@ describe('a telling', () => {
   it('has three things to press while it plays, and nothing else', () => {
     const { press, sent } = pressed();
     const { container } = render(<Telling s={state({ scene: told, line: 1, lines: 8 })} press={press} after={false} />);
-    expect(names(container)).toEqual(['← 이전 줄', '다음 줄 →', '다음 장면으로 →']);
+    expect(names(container)).toEqual(['← 이전 줄', '다음 줄 →', '장면 넘기기 ⇥']);
     fireEvent.click(screen.getByText('다음 줄 →'));
     fireEvent.click(screen.getByText('← 이전 줄'));
-    fireEvent.click(screen.getByText('다음 장면으로 →'));
+    fireEvent.click(screen.getByText('장면 넘기기 ⇥'));
     expect(sent).toEqual([{ name: 'line', value: 1 }, { name: 'line', value: -1 }, { name: 'skipScene' }]);
   });
 
@@ -105,7 +115,7 @@ describe('the evaluations', () => {
     const b = pressed();
     render(<Evaluations s={state({ phase: 'evaluations', residents, event: { ...event, noChoice: true } })} press={b.press} />);
     expect(screen.queryByText('무엇을 고칠지 고르기 →')).toBeNull();
-    fireEvent.click(screen.getByText('마치기 →'));
+    fireEvent.click(screen.getByText('다 읽었어요 →'));
     expect(b.sent).toEqual([{ name: 'toChoose' }]);
   });
 
@@ -132,12 +142,20 @@ describe('choosing', () => {
     expect(screen.getByText('근거가 약한 요청')).toBeDefined();
   });
 
-  it('one touch chooses, and from then on nothing else answers', () => {
-    const { press, sent } = pressed();
-    render(<Choose s={state({ phase: 'choose', requests })} press={press} />);
+  it('a touch only picks; the choice is made by the confirm button, and from then on nothing else answers', () => {
+    const a = pressed();
+    render(<Choose s={state({ phase: 'choose', requests })} press={a.press} />);
+    expect((screen.getByText('요청을 먼저 골라 주세요').closest('button') as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(screen.getByText('본인에게 먼저 기회를 주세요'));
+    expect(a.sent).toEqual([{ name: 'consider', id: 'A' }]);
+    cleanup();
+    // The wall says which card is picked; then the confirm sends the choice, once.
+    const b = pressed();
+    render(<Choose s={state({ phase: 'choose', requests, considering: 'A' })} press={b.press} />);
+    fireEvent.click(screen.getByText(/1번 요청으로 다시 보기/));
     fireEvent.click(screen.getByText('간격을 두세요'));
-    expect(sent).toEqual([{ name: 'choose', id: 'A' }]);
+    fireEvent.click(screen.getByText(/1번 요청으로 다시 보기/));
+    expect(b.sent).toEqual([{ name: 'choose', id: 'A' }]);
   });
 });
 

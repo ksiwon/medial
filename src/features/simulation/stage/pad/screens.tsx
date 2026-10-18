@@ -70,7 +70,11 @@ const EventButton = styled(Card)<{ $seen: boolean }>`
 export function Week({ s, press }: { s: StageState; press: Press }) {
   return (
     <Page>
-      <Hint>보고 싶은 사건을 하나 누르세요. 큰 화면에서 그 일이 펼쳐집니다. ({s.seen} / {s.total}개 봤어요)</Hint>
+      <Row>
+        <Hint>보고 싶은 사건을 하나 누르세요. 큰 화면에서 그 일이 펼쳐집니다. ({s.seen} / {s.total}개 봤어요)</Hint>
+        <Spacer />
+        {s.seen > 0 && <Button $tone="quiet" onClick={() => press({ name: 'finish' })}>마치기 →</Button>}
+      </Row>
       <WeekList>
         {s.week.map((d) => (
           <DayRow key={d.day} $empty={d.events.length === 0}>
@@ -119,13 +123,14 @@ const Now = styled.div`
 const Pair = styled.div`
   flex: none;
   display: grid;
-  grid-template-columns: 1fr 1fr 2fr;
+  grid-template-columns: 1fr 2fr 1fr;
   gap: 16px;
   > button { min-height: 120px; font-size: 32px; }
 `;
 
 /** The event plays by itself, a line at a time. The only things a visitor does in it are to go back or on by a
- *  line, to skip the scene, or - once it has been told - to read what the residents made of it. */
+ *  line, to skip the scene, or - once it has been told - to read what the residents made of it. The large button
+ *  is the next line: skipping a whole scene is the small one, so the obvious press never throws the scene away. */
 export function Telling({ s, press, after }: { s: StageState; press: Press; after: boolean }) {
   return (
     <Page>
@@ -142,8 +147,8 @@ export function Telling({ s, press, after }: { s: StageState; press: Press; afte
       ) : (
         <Pair>
           <Button $tone="quiet" onClick={() => press({ name: 'line', value: -1 })} disabled={s.line <= 0}>← 이전 줄</Button>
-          <Button $tone="quiet" onClick={() => press({ name: 'line', value: 1 })}>다음 줄 →</Button>
-          <Button $tone="primary" onClick={() => press({ name: 'skipScene' })}>다음 장면으로 →</Button>
+          <Button $tone="primary" onClick={() => press({ name: 'line', value: 1 })}>다음 줄 →</Button>
+          <Button $tone="quiet" onClick={() => press({ name: 'skipScene' })}>장면 넘기기 ⇥</Button>
         </Pair>
       )}
     </Page>
@@ -183,7 +188,8 @@ export function Evaluations({ s, press, result = false }: { s: StageState; press
         <Button $tone="quiet" onClick={() => press({ name: 'week' })}>← 이번 주로</Button>
         <Spacer />
         {!result && !emergency && <Next onClick={() => press({ name: 'toChoose' })}>무엇을 고칠지 고르기 →</Next>}
-        {!result && emergency && <Next onClick={() => press({ name: 'toChoose' })}>마치기 →</Next>}
+        {!result && emergency && <Next onClick={() => press({ name: 'toChoose' })}>다 읽었어요 →</Next>}
+        {result && <Button $tone="quiet" onClick={() => press({ name: 'finish' })}>마치기</Button>}
       </Row>
     </Page>
   );
@@ -204,16 +210,18 @@ const Pick = styled(Card)`
 `;
 
 export function Choose({ s, press }: { s: StageState; press: Press }) {
-  // One touch chooses, and a choice cannot be taken back: from the touch on, nothing else on this page answers.
+  // A choice cannot be taken back, so it takes two touches: a card (lit here and on the wall), then the button that
+  // confirms it. From the confirm on, nothing else on this page answers.
   const [sent, setSent] = useState<string | null>(null);
   useEffect(() => { setSent(null); }, [s.event?.id]);
+  const picked = s.considering;
   return (
     <Page>
-      <Hint>하나를 고르면 같은 일이 그 요청대로 다시 펼쳐집니다. 모든 요청에는 바라는 것과 따를 부담이 있어요.</Hint>
+      <Hint>요청을 하나 누르고, 아래 버튼으로 확정하세요. 확정하면 같은 일이 그 요청대로 다시 펼쳐지고 되돌릴 수 없어요.</Hint>
       <Grid $cols={Math.max(1, Math.min(3, s.requests.length))}>
         {s.requests.map((r, i) => (
-          <Pick key={r.id} $on={sent === r.id} disabled={sent !== null}
-            onClick={() => { setSent(r.id); press({ name: 'choose', id: r.id }); }}>
+          <Pick key={r.id} $on={picked === r.id} disabled={sent !== null}
+            onClick={() => press({ name: 'consider', id: picked === r.id ? null : r.id })}>
             <small>{i + 1}</small>
             <b>{r.label}</b>
             {r.from && <em className={r.basis === 'weak' ? 'weak' : undefined}>{r.basis === 'weak' ? '근거가 약한 요청' : `${r.from}의 평가에서`}</em>}
@@ -221,6 +229,13 @@ export function Choose({ s, press }: { s: StageState; press: Press }) {
           </Pick>
         ))}
       </Grid>
+      <Row>
+        <Button $tone="quiet" onClick={() => press({ name: 'week' })} disabled={sent !== null}>← 이번 주로</Button>
+        <Spacer />
+        <Next disabled={!picked || sent !== null} onClick={() => { if (picked) { setSent(picked); press({ name: 'choose', id: picked }); } }}>
+          {picked ? `${s.requests.findIndex((r) => r.id === picked) + 1}번 요청으로 다시 보기 →` : '요청을 먼저 골라 주세요'}
+        </Next>
+      </Row>
     </Page>
   );
 }
@@ -229,6 +244,40 @@ export function Choose({ s, press }: { s: StageState; press: Press }) {
 
 export function Result({ s, press }: { s: StageState; press: Press }) {
   return <Evaluations s={s} press={press} result />;
+}
+
+// ---- the closing ---------------------------------------------------------------
+
+export function Closing({ s, press }: { s: StageState; press: Press }) {
+  return (
+    <Stage>
+      <h1>{s.closingWords ? '함께해 주셔서 고맙습니다' : `${s.seen}개의 사건을 고쳐 보았습니다`}</h1>
+      <p>{s.closingWords ? '큰 화면의 마무리 말을 들어 주세요. 잠시 뒤 처음 화면으로 돌아갑니다.' : '큰 화면에 이번에 고친 것이 정리되어 있습니다.'}</p>
+      {!s.closingWords && <Button $tone="quiet" onClick={() => press({ name: 'closingWords' })}>마무리 말 듣기 →</Button>}
+      <Button $tone="primary" $big onClick={() => press({ name: 'home' })}>처음으로 돌아가기</Button>
+    </Stage>
+  );
+}
+
+/** The wall's clock, said here too: the visitor at the tablet sees the page will go on without them. */
+const Countdown = styled.div`
+  flex: none;
+  align-self: flex-end;
+  margin-top: -8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: ${night.faint};
+  font-variant-numeric: tabular-nums;
+`;
+
+export function AutoNote({ auto }: { auto: { key: string; seconds: number; say: string } }) {
+  const [left, setLeft] = useState(auto.seconds);
+  useEffect(() => {
+    setLeft(auto.seconds);
+    const tick = window.setInterval(() => setLeft((n) => Math.max(n - 1, 0)), 1000);
+    return () => window.clearInterval(tick);
+  }, [auto.key, auto.seconds]);
+  return left > 0 ? <Countdown aria-live="off">{left}초 뒤 {auto.say}</Countdown> : null;
 }
 
 // ---- not (or no longer) the tablet --------------------------------------------

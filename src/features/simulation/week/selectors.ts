@@ -57,6 +57,50 @@ export function eventsInOrder(week: Week): WeekEvent[] {
   return ids.map((id) => eventOf(week, id)).filter((e): e is WeekEvent => e !== null);
 }
 
+/** Hours as a number: '09:40' -> 9.67. */
+export const hoursOf = (time: string): number => {
+  const [h, m] = time.split(':').map(Number);
+  return h + (m || 0) / 60;
+};
+
+export interface Block {
+  event: WeekEvent;
+  /** When it starts by its first scene (hours). */
+  from: number;
+  /** Where its block sits on the day's axis (fractions of the axis) - at least `minHours` tall, so it can be read. */
+  top: number;
+  height: number;
+}
+
+export interface TimetableDay { day: string; blocks: Block[] }
+
+/**
+ * The week as a timetable: a column a day, the hours down it, each event a block from the time it happened. A block
+ * is at least `minHours` tall however short the event (a twelve-minute call still has to say what happened and how
+ * the residents received it). Two events of one day never stand side by side: a block that would overlap the one
+ * before it moves down below it, and blocks that would run off the end of the day move up together - so a block may
+ * sit a little off its time. Blocks of one day keep `gapHours` apart.
+ */
+export function timetable(week: Week, axis: { from: number; to: number; minHours: number; gapHours: number }): TimetableDay[] {
+  const span = axis.to - axis.from;
+  const gap = axis.gapHours / span;
+  return week.days.map(({ day, events: ids }) => {
+    const blocks: Block[] = ids.map((id) => eventOf(week, id)).filter((e): e is WeekEvent => e !== null).map((event) => {
+      const times = event.before.scenes.map((s) => hoursOf(s.time));
+      const from = Math.min(...times);
+      const height = Math.max(Math.max(...times) - from, axis.minHours) / span;
+      return { event, from, top: Math.max((from - axis.from) / span, 0), height };
+    }).sort((a, b) => a.top - b.top);
+    // Down past the one before; then, from the last, up so nothing runs past the end of the day.
+    for (let i = 1; i < blocks.length; i += 1) blocks[i].top = Math.max(blocks[i].top, blocks[i - 1].top + blocks[i - 1].height + gap);
+    for (let i = blocks.length - 1; i >= 0; i -= 1) {
+      const limit = i === blocks.length - 1 ? 1 : blocks[i + 1].top - gap;
+      blocks[i].top = Math.max(Math.min(blocks[i].top, limit - blocks[i].height), 0);
+    }
+    return { day, blocks };
+  });
+}
+
 /** How many events are read and how many are left, for the week's own caption. */
 export function progress(week: Week, seen: ReadonlySet<string>): { seen: number; of: number } {
   const ids = week.days.flatMap((d) => d.events);

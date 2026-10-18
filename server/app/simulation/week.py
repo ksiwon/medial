@@ -22,6 +22,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from . import rules
+
 WEEK_DIR = Path(__file__).resolve().parents[3] / "fixtures" / "week"
 DISCLAIMER = "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
 DAYS = ["월", "화", "수", "목", "금", "토", "일"]
@@ -87,6 +89,23 @@ def _evaluation(ev: dict[str, Any], names: dict[str, str]) -> dict[str, Any]:
     }
 
 
+def _rule_now(event_id: str, rule_type: str, values: dict[str, Any]) -> dict[str, Any]:
+    """A rule as the AI runs it, in words (rules.py)."""
+    try:
+        return {"type": rule_type, "label": rules.label(rule_type), "sentence": rules.sentence(rule_type, values)}
+    except rules.UnknownRule as error:
+        raise WeekError("%s 의 규칙 %s 를 말로 옮길 수 없습니다(rules.py)" % (event_id, error)) from error
+
+
+def _rule_change(event_id: str, rule: dict[str, Any]) -> dict[str, Any]:
+    """What a request does to one rule: its values and the sentences before and after."""
+    now = _rule_now(event_id, rule["type"], rule["before"])
+    return {
+        "type": rule["type"], "label": now["label"], "before": rule["before"], "after": rule["after"],
+        "beforeSentence": now["sentence"], "afterSentence": rules.sentence(rule["type"], rule["after"]),
+    }
+
+
 def load_week(weeks_dir: Path = WEEK_DIR) -> dict[str, Any]:
     briefs = _load("briefs.json", weeks_dir)
     dialogue = _load("dialogue.json", weeks_dir)["scenes"]
@@ -122,6 +141,14 @@ def load_week(weeks_dir: Path = WEEK_DIR) -> dict[str, Any]:
         eid = ev["id"]
         before_keys = ["%s.%s" % (eid, k) for k in ev["scenes"]]
         requests = []
+        #: The rules the event ran under before anything was chosen: each request's ``before``. Two requests that
+        #: disagree about how the AI ran would make the judgment panel say two things, so that stops the read.
+        baseline: dict[str, dict[str, Any]] = {}
+        for rid, req in ev["requests"].items():
+            for rule in req["rules"]:
+                seen = baseline.setdefault(rule["type"], rule["before"])
+                if seen != rule["before"]:
+                    raise WeekError("%s 의 요청들이 %s 규칙의 수정 전 값을 다르게 말합니다" % (eid, rule["type"]))
         for rid, req in ev["requests"].items():
             link = links.get("%s.%s" % (eid, rid))
             if link is None or link["verdict"] not in VERDICTS:
@@ -133,7 +160,7 @@ def load_week(weeks_dir: Path = WEEK_DIR) -> dict[str, Any]:
                 "label": req["label"],
                 "expect": req["expect"],
                 "cost": req["cost"],
-                "rules": req["rules"],
+                "rules": [_rule_change(eid, r) for r in req["rules"]],
                 "basis": {"verdict": link["verdict"], "actor": link["actor"] or None, "quote": link["basis"] or None,
                           "kind": link.get("kind") or None},
                 "after": {"scene": _scene(key, req["scene"], dialogue), "evaluations": evals_of(eid, rid, [key])},
@@ -147,6 +174,7 @@ def load_week(weeks_dir: Path = WEEK_DIR) -> dict[str, Any]:
             "noChoice": bool(ev.get("noChoice")),
             "precededBy": ev.get("precededBy"),
             "precedes": ev.get("precedes"),
+            "rules": [_rule_now(eid, t, v) for t, v in baseline.items()],
             "before": {
                 "scenes": [_scene(k, ev["scenes"][k.split(".", 1)[1]], dialogue) for k in before_keys],
                 "evaluations": evals_of(eid, "before", before_keys),

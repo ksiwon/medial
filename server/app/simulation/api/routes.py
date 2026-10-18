@@ -16,7 +16,7 @@ from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
-from ..assets import art_dir, art_index, voice_dir, voice_index
+from ..assets import art_dir, art_index, village_map, village_map_file, voice_dir, voice_index
 from ..week import WeekError, load_week
 from .stage import router as stage_router
 
@@ -54,6 +54,20 @@ def art_file(name: str) -> Any:
     if name not in index:
         raise HTTPException(status_code=404, detail="이 그림은 없다: %s" % name)
     return FileResponse(art_dir() / index[name], media_type="image/webp")
+
+
+@router.get("/village/map")
+def village() -> dict[str, Any]:
+    """Where the places and homes are, for the scene's map column (``assets.village_map``)."""
+    return village_map()
+
+
+@router.get("/village/map.png")
+def village_map_png() -> Any:
+    path = village_map_file()
+    if path is None:
+        raise HTTPException(status_code=404, detail="마을 지도 파일이 없다 (local-data/normalized)")
+    return FileResponse(path, media_type="image/png")
 
 
 @router.get("/village/voice")

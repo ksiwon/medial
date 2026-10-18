@@ -5,6 +5,7 @@ import type { Evaluation, Week, WeekEvent, WeekScene } from '../week/types';
 import { postState } from './bus';
 import { IDLE_STATE, type Command, type DayBrief, type Phase, type RequestBrief, type ResidentBrief, type StageState } from './protocol';
 import { useStream } from './stream';
+import { autoOf, type AutoAction } from '../week/auto';
 
 // The wall's side of the two screens: it does what the tablet pressed, and says what it shows.
 //
@@ -30,8 +31,18 @@ export function evaluationsOf(event: WeekEvent | null, step: string, requestId: 
   return event.before.evaluations;
 }
 
-/** Apply one press. */
+/** Apply one press. Every press is also a sign someone is at the tablet: the page's clock starts over. */
 export function apply(command: Command): void {
+  useWeekStore.getState().touch();
+  run(command);
+}
+
+/** What a run-out clock does (week/auto.ts): the same as the press it stands for, without counting as one. */
+export function runAuto(action: AutoAction): void {
+  run({ name: action } as Command);
+}
+
+function run(command: Command): void {
   const w = useWeekStore.getState();
   const event = eventOf(w.week ?? ({ events: [] } as unknown as Week), w.eventId);
   const on = (step: string) => w.pathStarted && w.step === step;
@@ -73,6 +84,9 @@ export function apply(command: Command): void {
     case 'toChoose':
       if (on('evaluations')) w.afterEvaluations();
       return;
+    case 'consider':
+      w.consider(command.id);
+      return;
     case 'choose':
       w.chooseRequest(command.id);
       return;
@@ -80,7 +94,13 @@ export function apply(command: Command): void {
       if (on('after')) w.goResult();
       return;
     case 'week':
-      if (w.pathStarted && w.step !== 'week') w.backToWeek();
+      if (w.pathStarted && w.step !== 'week' && w.step !== 'closing') w.backToWeek();
+      return;
+    case 'finish':
+      if (w.pathStarted && (w.step === 'week' || w.step === 'result' || w.step === 'choose')) w.finish();
+      return;
+    case 'closingWords':
+      w.showClosingWords();
       return;
     case 'home':
       if (w.pathStarted || w.introStarted) w.restart();
@@ -110,20 +130,28 @@ const weekBrief = (week: Week, seen: string[]): DayBrief[] =>
 export function describeStage(args: {
   week: Week | null; introStarted: boolean; pathStarted: boolean; step: string; eventId: string | null;
   requestId: string | null; lineIndex: number; openActor: string | null; seen: string[];
+  considering?: string | null; closingWords?: boolean; lastPress?: number;
 }): StageState {
   const { week } = args;
   if (!week) return IDLE_STATE;
   if (!args.pathStarted) return { ...IDLE_STATE, phase: args.introStarted ? 'intro' : 'idle' };
   const phase = args.step as Phase;
   const event = eventOf(week, args.eventId);
+  const scenes = scenesOf(event, phase, args.requestId);
+  const told = (phase === 'before' || phase === 'after') && positionIn(scenes, args.lineIndex).done;
+  const auto = autoOf({
+    pathStarted: true, step: phase, eventId: args.eventId, openActor: args.openActor, toldAll: told,
+    noChoice: event?.noChoice ?? false, seen: args.seen.length, closingWords: args.closingWords ?? false, lastPress: args.lastPress ?? 0,
+  });
   const base: StageState = {
     ...IDLE_STATE, phase, week: weekBrief(week, args.seen), seen: args.seen.length,
     total: week.days.reduce((n, d) => n + d.events.length, 0),
     event: event ? { id: event.id, title: event.title, day: dayOf(week, event.id), noChoice: event.noChoice } : null,
+    auto: auto ? { key: auto.key, seconds: auto.seconds, say: auto.say } : null,
+    closingWords: args.closingWords ?? false,
   };
   if (!event) return base;
   if (phase === 'before' || phase === 'after') {
-    const scenes = scenesOf(event, phase, args.requestId);
     const at = positionIn(scenes, args.lineIndex);
     const scene = scenes[at.scene];
     return {
@@ -135,7 +163,7 @@ export function describeStage(args: {
   if (phase === 'evaluations' || phase === 'result') {
     return { ...base, residents: residentBrief(week, evaluationsOf(event, phase, args.requestId)), openActor: args.openActor, chosen: args.requestId };
   }
-  if (phase === 'choose') return { ...base, requests: requestBrief(event, week) };
+  if (phase === 'choose') return { ...base, requests: requestBrief(event, week), considering: args.considering ?? null };
   return base;
 }
 
@@ -194,6 +222,7 @@ export function useWall(): { paired: boolean } {
   latest.current = describeStage({
     week: w.week, introStarted: w.introStarted, pathStarted: w.pathStarted, step: w.step, eventId: w.eventId,
     requestId: w.requestId, lineIndex: w.lineIndex, openActor: w.openActor, seen: w.seen,
+    considering: w.considering, closingWords: w.closingWords, lastPress: w.lastPress,
   });
 
   // After every render: the cheap comparison above decides whether anything goes out.

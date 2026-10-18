@@ -63,6 +63,29 @@ def test_a_picture_or_voice_that_does_not_exist_is_a_404_and_the_indexes_are_lis
     assert isinstance(c.get("/api/sim/village/voice").json()["lines"], dict)
 
 
+def test_without_the_village_registry_the_map_says_it_is_missing_and_draws_nothing(monkeypatch, tmp_path):
+    monkeypatch.setenv("MEDIAL_VILLAGE_DIR", str(tmp_path))
+    c = client()
+    assert c.get("/api/sim/village/map").json() == {"available": False}
+    assert c.get("/api/sim/village/map.png").status_code == 404
+
+
+def test_the_map_names_places_and_homes_and_nothing_about_the_residents_beyond_where_they_live(monkeypatch, tmp_path):
+    (tmp_path / "village.v1.json").write_text(
+        '{"geometry": {"viewBox": [0, 0, 10, 20]}, "places": {"FARM": {"x": 1, "y": 2, "name": "x"}},'
+        ' "homes": {"P1": {"x": 3, "y": 4}}, "patrol": [[0, 0], [1, 1]],'
+        ' "residents": [{"id": "P1", "plan": "secret"}], "mapImage": {"file": "m.png", "sourceWidthPx": 20,'
+        ' "sourceHeightPx": 10, "northUpMatrix": [0, -1, 1, 0, 0, 20]}}', encoding="utf-8")
+    (tmp_path / "m.png").write_bytes(b"\x89PNG")
+    monkeypatch.setenv("MEDIAL_VILLAGE_DIR", str(tmp_path))
+    c = client()
+    body = c.get("/api/sim/village/map").json()
+    assert body["available"] and body["raster"]["matrix"] == [0, -1, 1, 0, 0, 20]
+    assert body["places"] == {"FARM": {"x": 1, "y": 2}} and body["homes"] == {"P1": {"x": 3, "y": 4}}
+    assert "residents" not in body and "secret" not in str(body)
+    assert c.get("/api/sim/village/map.png").status_code == 200
+
+
 def test_the_server_package_has_nothing_that_could_call_a_model():
     """No module of the server imports an HTTP client or reads a key: the words are written by scripts/gen_week_*.py."""
     root = REPO_ROOT / "server" / "app"

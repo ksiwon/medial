@@ -1,5 +1,5 @@
 import type { Week } from '../week/types';
-import type { VoiceClip } from './types';
+import type { Village, VoiceClip } from './types';
 
 // What the screens read from the local API. Every call here is a read of something written and checked before
 // the exhibition. Nothing starts a run.
@@ -50,6 +50,9 @@ export const api = {
   /** Scene pictures (scripts/art.mjs → local-data/art/): served locally, never bundled. */
   art: () => request<{ names: string[] }>('/village/art'),
   artUrl: (name: string) => `${BASE}/village/art/${encodeURIComponent(name)}`,
+  /** The village map (local-data/normalized/, git-ignored): places, homes and the source raster, never bundled. */
+  village: () => request<Village>('/village/map'),
+  villageMapUrl: () => `${BASE}/village/map.png`,
   /** The spoken lines (scripts/tts_scenes.py → local-data/audio/), keyed 'speaker|text'. */
   voices: () => request<{ lines: Record<string, VoiceClip> }>('/village/voice'),
   voiceUrl: (file: string) => `${BASE}/village/voice/${encodeURIComponent(file)}`,

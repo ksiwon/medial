@@ -53,13 +53,26 @@ export interface Claim {
 
 export type Basis = 'direct' | 'weak';
 
+/** One of the AI's operating rules as it ran, in words. */
+export interface Rule { type: string; label: string; sentence: string }
+
+export interface RuleChange {
+  type: string;
+  label: string;
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+  beforeSentence: string;
+  afterSentence: string;
+}
+
 export interface WeekRequest {
   id: string;
   label: string;
   /** What the designer hopes for, and what it may cost. Both are read: no request is only good. */
   expect: string;
   cost: string;
-  rules: { type: string; before: Record<string, unknown>; after: Record<string, unknown> }[];
+  /** The rules it changes, with the sentences the AI's judgment panel reads before and after (server rules.py). */
+  rules: RuleChange[];
   /** How well the residents' own words support this request. 'weak' is shown as such, never hidden. */
   basis: { verdict: Basis; actor: string | null; quote: string | null; kind: ClaimKind | null };
   after: { scene: WeekScene; evaluations: Evaluation[] };
@@ -73,6 +86,8 @@ export interface WeekEvent {
   noChoice: boolean;
   precededBy: string | null;
   precedes: string | null;
+  /** The rules the AI ran this event under before anything was chosen (none for an emergency). */
+  rules: Rule[];
   before: { scenes: WeekScene[]; evaluations: Evaluation[] };
   requests: WeekRequest[];
 }
@@ -84,5 +99,6 @@ export interface Week {
   disclaimer: string;
 }
 
-/** Where the walk is. One path: the week, an event, its scenes, the residents' words, the request, what came of it. */
-export type Step = 'week' | 'before' | 'evaluations' | 'choose' | 'after' | 'result';
+/** Where the walk is. One path: the week, an event, its scenes, the residents' words, the request, what came of it -
+ *  and, when the visitor is done (or has gone), the closing words. */
+export type Step = 'week' | 'before' | 'evaluations' | 'choose' | 'after' | 'result' | 'closing';

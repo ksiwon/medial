@@ -7,8 +7,11 @@ import { inkA, night, px, radius } from './theme';
 // A resident's face on a reading page: the head and shoulders of the drawn
 // standing figure (the same picture the scene uses), on a warm disc. Someone
 // nobody drew gets their number on the same disc - never another person's face.
+//
+// Someone drawn only seated (the health-centre head at her desk) gets that picture: before 2026-10-18 the list
+// stopped at standing and on the phone, and her disc showed the id 'HC_HEAD' cut off by the circle.
 
-const POSES = ['stand', 'phone'];
+const POSES = ['stand', 'phone', 'desk', 'seated'];
 
 export function portraitOf(actorId: string, art: ReadonlySet<string>): string | null {
   const id = artIdOf(actorId);

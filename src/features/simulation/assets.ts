@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import { api, ApiError } from './api/client';
-import type { VoiceClip } from './api/types';
+import type { Village, VoiceClip } from './api/types';
 import { preloadVoices } from './scene/voice';
 
-// What the screens draw and play, fetched once: the scene pictures that exist and the recorded voices.
-// Both are optional - a figure without a picture is the schematic one, a line without a recording is paced
-// by reading time and silent - so a missing set is never an error. The week itself is week/store.ts.
+// What the screens draw and play, fetched once: the scene pictures that exist, the recorded voices and the village
+// map. All are optional - a figure without a picture is the schematic one, a line without a recording is paced
+// by reading time and silent, a missing map says so - so a missing set is never an error. The week itself is
+// week/store.ts.
 
 interface AssetState {
   status: 'idle' | 'loading' | 'ready' | 'error';
@@ -14,6 +15,8 @@ interface AssetState {
   art: Set<string>;
   /** The recorded voice of each spoken line, by 'speaker|text'; empty when there are none. */
   voices: Record<string, VoiceClip>;
+  /** Where the places and homes are, for the scene's map column. */
+  village: Village;
   load: () => Promise<void>;
 }
 
@@ -27,18 +30,20 @@ export const useAssets = create<AssetState>((set, get) => ({
   error: null,
   art: new Set(),
   voices: {},
+  village: { available: false },
 
   load: async () => {
     // React StrictMode invokes effects twice in development.
     if (get().status !== 'idle') return;
     set({ status: 'loading', error: null });
     try {
-      const [art, voice] = await Promise.all([
+      const [art, voice, village] = await Promise.all([
         api.art().catch(() => ({ names: [] as string[] })),
         api.voices().catch(() => ({ lines: {} as Record<string, VoiceClip> })),
+        api.village().catch((): Village => ({ available: false })),
       ]);
       preloadVoices(voice.lines);
-      set({ art: new Set(art.names), voices: voice.lines, status: 'ready' });
+      set({ art: new Set(art.names), voices: voice.lines, village, status: 'ready' });
     } catch (error) {
       set({ status: 'error', error: describe(error) });
     }

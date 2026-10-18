@@ -3,16 +3,22 @@ import styled from 'styled-components';
 import IdleScreen from './screens/IdleScreen';
 import IntroScreen from './screens/IntroScreen';
 import PairScreen from './screens/PairScreen';
-import { evaluationsOf, scenesOf, useWall } from './stage/wall';
+import { evaluationsOf, runAuto, scenesOf, useWall } from './stage/wall';
 import { useAssets } from './assets';
 import { useAmbient } from './ui/ambient';
 import { preloadArt } from './ui/Portrait';
 import { Callout, Mono } from './ui/primitives';
-import { font, night } from './ui/theme';
+import { font, night, px, radius } from './ui/theme';
 import { useUiScale } from './ui/uiScale';
+import { lineMs } from './scene/voice';
+import { autoOf, useCountdown } from './week/auto';
+import ClosingScreen from './week/ClosingScreen';
+import { judgmentAt } from './week/judgment';
+import JudgmentPanel from './week/JudgmentPanel';
 import { ChooseScreen, EvaluationsScreen, ResultScreen } from './week/ReviewScreens';
 import SceneView from './week/SceneView';
 import { eventOf, positionIn, requestOf } from './week/selectors';
+import VillageMap from './week/VillageMap';
 import { useWeekStore } from './week/store';
 import WeekScreen from './week/WeekScreen';
 
@@ -25,7 +31,13 @@ import WeekScreen from './week/WeekScreen';
 //   사건 장면    - the event as it ran, a line at a time;
 //   주민 평가    - the residents in it, in their words, with the lines each rests on;
 //   수정 요청    - what the designer may change, with the resident words behind each (none for an emergency);
-//   반영된 결과  - the same event with the request in force, and what the residents made of it.
+//   반영된 결과  - the same event with the request in force, and what the residents made of it, beside what they
+//                 said before;
+//   마무리       - what was changed this visit, the closing words, and the start again.
+//
+// A scene is three columns: the village map (where it happens), the scene, and the AI's judgment panel (what the AI
+// knows and the rules it runs under). Every page that waits has a clock (week/auto.ts) shown in its corner, so the
+// wall goes on - and comes back to the start - when nobody is at the tablet.
 //
 // Every scene and evaluation was written and checked before the exhibition (server/app/simulation/week.py):
 // choosing a request opens what it already says, it starts nothing. The earlier three-day walk (a tree of
@@ -55,11 +67,31 @@ const Root = styled.div`
  *  which says the same in its own corner. */
 const Foot = styled.footer`
   flex: none;
-  display: flex;
-  justify-content: center;
-  padding: 0 16px 8px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: ${px(16)};
+  padding: 0 ${px(24)} ${px(8)};
   font-size: ${font.small};
   > span { opacity: 0.6; text-align: center; }
+  > :last-child { justify-self: end; }
+`;
+
+/** A telling: the map, the scene and the AI's panel side by side. */
+const Telling = styled.div`
+  flex: 1;
+  min-height: 0;
+  display: flex;
+`;
+
+/** The page's clock, at the right of the foot line: "N초 뒤 …". Said so a visitor knows the wall will go on
+ *  without them; in the foot it never lies over what the page says. */
+const Clock = styled.span`
+  font-size: ${px(16)};
+  font-weight: 700;
+  color: ${night.accent};
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 `;
 
 const Notices = styled.div`
@@ -95,13 +127,23 @@ export default function SimulationApp() {
   const scenes = scenesOf(event, w.step, w.requestId);
   const at = positionIn(scenes, w.lineIndex);
 
-  // The wall has no pointer, so a telling goes on by itself: a line for a few seconds, then the next. The
-  // tablet's presses move the same line, and they restart this clock.
+  // The wall has no pointer, so a telling goes on by itself: a line for a few seconds - or as long as its
+  // recording, when that is longer - then the next. The tablet's presses move the same line, and restart this clock.
+  const flat = scenes.flatMap((sc) => sc.lines);
+  const onLine = flat[Math.min(w.lineIndex, Math.max(flat.length - 1, 0))];
+  const lineFor = onLine ? lineMs(s.voices, onLine.speaker, onLine.text, LINE_MS) : LINE_MS;
   useEffect(() => {
     if (!w.pathStarted || !telling || at.done) return undefined;
-    const timer = window.setTimeout(() => w.setLine(w.lineIndex + 1), LINE_MS);
+    const timer = window.setTimeout(() => w.setLine(w.lineIndex + 1), lineFor);
     return () => window.clearTimeout(timer);
-  }, [w.pathStarted, telling, at.done, w.lineIndex, w.eventId, w.step]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [w.pathStarted, telling, at.done, w.lineIndex, w.eventId, w.step, lineFor]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Every page that waits counts down (week/auto.ts); a press on the tablet starts it over.
+  const auto = autoOf({
+    pathStarted: w.pathStarted, step: w.step, eventId: w.eventId, openActor: w.openActor, toldAll: telling && at.done,
+    noChoice: event?.noChoice ?? false, seen: w.seen.length, closingWords: w.closingWords, lastPress: w.lastPress,
+  });
+  const left = useCountdown(auto, runAuto);
 
   if (s.status === 'error') {
     return (
@@ -152,10 +194,15 @@ export default function SimulationApp() {
       {(paired || w.pathStarted || w.introStarted) && !w.pathStarted && !w.introStarted && <IdleScreen art={s.art} />}
       {!w.pathStarted && w.introStarted && <IntroScreen voices={s.voices} onFinish={w.enterWeek} />}
 
-      {showWeek && <WeekScreen week={week} art={s.art} now={null} seen={w.seen} />}
-      {w.pathStarted && telling && scene && (
-        <SceneView week={week} scene={scene} line={w.lineIndex - before} art={s.art}
-          seconds={(LINE_MS / 1000) * scene.lines.length} position={{ at: at.scene + 1, of: scenes.length }} voices={s.voices} />
+      {showWeek && <WeekScreen week={week} art={s.art} now={null} seen={w.seen} chosen={w.chosen} />}
+      {w.pathStarted && telling && scene && event && (
+        <Telling>
+          <VillageMap village={s.village} frames={scene.frames} people={week.people} art={s.art} />
+          <SceneView week={week} scene={scene} line={w.lineIndex - before} art={s.art}
+            seconds={(LINE_MS / 1000) * scene.lines.length} position={{ at: at.scene + 1, of: scenes.length }} voices={s.voices} />
+          <JudgmentPanel week={week} after={w.step === 'after'}
+            judgment={judgmentAt(event, w.step === 'after' ? request : null, scenes, at.scene, w.lineIndex - before)} />
+        </Telling>
       )}
       {w.pathStarted && event && w.step === 'evaluations' && (
         <EvaluationsScreen week={week} event={event} evaluations={evaluationsOf(event, w.step, w.requestId)}
@@ -163,14 +210,19 @@ export default function SimulationApp() {
           eyebrow={`${event.title} · 주민 평가`} title="서비스를 겪은 주민의 말"
           lead="이 일에 있었던 주민이 자기가 겪은 것을 어떻게 읽었는지, 그리고 어느 대사를 근거로 삼았는지 보입니다." />
       )}
-      {w.pathStarted && event && w.step === 'choose' && <ChooseScreen week={week} event={event} art={s.art} />}
+      {w.pathStarted && event && w.step === 'choose' && <ChooseScreen week={week} event={event} art={s.art} considering={w.considering} />}
       {w.pathStarted && event && w.step === 'result' && (
         <ResultScreen week={week} event={event} request={request} art={s.art} openActor={w.openActor} />
+      )}
+      {w.pathStarted && w.step === 'closing' && (
+        <ClosingScreen week={week} chosen={w.chosen} seen={w.seen} words={w.closingWords} art={s.art} voices={s.voices} />
       )}
 
       {w.pathStarted && (
         <Foot>
+          <i />
           <span>화면 속 사람과 대화는 전부 시뮬레이션입니다 · 이름은 가명, 모습은 지어낸 그림입니다</span>
+          {auto && left !== null && left > 0 ? <Clock aria-live="off">{left}초 뒤 {auto.say}</Clock> : <i />}
         </Foot>
       )}
     </Root>

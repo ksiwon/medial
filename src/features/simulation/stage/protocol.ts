@@ -7,7 +7,7 @@
 // about where the walk is. (The one-screen version of the exhibition lives on the
 // `single-screen` branch; this branch has the two screens only.)
 
-export type Phase = 'idle' | 'intro' | 'week' | 'before' | 'evaluations' | 'choose' | 'after' | 'result';
+export type Phase = 'idle' | 'intro' | 'week' | 'before' | 'evaluations' | 'choose' | 'after' | 'result' | 'closing';
 
 /** A press. `id` is only what the named press needs. */
 export type Command =
@@ -20,9 +20,12 @@ export type Command =
   | { name: 'openResident'; id: string }
   | { name: 'closeResident' }
   | { name: 'toChoose' }
+  | { name: 'consider'; id: string | null }
   | { name: 'choose'; id: string }
   | { name: 'toResult' }
   | { name: 'week' }
+  | { name: 'finish' }
+  | { name: 'closingWords' }
   | { name: 'home' };
 
 /** One day of the week, for the tablet's list: which events fall on it. */
@@ -69,11 +72,17 @@ export interface StageState {
   /** Choose: the requests (none for an emergency). After: the one that was chosen. */
   requests: RequestBrief[];
   chosen: string | null;
+  /** Choose: the request a finger rests on, not yet confirmed. */
+  considering: string | null;
+  /** The clock the wall's page is on (week/auto.ts), so the tablet can say it too; a new key is a new count. */
+  auto: { key: string; seconds: number; say: string } | null;
+  /** Closing: the closing words are up (rather than the list of what was changed). */
+  closingWords: boolean;
 }
 
 export const IDLE_STATE: StageState = {
   phase: 'idle', week: [], seen: 0, total: 0, event: null, scene: null, line: 0, lines: 0, toldAll: false,
-  residents: [], openActor: null, requests: [], chosen: null,
+  residents: [], openActor: null, requests: [], chosen: null, considering: null, auto: null, closingWords: false,
 };
 
 export const STAGE_API = '/api/sim/stage';

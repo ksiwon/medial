@@ -88,22 +88,26 @@ const Person = styled.div<{ $soft: boolean }>`
   > img, > svg { width: 100%; height: 100%; object-fit: contain; }
 `;
 
+/** Where the frame is. Dark and solid enough to read on the brightest backdrop (a sunny field), which the
+ *  see-through 0.62 did not. */
 const Label = styled.div`
-  ${pill('sm')}
+  ${pill('md')}
   position: absolute;
   left: ${px(16)};
   top: ${px(16)};
   z-index: 4;
   font-weight: 800;
   color: #fff;
-  background: rgba(21, 21, 15, 0.62);
-  > i { font-style: normal; font-weight: 700; opacity: 0.72; margin-left: ${px(8)}; }
+  background: rgba(21, 21, 15, 0.84);
+  box-shadow: 0 ${px(4)} ${px(12)} ${shadeA(0.3)};
+  > i { font-style: normal; font-weight: 700; opacity: 0.72; margin-left: ${px(4)}; }
 `;
 
 const Tag = styled.span`
   ${pill('xs')}
   position: absolute;
-  bottom: ${px(44)};
+  /* Above the time bar (bottom 16 + its height), not on it. */
+  bottom: ${px(72)};
   transform: translateX(-50%);
   font-weight: 800;
   color: ${night.deep};
@@ -111,11 +115,11 @@ const Tag = styled.span`
 `;
 
 /** A frame's bubbles, one column so they never overlap. */
-const Column = styled.div<{ $at: 'top' | 'bottom' }>`
+const Column = styled.div`
   position: absolute;
   left: ${px(16)};
   right: ${px(16)};
-  ${(p) => (p.$at === 'top' ? css`top: ${px(72)};` : css`bottom: ${px(96)};`)}
+  top: ${px(72)};
   display: flex;
   flex-direction: column;
   gap: ${px(8)};
@@ -123,11 +127,14 @@ const Column = styled.div<{ $at: 'top' | 'bottom' }>`
   z-index: 3;
 `;
 
-const Bubble = styled.div<{ $ai: boolean; $old: boolean; $side: 'l' | 'r' }>`
+/** A line, over the one who says it: the bubble leans to the speaker's side of the frame and its tail points down
+ *  at them (the AI's, which has no one to point at, at its device's side). The line before stays above it, solid
+ *  enough to read on a bright backdrop - it used to fade to 0.55 and vanish into the sky. */
+const Bubble = styled.div<{ $ai: boolean; $old: boolean; $side: 'l' | 'r'; $align: 'flex-start' | 'center' | 'flex-end' }>`
   position: relative;
   max-width: min(78%, ${px(560)});
-  align-self: ${(p) => (p.$side === 'l' ? 'flex-start' : 'flex-end')};
-  background: ${(p) => (p.$ai ? '#fff6f2' : '#ffffff')};
+  align-self: ${(p) => p.$align};
+  background: ${(p) => (p.$old ? '#e9e5dd' : p.$ai ? '#fff6f2' : '#ffffff')};
   border: ${(p) => (p.$ai ? `2px solid ${night.accent}` : 'none')};
   color: ${night.deep};
   border-radius: ${radius.panel};
@@ -139,12 +146,23 @@ const Bubble = styled.div<{ $ai: boolean; $old: boolean; $side: 'l' | 'r' }>`
   font-weight: 600;
   word-break: keep-all;
   box-shadow: 0 8px 24px ${shadeA(0.28)};
-  opacity: ${(p) => (p.$old ? 0.55 : 1)};
-  filter: ${(p) => (p.$old ? 'brightness(0.7)' : 'none')};
-  transform: ${(p) => (p.$old ? 'translateY(-4px) scale(0.96)' : 'none')};
+  opacity: ${(p) => (p.$old ? 0.86 : 1)};
+  transform: ${(p) => (p.$old ? 'scale(0.94)' : 'none')};
+  transform-origin: ${(p) => (p.$side === 'l' ? 'left bottom' : 'right bottom')};
+  ${(p) => p.$old && css`font-size: ${px(20)}; box-shadow: none;`}
   transition: opacity 0.35s ease, transform 0.35s ease;
   animation: ${pop} 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2);
   > b { display: block; font-size: ${px(12)}; font-weight: 800; color: ${(p) => (p.$ai ? night.accent : '#6b675f')}; margin-bottom: ${px(2)}; }
+  &::after {
+    content: '';
+    display: ${(p) => (p.$old ? 'none' : 'block')};
+    position: absolute;
+    bottom: ${px(-8)};
+    ${(p) => (p.$side === 'l' ? css`left: ${px(24)};` : css`right: ${px(24)};`)}
+    border: ${px(8)} solid transparent;
+    border-bottom: 0;
+    border-top-color: ${(p) => (p.$ai ? night.accent : '#ffffff')};
+  }
 `;
 
 const Bar = styled.div`
@@ -229,14 +247,18 @@ export default function SceneView({ week, scene, line, art, seconds, position, v
                 {ids.map((id, i) => <Tag key={id} style={{ left: `${at[i]}%` }}>{nameOf(week, id)}</Tag>)}
               </Cam>
               {frame.label && <Label>{frame.label}{frame.device && <i>· {frame.device}</i>}</Label>}
-              <Column $at={fi % 2 === 0 ? 'top' : 'bottom'}>
-                {here.map((b) => (
-                  <Bubble key={`${b.line.n}`} $ai={b.line.speaker === 'AI'} $old={b.old}
-                    $side={b.line.speaker === 'AI' ? 'r' : 'l'}>
+              <Column>
+                {here.map((b) => {
+                  const x = b.line.speaker === 'AI' ? 100 : (at[ids.indexOf(b.line.speaker)] ?? 50);
+                  const side = x <= 55 ? 'l' : 'r';
+                  return (
+                  <Bubble key={`${b.line.n}`} $ai={b.line.speaker === 'AI'} $old={b.old} $side={side}
+                    $align={x < 34 ? 'flex-start' : x > 66 ? 'flex-end' : side === 'l' ? 'center' : 'center'}>
                     <b>{b.line.speaker === 'AI' ? (frame.device ? `AI · ${frame.device}` : 'AI') : nameOf(week, b.line.speaker)}</b>
                     {b.line.text}
                   </Bubble>
-                ))}
+                  );
+                })}
               </Column>
             </FrameBox>
           );

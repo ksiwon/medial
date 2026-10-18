@@ -52,36 +52,38 @@ async function main() {
   for (let i = 0; i < 3; i += 1) { await tap(pad, '다음 줄'); await settle(500); }
   await shot(wall, '05-wall-scene-2');
   for (let i = 0; i < 12 && !(await pad.getByRole('button', { name: /주민 평가 보기/ }).isVisible().catch(() => false)); i += 1) {
-    await pad.getByRole('button', { name: /다음 장면으로/ }).tap({ timeout: 3000 }).catch(() => {});
+    await pad.getByRole('button', { name: /장면 넘기기/ }).tap({ timeout: 3000 }).catch(() => {});
     await settle(500);
   }
   await shot(wall, '06-wall-scene-end');
   await tap(pad, /주민 평가 보기/); await settle(1500);
   await shot(wall, '07-wall-evaluations'); await shot(pad, '07-pad-evaluations');
 
-  const emergency = await pad.getByRole('button', { name: /마치기/ }).isVisible().catch(() => false);
-  if (emergency) { await tap(pad, /마치기/); await settle(1200); await shot(wall, '08-wall-result'); }
+  const emergency = await pad.getByRole('button', { name: /다 읽었어요/ }).isVisible().catch(() => false);
+  if (emergency) { await tap(pad, /다 읽었어요/); await settle(1200); await shot(wall, '08-wall-result'); }
   else {
     await tap(pad, /무엇을 고칠지 고르기/); await settle(1500);
     await shot(wall, '08-wall-choose'); await shot(pad, '08-pad-choose');
-    const options = await pad.locator('button').all();
-    let picked = false;
-    for (const o of options) {
-      const text = await o.innerText().catch(() => '');
-      if (/^\s*\d\n/.test(text)) { await o.tap(); picked = true; break; }
-    }
-    if (!picked) await pad.locator('button').filter({ hasText: /바라는 것/ }).first().tap();
+    // A touch picks (lit on the wall); the confirm chooses.
+    await pad.locator('button').filter({ hasText: /바라는 것/ }).first().tap();
+    await settle(1200);
+    await shot(wall, '08b-wall-considering'); await shot(pad, '08b-pad-considering');
+    await tap(pad, /요청으로 다시 보기/);
     await settle(2500);
     await shot(wall, '09-wall-after-scene'); await shot(pad, '09-pad-after-scene');
     for (let i = 0; i < 12 && !(await pad.getByRole('button', { name: /반영된 평가 보기/ }).isVisible().catch(() => false)); i += 1) {
-      await pad.getByRole('button', { name: /다음 장면으로/ }).tap({ timeout: 3000 }).catch(() => {});
+      await pad.getByRole('button', { name: /장면 넘기기/ }).tap({ timeout: 3000 }).catch(() => {});
       await settle(500);
     }
     await tap(pad, /반영된 평가 보기/); await settle(1500);
     await shot(wall, '10-wall-result'); await shot(pad, '10-pad-result');
   }
   await tap(pad, /이번 주로/); await settle(1200);
-  await shot(wall, '11-wall-week-again');
+  await shot(wall, '11-wall-week-again'); await shot(pad, '11-pad-week-again');
+  await tap(pad, /마치기/); await settle(2500);
+  await shot(wall, '12-wall-closing'); await shot(pad, '12-pad-closing');
+  await tap(pad, /마무리 말 듣기/); await settle(20000);
+  await shot(wall, '13-wall-closing-words');
   console.log(problems.length ? 'PROBLEMS:\n' + problems.join('\n') : 'no console errors');
   await browser.close();
 }

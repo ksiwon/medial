@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createBus, postTo, type PressResult } from './bus';
 import { Button, Notice, Screen, TopBar } from './pad/kit';
-import { Choose, Evaluations, Join, Result, Scan, Telling, Waiting, Watching, Week, type Press } from './pad/screens';
+import { AutoNote, Choose, Closing, Evaluations, Join, Result, Scan, Telling, Waiting, Watching, Week, type Press } from './pad/screens';
 import {
   IDLE_STATE, STAGE_API, forgetPadToken, hasJoined, padToken, rememberJoined, type Command, type Link, type Phase, type StageState,
 } from './protocol';
@@ -24,6 +24,7 @@ const HEADLINE: Record<Phase, (s: StageState) => string> = {
   choose: () => '무엇을 고칠 것인가',
   after: (s) => (s.toldAll ? '이야기가 끝났어요' : '고른 요청대로 다시 보는 중'),
   result: (s) => (s.event?.noChoice ? '응급 · 일어난 일을 읽는 중' : '반영된 결과'),
+  closing: (s) => (s.closingWords ? '마무리' : '이번에 고친 것'),
 };
 
 export default function PadApp() {
@@ -100,6 +101,7 @@ export default function PadApp() {
       {notice === 'no-wall' && <Notice>큰 화면이 그것을 받지 못했습니다. 잠시 뒤 다시 눌러 주세요.</Notice>}
       {notice === 'failed' && <Notice>방금 누른 것이 전달되지 않았습니다. 다시 눌러 주세요.</Notice>}
       <PadStage s={state} press={press} />
+      {state.auto && <AutoNote auto={state.auto} />}
     </Screen>
   );
 }
@@ -114,5 +116,6 @@ function PadStage({ s, press }: { s: StageState; press: Press }) {
     case 'choose': return <Choose s={s} press={press} />;
     case 'after': return <Telling s={s} press={press} after />;
     case 'result': return <Result s={s} press={press} />;
+    case 'closing': return <Closing s={s} press={press} />;
   }
 }

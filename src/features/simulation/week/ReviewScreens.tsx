@@ -287,7 +287,11 @@ export function RequestCard({ week, request, index, art, chosen }: {
   );
 }
 
-export function ChooseScreen({ week, event, art }: { week: Week; event: WeekEvent; art: ReadonlySet<string> }) {
+export function ChooseScreen({ week, event, art, considering }: {
+  week: Week; event: WeekEvent; art: ReadonlySet<string>;
+  /** The card a finger rests on at the tablet, before it is confirmed. */
+  considering: string | null;
+}) {
   return (
     <Page aria-label="무엇을 고칠 것인가">
       <Head>
@@ -299,7 +303,7 @@ export function ChooseScreen({ week, event, art }: { week: Week; event: WeekEven
         </p>
       </Head>
       <Cards $n={event.requests.length}>
-        {event.requests.map((r, i) => <RequestCard key={r.id} week={week} request={r} index={i} art={art} />)}
+        {event.requests.map((r, i) => <RequestCard key={r.id} week={week} request={r} index={i} art={art} chosen={r.id === considering} />)}
       </Cards>
       <Foot>합성 평가입니다. 실제 주민의 만족도나 동의가 아니며, 나중에 실제 주민이 확인·반박할 대상입니다.</Foot>
     </Page>
@@ -317,20 +321,163 @@ export function ResultScreen({ week, event, request, art, openActor }: {
         title="주민들이 겪은 일" lead="사람의 안전이 걸린 순간은 고르는 것이 아니라 일어난 일을 읽습니다. 규칙을 바꾸는 선택지는 두지 않았습니다." />
     );
   }
+  const index = event.requests.findIndex((r) => r.id === request.id);
   return (
     <Page aria-label="반영된 결과">
       <Head>
         <small>{event.title} · 고른 요청이 반영된 모습</small>
         <h1>이 결정이 이렇게 반영되었습니다</h1>
-        <p>고른 요청대로 같은 일이 다시 펼쳐졌습니다. 그 장면에 있던 주민이 자기 말로 어땠는지 말합니다.</p>
+        <p>같은 일이 고른 요청대로 다시 펼쳐졌습니다. 같은 주민이 수정 전과 반영 후에 각각 자기 말로 어땠는지 나란히 봅니다.</p>
       </Head>
-      <Cards $n={1 + request.after.evaluations.length}>
-        <RequestCard week={week} request={request} index={event.requests.findIndex((r) => r.id === request.id)} art={art} chosen />
-        {request.after.evaluations.map((e) => (
-          <EvaluationCard key={e.actor} week={week} evaluation={e} scenes={[request.after.scene]} art={art} open={openActor === e.actor} />
-        ))}
-      </Cards>
-      <Foot>합성 평가입니다. 실제 주민의 만족도나 동의가 아니며, 나중에 실제 주민이 확인·반박할 대상입니다.</Foot>
+      <Decision>
+        <Chip $tone="accent">{index + 1}</Chip>
+        <div>
+          <strong>{request.label}</strong>
+          <ul>
+            {request.rules.map((r) => (
+              <li key={r.type}><b>{r.label}</b><s>{r.beforeSentence}</s><i aria-hidden>→</i><span>{r.afterSentence}</span></li>
+            ))}
+          </ul>
+        </div>
+        <Trade2>
+          <div><small>바라는 것</small><p>{request.expect}</p></div>
+          <div className="cost"><small>따를 부담</small><p>{request.cost}</p></div>
+        </Trade2>
+      </Decision>
+      <Pairs $n={request.after.evaluations.length}>
+        {request.after.evaluations.map((after) => {
+          const before = event.before.evaluations.find((e) => e.actor === after.actor) ?? null;
+          return (
+            <Pair key={after.actor} $lit={openActor === after.actor}>
+              <Who>
+                <Portrait actorId={after.actor} art={art} size={72} />
+                <div>
+                  <strong>{nameOf(week, after.actor)}</strong>
+                  <Chip>시뮬레이션 주민의 평가</Chip>
+                </div>
+              </Who>
+              <Side>
+                <small>수정 전</small>
+                {before ? <Said evaluation={before} week={week} scenes={event.before.scenes} />
+                  : <p className="none">수정 전 장면에는 이 주민이 없었습니다.</p>}
+              </Side>
+              <Arrow aria-hidden>→</Arrow>
+              <Side $after>
+                <small>반영 후</small>
+                <Said evaluation={after} week={week} scenes={[request.after.scene]} />
+              </Side>
+            </Pair>
+          );
+        })}
+      </Pairs>
+      <Foot>
+        합성 평가입니다. 실제 주민의 만족도나 동의가 아니며, 나중에 실제 주민이 확인·반박할 대상입니다. 반영된 장면에 다시 나온 주민만 견줍니다.
+      </Foot>
     </Page>
+  );
+}
+
+// ---- before and after, side by side ----------------------------------------------
+
+/** The chosen request, as one band: what it asked, the rules it changed (before → after), and what it costs. */
+const Decision = styled.section`
+  display: grid;
+  grid-template-columns: auto minmax(0, 1.6fr) minmax(0, 1fr);
+  align-items: start;
+  gap: ${space.lg};
+  padding: ${space.lg} ${space.xl};
+  border-radius: ${radius.card};
+  background: ${night.panel};
+  border: 1px solid ${night.accent};
+  > div > strong { display: block; font-size: ${px(24)}; font-weight: 800; letter-spacing: -0.03em; line-height: 1.3; word-break: keep-all; }
+  > div > ul { margin: ${space.sm} 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: ${space.xs}; }
+  > div > ul > li { display: flex; flex-wrap: wrap; align-items: baseline; gap: ${space.sm}; font-size: ${px(16)}; line-height: 1.5; word-break: keep-all; }
+  > div > ul > li > b { font-weight: 800; color: ${night.mute}; }
+  > div > ul > li > s { color: ${night.faint}; text-decoration-color: ${inkA(0.35)}; }
+  > div > ul > li > i { font-style: normal; font-weight: 800; color: ${night.accent}; }
+  > div > ul > li > span { font-weight: 700; }
+`;
+
+const Trade2 = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: ${space.sm};
+  > div { display: flex; flex-direction: column; gap: ${space.xs}; padding: ${space.md}; border-radius: ${radius.card}; background: ${inkA(0.05)}; }
+  > div > small { ${pill('xs')} align-self: flex-start; font-weight: 800; color: ${night.mute}; background: ${inkA(0.1)}; }
+  > div > p { margin: 0; font-size: ${px(16)}; line-height: 1.45; font-weight: 700; word-break: keep-all; }
+  > div.cost > small { color: ${night.deep}; background: #e8c46a; }
+`;
+
+const Pairs = styled.div<{ $n: number }>`
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: repeat(${(p) => Math.max(p.$n, 1)}, minmax(0, 1fr));
+  gap: ${space.lg};
+`;
+
+const Pair = styled.article<{ $lit: boolean }>`
+  display: grid;
+  grid-template-columns: ${px(200)} minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: stretch;
+  gap: ${space.lg};
+  min-height: 0;
+  padding: ${space.lg} ${space.xl};
+  border-radius: ${radius.card};
+  background: ${night.panel};
+  border: 1px solid ${(p) => (p.$lit ? night.accent : night.line)};
+  > header { flex-direction: column; align-items: flex-start; align-self: start; }
+`;
+
+const Side = styled.div<{ $after?: boolean }>`
+  display: flex;
+  flex-direction: column;
+  gap: ${space.sm};
+  min-height: 0;
+  overflow: hidden;
+  padding: ${space.md} ${space.lg};
+  border-radius: ${radius.card};
+  background: ${(p) => (p.$after ? night.accentSoft : inkA(0.04))};
+  > small { ${pill('xs')} align-self: flex-start; font-weight: 800; letter-spacing: 0.06em;
+    color: ${(p) => (p.$after ? '#fff' : night.mute)}; background: ${(p) => (p.$after ? night.accent : inkA(0.1))}; }
+  > p.none { margin: 0; font-size: ${px(20)}; color: ${night.faint}; }
+`;
+
+const Arrow = styled.div`
+  align-self: center;
+  font-size: ${px(32)};
+  font-weight: 800;
+  color: ${night.accent};
+`;
+
+const SaidText = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${space.sm};
+  > p { margin: 0; font-size: ${px(20)}; line-height: 1.55; word-break: keep-all; }
+  > ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: ${space.xs}; }
+  > ul > li { display: grid; grid-template-columns: ${px(20)} minmax(0, 1fr); gap: ${space.sm}; font-size: ${px(20)}; line-height: 1.45; font-weight: 600; word-break: keep-all; }
+  > ul > li > b { text-align: center; font-weight: 800; }
+  > ul > li > span > small { display: block; font-size: ${px(16)}; font-weight: 500; color: ${night.mute}; }
+`;
+
+/** One resident's reading, compact: their paragraph, then each claim with its kind and the first line it rests on. */
+function Said({ evaluation, week, scenes }: { evaluation: Evaluation; week: Week; scenes: WeekScene[] }) {
+  return (
+    <SaidText>
+      <p>{evaluation.paragraph}</p>
+      <ul>
+        {evaluation.claims.map((c, i) => {
+          const tone = claimTone[c.kind];
+          const heard = c.citedLines.map((n) => lineOf(scenes, n)).find((l) => l);
+          return (
+            <li key={i}>
+              <b style={{ color: tone.color }} aria-label={tone.label}>{tone.mark}</b>
+              <span>{c.text}{heard && <small>{heard.speaker === 'AI' ? 'AI' : nameOf(week, heard.speaker)} · {heard.text}</small>}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </SaidText>
   );
 }
