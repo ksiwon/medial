@@ -114,12 +114,14 @@ const Tag = styled.span`
   background: rgba(255, 255, 255, 0.9);
 `;
 
-/** A frame's bubbles, one column so they never overlap. */
-const Column = styled.div`
+/** A frame's bubbles, one column so they never overlap. A person's are at the top, over their own side; the AI's -
+ *  it has no body - at the foot, above the time bar, where they cover floor rather than a face (2026-10-18: centred at
+ *  the top they lay over the head of whoever stood in the middle). */
+const Column = styled.div<{ $at: 'top' | 'foot' }>`
   position: absolute;
   left: ${px(16)};
   right: ${px(16)};
-  top: ${px(72)};
+  ${(p) => (p.$at === 'top' ? css`top: ${px(72)};` : css`bottom: ${px(112)};`)}
   display: flex;
   flex-direction: column;
   gap: ${px(8)};
@@ -130,7 +132,7 @@ const Column = styled.div`
 /** A line, over the one who says it: the bubble leans to the speaker's side of the frame and its tail points down
  *  at them (the AI's, which has no one to point at, at its device's side). The line before stays above it, solid
  *  enough to read on a bright backdrop - it used to fade to 0.55 and vanish into the sky. */
-const Bubble = styled.div<{ $ai: boolean; $old: boolean; $side: 'l' | 'r'; $align: 'flex-start' | 'center' | 'flex-end' }>`
+const Bubble = styled.div<{ $ai: boolean; $old: boolean; $side: 'l' | 'r'; $tail: boolean; $align: 'flex-start' | 'center' | 'flex-end' }>`
   position: relative;
   max-width: min(78%, ${px(560)});
   align-self: ${(p) => p.$align};
@@ -155,7 +157,7 @@ const Bubble = styled.div<{ $ai: boolean; $old: boolean; $side: 'l' | 'r'; $alig
   > b { display: block; font-size: ${px(12)}; font-weight: 800; color: ${(p) => (p.$ai ? night.accent : '#6b675f')}; margin-bottom: ${px(2)}; }
   &::after {
     content: '';
-    display: ${(p) => (p.$old ? 'none' : 'block')};
+    display: ${(p) => (p.$old || !p.$tail ? 'none' : 'block')};
     position: absolute;
     bottom: ${px(-8)};
     ${(p) => (p.$side === 'l' ? css`left: ${px(24)};` : css`right: ${px(24)};`)}
@@ -247,19 +249,22 @@ export default function SceneView({ week, scene, line, art, seconds, position, v
                 {ids.map((id, i) => <Tag key={id} style={{ left: `${at[i]}%` }}>{nameOf(week, id)}</Tag>)}
               </Cam>
               {frame.label && <Label>{frame.label}{frame.device && <i>· {frame.device}</i>}</Label>}
-              <Column>
-                {here.map((b) => {
-                  const x = b.line.speaker === 'AI' ? 100 : (at[ids.indexOf(b.line.speaker)] ?? 50);
-                  const side = x <= 55 ? 'l' : 'r';
-                  return (
-                  <Bubble key={`${b.line.n}`} $ai={b.line.speaker === 'AI'} $old={b.old} $side={side}
-                    $align={x < 34 ? 'flex-start' : x > 66 ? 'flex-end' : side === 'l' ? 'center' : 'center'}>
-                    <b>{b.line.speaker === 'AI' ? (frame.device ? `AI · ${frame.device}` : 'AI') : nameOf(week, b.line.speaker)}</b>
-                    {b.line.text}
-                  </Bubble>
-                  );
-                })}
-              </Column>
+              {(['top', 'foot'] as const).map((spot) => (
+                <Column key={spot} $at={spot}>
+                  {here.filter((b) => (b.line.speaker === 'AI') === (spot === 'foot')).map((b) => {
+                    const ai = b.line.speaker === 'AI';
+                    const x = ai ? 50 : (at[ids.indexOf(b.line.speaker)] ?? 50);
+                    const side = x <= 55 ? 'l' : 'r';
+                    return (
+                      <Bubble key={`${b.line.n}`} $ai={ai} $old={b.old} $side={side} $tail={!ai}
+                        $align={ai ? 'center' : x < 34 ? 'flex-start' : x > 66 ? 'flex-end' : 'center'}>
+                        <b>{ai ? (frame.device ? `AI · ${frame.device}` : 'AI') : nameOf(week, b.line.speaker)}</b>
+                        {b.line.text}
+                      </Bubble>
+                    );
+                  })}
+                </Column>
+              ))}
             </FrameBox>
           );
         })}

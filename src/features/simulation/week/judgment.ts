@@ -5,7 +5,8 @@ import type { Pose, WeekEvent, WeekRequest, WeekScene } from './types';
 //   지금 아는 것            the lines the AI was in - what it said and what it heard, up to the line on screen
 //   걸린 규칙               the rules the event ran under; after a request, the ones it changed, before and after
 //   연락한 사람             who it spoke to in this event, how, and whether they have answered yet
-//   그래서 이렇게 말한다     the last thing it said
+//
+// (What it says is the scene's bubble; a fourth step that repeated it was dropped on 2026-10-18.)
 //
 // Only what the AI holds: a scene it is not in (cast without 'AI') adds nothing, and the panel says it cannot see
 // that scene. Its context is this event's alone (AGENTS.md): it starts empty with the event, and an `after`
@@ -31,7 +32,6 @@ export interface Judgment {
   knows: Known[];
   rules: PanelRule[];
   contacts: Contact[];
-  said: string | null;
   /** An emergency runs no chosen rule: the panel says so instead of listing none. */
   emergency: boolean;
 }
@@ -61,7 +61,6 @@ function wayOf(scene: WeekScene, actor: string): ContactWay {
 export function judgmentAt(event: WeekEvent, request: WeekRequest | null, scenes: WeekScene[], sceneIndex: number, line: number | null): Judgment {
   const knows: Known[] = [];
   const contacts = new Map<string, Contact>();
-  let said: string | null = null;
   scenes.slice(0, sceneIndex + 1).forEach((scene, i) => {
     if (!scene.cast.includes('AI')) return;
     const upTo = i < sceneIndex ? scene.lines.length : line === null ? 0 : line + 1;
@@ -69,8 +68,7 @@ export function judgmentAt(event: WeekEvent, request: WeekRequest | null, scenes
       if (actor !== 'AI' && !contacts.has(actor)) contacts.set(actor, { actor, way: wayOf(scene, actor), answered: false });
     }
     for (const l of scene.lines.slice(0, upTo)) {
-      if (l.speaker === 'AI') said = l.text;
-      else { const c = contacts.get(l.speaker); if (c) c.answered = true; }
+      if (l.speaker !== 'AI') { const c = contacts.get(l.speaker); if (c) c.answered = true; }
       knows.push({ speaker: l.speaker, text: l.text, heard: l.speaker !== 'AI' });
     }
   });
@@ -79,7 +77,6 @@ export function judgmentAt(event: WeekEvent, request: WeekRequest | null, scenes
     knows,
     rules: rulesIn(event, request),
     contacts: [...contacts.values()],
-    said,
     emergency: event.noChoice,
   };
 }

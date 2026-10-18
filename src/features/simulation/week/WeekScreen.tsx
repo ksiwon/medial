@@ -18,9 +18,9 @@ import type { Claim, Evaluation, Week, WeekEvent } from './types';
 // The wall is read-only: the tablet picks an event and the wall lights it.
 
 /** The hours the axis runs: the village's day starts early; the latest event is after 20:00. */
-export const AXIS = { from: 6, to: 24, minHours: 6.2, gapHours: 0.5 };
+export const AXIS = { from: 7, to: 23, minHours: 6.2, gapHours: 0.5 };
 /** The hour lines drawn on the axis. */
-const HOURS = [6, 9, 12, 15, 18, 21];
+const HOURS = [7, 10, 13, 16, 19, 22];
 
 const Page = styled.div`
   flex: 1;
@@ -136,8 +136,8 @@ const Voice = styled.li`
   display: grid;
   grid-template-columns: ${px(20)} minmax(0, 1fr);
   column-gap: ${space.xs};
-  font-size: ${px(12)};
-  line-height: 1.45;
+  font-size: ${px(16)};
+  line-height: 1.4;
   > b { font-weight: 800; text-align: center; }
   > span { font-weight: 600; color: ${inkA(0.92)}; word-break: keep-all; }
 `;

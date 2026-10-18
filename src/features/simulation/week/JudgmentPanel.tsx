@@ -5,8 +5,9 @@ import type { ContactWay, Judgment } from './judgment';
 import { nameOf } from './selectors';
 import type { Week } from './types';
 
-// The AI has no body on screen. This panel is where it is: what it knows, the rules it runs under, who it spoke to,
-// and what it said - beside the scene, for the whole telling (week/judgment.ts says where each comes from). When the
+// The AI has no body on screen. This panel is where it is: what it knows, the rules it runs under, and who it spoke
+// to - beside the scene (what it says is the bubble; the panel used to repeat it word for word and was dropped
+// 2026-10-18, so the rules - after a request, the changed one - are the panel's largest words), for the whole telling (week/judgment.ts says where each comes from). When the
 // scene happens where the AI is not, the panel dims and says it cannot see it: the world and what the AI observed
 // are never one thing.
 
@@ -102,7 +103,7 @@ const RuleRow = styled.div<{ $changed: boolean }>`
   > b { font-weight: 800; display: flex; align-items: center; gap: ${space.sm}; flex-wrap: wrap; }
   > b > em { ${pill('xs')} font-style: normal; font-weight: 800; color: #fff; background: ${night.accent}; }
   > s { color: ${night.faint}; text-decoration-color: ${inkA(0.35)}; }
-  > span { ${(p) => p.$changed && css`padding: ${space.xs} ${space.sm}; border-radius: ${radius.control}; background: ${night.accentSoft}; box-shadow: inset ${px(4)} 0 0 ${night.accent}; font-weight: 700;`} }
+  > span { ${(p) => p.$changed && css`font-size: ${px(20)}; line-height: 1.4; padding: ${space.xs} ${space.sm}; border-radius: ${radius.control}; background: ${night.accentSoft}; box-shadow: inset ${px(4)} 0 0 ${night.accent}; font-weight: 700;`} }
 `;
 
 const ContactRow = styled.div<{ $answered: boolean }>`
@@ -114,16 +115,6 @@ const ContactRow = styled.div<{ $answered: boolean }>`
   > span { color: ${night.mute}; }
   > em { ${pill('xs')} margin-left: auto; font-style: normal; font-weight: 800;
     color: ${(p) => (p.$answered ? '#fff' : night.deep)}; background: ${(p) => (p.$answered ? '#3d6ea8' : night.ink)}; }
-`;
-
-const Speech = styled.div`
-  padding: ${space.sm} ${space.md};
-  border-radius: ${radius.card};
-  background: ${night.accentSoft};
-  font-size: ${px(16)};
-  line-height: 1.5;
-  font-weight: 700;
-  word-break: keep-all;
 `;
 
 const Away = styled.div`
@@ -186,10 +177,6 @@ export default function JudgmentPanel({ week, judgment, after }: { week: Week; j
               <b>{who(c.actor)}</b><span>{WAY[c.way]}</span><em>{c.answered ? '답함' : '묻는 중'}</em>
             </ContactRow>
           )) : <None>아직 연락한 사람이 없습니다</None>}
-        </Step>
-        <Step $on={j.said !== null}>
-          <h4>그래서 이렇게 말한다</h4>
-          {j.said ? <Speech>{j.said}</Speech> : <None>—</None>}
         </Step>
       </Steps>
       {!j.present && (

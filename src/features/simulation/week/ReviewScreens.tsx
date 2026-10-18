@@ -40,9 +40,10 @@ const Cards = styled.div<{ $n: number }>`
   min-height: 0;
   display: grid;
   grid-template-columns: repeat(${(p) => Math.min(Math.max(p.$n, 1), 3)}, minmax(0, 1fr));
-  grid-auto-rows: minmax(0, 1fr);
+  /* As tall as what the cards say, never past the page: one or two residents no longer leave empty boxes. */
+  grid-auto-rows: fit-content(100%);
   gap: ${space.lg};
-  align-content: stretch;
+  align-content: start;
 `;
 
 const Card = styled.article<{ $lit?: boolean }>`
@@ -303,8 +304,7 @@ export function ChooseScreen({ week, event, art, considering }: {
           {' '}모든 요청에는 바라는 것과 함께 따를 부담이 있습니다.
         </p>
       </Head>
-      {/* One request is one card at its own height, not a column stretched over the page. */}
-      <Cards $n={event.requests.length} style={event.requests.length === 1 ? { gridAutoRows: 'auto', alignContent: 'start' } : undefined}>
+      <Cards $n={event.requests.length}>
         {event.requests.map((r, i) => <RequestCard key={r.id} week={week} request={r} index={i} art={art} chosen={r.id === considering} />)}
       </Cards>
       <Foot>합성 평가입니다. 실제 주민의 만족도나 동의가 아니며, 나중에 실제 주민이 확인·반박할 대상입니다.</Foot>
@@ -414,7 +414,8 @@ const Pairs = styled.div<{ $n: number }>`
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-rows: repeat(${(p) => Math.max(p.$n, 1)}, minmax(0, 1fr));
+  grid-template-rows: repeat(${(p) => Math.max(p.$n, 1)}, fit-content(${(p) => 100 / Math.max(p.$n, 1)}%));
+  align-content: start;
   gap: ${space.lg};
 `;
 

@@ -36,7 +36,6 @@ describe("the AI's judgment panel", () => {
     expect(before.contacts).toEqual([{ actor: 'P6', way: 'phone', answered: false }]);
     const after = judgmentAt(E1, null, scenes, 0, scenes[0].lines.length - 1);
     expect(after.contacts[0].answered).toBe(true);
-    expect(after.said).toBe([...scenes[0].lines].reverse().find((l) => l.speaker === 'AI')!.text);
   });
 
   it('runs the rules as they were, and after a request the changed ones first, with what they were', () => {
