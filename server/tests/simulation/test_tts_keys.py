@@ -65,7 +65,7 @@ def run_make(monkeypatch, tmp_path, items, holders, limit, quota_by_key, capsys)
     monkeypatch.setattr(t, "planned", lambda: iter(items))
     monkeypatch.setattr(t, "check_ready", lambda todo: [])
     monkeypatch.setattr(t, "speak", fake_speak)
-    monkeypatch.setattr(t, "trim", lambda path: None)
+    monkeypatch.setattr(t, "trim", lambda path, raw_path=None: None)
     monkeypatch.setattr(t, "check", lambda path, text: None)
     monkeypatch.setattr(t, "seconds", lambda path: 1.0)
     monkeypatch.setattr(t.time, "sleep", lambda s: None)
@@ -104,13 +104,14 @@ def test_a_spent_key_hands_over_only_to_a_key_of_the_same_project(monkeypatch, t
     assert len(calls) == 6
 
 
-def test_when_every_key_that_holds_the_voice_is_spent_the_run_stops_and_says_so(monkeypatch, tmp_path, capsys):
-    items = [item("s", i, "P1") for i in range(1, 5)] + [item("s", 5, "P10")]
+def test_a_speaker_whose_keys_are_all_spent_waits_while_the_other_speakers_go_on(monkeypatch, tmp_path, capsys):
+    items = [item("s", 1, "P1"), item("s", 2, "P1"), item("s", 3, "P1"), item("s", 4, "P10"), item("s", 5, "P10")]
     holders = {"P1": ["OLD"], "P10": ["NEW"]}
-    calls = run_make(monkeypatch, tmp_path, items, holders, limit=90, quota_by_key={"OLD": 2, "NEW": 99}, capsys=capsys)
+    calls = run_make(monkeypatch, tmp_path, items, holders, limit=90, quota_by_key={"OLD": 1, "NEW": 99}, capsys=capsys)
     out = capsys.readouterr().out
-    assert "NEW" not in calls[:3]      # P1's lines were never given to the key of the other project
-    assert "stopped" in out and "P1" in out
+    assert calls.count("NEW") == 2          # P10's lines were made although P1's key ran out first
+    assert "NEW" not in calls[:2]           # and P1's lines were never given to the other project's key
+    assert "left for the next run: P1" in out
 
 
 def wav_of(seconds: float) -> bytes:
@@ -138,7 +139,7 @@ def test_the_run_stops_before_it_would_pass_the_budget(monkeypatch, tmp_path, ca
     monkeypatch.setattr(t, "planned", lambda: iter(items))
     monkeypatch.setattr(t, "check_ready", lambda todo: [])
     monkeypatch.setattr(t, "speak", lambda *a, **k: wav_of(40.0))   # each call returns 40 s of audio: about 0.18 won
-    monkeypatch.setattr(t, "trim", lambda path: None)
+    monkeypatch.setattr(t, "trim", lambda path, raw_path=None: None)
     monkeypatch.setattr(t, "check", lambda path, text: None)
     monkeypatch.setattr(t, "seconds", lambda path: 1.0)
     monkeypatch.setattr(t.time, "sleep", lambda s: None)

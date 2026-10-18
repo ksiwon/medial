@@ -224,29 +224,48 @@ def speak(key: str, voice: str, text: str, style: str, model: str = MODEL) -> by
     raise RuntimeError("no audio in the reply")
 
 
-def trim(path: Path) -> None:
-    """Cut the silence and any stray noise before the voice starts and after it ends.
+#: How the model's clip is cut down to the line. The first cut (threshold 400, 40 ms before the voice, 120 ms after)
+#: ate the soft start and the fading end of a line, which the researcher heard as clipped at both ends (2026-10-18).
+TRIM_THRESHOLD = 150   # rms of a 10 ms step above which it counts as voice; the soft ㅎ ㅅ at a word's start sits near 150-300
+TRIM_LEAD_MS = 120     # kept before the first voiced step
+TRIM_TAIL_MS = 300     # kept after the last voiced step, with a fade out over the last 80 ms
+TRIM_FADE_IN_MS = 10
+TRIM_FADE_OUT_MS = 80
 
-    The model starts every clip with about 0.2 s of near-silence and a click, and may end with a
-    long tail; the screen wants the line to begin the moment it is played and to end when it is over.
-    A 40 ms lead and a 10 ms fade-in are left so the voice does not start with a hard edge.
+
+def trim(path: Path, raw_path: Path | None = None) -> None:
+    """Cut the silence and any stray noise before the voice starts and after it ends, from the *untouched* clip.
+
+    The model starts every clip with about 0.2 s of near-silence and a click, and may end with a long tail; the
+    screen wants the line to begin the moment it is played and to end when it is over. The clip the model returned
+    is kept whole in ``raw/`` (it was paid for), and ``path`` is cut from it, so how much is cut can be changed and
+    tried again without another call.
     """
     import audioop
 
-    with wave.open(str(path)) as w:
+    src = raw_path or path
+    with wave.open(str(src)) as w:
         params, raw = w.getparams(), w.readframes(w.getnframes())
     step = params.framerate // 100  # 10 ms
     size = step * 2
-    loud = [i for i in range(0, len(raw) - size, size) if audioop.rms(raw[i:i + size], 2) > 400]
+    loud = [i for i in range(0, len(raw) - size, size) if audioop.rms(raw[i:i + size], 2) > TRIM_THRESHOLD]
     if not loud:
         return
-    start = max(0, loud[0] - 4 * size)
-    end = min(len(raw), loud[-1] + size * 12)
+    start = max(0, loud[0] - (TRIM_LEAD_MS // 10) * size)
+    end = min(len(raw), loud[-1] + size * (1 + TRIM_TAIL_MS // 10))
     body = bytearray(raw[start:end])
-    fade = min(len(body) // 2, step * 2)  # 10 ms of samples * 2 bytes
-    for k in range(0, fade, 2):
-        v = int.from_bytes(body[k:k + 2], "little", signed=True)
-        body[k:k + 2] = int(v * (k / fade)).to_bytes(2, "little", signed=True)
+
+    def ramp(first: int, last: int, rising: bool) -> None:
+        count = max(1, (last - first) // 2)
+        for n, k in enumerate(range(first, last, 2)):
+            gain = n / count if rising else 1 - n / count
+            v = int.from_bytes(body[k:k + 2], "little", signed=True)
+            body[k:k + 2] = int(v * gain).to_bytes(2, "little", signed=True)
+
+    fade_in = min(len(body) // 2, step * (TRIM_FADE_IN_MS // 10) * 2)
+    fade_out = min(len(body) // 2, step * (TRIM_FADE_OUT_MS // 10) * 2)
+    ramp(0, fade_in, True)
+    ramp(len(body) - fade_out, len(body), False)
     with wave.open(str(path), "wb") as w:
         w.setparams(params)
         w.writeframes(bytes(body))
@@ -340,6 +359,7 @@ def main():
         raise SystemExit("만들 수 없다:\n- " + "\n- ".join(problems))
     AUDIO = AUDIO_ROOT / args.model
     AUDIO.mkdir(parents=True, exist_ok=True)
+    raw_dir = AUDIO / "raw"
     index = AUDIO / "scenes.json"
     known = {row["file"]: row for rows in (json.load(open(index, encoding="utf-8")) if index.exists() else {}).values() for row in rows}
     from tts_voices import keys as key_pool, usable
@@ -349,6 +369,7 @@ def main():
     spent = {name: 0 for name in pool}      # calls made with each key this run (the quota is per project)
     full: set[str] = set()                  # keys that answered 429 and are left alone for the rest of the run
     made, failures, rejected, kept = 0, 0, [], {}
+    waiting: dict[str, list[str]] = {}      # speaker -> lines left for a later run because every key holding the voice is spent
     spent_won = 0.0                         # what this run has been billed, from the audio the calls returned
     for it in todo:
         path = AUDIO / it["file"]
@@ -379,6 +400,8 @@ def main():
                             audio = speak(pool[key_name], it["voice"], it["spoken"], it["style"], args.model)
                             spent_won += cost_won(wav_seconds(audio) or len(it["spoken"].replace(" ", "")) * SECONDS_PER_CHARACTER,
                                                   len(it["spoken"]) + len(it["style"]))
+                            raw_dir.mkdir(parents=True, exist_ok=True)
+                            (raw_dir / it["file"]).write_bytes(audio)   # the paid-for clip, whole: trim cuts a copy
                             path.write_bytes(audio)
                             break
                         except urllib.error.HTTPError as e:
@@ -391,7 +414,7 @@ def main():
                                 raise
                             print("retry %s: %s" % (it["file"], type(e).__name__))
                             time.sleep(3)
-                    trim(path)
+                    trim(path, raw_dir / it["file"])
                     break
                 except urllib.error.HTTPError as e:
                     print("HTTP", e.code, key_name, e.read()[:200].decode("utf-8", "ignore"))
@@ -414,9 +437,13 @@ def main():
                     break
                 if broken and failures < 5:
                     continue  # this line failed even after the retries: leave it for the next run, go on to the next
-                print("stopped: no key with quota left holds %s's voice (%s); run again later or add that project's key"
-                      % (it["speaker"], ", ".join("%s %d/%d" % (k, spent[k], args.limit) for k in holders[it["speaker"]]) or "no key"))
-                break
+                # Every key that holds this voice is spent. Only this speaker's lines wait for another day; the lines of
+                # speakers held by a key with quota left go on being made.
+                if it["speaker"] not in waiting:
+                    print("quota spent for %s's voice (%s); its remaining lines wait for the next run"
+                          % (it["speaker"], ", ".join("%s %d/%d" % (k, spent[k], args.limit) for k in holders[it["speaker"]]) or "no key"))
+                waiting.setdefault(it["speaker"], []).append(it["file"])
+                continue
             spent[key_name] += 1
             failures = 0   # five failures *in a row* stop a run; a success starts the count again
             made += 1
@@ -433,6 +460,8 @@ def main():
                 "style": it["style"], "voice": it["voice"], "hash": it["hash"], "file": it["file"],
                 "seconds": round(seconds(path), 2)})
     print("calls per key:", ", ".join("%s %d" % (k, n) for k, n in spent.items()))
+    for sp, files in waiting.items():
+        print("left for the next run: %s %d lines" % (sp, len(files)))
     print("billed this run: about %.1f won (budget %.0f won)" % (spent_won, args.budget_won))
     # scenes.json: the lines of each scene in order. manifest.json: the same by 'speaker|text', which is what the screen reads.
     index.write_text(json.dumps(kept, ensure_ascii=False, indent=1), encoding="utf-8")
