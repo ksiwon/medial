@@ -101,16 +101,52 @@ def approve(names):
     SPEC_FILE.write_text(json.dumps(made), encoding="utf-8")
 
 
-def key() -> str:
+def keys() -> dict[str, str]:
+    """The Gemini keys in server/.env, by variable name: GEMINI_API_KEY, GEMINI_API_KEY_2, GEMINI_API_KEY_OLD ...
+
+    GEMINI_API_KEY comes first whatever its place in the file; a commented-out line is not read. A voice belongs to the *project* its key belongs to, and two keys of two
+    projects cannot see each other's voices, so which key may speak which voice is found out (``usable``) and never
+    assumed. The values go nowhere but the request header: not into a file, not into a message.
+    """
+    out: dict[str, str] = {}
     for line in io.open(ROOT / "server" / ".env", encoding="utf-8"):
-        if line.startswith("GEMINI_API_KEY="):
-            return line.split("=", 1)[1].strip()
-    raise SystemExit("server/.env 에 GEMINI_API_KEY 가 없다")
+        line = line.strip()
+        if line.startswith("GEMINI_API_KEY") and "=" in line:
+            name, value = line.split("=", 1)
+            value = value.strip().strip('"').strip("'")
+            if value:
+                out[name.strip()] = value
+    if not out:
+        raise SystemExit("server/.env 에 GEMINI_API_KEY 가 없다")
+    # GEMINI_API_KEY is always tried first, then the others in the order they are written (GEMINI_API_KEY_SUB ...).
+    return {name: out[name] for name in sorted(out, key=lambda n: n != "GEMINI_API_KEY")}
 
 
-def call(method: str, path: str = "", body=None):
+def key(name: str | None = None) -> str:
+    pool = keys()
+    return pool[name] if name else next(iter(pool.values()))
+
+
+def visible(key_value: str, voice_id: str) -> bool:
+    """Can this key read this stored voice? A GetVoice call: no synthesis, so no quota is spent."""
+    req = urllib.request.Request(URL + "/" + voice_id, headers={"x-goog-api-key": key_value})
+    try:
+        urllib.request.urlopen(req, timeout=60).read()
+        return True
+    except urllib.error.HTTPError as e:
+        if e.code in (403, 404):
+            return False
+        raise
+
+
+def usable(name: str, voice_id: str) -> list[str]:
+    """The key names whose project holds this voice, in the order the keys are listed."""
+    return [k for k, v in keys().items() if visible(v, voice_id)]
+
+
+def call(method: str, path: str = "", body=None, key_name: str | None = None):
     req = urllib.request.Request(URL + path, data=json.dumps(body).encode() if body else None, method=method,
-                                 headers={"Content-Type": "application/json", "x-goog-api-key": key()})
+                                 headers={"Content-Type": "application/json", "x-goog-api-key": key(key_name)})
     return json.load(urllib.request.urlopen(req, timeout=240))
 
 

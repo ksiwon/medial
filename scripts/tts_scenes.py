@@ -4,7 +4,7 @@
     python scripts/tts_scenes.py check             # is everything ready to make? (no calls, no key read)
     python scripts/tts_scenes.py styles            # each line's acting note -> fixtures/week/tts-styles.json (model calls)
     python scripts/tts_scenes.py make              # missing audio only -> local-data/audio/<model>/<scene>_<NN>_<speaker>.wav
-    python scripts/tts_scenes.py make --limit 40   # stop after this many calls (the daily quota is 100)
+    python scripts/tts_scenes.py make --limit 40   # at most this many calls per key (the daily quota is 100 per project)
 
 What is spoken is the week's dialogue (``fixtures/week/dialogue.json``: the scenes before and after each request)
 and the narration of the opening film and the closing page (``fixtures/exhibition/narration.json``). Each line is
@@ -174,14 +174,6 @@ def key_of(voice: str, text: str, style: str) -> str:
     return hashlib.sha1(json.dumps([voice, text, style], ensure_ascii=False).encode()).hexdigest()[:16]
 
 
-def api_key() -> str:
-    for line in io.open(ROOT / "server" / ".env", encoding="utf-8"):
-        line = line.strip()
-        if line.startswith("GEMINI_API_KEY="):
-            return line.split("=", 1)[1].strip()
-    raise SystemExit("server/.env 에 GEMINI_API_KEY 가 없다")
-
-
 def speak(key: str, voice: str, text: str, style: str, model: str = MODEL) -> bytes:
     item = {"type": "text", "text": text}
     if style:
@@ -262,6 +254,12 @@ def check_ready(todo) -> list[str]:
     if stale:
         out.append("지금 명세와 다르게 만든 목소리라 쓸 수 없다: %s (python scripts/tts_voices.py make %s)"
                    % (", ".join(stale), " ".join(stale)))
+    if voices and not missing:
+        from tts_voices import usable
+        unreachable = [sp for sp in speakers if not usable(sp, voices[sp])]
+        if unreachable:
+            out.append("지금 있는 키로는 볼 수 없는 목소리(다른 프로젝트에서 만든 것): %s (server/.env 에 그 프로젝트의 GEMINI_API_KEY_* 를 두세요)"
+                       % ", ".join(unreachable))
     unstyled = [it for it in todo if it["speaker"] not in STYLE and not it["style"]]
     if unstyled:
         out.append("연기 지시가 없는 줄 %d개 (python scripts/tts_scenes.py styles)" % len(unstyled))
@@ -281,7 +279,7 @@ def main():
     sub.add_parser("check")
     sub.add_parser("styles")
     mk = sub.add_parser("make")
-    mk.add_argument("--limit", type=int, default=90)
+    mk.add_argument("--limit", type=int, default=90, help="calls per key (the daily quota is 100 per project)")
     mk.add_argument("--model", default=MODEL)
     args = ap.parse_args()
     if args.cmd == "styles":
@@ -308,7 +306,13 @@ def main():
     AUDIO.mkdir(parents=True, exist_ok=True)
     index = AUDIO / "scenes.json"
     known = {row["file"]: row for rows in (json.load(open(index, encoding="utf-8")) if index.exists() else {}).values() for row in rows}
-    key, made, failures, rejected, kept = api_key(), 0, 0, [], {}
+    from tts_voices import keys as key_pool, usable
+
+    pool = key_pool()
+    holders = {sp: usable(sp, v) for sp, v in {it["speaker"]: it["voice"] for it in todo}.items()}
+    spent = {name: 0 for name in pool}      # calls made with each key this run (the quota is per project)
+    full: set[str] = set()                  # keys that answered 429 and are left alone for the rest of the run
+    made, failures, rejected, kept = 0, 0, [], {}
     for it in todo:
         path = AUDIO / it["file"]
         legacy = AUDIO / ("%s.wav" % it["hash"])  # the earlier, hash-named file of the same voice, text and style
@@ -317,26 +321,46 @@ def main():
         elif legacy.exists():
             legacy.replace(path)
         else:
-            if made >= args.limit:
-                print("stopped at the limit (%d calls); run again later" % made)
-                break
-            try:
-                for tries in range(3):  # a read timeout or a dropped connection is retried; a quota or a bad request is not
-                    try:
-                        path.write_bytes(speak(key, it["voice"], it["spoken"], it["style"], args.model))
-                        break
-                    except (TimeoutError, ConnectionError, urllib.error.URLError) as e:
-                        if isinstance(e, urllib.error.HTTPError) or tries == 2:
-                            raise
-                        print("retry %s: %s" % (it["file"], type(e).__name__))
-                        time.sleep(3)
-                trim(path)
-            except urllib.error.HTTPError as e:
-                print("HTTP", e.code, e.read()[:200].decode("utf-8", "ignore"))
-                failures += 1
-                if failures >= 3 or e.code == 429:  # a quota or a broken request: stop, do not burn calls
+            # Only a key whose project holds this voice may speak it: another project's key would answer 404, or
+            # worse, nothing guarantees it is the same voice. Among those, the first with quota left (GEMINI_API_KEY
+            # first, then GEMINI_API_KEY_SUB ...). A key that answers 429 is set aside and the *same line* goes on to
+            # the next key that holds the voice; nothing is skipped.
+            key_name, broken = None, False
+            while True:
+                usable_keys = [k for k in holders[it["speaker"]] if k not in full and spent[k] < args.limit]
+                if not usable_keys:
                     break
-                continue
+                key_name = usable_keys[0]
+                try:
+                    for tries in range(3):  # a read timeout or a dropped connection is retried; a quota or a bad request is not
+                        try:
+                            path.write_bytes(speak(pool[key_name], it["voice"], it["spoken"], it["style"], args.model))
+                            break
+                        except (TimeoutError, ConnectionError, urllib.error.URLError) as e:
+                            if isinstance(e, urllib.error.HTTPError) or tries == 2:
+                                raise
+                            print("retry %s: %s" % (it["file"], type(e).__name__))
+                            time.sleep(3)
+                    trim(path)
+                    break
+                except urllib.error.HTTPError as e:
+                    print("HTTP", e.code, key_name, e.read()[:200].decode("utf-8", "ignore"))
+                    if e.code == 429:
+                        full.add(key_name)
+                        print("%s is out of quota; %s" % (key_name, "trying the next key that holds this voice"
+                                                         if any(k not in full for k in holders[it["speaker"]]) else "no other key holds this voice"))
+                        key_name = None
+                        continue
+                    failures += 1
+                    key_name, broken = None, True
+                    break
+            if key_name is None:
+                if broken and failures < 3:
+                    continue  # a broken request on this line: leave it, go on to the next
+                print("stopped: no key with quota left holds %s's voice (%s); run again later or add that project's key"
+                      % (it["speaker"], ", ".join("%s %d/%d" % (k, spent[k], args.limit) for k in holders[it["speaker"]]) or "no key"))
+                break
+            spent[key_name] += 1
             made += 1
             why = check(path, it["spoken"])
             if why:
@@ -350,6 +374,7 @@ def main():
                 "index": it["index"], "speaker": it["speaker"], "text": it["text"], "spoken": it["spoken"],
                 "style": it["style"], "voice": it["voice"], "hash": it["hash"], "file": it["file"],
                 "seconds": round(seconds(path), 2)})
+    print("calls per key:", ", ".join("%s %d" % (k, n) for k, n in spent.items()))
     # scenes.json: the lines of each scene in order. manifest.json: the same by 'speaker|text', which is what the screen reads.
     index.write_text(json.dumps(kept, ensure_ascii=False, indent=1), encoding="utf-8")
     manifest = {"%s|%s" % (row["speaker"], row["text"]): {"file": row["file"], "seconds": row["seconds"]}
