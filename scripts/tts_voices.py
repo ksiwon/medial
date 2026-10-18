@@ -58,13 +58,20 @@ SPECS: dict[str, tuple[str, str]] = {
     "P10": ("male", man(75, "restaurant owner who also farms") + "Steady, quietly capable old man's voice; mid-low, calm and unhurried, with a plain practical tone."),
     "P11": ("female", "A 79-year-old woman who runs a small restaurant with her husband" + FROM % ("she", "her") + "Thin, slightly raspy old woman voice; warm, motherly, talkative and quick, a little worn by aches."),
     "P12": ("male", man(63, "shop owner") + "Smooth, slightly nasal mid-high voice; quick-witted, sly, businesslike."),
-    # Not residents: the system's voice and the health centre's nurse speak standard Korean.
-    "MEDIAL": ("female", "A composed, bright woman in her mid-30s speaking clear standard Korean at a brisk, natural conversational pace, with a crisp, friendly, matter-of-fact tone; confident and efficient, not soft, not breathy, not sing-song."),
-    # The narrator of the opening film and the closing page: not a resident, not MEDial (a bright woman), so the
-    # audience never takes the narration for the system speaking. Low, standard Korean, brisk because time is short.
+    # Not residents: the AI speaker, the narrator and the health centre's head speak standard Korean.
+    "AI": ("female", "A composed, bright woman in her mid-30s speaking clear standard Korean at a brisk, natural conversational pace, with a crisp, friendly, matter-of-fact tone; confident and efficient, not soft, not breathy, not sing-song."),
+    # The narrator of the opening film and the closing page: not a resident, not the AI (a bright woman), so the
+    # audience never takes the narration for the AI speaking. Low, standard Korean, brisk because time is short.
     "NARRATOR": ("male", "A man in his 40s narrating a design exhibition film in clear standard Seoul Korean: a low, calm, steady voice with a smooth documentary delivery, brisk and confident, no dialect, no sing-song."),
-    "HC_NURSE": ("female", "A woman in her mid-40s who works at a small rural clinic in South Korea, speaking clear standard Korean with a calm, courteous, professional voice."),
+    # The head of the health centre (the one who used to be called the nurse). A man in his 50s is a guess of this
+    # file's author, not the interview record's: confirm it with the researcher before it is made.
+    "HC_HEAD": ("male", "A man in his early 50s who runs a small rural health centre in South Korea, speaking clear standard Korean with a calm, courteous, composed voice; measured and concise, reassuring without being soft."),
 }
+
+
+#: Voices made from a description that has since changed. Their ids still sit in voices.json until ``make`` replaces
+#: them, and a line must not be spoken with one: the picture and the sound would disagree (P10 a man, P11 a woman).
+STALE = {"P10", "P11"}
 
 
 def key() -> str:
@@ -86,7 +93,7 @@ def make(names):
         gender, text = SPECS[name]
         for attempt in range(6):
             body = {"store": True, "voice": {"model": "gemini-3.8-flash-tts", "type": "prompted",
-                                             "display_name": "medial-" + name, "gender": gender,
+                                             "display_name": "dially-" + name, "gender": gender,
                                              "language_code": "ko-KR", "prompted": {"input": text}}}
             try:
                 new = call("POST", "", body)["id"]
@@ -102,6 +109,7 @@ def make(names):
             except urllib.error.HTTPError:
                 pass
         ids[name] = new
+        STALE.discard(name)
         print(name, new)
         FILE.write_text(json.dumps(ids), encoding="utf-8")
 
@@ -109,8 +117,11 @@ def make(names):
 #: The median pitch (Hz) each voice had when the researcher approved it by ear (2026-10-13). A voice
 #: is a random draw from its description, so a re-made one is measured and drawn again until it is
 #: back within TOLERANCE of this - the pitch is the one thing that was complained about (P1 too high).
+#: P10 and P11 are not here: their approved values belonged to the earlier, sex-swapped descriptions (2026-10-18),
+#: and the AI, HC_HEAD and NARRATOR never had one. Those are measured (``calibrate`` prints the Hz) and the
+#: researcher's ear sets their target; a number is not invented for them.
 TARGET_HZ = {"P1": 132, "P2": 139, "P3": 121, "P4": 115, "P5": 107, "P6": 129, "P7": 95, "P8": 115,
-             "P9": 114, "P10": 174, "P11": 130, "P12": 126}
+             "P9": 114, "P12": 126}
 TOLERANCE = 14
 SAMPLE = "내가 언제 밭에 오는지 남한테까지 알리나? 영 싫네."
 
@@ -148,6 +159,9 @@ def calibrate(names):
             path.write_bytes(t.speak(key(), ids[name], SAMPLE, "", "gemini-3.8-flash-tts"))
             t.trim(path)
             hz = pitch(path)
+            if name not in TARGET_HZ:
+                print("%-8s %3.0f Hz  (목표 음높이 없음: 측정만 한다. 귀로 확인해 TARGET_HZ에 넣는다)" % (name, hz))
+                break
             ok = abs(hz - TARGET_HZ[name]) <= TOLERANCE
             print("%-4s attempt %d: %3.0f Hz (target %d) %s" % (name, attempt + 1, hz, TARGET_HZ[name], "ok" if ok else "again"))
             if ok:

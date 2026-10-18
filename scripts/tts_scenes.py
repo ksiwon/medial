@@ -1,20 +1,25 @@
-"""Speaks the exhibition scenes' lines with Gemini TTS, once, ahead of time (never live).
+"""Speaks the exhibition's lines with Gemini TTS, once, ahead of time (never live).
 
     python scripts/tts_scenes.py list              # the lines and what is sent for each (no calls)
-    python scripts/tts_scenes.py make              # missing audio only -> local-data/audio/<model>/<hash>.wav
+    python scripts/tts_scenes.py check             # is everything ready to make? (no calls, no key read)
+    python scripts/tts_scenes.py styles            # each line's acting note -> fixtures/week/tts-styles.json (model calls)
+    python scripts/tts_scenes.py make              # missing audio only -> local-data/audio/<model>/<scene>_<NN>_<speaker>.wav
     python scripts/tts_scenes.py make --limit 40   # stop after this many calls (the daily quota is 100)
-    python scripts/tts_scenes.py styles            # each line's acting note -> fixtures/exhibition/tts-styles.json
 
-Each line is its own file (``<scene>_<NN>_<speaker>.wav``), with ``scenes.json`` listing a scene's lines in
-order and ``manifest.json`` mapping 'speaker|text' to the file for the screen. What the screen shows and what the voice reads are different strings. ``spoken`` is the voice's:
-"MEDial" is always read 메디얼 (without it the voice said 엠이디얼, 미디알, ...), clock times and
-minutes are written out the way a person says them (08:00 -> 여덟 시, 20:56 -> 여덟 시 오십육 분).
-The voice of each person is a Voice design id (`local-data/tts/voices.json`, made once with
-gemini-3.8-flash-tts; the description carries the age, the dialect and the timbre). Style text goes in
-speech_metadata, never in the text: the model reads whatever is in the text aloud.
+What is spoken is the week's dialogue (``fixtures/week/dialogue.json``: the scenes before and after each request)
+and the narration of the opening film and the closing page (``fixtures/exhibition/narration.json``). Each line is
+its own file with ``scenes.json`` listing a scene's lines in order and ``manifest.json`` mapping 'speaker|text' to
+the file for the screen. What the screen shows and what the voice reads are different strings: ``spoken`` is the
+voice's. Clock times and minutes are written out the way a person says them (08:00 -> 여덟 시, 20:56 -> 여덟 시
+오십육 분) and "AI" is read 에이아이.
 
-A line is made again only when its (voice, spoken text, style) hash changed, so a line that did not change is never made
-twice. Nothing here is called at runtime; the screen plays the file.
+The voice of each person is a Voice design id (`local-data/tts/voices.json`, made once with gemini-3.8-flash-tts;
+the description carries the age, the dialect and the timbre). Style text goes in speech_metadata, never in the
+text: the model reads whatever is in the text aloud.
+
+A line is made again only when its (voice, spoken text, style) hash changed. Nothing here is called at runtime; the
+screen plays the file. The acting notes are written by ``scripts/model.py`` (OpenAI); the voice is Gemini. Neither
+key is read by ``list`` or ``check``.
 """
 from __future__ import annotations
 
@@ -24,7 +29,6 @@ import hashlib
 import io
 import json
 import re
-import sqlite3
 import sys
 import time
 import urllib.error
@@ -35,26 +39,26 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.stdout.reconfigure(encoding="utf-8")
 
-DB = ROOT / "local-data" / "runs" / "sim.sqlite3"
 VOICES = ROOT / "local-data" / "tts" / "voices.json"
 AUDIO_ROOT = ROOT / "local-data" / "audio"
 MODEL = "gemini-3.8-flash-tts"  # --model gemini-3.8-flash-lite-tts for a cheaper, separately-metered try
-#: MEDial's lines are delivered brisk; the residents' voices carry their own manner.
-STYLE = {"MEDial": "brisk and efficient, natural pace",
+#: The AI's lines are delivered brisk; the residents' voices carry their own manner.
+STYLE = {"AI": "brisk and efficient, natural pace",
          "NARRATOR": "calm, low and steady narration, brisk pace, no pauses between phrases"}
-VOICE_KEY = {"MEDial": "MEDIAL"}
-# The final dialogue and the acting notes are committed (synthetic lines of pseudonymous residents):
-# fixtures/exhibition/. The voices and the audio are not - they live in local-data/.
-STYLES = ROOT / "fixtures" / "exhibition" / "tts-styles.json"
-DIALOGUE = ROOT / "fixtures" / "exhibition" / "dialogue.json"
+# The week's dialogue, the narration and the acting notes are committed (synthetic lines of pseudonymous residents).
+# The voices and the audio are not - they live in local-data/.
+WEEK = ROOT / "fixtures" / "week"
+STYLES = WEEK / "tts-styles.json"
+DIALOGUE = WEEK / "dialogue.json"
+BRIEFS = WEEK / "briefs.json"
 NARRATION = ROOT / "fixtures" / "exhibition" / "narration.json"  # the opening film's and the closing page's big captions
 
-NOTES = """당신은 음성 연출가다. 마을 장면의 대사 한 줄마다 '연기 지시'를 짧은 영어로 쓴다. 이 지시는 Gemini TTS의 speech_metadata.style 로 들어가 그 줄의 감정·속도·세기만 정한다.
+NOTES = """당신은 음성 연출가다. 마을 장면의 대사 한 줄마다 '연기 지시'를 짧은 영어로 쓴다. 이 지시는 Gemini TTS의 speech_metadata.style 로 들어가 그 줄의 감정·속도·세기만 정한다. 화자 AI는 안부를 살피고 이웃과 보건소를 잇는 AI 스피커다.
 
 규칙
 - 줄마다 2~6단어의 영어 구. 예: "worried, a little hurried", "gruff and curt", "relieved, softening", "frightened, short of breath", "brisk but reassuring".
 - 지시는 그 줄에 일어나는 감정 한 가지와 속도만. 나이·성별·사투리·억양·음색은 쓰지 않는다(그것은 목소리가 이미 정한다). 장면 안에서 감정이 변하는 흐름을 줄마다 반영한다.
-- MEDial은 기본이 brisk and efficient, friendly. 소식이 나쁘면 "brisk, a little sorry", 위급하면 "calm and steady, reassuring"처럼 조금만 바꾼다. 늘어지거나 간지럽게 하지 않는다.
+- AI는 기본이 brisk and efficient, friendly. 소식이 나쁘면 "brisk, a little sorry", 위급하면 "calm and steady, reassuring"처럼 조금만 바꾼다. 늘어지거나 간지럽게 하지 않는다.
 - 과장하지 않는다. 한 줄을 읽는 데 어울리는 정도로만.
 - lines 배열은 대사 수와 같은 길이, 같은 순서로 돌려준다. JSON만."""
 
@@ -77,44 +81,49 @@ def sino(n: int) -> str:
     return ("" if tens == 1 else SINO[tens]) + "십" + ("" if ones == 0 else SINO[ones])
 
 
-def spoken(text: str, speaker: str = "") -> str:
-    """The line as it is read aloud.
+#: Words the voice would get wrong as written. "Dially" is Dial + Diary: said 다이얼리, as it is meant to sound.
+SAY = [("Dially", "다이얼리"), ("AI", "에이아이")]
 
-    The residents' Gyeongsang voices garble a bare "메디얼이" (heard back as 며느리, 매제, 멧돼지); said as "메디얼이라는
-    에이아이가" the name survives, so a resident naming MEDial says what it is along with it (measured 2026-10-14).
-    """
-    if speaker not in ("", "MEDial", "NARRATOR"):
-        pair = {"이": "가", "가": "가", "은": "는", "는": "는", "을": "를", "를": "를"}
-        text = re.sub(r"MEDial(이|가|은|는|을|를)?", lambda m: "메디얼이라는 에이아이" + pair.get(m.group(1) or "", ""), text)
+
+def hour_word(h: int) -> str:
+    """Hours as a person says them: 한 시, 열두 시, 여덟 시 (13:00 is 한 시, 20:00 is 여덟 시)."""
+    return NATIVE_HOUR[h - 12 if h > 12 else h]
+
+
+def spoken(text: str, speaker: str = "") -> str:
+    """The line as it is read aloud: clock times and minutes written out, and the few names the voice would get
+    wrong. ``speaker`` is kept for the callers that pass it; every voice reads the same words."""
     def clock(m):
         h, mi = int(m.group(1)), int(m.group(2))
-        h = h - 12 if h > 12 else h  # people say 한 시 for 13:00, 여덟 시 for 20:56
-        return NATIVE_HOUR[h] + " 시" + ("" if mi == 0 else " " + sino(mi) + " 분")
+        return hour_word(h) + " 시" + ("" if mi == 0 else " " + sino(mi) + " 분")
 
     text = re.sub(r"(\d{1,2}):(\d{2})", clock, text)
+    # An hour already written 12시 (a range like 11시~13시 too) is read as a native number, not as 십이 시.
+    text = re.sub(r"(\d{1,2})\s*시(?!간)", lambda m: hour_word(int(m.group(1))) + " 시", text)
     text = re.sub(r"(\d+)\s*분", lambda m: sino(int(m.group(1))) + " 분", text)
     text = re.sub(r"(\d+)\s*명", lambda m: NATIVE_HOUR[int(m.group(1))] + " 명" if int(m.group(1)) in NATIVE_HOUR else m.group(0), text)
-    return text.replace("MEDial", "메디얼").replace("Resident Simulator", "레지던트 시뮬레이터").replace("AI", "에이아이")
+    text = re.sub(r"\s*~\s*", "에서 ", text)  # 11시~13시 -> 열한 시에서 한 시
+    for written, said in SAY:
+        text = text.replace(written, said)
+    return re.sub(r"\s{2,}", " ", text)
 
 
 def planned():
-    """Every spoken line of the final dialogue, in scene order, with the file it is kept in.
+    """Every spoken line, in scene order, with the file it is kept in.
 
-    One line, one file: ``<scene>_<NN>_<speaker>.wav`` (d1-w2_03_P6.wav is the third line of scene
-    d1-w2, spoken by P6). Nothing is bundled, so the code can pick any line by itself.
+    One line, one file: ``<scene>_<NN>_<speaker>.wav`` (E1.s1_03_P6.wav is the third line of scene E1.s1, spoken by
+    P6). Nothing is bundled, so the code can pick any line by itself.
     """
     scenes = {**json.load(open(DIALOGUE, encoding="utf-8"))["scenes"], **json.load(open(NARRATION, encoding="utf-8"))["scenes"]}
-    voices = json.load(open(VOICES, encoding="utf-8"))
+    voices = json.load(open(VOICES, encoding="utf-8")) if VOICES.exists() else {}
     notes = styles_of_record()
     for scene, body in scenes.items():
         for i, ln in enumerate(body["lines"], start=1):
             speaker, text = ln["speaker"], ln["text"]
-            voice = voices.get(VOICE_KEY.get(speaker, speaker))
-            if voice is None:
-                raise SystemExit("no voice for %s (local-data/tts/voices.json)" % speaker)
+            voice = voices.get(speaker)
             say, style = spoken(text, speaker), notes.get("%s|%s" % (speaker, text)) or STYLE.get(speaker, "")
             yield {"scene": scene, "index": i, "speaker": speaker, "text": text, "spoken": say, "style": style,
-                   "voice": voice, "hash": key_of(voice, say, style), "file": "%s_%02d_%s.wav" % (scene, i, speaker)}
+                   "voice": voice, "hash": key_of(voice or "", say, style), "file": "%s_%02d_%s.wav" % (scene, i, speaker)}
 
 
 def styles_of_record():
@@ -123,19 +132,29 @@ def styles_of_record():
 
 
 def write_styles():
+    """One short acting note per dialogue line (the narration keeps its fixed style). Asks the model; writes the
+    notes of the lines still without one, so a line already noted is never asked again."""
     sys.path.insert(0, str(ROOT / "scripts"))
-    import gen_dialogue as g  # the briefs say who is in a scene and what happens
+    from model import Model
 
-    client = g.ModelProvider.from_env(g.env)._client(g.policy_from_env(g.env, mode="off").headModelId)
+    client = Model()
+    briefs = json.load(open(BRIEFS, encoding="utf-8"))
+    situation = {}
+    for ev in briefs["events"]:
+        for k, sc in ev["scenes"].items():
+            situation["%s.%s" % (ev["id"], k)] = sc["scene"]
+        for k, r in ev["requests"].items():
+            situation["%s.%s" % (ev["id"], k)] = r["scene"]["scene"]
     scenes = json.load(open(DIALOGUE, encoding="utf-8"))["scenes"]
-    out = {}
+    out = dict(styles_of_record())
     for key, scene in scenes.items():
-        brief = g.BRIEFS[key]
-        payload = {"장면": brief["scene"], "인물": brief["people"], "끝맺음": brief["ending"],
+        todo = [l for l in scene["lines"] if "%s|%s" % (l["speaker"], l["text"]) not in out]
+        if not todo:
+            continue
+        payload = {"장면": situation[key], "인물": {c: briefs["voices"][c] for c in scene["cast"]},
                    "대사": ["%s: %s" % (l["speaker"], l["text"]) for l in scene["lines"]]}
         for _ in range(3):
-            raw, _u = client._post(NOTES, payload, NOTE_SCHEMA, "scene_styles", 2000)
-            notes = (raw if isinstance(raw, dict) else json.loads(raw))["styles"]
+            notes = client.ask(NOTES, payload, NOTE_SCHEMA, "scene_styles", 2000)["styles"]
             if len(notes) == len(scene["lines"]):
                 break
         else:
@@ -144,7 +163,7 @@ def write_styles():
             out["%s|%s" % (ln["speaker"], ln["text"])] = note
             print("%-8s %-34s %s" % (ln["speaker"], note, ln["text"]))
         print()
-    STYLES.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
+        STYLES.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
 def key_of(voice: str, text: str, style: str) -> str:
@@ -225,10 +244,37 @@ def seconds(path: Path) -> float:
         return w.getnframes() / w.getframerate()
 
 
+def check_ready(todo) -> list[str]:
+    """What stands between this and a first call, as plain sentences. Reads no key and calls nothing."""
+    out: list[str] = []
+    speakers = sorted({it["speaker"] for it in todo})
+    voices = json.load(open(VOICES, encoding="utf-8")) if VOICES.exists() else {}
+    missing = [s for s in speakers if s not in voices]
+    if missing:
+        out.append("목소리가 없다: %s (python scripts/tts_voices.py make %s)" % (", ".join(missing), " ".join(missing)))
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from tts_voices import STALE
+    stale = [s for s in speakers if s in STALE and s in voices]
+    if stale:
+        out.append("옛 명세로 만든 목소리라 쓸 수 없다(성별이 그림과 반대): %s (python scripts/tts_voices.py make %s)"
+                   % (", ".join(stale), " ".join(stale)))
+    unstyled = [it for it in todo if it["speaker"] not in STYLE and not it["style"]]
+    if unstyled:
+        out.append("연기 지시가 없는 줄 %d개 (python scripts/tts_scenes.py styles)" % len(unstyled))
+    digits = [it for it in todo if re.search(r"\d|[A-Za-z]", it["spoken"])]
+    if digits:
+        out.append("읽을 문장에 숫자·알파벳이 남은 줄 %d개: %s" % (len(digits), digits[0]["spoken"]))
+    dup = [f for f in {it["file"] for it in todo} if sum(it["file"] == f for it in todo) > 1]
+    if dup:
+        out.append("같은 파일 이름이 겹친다: %s" % dup[:3])
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("list")
+    sub.add_parser("check")
     sub.add_parser("styles")
     mk = sub.add_parser("make")
     mk.add_argument("--limit", type=int, default=90)
@@ -244,6 +290,16 @@ def main():
                                        "" if it["spoken"] == it["text"] else "\n%s -> %s" % (" " * 41, it["spoken"])))
         print(len(todo), "lines")
         return
+    problems = check_ready(todo)
+    if args.cmd == "check":
+        scenes = {it["scene"] for it in todo}
+        print("%d lines in %d scenes; speakers: %s" % (len(todo), len(scenes), ", ".join(sorted({it["speaker"] for it in todo}))))
+        for p in problems:
+            print("막힘:", p)
+        print("준비됨" if not problems else "준비 안 됨: %d가지" % len(problems))
+        return
+    if problems:
+        raise SystemExit("만들 수 없다:\n- " + "\n- ".join(problems))
     AUDIO = AUDIO_ROOT / args.model
     AUDIO.mkdir(parents=True, exist_ok=True)
     index = AUDIO / "scenes.json"
