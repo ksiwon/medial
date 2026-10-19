@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { api } from '../api/client';
 import { artIdOf } from '../week/art';
-import { inkA, night, px, radius } from './theme';
+import { inkA, night, px, radius, skin } from './theme';
 
 // A resident's face on a reading page: the head and shoulders of the drawn
 // standing figure (the same picture the scene uses), on a warm disc. Someone
@@ -28,7 +28,7 @@ const Disc = styled.div<{ $size: number }>`
   height: ${(p) => px(p.$size)};
   border-radius: ${radius.round};
   overflow: hidden;
-  background: #d9a877;
+  background: ${skin};
   box-shadow: 0 0 0 ${px(2)} ${inkA(0.3)};
   display: grid;
   place-items: center;

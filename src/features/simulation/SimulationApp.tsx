@@ -3,21 +3,22 @@ import styled from 'styled-components';
 import IdleScreen from './screens/IdleScreen';
 import IntroScreen from './screens/IntroScreen';
 import PairScreen from './screens/PairScreen';
-import { evaluationsOf, runAuto, scenesOf, useWall } from './stage/wall';
+import { runAuto, useWall } from './stage/wall';
 import { useAssets } from './assets';
 import { useAmbient } from './ui/ambient';
 import { preloadArt } from './ui/Portrait';
 import { Callout, Mono } from './ui/primitives';
-import { font, night, px, radius } from './ui/theme';
+import { font, night, px, radius, space, type } from './ui/theme';
 import { useUiScale } from './ui/uiScale';
 import { lineMs } from './scene/voice';
 import { autoOf, useCountdown } from './week/auto';
 import ClosingScreen from './week/ClosingScreen';
 import { judgmentAt } from './week/judgment';
 import JudgmentPanel from './week/JudgmentPanel';
-import { ChooseScreen, EvaluationsScreen, ResultScreen } from './week/ReviewScreens';
+import Logo from './ui/Logo';
+import { ChooseScreen, EvaluationsScreen, GeneratingScreen } from './week/ReviewScreens';
 import SceneView from './week/SceneView';
-import { eventOf, positionIn, requestOf } from './week/selectors';
+import { eventOf, positionIn, versionOf } from './week/selectors';
 import VillageMap from './week/VillageMap';
 import { useWeekStore } from './week/store';
 import WeekScreen from './week/WeekScreen';
@@ -70,10 +71,11 @@ const Foot = styled.footer`
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: ${px(16)};
-  padding: 0 ${px(24)} ${px(8)};
+  gap: ${space.lg};
+  padding: ${space.md} ${space.xl};
   font-size: ${font.small};
   > span { opacity: 0.6; text-align: center; }
+  > :first-child { justify-self: start; }
   > :last-child { justify-self: end; }
 `;
 
@@ -84,10 +86,10 @@ const Telling = styled.div`
   display: flex;
 `;
 
-/** The page's clock, at the right of the foot line: "N초 뒤 …". Said so a visitor knows the wall will go on
+/** The page's clock, at the right of the foot line: "조작이 없으면 N초 뒤 …". Said so a visitor knows the wall will go on
  *  without them; in the foot it never lies over what the page says. */
 const Clock = styled.span`
-  font-size: ${px(16)};
+  font-size: ${type.body};
   font-weight: 700;
   color: ${night.accent};
   font-variant-numeric: tabular-nums;
@@ -98,12 +100,14 @@ const Notices = styled.div`
   flex: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 20px 0;
+  gap: ${space.sm};
+  padding: ${space.md} ${space.lg} 0;
 `;
 
 /** How long a line of a telling stays before the next one (the exhibition's pace). */
 const LINE_MS = 4500;
+/** How long the wall says a new simulation is being made. */
+const GENERATING_MS = 4000;
 
 export default function SimulationApp() {
   useUiScale();
@@ -123,8 +127,11 @@ export default function SimulationApp() {
 
   const week = w.week;
   const event = week ? eventOf(week, w.eventId) : null;
-  const telling = w.step === 'before' || w.step === 'after';
-  const scenes = scenesOf(event, w.step, w.requestId);
+  const generating = w.generating;
+  const telling = w.step === 'telling' && !generating;
+  // The version of the event being read: how it first ran, or the one a chosen request made.
+  const version = versionOf(event, w.paths[w.eventId ?? ''] ?? []);
+  const scenes = version?.scenes ?? [];
   const at = positionIn(scenes, w.lineIndex);
 
   // The wall has no pointer, so a telling goes on by itself: a line for a few seconds - or as long as its
@@ -138,10 +145,17 @@ export default function SimulationApp() {
     return () => window.clearTimeout(timer);
   }, [w.pathStarted, telling, at.done, w.lineIndex, w.eventId, w.step, lineFor]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // A confirmed request is "made" for a few seconds before it is told: the record was written ahead, this is only the wait.
+  useEffect(() => {
+    if (!generating) return undefined;
+    const timer = window.setTimeout(w.endGenerating, GENERATING_MS);
+    return () => window.clearTimeout(timer);
+  }, [generating, w.endGenerating]);
+
   // Every page that waits counts down (week/auto.ts); a press on the tablet starts it over.
   const auto = autoOf({
-    pathStarted: w.pathStarted, step: w.step, eventId: w.eventId, openActor: w.openActor, toldAll: telling && at.done,
-    noChoice: event?.noChoice ?? false, seen: w.seen.length, closingWords: w.closingWords, lastPress: w.lastPress,
+    pathStarted: w.pathStarted, step: w.step, eventId: w.eventId, toldAll: telling && at.done,
+    leaf: version ? version.requests.length === 0 : false, seen: w.seen.length, closingWords: w.closingWords, lastPress: w.lastPress,
   });
   const left = useCountdown(auto, runAuto);
 
@@ -184,7 +198,7 @@ export default function SimulationApp() {
 
   const scene = scenes[at.scene];
   const before = scenes.slice(0, at.scene).reduce((n, sc) => n + sc.lines.length, 0);
-  const request = event ? requestOf(event, w.requestId) : null;
+  const made = version?.chain[version.chain.length - 1] ?? null;
   const showWeek = w.pathStarted && w.step === 'week';
   return (
     <Root>
@@ -194,35 +208,32 @@ export default function SimulationApp() {
       {(paired || w.pathStarted || w.introStarted) && !w.pathStarted && !w.introStarted && <IdleScreen art={s.art} />}
       {!w.pathStarted && w.introStarted && <IntroScreen voices={s.voices} onFinish={w.enterWeek} />}
 
-      {showWeek && <WeekScreen week={week} art={s.art} now={null} seen={w.seen} chosen={w.chosen} />}
-      {w.pathStarted && telling && scene && event && (
+      {showWeek && <WeekScreen week={week} art={s.art} now={null} paths={w.paths} />}
+      {w.pathStarted && telling && scene && event && version && (
         <Telling>
           <VillageMap village={s.village} frames={scene.frames} people={week.people} art={s.art} />
           <SceneView week={week} scene={scene} line={w.lineIndex - before} art={s.art}
             seconds={(LINE_MS / 1000) * scene.lines.length} position={{ at: at.scene + 1, of: scenes.length }} voices={s.voices} />
-          <JudgmentPanel week={week} after={w.step === 'after'}
-            judgment={judgmentAt(event, w.step === 'after' ? request : null, scenes, at.scene, w.lineIndex - before)} />
+          <JudgmentPanel week={week} version={version.number}
+            judgment={judgmentAt(event, version.chain, scenes, at.scene, w.lineIndex - before)} />
         </Telling>
       )}
-      {w.pathStarted && event && w.step === 'evaluations' && (
-        <EvaluationsScreen week={week} event={event} evaluations={evaluationsOf(event, w.step, w.requestId)}
-          scenes={event.before.scenes} art={s.art} openActor={w.openActor}
-          eyebrow={`${event.title} · 주민 평가`} title="서비스를 겪은 주민의 말"
-          lead="이 일에 있었던 주민이 자기가 겪은 것을 어떻게 읽었는지, 그리고 어느 대사를 근거로 삼았는지 보입니다." />
+      {w.pathStarted && event && generating && <GeneratingScreen event={event} request={made} version={version?.number ?? 2} />}
+      {w.pathStarted && event && version && !generating && w.step === 'evaluations' && (
+        <EvaluationsScreen week={week} event={event} version={version} art={s.art} />
       )}
-      {w.pathStarted && event && w.step === 'choose' && <ChooseScreen week={week} event={event} art={s.art} considering={w.considering} />}
-      {w.pathStarted && event && w.step === 'result' && (
-        <ResultScreen week={week} event={event} request={request} art={s.art} openActor={w.openActor} />
+      {w.pathStarted && event && version && !generating && w.step === 'choose' && (
+        <ChooseScreen week={week} event={event} version={version} art={s.art} considering={w.considering} />
       )}
       {w.pathStarted && w.step === 'closing' && (
-        <ClosingScreen week={week} chosen={w.chosen} seen={w.seen} words={w.closingWords} art={s.art} voices={s.voices} />
+        <ClosingScreen week={week} paths={w.paths} words={w.closingWords} art={s.art} voices={s.voices} />
       )}
 
       {w.pathStarted && (
         <Foot>
-          <i />
+          <Logo height="clamp(16px, 1.2vw, 44px)" />
           <span>화면 속 사람과 대화는 전부 시뮬레이션입니다 · 이름은 가명, 모습은 지어낸 그림입니다</span>
-          {auto && left !== null && left > 0 ? <Clock aria-live="off">{left}초 뒤 {auto.say}</Clock> : <i />}
+          {auto && left !== null && left > 0 ? <Clock aria-live="off">조작이 없으면 {left}초 뒤 {auto.say}</Clock> : <i />}
         </Foot>
       )}
     </Root>

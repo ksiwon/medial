@@ -38,6 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.stdout.reconfigure(encoding="utf-8")
 
 from model import Model  # noqa: E402
+from gen_week_dialogue import walk_requests  # noqa: E402
 
 WEEK = ROOT / "fixtures" / "week"
 BRIEFS = WEEK / "briefs.json"
@@ -91,9 +92,13 @@ def load():
 def variants_of(ev: dict) -> dict[str, list[str]]:
     """The scene keys a resident of this event may have been in, per variant."""
     out = {"before": ["%s.%s" % (ev["id"], k) for k in ev["scenes"]]}
-    for k in ev["requests"]:
+    for k, _ in walk_requests(ev["requests"]):
         out[k] = ["%s.%s" % (ev["id"], k)]
     return out
+
+
+def request_of(ev: dict, name: str) -> dict | None:
+    return dict(walk_requests(ev["requests"])).get(name)
 
 
 def experienced(actor: str, keys: list[str], dialogue: dict) -> list[dict]:
@@ -159,7 +164,7 @@ def make(only: list[str] | None) -> None:
             tag = "%s.%s" % (ev["id"], vid)
             if only and not any(tag == o or tag.startswith(o + ".") or ev["id"] == o for o in only):
                 continue
-            request = ev["requests"].get(vid)
+            request = request_of(ev, vid)
             for actor in residents_of(keys, dialogue):
                 lines = experienced(actor, keys, dialogue)
                 allowed = {x["n"] for x in lines}
@@ -220,16 +225,21 @@ LINK_SCHEMA = {
 
 
 def link(only: list[str] | None) -> None:
+    """``--only E1.B E1.A.B`` judges those requests only and leaves every other link as it was; ``--only E1`` judges
+    every request of the event again. A request's basis is looked for in the evaluations of the version it is offered
+    on: the first version's (before) for ``B``, request A's after-evaluations for ``A.B``."""
     client = Model()
     briefs, _ = load()
     data = json.loads(OUT.read_text(encoding="utf-8"))
     made = data["evaluations"]
     links = data.get("links", {})
     for ev in briefs["events"]:
-        if only and ev["id"] not in only:
-            continue
-        before = {v["actor"]: v for v in made.values() if v["event"] == ev["id"] and v["variant"] == "before"}
-        for rid, r in ev["requests"].items():
+        for rid, r in walk_requests(ev["requests"]):
+            key = "%s.%s" % (ev["id"], rid)
+            if only and key not in only and ev["id"] not in only:
+                continue
+            parent = rid.rsplit(".", 1)[0] if "." in rid else "before"
+            before = {v["actor"]: v for v in made.values() if v["event"] == ev["id"] and v["variant"] == parent}
             payload = {
                 "수정 요청": r["label"],
                 "수정 전 평가들(actor: 단락 / 주장 종류: 주장)": [
@@ -242,8 +252,8 @@ def link(only: list[str] | None) -> None:
             if res["verdict"] != "none" and not quoted:
                 res["verdict"] = "weak"
                 res["note"] = "인용이 평가 원문과 일치하지 않아 약함으로 내림"
-            links["%s.%s" % (ev["id"], rid)] = res
-            print("== %s.%s %s %s %s" % (ev["id"], rid, res["verdict"], res["actor"], res["basis"][:60]))
+            links[key] = res
+            print("== %s %s %s %s" % (key, res["verdict"], res["actor"], res["basis"][:60]))
     data["links"] = links
     OUT.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
 
@@ -258,13 +268,13 @@ def read() -> None:
     body: list[str] = []
     for ev in briefs["events"]:
         body.append('<section><h2>%s · %s</h2>' % (ev["id"], e(names[ev["id"]])))
-        for vid in ["before"] + list(ev["requests"]):
+        for vid in ["before"] + [k for k, _ in walk_requests(ev["requests"])]:
             cards = [v for v in made.values() if v["event"] == ev["id"] and v["variant"] == vid]
             if not cards:
                 continue
             head = "수정 전" if vid == "before" else "요청 %s 적용 후" % vid
             if vid != "before":
-                r = ev["requests"][vid]
+                r = request_of(ev, vid)
                 head += ' <small>%s</small>' % e(r["label"])
             body.append("<h3>%s</h3>" % head)
             for c in cards:

@@ -7,7 +7,7 @@
 // about where the walk is. (The one-screen version of the exhibition lives on the
 // `single-screen` branch; this branch has the two screens only.)
 
-export type Phase = 'idle' | 'intro' | 'week' | 'before' | 'evaluations' | 'choose' | 'after' | 'result' | 'closing';
+export type Phase = 'idle' | 'intro' | 'week' | 'telling' | 'evaluations' | 'choose' | 'closing';
 
 /** A press. `id` is only what the named press needs. */
 export type Command =
@@ -17,12 +17,10 @@ export type Command =
   | { name: 'line'; value: -1 | 1 }
   | { name: 'skipScene' }
   | { name: 'toEvaluations' }
-  | { name: 'openResident'; id: string }
-  | { name: 'closeResident' }
+  | { name: 'toTelling' }
   | { name: 'toChoose' }
   | { name: 'consider'; id: string | null }
   | { name: 'choose'; id: string }
-  | { name: 'toResult' }
   | { name: 'week' }
   | { name: 'finish' }
   | { name: 'closingWords' }
@@ -31,15 +29,8 @@ export type Command =
 /** One day of the week, for the tablet's list: which events fall on it. */
 export interface DayBrief {
   day: string;
-  /** chosen: the number of the request chosen when it was read (1-based), else null. */
-  events: { id: string; title: string; noChoice: boolean; seen: boolean; chosen: number | null }[];
-}
-
-/** A resident to open on the wall: the name, and the kinds of what they said as marks - their words are on the wall. */
-export interface ResidentBrief {
-  id: string;
-  name: string;
-  marks: ('good' | 'bad' | 'neutral' | 'unknown' | 'wish')[];
+  /** version: which version of the event the wall would read now (1 = as it first ran). */
+  events: { id: string; title: string; noChoice: boolean; version: number }[];
 }
 
 /** A request to pick: its number and its sentence - what it hopes for, what it costs and its basis are on the wall. */
@@ -54,29 +45,31 @@ export interface StageState {
   phase: Phase;
   /** The week, always: the tablet's list of events to pick from. */
   week: DayBrief[];
-  seen: number;
-  total: number;
+  /** How many times the visitor has had the AI changed so far (a request chosen). */
+  runs: number;
   /** The open event, and the weekday it falls on this session. */
   event: { id: string; title: string; day: string | null; noChoice: boolean } | null;
-  /** Reading a telling (before / after): the scene it is in, how far through, and whether it is done. */
+  /** Reading a telling: the scene it is in, how far through, and whether it is done. */
   scene: { time: string; index: number; of: number } | null;
+  /** The version of the open event being read (1 = as it first ran) and whether it has nothing to choose. */
+  version: number;
+  leaf: boolean;
   line: number;
   lines: number;
   toldAll: boolean;
-  /** Evaluations: the residents who were asked, and whose card is open. */
-  residents: ResidentBrief[];
-  openActor: string | null;
   /** Choose: the requests (none for an emergency). */
   requests: RequestBrief[];
   /** Choose: the request a finger rests on, not yet confirmed. */
   considering: string | null;
+  /** After a choice: the wall is making the new simulation (for a few seconds), the telling has not begun. */
+  generating: boolean;
   /** Closing: the closing words are up (rather than the list of what was changed). */
   closingWords: boolean;
 }
 
 export const IDLE_STATE: StageState = {
-  phase: 'idle', week: [], seen: 0, total: 0, event: null, scene: null, line: 0, lines: 0, toldAll: false,
-  residents: [], openActor: null, requests: [], considering: null, closingWords: false,
+  phase: 'idle', week: [], runs: 0, event: null, scene: null, version: 1, leaf: false, line: 0, lines: 0, toldAll: false,
+  requests: [], considering: null, generating: false, closingWords: false,
 };
 
 export const STAGE_API = '/api/sim/stage';

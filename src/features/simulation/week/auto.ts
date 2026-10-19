@@ -13,10 +13,6 @@ export const AUTO_S = {
   told: 8,
   /** The residents' words, as a list. */
   evaluations: 15,
-  /** One resident's card, opened from the tablet: then back to the list. */
-  resident: 30,
-  /** What came of the chosen request: the before and after side by side. */
-  result: 30,
   /** The week or the request page with nobody pressing: the visitor has gone. */
   away: 90,
   /** The closing page's list of what was changed, before the closing words. */
@@ -25,14 +21,14 @@ export const AUTO_S = {
   closing: 90,
 } as const;
 
-export type AutoAction = 'toEvaluations' | 'toResult' | 'toChoose' | 'closeResident' | 'week' | 'finish' | 'closingWords' | 'home';
+export type AutoAction = 'toEvaluations' | 'toChoose' | 'week' | 'finish' | 'closingWords' | 'home';
 
 export interface Auto {
   /** What changes when it runs out; a new key starts the clock over. */
   key: string;
   seconds: number;
   action: AutoAction;
-  /** Said on the page: "N초 뒤 {say}". */
+  /** Said on the page: "조작이 없으면 N초 뒤 {say}". */
   say: string;
 }
 
@@ -40,10 +36,10 @@ export interface AutoState {
   pathStarted: boolean;
   step: string;
   eventId: string | null;
-  openActor: string | null;
   /** The telling's last line is on screen. */
   toldAll: boolean;
-  noChoice: boolean;
+  /** Nothing to choose on the version being read (an emergency, or the last version of an event). */
+  leaf: boolean;
   seen: number;
   closingWords: boolean;
   lastPress: number;
@@ -52,24 +48,20 @@ export interface AutoState {
 /** The clock the page is on, or null for a page that waits for no one (the film, a telling still being told). */
 export function autoOf(s: AutoState): Auto | null {
   if (!s.pathStarted) return null;
-  const key = (what: string) => `${what}:${s.eventId ?? ''}:${s.openActor ?? ''}:${s.lastPress}`;
+  const key = (what: string) => `${what}:${s.eventId ?? ''}:${s.lastPress}`;
   switch (s.step) {
-    case 'before':
+    case 'telling':
       return s.toldAll ? { key: key('told'), seconds: AUTO_S.told, action: 'toEvaluations', say: '주민 평가로 넘어갑니다' } : null;
-    case 'after':
-      return s.toldAll ? { key: key('told'), seconds: AUTO_S.told, action: 'toResult', say: '반영된 평가로 넘어갑니다' } : null;
     case 'evaluations':
-      if (s.openActor) return { key: key('resident'), seconds: AUTO_S.resident, action: 'closeResident', say: '목록으로 돌아갑니다' };
-      return { key: key('evaluations'), seconds: AUTO_S.evaluations, action: 'toChoose', say: s.noChoice ? '정리로 넘어갑니다' : '수정 요청 고르기로 넘어갑니다' };
-    case 'result':
-      if (s.openActor) return { key: key('resident'), seconds: AUTO_S.resident, action: 'closeResident', say: '목록으로 돌아갑니다' };
-      return { key: key('result'), seconds: AUTO_S.result, action: 'week', say: '이번 주로 돌아갑니다' };
+      return s.leaf
+        ? { key: key('evaluations'), seconds: AUTO_S.evaluations, action: 'week', say: '이번 주로 돌아갑니다' }
+        : { key: key('evaluations'), seconds: AUTO_S.evaluations, action: 'toChoose', say: '수정 요청 고르기로 넘어갑니다' };
     case 'week':
     case 'choose':
       // Nobody seen anything yet: there is nothing to close, so the start comes back at once.
       return s.seen > 0
-        ? { key: key(`away-${s.step}`), seconds: AUTO_S.away, action: 'finish', say: '아무도 누르지 않으면 마무리합니다' }
-        : { key: key(`away-${s.step}`), seconds: AUTO_S.away, action: 'home', say: '아무도 누르지 않으면 처음으로 돌아갑니다' };
+        ? { key: key(`away-${s.step}`), seconds: AUTO_S.away, action: 'finish', say: '마무리합니다' }
+        : { key: key(`away-${s.step}`), seconds: AUTO_S.away, action: 'home', say: '처음으로 돌아갑니다' };
     case 'closing':
       return s.closingWords || s.seen === 0
         ? { key: key('closing'), seconds: AUTO_S.closing, action: 'home', say: '처음으로 돌아갑니다' }

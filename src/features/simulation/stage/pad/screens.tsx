@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { claimTone, inkA, night, radius } from '../../ui/theme';
+import { inkA, night, radius } from '../../ui/theme';
+import { RUNS_TO_CLOSE } from '../../week/selectors';
 import type { Command, StageState } from '../protocol';
-import { Button, Card, Grid, Hint, Next, Page, Row, Spacer, Stage } from './kit';
+import { Ask, Button, Card, Grid, Hint, Next, Page, Row, Spacer, Stage } from './kit';
 
 // What the tablet shows at each stage of the walk. The tablet is touched and the wall is read: a paragraph here pulls
 // the visitor's eyes away from the wall (researcher, 2026-10-18). So a screen has its buttons and just enough to know
@@ -55,22 +56,24 @@ const DayRow = styled.div<{ $empty: boolean }>`
   > div > i { border: 1px dashed ${night.line}; border-radius: ${radius.card}; }
 `;
 
-const EventButton = styled(Card)<{ $seen: boolean }>`
+const EventButton = styled(Card)`
   min-height: 0;
   height: 100%;
   padding: 8px 16px;
   flex-direction: row;
   align-items: center;
   gap: 12px;
-  ${(p) => p.$seen && 'opacity: 0.55;'}
   > b { flex: 1; font-size: 24px; }
   > small { flex: none; padding: 4px 12px; border-radius: ${radius.pill}; font-size: 16px; font-weight: 800; color: ${night.deep}; background: ${night.ink}; }
 `;
 
 export function Week({ s, press }: { s: StageState; press: Press }) {
+  // Not "n of 5": the visitor may change the AI as often as they like; five is only where the closing opens, and the
+  // page says so in those words ("5번 이상") for as long as it is on.
+  const opens = s.runs >= RUNS_TO_CLOSE;
   return (
     <Page>
-      <Hint>보고 싶은 사건을 누르세요 · {s.seen} / {s.total}개 봤어요</Hint>
+      <Hint>보고 싶은 사건을 누르세요</Hint>
       <WeekList>
         {s.week.map((d) => (
           <DayRow key={d.day} $empty={d.events.length === 0}>
@@ -78,16 +81,21 @@ export function Week({ s, press }: { s: StageState; press: Press }) {
             <div>
               {d.events.length === 0 && <i aria-label="조용한 날" />}
               {d.events.map((e) => (
-                <EventButton key={e.id} $seen={e.seen} onClick={() => press({ name: 'openEvent', id: e.id })}>
+                <EventButton key={e.id} onClick={() => press({ name: 'openEvent', id: e.id })}>
                   <b>{e.title}</b>
-                  {e.seen ? <small>{e.chosen ? `✓ ${e.chosen}번` : '✓'}</small> : e.noChoice ? <small>응급</small> : null}
+                  {e.noChoice ? <small>응급</small> : e.version > 1 ? <small>v{e.version}</small> : null}
                 </EventButton>
               ))}
             </div>
           </DayRow>
         ))}
       </WeekList>
-      {s.seen > 0 && <Row><Spacer /><Button onClick={() => press({ name: 'finish' })}>마치기 →</Button></Row>}
+      {/* The closing is always on the page, so the way out is known; until the fifth change it is an outline that does not answer. */}
+      <Row>
+        <Spacer />
+        <Hint>고친 횟수 {s.runs} · {RUNS_TO_CLOSE}번 이상 고치면 마무리 장면으로 넘어갈 수 있어요</Hint>
+        <Next disabled={!opens} onClick={() => press({ name: 'finish' })}>마무리 장면 보기 →</Next>
+      </Row>
     </Page>
   );
 }
@@ -113,30 +121,28 @@ const Where = styled.div`
   font-variant-numeric: tabular-nums;
 `;
 
-/** The buttons fill the page: a press is found without looking down for long. */
+/** The buttons sit at the foot, a thumb's height: a press is found without looking down for long, and the page is not one big button. */
 const Pads = styled.div`
-  flex: 1;
-  min-height: 0;
+  flex: none;
+  margin-top: auto;
+  height: 144px;
   display: grid;
   grid-template-columns: 1fr 2fr 1fr;
   gap: 16px;
-  /* Tall buttons are rounded rectangles: a pill this tall became a huge oval. */
-  > button { height: 100%; font-size: 40px; border-radius: ${radius.card}; }
+  > button { height: 100%; font-size: 28px; border-radius: ${radius.card}; }
 `;
 
 /** The event plays by itself, a line at a time. The only things a visitor does in it are to go back or on by a
  *  line, to skip the scene, or - once it has been told - to go on to what the residents made of it. The large button
  *  is the next line: skipping a whole scene is the small one, so the obvious press never throws the scene away. */
-export function Telling({ s, press, after }: { s: StageState; press: Press; after: boolean }) {
+export function Telling({ s, press }: { s: StageState; press: Press }) {
   return (
     <Page>
       <Track $p={s.lines > 0 ? (s.line + 1) / s.lines : 0} aria-hidden><i /></Track>
-      <Where>{after ? '고른 요청대로 다시 · ' : ''}{s.scene ? `${s.scene.time} · 장면 ${s.scene.index + 1} / ${s.scene.of}` : ''}</Where>
+      <Where>ver{s.version}{s.scene ? ` · ${s.scene.time} · 장면 ${s.scene.index + 1} / ${s.scene.of}` : ''}</Where>
       {s.toldAll ? (
         <Pads style={{ gridTemplateColumns: '1fr' }}>
-          <Next $big onClick={() => press({ name: after ? 'toResult' : 'toEvaluations' })}>
-            {after ? '반영된 평가 →' : '주민 평가 →'}
-          </Next>
+          <Next $big onClick={() => press({ name: 'toEvaluations' })}>주민 평가 →</Next>
         </Pads>
       ) : (
         <Pads>
@@ -150,45 +156,18 @@ export function Telling({ s, press, after }: { s: StageState; press: Press; afte
 }
 
 // ---- the residents' evaluations ----------------------------------------------
+// What the residents said is on the wall; the tablet only decides where to go next.
 
-const Resident = styled(Card)`
-  min-height: 0;
-  height: 100%;
-  justify-content: center;
-  align-items: center;
-  gap: 12px;
-  > b { font-size: 32px; }
-  > i { font-style: normal; font-size: 32px; font-weight: 800; letter-spacing: 0.08em; }
-`;
-
-export function Evaluations({ s, press, result = false }: { s: StageState; press: Press; result?: boolean }) {
-  const emergency = s.event?.noChoice ?? false;
-  if (s.openActor) {
-    return (
-      <Page>
-        <Pads style={{ gridTemplateColumns: '1fr' }}>
-          <Button $tone="primary" onClick={() => press({ name: 'closeResident' })}>← 목록</Button>
-        </Pads>
-      </Page>
-    );
-  }
+export function Evaluations({ s, press }: { s: StageState; press: Press }) {
   return (
     <Page>
-      <Grid $cols={Math.max(1, Math.min(3, s.residents.length))} style={{ gridAutoRows: '1fr' }}>
-        {s.residents.map((r) => (
-          <Resident key={r.id} onClick={() => press({ name: 'openResident', id: r.id })}>
-            <b>{r.name}</b>
-            <i aria-label="주장의 종류">{r.marks.map((k, j) => <span key={j} style={{ color: claimTone[k].color }}>{claimTone[k].mark}</span>)}</i>
-          </Resident>
-        ))}
-      </Grid>
-      <Row>
-        <Button $tone="quiet" onClick={() => press({ name: 'week' })}>← 이번 주</Button>
-        <Spacer />
-        {!result && !emergency && <Next onClick={() => press({ name: 'toChoose' })}>고르기 →</Next>}
-        {!result && emergency && <Next onClick={() => press({ name: 'toChoose' })}>다 읽었어요 →</Next>}
-        {result && <Button $tone="quiet" onClick={() => press({ name: 'finish' })}>마치기</Button>}
-      </Row>
+      <Pads style={{ gridTemplateColumns: '1fr 1fr' }}>
+        <Button $tone="quiet" onClick={() => press({ name: 'toTelling' })}>← 대화로 돌아가기</Button>
+        {/* A version with nothing to choose ends the event: the way on is back to the week. */}
+        {s.leaf
+          ? <Button $tone="primary" onClick={() => press({ name: 'week' })}>이번 주로 →</Button>
+          : <Button $tone="primary" onClick={() => press({ name: 'toChoose' })}>수정 요청 고르기 →</Button>}
+      </Pads>
     </Page>
   );
 }
@@ -200,7 +179,9 @@ const RequestNumber = styled(Card)`
   min-height: 0;
   height: 100%;
   align-items: center;
-  justify-content: center;
+  /* The number is on one line in every card; the sentence hangs under it, however many lines it takes. */
+  justify-content: flex-start;
+  padding-top: 140px;
   gap: 24px;
   text-align: center;
   > b { font-size: 96px; line-height: 1; }
@@ -208,38 +189,42 @@ const RequestNumber = styled(Card)`
 `;
 
 export function Choose({ s, press }: { s: StageState; press: Press }) {
-  // A choice cannot be taken back, so it takes two touches: a number (lit here and on the wall), then the button that
-  // confirms it. From the confirm on, nothing else on this page answers.
+  // A choice cannot be taken back, so it takes two touches: a number (lit here and on the wall), then "돌리기" in the
+  // question that comes up. From that on, nothing else on this page answers.
   const [sent, setSent] = useState<string | null>(null);
   useEffect(() => { setSent(null); }, [s.event?.id]);
   const picked = s.considering;
   const number = picked ? s.requests.findIndex((r) => r.id === picked) + 1 : null;
+  if (s.generating) return <Stage><h1>새로운 시뮬레이션을 만들고 있어요</h1></Stage>;
   return (
     <Page>
       <Grid $cols={Math.max(1, Math.min(3, s.requests.length))} style={{ gridAutoRows: '1fr' }}>
         {s.requests.map((r, i) => (
           <RequestNumber key={r.id} $on={picked === r.id} disabled={sent !== null}
-            onClick={() => press({ name: 'consider', id: picked === r.id ? null : r.id })}>
+            onClick={() => press({ name: 'consider', id: r.id })}>
             <b>{i + 1}</b>
             <span>{r.label}</span>
           </RequestNumber>
         ))}
       </Grid>
       <Row>
-        <Button $tone="quiet" onClick={() => press({ name: 'week' })} disabled={sent !== null}>← 이번 주</Button>
+        <Button $tone="quiet" onClick={() => press({ name: 'toEvaluations' })} disabled={sent !== null}>← 주민 평가</Button>
         <Spacer />
-        <Next disabled={!picked || sent !== null} onClick={() => { if (picked) { setSent(picked); press({ name: 'choose', id: picked }); } }}>
-          {number ? `${number}번으로 다시 보기 →` : '번호를 고르세요'}
-        </Next>
       </Row>
+      {picked && sent === null && (
+        <Ask role="dialog" aria-label="고른 요청을 반영할까요">
+          <section>
+            <h2>{number}번 수정 요청을 AI에 반영하시겠습니까?</h2>
+            <p>반영된 규칙대로 이 사건을 새로 시뮬레이션합니다.</p>
+            <div>
+              <Button $tone="quiet" onClick={() => press({ name: 'consider', id: null })}>다시 고르기</Button>
+              <Button $tone="primary" onClick={() => { setSent(picked); press({ name: 'choose', id: picked }); }}>돌리기</Button>
+            </div>
+          </section>
+        </Ask>
+      )}
     </Page>
   );
-}
-
-// ---- the end of an event -------------------------------------------------------
-
-export function Result({ s, press }: { s: StageState; press: Press }) {
-  return <Evaluations s={s} press={press} result />;
 }
 
 // ---- the closing ---------------------------------------------------------------
@@ -247,9 +232,11 @@ export function Result({ s, press }: { s: StageState; press: Press }) {
 export function Closing({ s, press }: { s: StageState; press: Press }) {
   return (
     <Stage>
-      <h1>{s.seen}개의 사건을 고쳐 보았습니다</h1>
-      {!s.closingWords && <Button $tone="quiet" $big onClick={() => press({ name: 'closingWords' })}>마무리 말 →</Button>}
-      <Button $tone="primary" $big onClick={() => press({ name: 'home' })}>처음으로</Button>
+      <h1>{s.week.flatMap((d) => d.events).filter((e) => e.version > 1).length}개의 사건을 {s.runs}번 고쳤습니다</h1>
+      {/* The closing words are always heard before the way back: the start button only comes up once they are on the wall. */}
+      {s.closingWords
+        ? <Button $tone="primary" $big onClick={() => press({ name: 'home' })}>처음으로</Button>
+        : <Button $tone="primary" $big onClick={() => press({ name: 'closingWords' })}>마무리 말 →</Button>}
     </Stage>
   );
 }

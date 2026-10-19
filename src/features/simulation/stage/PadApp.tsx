@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createBus, postTo, type PressResult } from './bus';
-import { Button, Notice, Screen, TopBar } from './pad/kit';
-import { Choose, Closing, Evaluations, Join, Result, Scan, Telling, Waiting, Watching, Week, type Press } from './pad/screens';
+import { Ask, Button, Notice, Screen, TopBar } from './pad/kit';
+import { Choose, Closing, Evaluations, Join, Scan, Telling, Waiting, Watching, Week, type Press } from './pad/screens';
 import {
   IDLE_STATE, STAGE_API, forgetPadToken, hasJoined, padToken, rememberJoined, type Command, type Link, type Phase, type StageState,
 } from './protocol';
@@ -11,7 +11,7 @@ import { useStream } from './stream';
 // said (stage/wall.ts) and sends presses (stage/bus.ts), and a press is never assumed to have worked -
 // the wall's next report is what changes the screen. Everything it can say about its own connection it says.
 
-const HOME_ASK_MS = 3000;
+const HOME_ASK_MS = 20000; // the window closes by itself if nobody answers
 /** How long a "the wall did not hear that" stays on screen. */
 const NOTICE_MS = 4000;
 
@@ -61,7 +61,7 @@ export default function PadApp() {
     return () => document.removeEventListener('touchmove', stop);
   }, []);
 
-  // 처음으로 asks twice: one stray touch must not throw away someone's path.
+  // 처음으로 asks first, in a window over the page: one stray touch must not throw away someone's path.
   const [asking, setAsking] = useState(false);
   useEffect(() => {
     if (!asking) return undefined;
@@ -77,9 +77,7 @@ export default function PadApp() {
 
   // The closing has its own way back in the middle of the page: the corner one would be the same press twice.
   const home = state.phase === 'idle' || state.phase === 'closing' ? null : (
-    <Button $tone="quiet" onClick={() => { if (asking) { setAsking(false); press({ name: 'home' }); } else setAsking(true); }}>
-      {asking ? '한 번 더 누르면 처음으로' : '↺ 처음으로'}
-    </Button>
+    <Button $tone="quiet" onClick={() => setAsking(true)}>↺ 처음으로</Button>
   );
 
   return (
@@ -90,6 +88,18 @@ export default function PadApp() {
       {notice === 'no-wall' && <Notice>큰 화면이 그것을 받지 못했습니다. 잠시 뒤 다시 눌러 주세요.</Notice>}
       {notice === 'failed' && <Notice>방금 누른 것이 전달되지 않았습니다. 다시 눌러 주세요.</Notice>}
       <PadStage s={state} press={press} />
+      {asking && home && (
+        <Ask role="dialog" aria-label="처음으로 돌아갈까요">
+          <section>
+            <h2>처음으로 돌아갈까요?</h2>
+            <p>지금까지 고친 내용이 사라지고, 소개 화면부터 다시 시작합니다.</p>
+            <div>
+              <Button $tone="quiet" onClick={() => setAsking(false)}>계속 보기</Button>
+              <Button $tone="primary" onClick={() => { setAsking(false); press({ name: 'home' }); }}>처음으로</Button>
+            </div>
+          </section>
+        </Ask>
+      )}
     </Screen>
   );
 }
@@ -99,11 +109,9 @@ function PadStage({ s, press }: { s: StageState; press: Press }) {
     case 'idle': return <Waiting press={press} />;
     case 'intro': return <Watching press={press} />;
     case 'week': return <Week s={s} press={press} />;
-    case 'before': return <Telling s={s} press={press} after={false} />;
+    case 'telling': return <Telling s={s} press={press} />;
     case 'evaluations': return <Evaluations s={s} press={press} />;
     case 'choose': return <Choose s={s} press={press} />;
-    case 'after': return <Telling s={s} press={press} after />;
-    case 'result': return <Result s={s} press={press} />;
     case 'closing': return <Closing s={s} press={press} />;
   }
 }

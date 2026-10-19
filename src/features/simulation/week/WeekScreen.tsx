@@ -1,9 +1,9 @@
 import styled, { css } from 'styled-components';
 import { api } from '../api/client';
 import { pill } from '../ui/primitives';
-import { accentA, claimTone, inkA, night, px, radius, space } from '../ui/theme';
+import { accentA, claimTone, inkA, night, panelA, px, radius, space, type } from '../ui/theme';
 import { figureOf } from './art';
-import { progress, requestOf, timetable, type Block } from './selectors';
+import { runsOf, timetable, versionOf, type Block, type Paths } from './selectors';
 import type { Claim, Evaluation, Week, WeekEvent } from './types';
 
 // The week as a timetable: seven columns, Monday to Sunday, the hours of the day down the left, and each event a
@@ -18,7 +18,7 @@ import type { Claim, Evaluation, Week, WeekEvent } from './types';
 // The wall is read-only: the tablet picks an event and the wall lights it.
 
 /** The hours the axis runs: the village's day starts early; the latest event is after 20:00. */
-export const AXIS = { from: 7, to: 23, minHours: 6.2, gapHours: 0.5 };
+export const AXIS = { from: 7, to: 23, minHours: 7.3, gapHours: 0.5 };
 /** The hour lines drawn on the axis. */
 const HOURS = [7, 10, 13, 16, 19, 22];
 
@@ -28,15 +28,15 @@ const Page = styled.div`
   display: grid;
   grid-template-columns: ${px(48)} minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
-  gap: ${space.sm};
-  padding: ${space.lg} ${space.xl} ${space.sm};
+  gap: ${space.md};
+  padding: ${space.xl};
   background: ${night.ground};
   color: ${night.ink};
 `;
 
 const Axis = styled.div`
   position: relative;
-  > span { position: absolute; right: 0; transform: translateY(-50%); font-size: ${px(16)}; font-weight: 700; color: ${night.faint}; font-variant-numeric: tabular-nums; }
+  > span { position: absolute; right: 0; transform: translateY(-50%); font-size: ${type.body}; font-weight: 700; color: ${night.faint}; font-variant-numeric: tabular-nums; }
 `;
 
 /** The hour lines, under every column. */
@@ -50,7 +50,7 @@ const Lines = styled.div`
 const Row = styled.div<{ $cols: string }>`
   display: grid;
   grid-template-columns: ${(p) => p.$cols};
-  gap: ${space.md};
+  gap: ${space.lg};
 `;
 
 const Head = styled.div<{ $empty: boolean }>`
@@ -59,9 +59,9 @@ const Head = styled.div<{ $empty: boolean }>`
   gap: ${space.sm};
   padding: 0 ${space.xs} ${space.xs};
   border-bottom: 2px solid ${(p) => (p.$empty ? night.line : inkA(0.3))};
-  > b { font-size: ${px(32)}; font-weight: 800; letter-spacing: -0.02em; color: ${(p) => (p.$empty ? night.faint : night.ink)}; }
-  > span { font-size: ${px(12)}; color: ${night.faint}; }
-  > em { margin-left: auto; font-style: normal; font-size: ${px(12)}; font-weight: 800; color: ${night.accent}; }
+  > b { font-size: ${type.display}; font-weight: 800; letter-spacing: -0.02em; color: ${(p) => (p.$empty ? night.faint : night.ink)}; }
+  > span { font-size: ${type.caption}; color: ${night.faint}; }
+  > em { margin-left: auto; font-style: normal; font-size: ${type.caption}; font-weight: 800; color: ${night.accent}; }
 `;
 
 const Body = styled(Row)`
@@ -73,7 +73,7 @@ const Column = styled.div<{ $empty: boolean }>`
   position: relative;
   display: flex;
   min-height: 0;
-  > em { margin: auto 0; text-align: center; font-style: normal; font-size: ${px(16)}; line-height: 1.5; color: ${night.faint}; word-break: keep-all; }
+  > em { margin: auto 0; text-align: center; font-style: normal; font-size: ${type.body}; line-height: 1.5; color: ${night.faint}; word-break: keep-all; }
 `;
 
 const Card = styled.article<{ $now: boolean }>`
@@ -84,7 +84,7 @@ const Card = styled.article<{ $now: boolean }>`
   display: flex;
   flex-direction: column;
   gap: ${space.sm};
-  padding: ${space.md} ${space.lg};
+  padding: ${space.lg};
   border-radius: ${radius.card};
   background: ${night.panel};
   border: 1px solid ${(p) => (p.$now ? night.accent : inkA(0.16))};
@@ -99,22 +99,42 @@ const Ghost = styled.div<{ $src: string | null }>`
   background: ${(p) => (p.$src ? `center / cover url(${p.$src})` : 'none')};
   opacity: 0.22;
   > img { position: absolute; bottom: 0; height: 80%; max-width: none; object-fit: contain; }
-  &::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(27, 28, 24, 0.1) 0%, rgba(27, 28, 24, 0.8) 60%); }
+  &::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, ${panelA(0.1)} 0%, ${panelA(0.8)} 60%); }
 `;
 
-const Title = styled.div`
+const Title = styled.div<{ $chip?: boolean }>`
   display: flex;
+  /* Room for the version chip in the corner, so a title never runs under it. */
+  ${(p) => p.$chip && css`padding-right: calc(${space.xxl} + ${space.md});`}
   flex-direction: column;
   gap: ${space.sm};
-  > strong { font-size: ${px(24)}; font-weight: 800; letter-spacing: -0.03em; line-height: 1.2; word-break: keep-all; }
+  > strong { font-size: ${type.title}; font-weight: 800; letter-spacing: -0.03em; line-height: 1.2; word-break: keep-all; }
 `;
 
-const Mark = styled.span<{ $kind: 'now' | 'seen' | 'emergency' }>`
+const Mark = styled.span<{ $kind: 'now' | 'emergency' }>`
   ${pill('xs')}
   align-self: flex-start;
   font-weight: 800;
-  color: ${(p) => (p.$kind === 'now' ? '#fff' : p.$kind === 'emergency' ? night.deep : night.mute)};
-  background: ${(p) => (p.$kind === 'now' ? night.accent : p.$kind === 'emergency' ? night.ink : inkA(0.12))};
+  color: ${(p) => (p.$kind === 'now' ? night.white : night.deep)};
+  background: ${(p) => (p.$kind === 'now' ? night.accent : night.ink)};
+`;
+
+/** The card's top line: what is special about it. The version chip is not in it - it is set in the corner (below), so it
+ *  never moves the title. */
+const Top = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${space.sm};
+`;
+
+const VersionChip = styled.span`
+  ${pill('xs')}
+  position: absolute !important;
+  top: ${space.md};
+  right: ${space.md};
+  font-weight: 800;
+  color: ${night.ink};
+  background: ${inkA(0.14)};
 `;
 
 /** How the residents received it: one entry each - who, the kinds of what they said, and the one thing to read. */
@@ -127,7 +147,7 @@ const Feedback = styled.ul`
   flex-direction: column;
   gap: ${space.sm};
   min-height: 0;
-  > small { font-size: ${px(12)}; font-weight: 800; letter-spacing: 0.06em; color: ${night.mute}; }
+  > small { font-size: ${type.caption}; font-weight: 800; letter-spacing: 0.06em; color: ${night.mute}; }
 `;
 
 /** One thing a resident said: its kind as a mark, then the words. No face and no name - the card is about the
@@ -135,23 +155,11 @@ const Feedback = styled.ul`
 const Voice = styled.li`
   display: grid;
   grid-template-columns: ${px(20)} minmax(0, 1fr);
-  column-gap: ${space.xs};
-  font-size: ${px(16)};
+  column-gap: ${space.sm};
+  font-size: ${type.body};
   line-height: 1.4;
   > b { font-weight: 800; text-align: center; }
   > span { font-weight: 600; color: ${inkA(0.92)}; word-break: keep-all; }
-`;
-
-const Chosen = styled.div`
-  font-size: ${px(16)};
-  line-height: 1.45;
-  font-weight: 700;
-  padding: ${space.xs} ${space.sm};
-  border-radius: ${radius.control};
-  background: ${night.accentSoft};
-  box-shadow: inset ${px(4)} 0 0 ${night.accent};
-  word-break: keep-all;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 `;
 
 /** How many things a card says. */
@@ -180,31 +188,32 @@ function sceneOf(event: WeekEvent, art: ReadonlySet<string>): { backdrop: string
   return { backdrop: art.has(frame.place) ? api.artUrl(frame.place) : null, figures: figures.slice(0, 2).map((n) => api.artUrl(n)) };
 }
 
-function EventCard({ week, block, art, now, seen, chosen }: {
-  week: Week; block: Block; art: ReadonlySet<string>; now: boolean; seen: boolean; chosen: string | null;
+function EventCard({ week, block, art, now, path }: {
+  week: Week; block: Block; art: ReadonlySet<string>; now: boolean; path: readonly string[];
 }) {
   const { event } = block;
   const picture = sceneOf(event, art);
-  const request = requestOf(event, chosen);
-  const voices = request ? request.after.evaluations : event.before.evaluations;
+  const version = versionOf(event, path);
+  const number = version?.number ?? 1;
+  const voices = version?.evaluations ?? event.before.evaluations;
   return (
     <Card $now={now} aria-current={now}
       style={{
-        top: `${block.top * 100}%`, height: `${block.height * 100}%`, left: 0, right: 0,
+        top: `${block.top * 100}%`, maxHeight: `${block.height * 100}%`, left: 0, right: 0,
       }}>
       <Ghost $src={picture.backdrop} aria-hidden>
         {picture.figures.map((src, i) => <img key={src} src={src} alt="" style={{ right: `${i * 34}%` }} />)}
       </Ghost>
-      <Title>
-        {now ? <Mark $kind="now">지금 보는 중</Mark>
-          : event.noChoice ? <Mark $kind="emergency">응급</Mark>
-            : seen ? <Mark $kind="seen">읽음</Mark> : null}
+      {number > 1 && <VersionChip aria-label={`ver${number}`}>v{number}</VersionChip>}
+      <Title $chip={number > 1}>
+        {(now || event.noChoice) && (
+          <Top>{now ? <Mark $kind="now">지금 보는 중</Mark> : <Mark $kind="emergency">응급</Mark>}</Top>
+        )}
         <strong>{event.title}</strong>
       </Title>
-      {request && <Chosen>고른 요청 · {request.label}</Chosen>}
       <Feedback aria-label="주민의 피드백">
-        <small>{request ? '반영 후 · 시뮬레이션 주민의 피드백' : '시뮬레이션 주민의 피드백'}</small>
-        {feedbackOf(voices).map((c, i) => (
+        <small>{number > 1 ? `ver${number} · ` : ''}시뮬레이션 주민의 피드백</small>
+        {feedbackOf(voices, SAY).map((c, i) => (
           <Voice key={i}>
             <b style={{ color: claimTone[c.kind].color }} aria-label={claimTone[c.kind].label}>{claimTone[c.kind].mark}</b>
             <span>{c.text}</span>
@@ -220,16 +229,14 @@ interface Props {
   art: ReadonlySet<string>;
   /** The event the tablet has picked: the wall lights it. */
   now: string | null;
-  seen: readonly string[];
-  /** The request chosen in each read event: its card then says what was chosen and how it was received. */
-  chosen: Record<string, string | null>;
+  /** The requests chosen in each event: its card shows the version they made, and what the residents said of it. */
+  paths: Paths;
 }
 
-export default function WeekScreen({ week, art, now, seen, chosen }: Props) {
+export default function WeekScreen({ week, art, now, paths }: Props) {
   const days = timetable(week, AXIS);
   // A quiet day is narrow; the rest share the width.
   const cols = days.map((d) => (d.blocks.length === 0 ? 'minmax(0, 0.4fr)' : 'minmax(0, 1fr)')).join(' ');
-  const read = progress(week, new Set(seen));
   const span = AXIS.to - AXIS.from;
   const at = (h: number) => `${((h - AXIS.from) / span) * 100}%`;
   return (
@@ -240,7 +247,7 @@ export default function WeekScreen({ week, art, now, seen, chosen }: Props) {
           <Head key={d.day} $empty={d.blocks.length === 0}>
             <b>{d.day}</b>
             {d.blocks.length > 0 && <span>사건 {d.blocks.length}</span>}
-            {i === days.length - 1 && <em>읽음 {read.seen}/{read.of}</em>}
+            {i === days.length - 1 && <em>고친 횟수 {runsOf(paths)}</em>}
           </Head>
         ))}
       </Row>
@@ -254,7 +261,7 @@ export default function WeekScreen({ week, art, now, seen, chosen }: Props) {
             {d.blocks.length === 0 && <em>아무 일 없이<br />지나간 날</em>}
             {d.blocks.map((b) => (
               <EventCard key={b.event.id} week={week} block={b} art={art}
-                now={b.event.id === now} seen={seen.includes(b.event.id)} chosen={chosen[b.event.id] ?? null} />
+                now={b.event.id === now} path={paths[b.event.id] ?? []} />
             ))}
           </Column>
         ))}

@@ -106,6 +106,15 @@ def _rule_change(event_id: str, rule: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _all_rules(requests: dict[str, Any], level: int = 0) -> list[dict[str, Any]]:
+    """Every rule change in a tree of requests, each tagged with how deep it is (0 = offered on the first version)."""
+    out: list[dict[str, Any]] = []
+    for req in requests.values():
+        out += [{**rule, "_level": level} for rule in req["rules"]]
+        out += _all_rules(req.get("requests", {}), level + 1)
+    return out
+
+
 def load_week(weeks_dir: Path = WEEK_DIR) -> dict[str, Any]:
     briefs = _load("briefs.json", weeks_dir)
     dialogue = _load("dialogue.json", weeks_dir)["scenes"]
@@ -136,26 +145,26 @@ def load_week(weeks_dir: Path = WEEK_DIR) -> dict[str, Any]:
             out.append(_evaluation(ev, names))
         return out
 
-    events = []
-    for ev in briefs["events"]:
-        eid = ev["id"]
-        before_keys = ["%s.%s" % (eid, k) for k in ev["scenes"]]
-        requests = []
-        #: The rules the event ran under before anything was chosen: each request's ``before``. Two requests that
-        #: disagree about how the AI ran would make the judgment panel say two things, so that stops the read.
-        baseline: dict[str, dict[str, Any]] = {}
-        for rid, req in ev["requests"].items():
+    def build_requests(eid: str, offered: dict[str, Any], path: list[str], running: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+        """The requests offered on one version, each with the version it makes (its scene and the residents' words)
+        and, in turn, the requests that version offers. ``running`` is how the AI runs on this version, by rule type:
+        a request's ``before`` has to say exactly that, or the judgment panel would say two things."""
+        out = []
+        for rid, req in offered.items():
+            here = path + [rid]
+            name = ".".join(here)
+            key = "%s.%s" % (eid, name)
             for rule in req["rules"]:
-                seen = baseline.setdefault(rule["type"], rule["before"])
-                if seen != rule["before"]:
-                    raise WeekError("%s 의 요청들이 %s 규칙의 수정 전 값을 다르게 말합니다" % (eid, rule["type"]))
-        for rid, req in ev["requests"].items():
-            link = links.get("%s.%s" % (eid, rid))
+                if rule["type"] in running and running[rule["type"]] != rule["before"]:
+                    raise WeekError("%s 의 수정 전 값이 앞 버전이 돌던 값과 다릅니다(%s)" % (key, rule["type"]))
+            link = links.get(key)
             if link is None or link["verdict"] not in VERDICTS:
                 # A request with no basis in what the residents said is not a choice we show.
-                raise WeekError("%s.%s 는 주민 평가에서 근거를 찾지 못했습니다(연결 점검)" % (eid, rid))
-            key = "%s.%s" % (eid, rid)
-            requests.append({
+                raise WeekError("%s 는 주민 평가에서 근거를 찾지 못했습니다(연결 점검)" % key)
+            now = dict(running)
+            for rule in req["rules"]:
+                now[rule["type"]] = rule["after"]
+            out.append({
                 "id": rid,
                 "label": req["label"],
                 "expect": req["expect"],
@@ -163,8 +172,30 @@ def load_week(weeks_dir: Path = WEEK_DIR) -> dict[str, Any]:
                 "rules": [_rule_change(eid, r) for r in req["rules"]],
                 "basis": {"verdict": link["verdict"], "actor": link["actor"] or None, "quote": link["basis"] or None,
                           "kind": link.get("kind") or None},
-                "after": {"scene": _scene(key, req["scene"], dialogue), "evaluations": evals_of(eid, rid, [key])},
+                "after": {
+                    "scene": _scene(key, req["scene"], dialogue),
+                    "evaluations": evals_of(eid, name, [key]),
+                    "requests": build_requests(eid, req.get("requests", {}), here, now),
+                },
             })
+        return out
+
+    events = []
+    for ev in briefs["events"]:
+        eid = ev["id"]
+        before_keys = ["%s.%s" % (eid, k) for k in ev["scenes"]]
+        #: The rules the event ran under before anything was chosen: each request's ``before``. Two requests that
+        #: disagree about how the AI ran would make the judgment panel say two things, so that stops the read.
+        baseline: dict[str, dict[str, Any]] = {}
+        for rule in sorted(_all_rules(ev["requests"]), key=lambda r: r["_level"]):
+            if rule["_level"] > 0:
+                # Only on a later version: nothing before it changed this rule, so what it says is how the AI always ran.
+                baseline.setdefault(rule["type"], rule["before"])
+                continue
+            seen = baseline.setdefault(rule["type"], rule["before"])
+            if seen != rule["before"]:
+                raise WeekError("%s 의 요청들이 %s 규칙의 수정 전 값을 다르게 말합니다" % (eid, rule["type"]))
+        requests = build_requests(eid, ev["requests"], [], dict(baseline))
         if ev.get("noChoice") and requests:
             raise WeekError("%s 는 선택지 없는 사건인데 요청이 있습니다" % eid)
         events.append({

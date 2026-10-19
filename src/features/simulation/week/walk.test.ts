@@ -4,7 +4,7 @@ import { INTRO_SAY } from '../screens/IntroScreen';
 import { autoOf, AUTO_S, type AutoState } from './auto';
 import { CLOSE_SAY } from './ClosingScreen';
 import { judgmentAt, rulesIn } from './judgment';
-import { eventOf, requestOf, timetable } from './selectors';
+import { eventOf, timetable } from './selectors';
 import type { Week } from './types';
 import { spotsOf } from './VillageMap';
 import { AXIS, feedbackOf } from './WeekScreen';
@@ -19,12 +19,12 @@ const E1 = eventOf(week, 'E1')!;
 describe("the AI's judgment panel", () => {
   it('knows nothing before the first line, and then only the lines it was in', () => {
     const scenes = E1.before.scenes;
-    expect(judgmentAt(E1, null, scenes, 0, null).knows).toEqual([]);
-    const first = judgmentAt(E1, null, scenes, 0, 0);
+    expect(judgmentAt(E1, [], scenes, 0, null).knows).toEqual([]);
+    const first = judgmentAt(E1, [], scenes, 0, 0);
     expect(first.present).toBe(true);
     expect(first.knows).toHaveLength(1);
     // The field scene (s2) has no AI in it: the panel says it cannot see it and learns nothing there.
-    const field = judgmentAt(E1, null, scenes, 1, scenes[1].lines.length - 1);
+    const field = judgmentAt(E1, [], scenes, 1, scenes[1].lines.length - 1);
     expect(scenes[1].cast).not.toContain('AI');
     expect(field.present).toBe(false);
     expect(field.knows).toHaveLength(scenes[0].lines.length);
@@ -32,31 +32,47 @@ describe("the AI's judgment panel", () => {
 
   it('says who it spoke to, and how, and whether they have answered', () => {
     const scenes = E1.before.scenes;
-    const before = judgmentAt(E1, null, scenes, 0, 0);
+    const before = judgmentAt(E1, [], scenes, 0, 0);
     expect(before.contacts).toEqual([{ actor: 'P6', way: 'phone', answered: false }]);
-    const after = judgmentAt(E1, null, scenes, 0, scenes[0].lines.length - 1);
+    const after = judgmentAt(E1, [], scenes, 0, scenes[0].lines.length - 1);
     expect(after.contacts[0].answered).toBe(true);
   });
 
-  it('runs the rules as they were, and after a request the changed ones first, with what they were', () => {
-    expect(rulesIn(E1, null).every((r) => r.was === null)).toBe(true);
-    const A = requestOf(E1, 'A')!;
-    const rows = rulesIn(E1, A);
+  it('runs the rules as they were, and on a later version the last request\'s changed ones first, with what they were', () => {
+    expect(rulesIn(E1, []).every((r) => r.was === null)).toBe(true);
+    const A = E1.requests.find((q) => q.id === 'A')!;
+    const rows = rulesIn(E1, [A]);
     expect(rows.slice(0, A.rules.length).map((r) => r.was)).toEqual(A.rules.map((r) => r.beforeSentence));
     expect(rows.slice(0, A.rules.length).map((r) => r.sentence)).toEqual(A.rules.map((r) => r.afterSentence));
-    expect(judgmentAt(eventOf(week, 'E6')!, null, eventOf(week, 'E6')!.before.scenes, 0, 0).emergency).toBe(true);
+    expect(judgmentAt(eventOf(week, 'E6')!, [], eventOf(week, 'E6')!.before.scenes, 0, 0).emergency).toBe(true);
+  });
+
+  it('keeps an earlier request in force on the version after it, marking only what the last one changed', () => {
+    const E1b = eventOf(week, 'E1')!;
+    const A = E1b.requests.find((q) => q.id === 'A')!;
+    const B = A.after.requests[0];
+    const rows = rulesIn(E1b, [A, B]);
+    const changedByA = A.rules.filter((rule) => !B.rules.some((x) => x.type === rule.type));
+    // What A changed and B left alone is in force, no longer marked.
+    for (const rule of changedByA) expect(rows.find((x) => x.label === rule.label)).toMatchObject({ sentence: rule.afterSentence, was: null });
+    // What B changed is marked, with what ver2 ran.
+    for (const rule of B.rules) expect(rows.find((x) => x.label === rule.label)).toMatchObject({ sentence: rule.afterSentence, was: rule.beforeSentence });
   });
 });
 
 describe('the clocks', () => {
   const base: AutoState = {
-    pathStarted: true, step: 'week', eventId: null, openActor: null, toldAll: false, noChoice: false, seen: 0, closingWords: false, lastPress: 0,
+    pathStarted: true, step: 'week', eventId: null, toldAll: false, leaf: false, seen: 0, closingWords: false, lastPress: 0,
   };
 
   it('a telling waits for no clock until its last line, then goes on to the residents', () => {
-    expect(autoOf({ ...base, step: 'before' })).toBeNull();
-    expect(autoOf({ ...base, step: 'before', toldAll: true })).toMatchObject({ action: 'toEvaluations', seconds: AUTO_S.told });
-    expect(autoOf({ ...base, step: 'after', toldAll: true })?.action).toBe('toResult');
+    expect(autoOf({ ...base, step: 'telling' })).toBeNull();
+    expect(autoOf({ ...base, step: 'telling', toldAll: true })).toMatchObject({ action: 'toEvaluations', seconds: AUTO_S.told });
+  });
+
+  it('the residents\' words go on to the requests, or - where there is nothing to choose - back to the week', () => {
+    expect(autoOf({ ...base, step: 'evaluations' })).toMatchObject({ action: 'toChoose', seconds: AUTO_S.evaluations });
+    expect(autoOf({ ...base, step: 'evaluations', leaf: true })).toMatchObject({ action: 'week' });
   });
 
   it('never chooses for the visitor: the request page only gives up to the closing', () => {

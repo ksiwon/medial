@@ -31,7 +31,7 @@ const Stage = styled.div`
 const Code = styled.div`
   padding: clamp(16px, 1.6vw, 56px);
   border-radius: ${radius.card};
-  background: #fff;
+  background: ${night.white};
   line-height: 0;
   > img { width: clamp(240px, 22vw, 840px); height: auto; image-rendering: pixelated; }
 `;

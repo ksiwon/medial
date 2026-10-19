@@ -1,7 +1,7 @@
 // The week the exhibition reads (server/app/simulation/week.py). Joined and checked on the server: a screen
 // never combines files, and nothing in it is a score.
 
-export type Pose = 'stand' | 'phone' | 'work' | 'desk' | 'lying' | 'resting' | 'cpr';
+export type Pose = 'stand' | 'phone' | 'work' | 'desk' | 'lying' | 'fallen' | 'resting' | 'cpr';
 
 /** One place on screen and who is standing in it. A phone call is two frames; a talk in one room is one. */
 export interface Frame {
@@ -75,7 +75,8 @@ export interface WeekRequest {
   rules: RuleChange[];
   /** How well the residents' own words support this request. 'weak' is shown as such, never hidden. */
   basis: { verdict: Basis; actor: string | null; quote: string | null; kind: ClaimKind | null };
-  after: { scene: WeekScene; evaluations: Evaluation[] };
+  /** The version this request makes: its scene, what the residents made of it, and what can be chosen from there (nothing on the last version). */
+  after: { scene: WeekScene; evaluations: Evaluation[]; requests: WeekRequest[] };
 }
 
 export interface WeekEvent {
@@ -99,6 +100,7 @@ export interface Week {
   disclaimer: string;
 }
 
-/** Where the walk is. One path: the week, an event, its scenes, the residents' words, the request, what came of it -
- *  and, when the visitor is done (or has gone), the closing words. */
-export type Step = 'week' | 'before' | 'evaluations' | 'choose' | 'after' | 'result' | 'closing';
+/** Where the walk is. One path: the week, an event (its scenes, as they ran in the version being read), the residents'
+ *  words, the request to choose - and a choice makes the next version, back at the week. When the visitor is done (or
+ *  has gone), the closing words. */
+export type Step = 'week' | 'telling' | 'evaluations' | 'choose' | 'closing';

@@ -35,10 +35,10 @@ const check = (ok, name, detail = '') => { results.push(ok); console.log(ok ? ' 
     await pad.getByRole('button', { name: /넘기기|주민 평가/ }).first().waitFor({ timeout: 30000 });
   };
 
-  // 어디까지 걸어갔든 처음으로 돌아가 알려진 자리에서 시작한다 (처음으로 는 두 번 눌러야 한다).
+  // 어디까지 걸어갔든 처음으로 돌아가 알려진 자리에서 시작한다 (처음으로 는 묻는 창에서 한 번 더 눌러야 한다).
   const startOver = async () => {
     const home = pad.getByRole('button', { name: /처음으로/ }).first();
-    if (await home.count()) { await home.tap(); await home.tap(); }
+    if (await home.count()) { await home.tap(); await pad.getByRole('dialog').getByRole('button', { name: '처음으로' }).tap(); }
     await pad.getByRole('button', { name: '시작하기' }).waitFor({ timeout: 20000 });
   };
 
@@ -84,7 +84,7 @@ const check = (ok, name, detail = '') => { results.push(ok); console.log(ok ? ' 
   console.log('· 지나간 화면의 눌림은 버려진다 (평가 화면에서 낡은 "고르기"를 보내도 아무것도 안 일어난다)');
   // 어디까지 걸어갔든(연타로 이야기가 끝나 자동으로 넘어갔을 수 있다) 처음으로 돌아가 알려진 자리에서 시작한다.
   const homeBtn = pad.getByRole('button', { name: /처음으로/ }).first();
-  await homeBtn.tap(); await homeBtn.tap();
+  await homeBtn.tap(); await pad.getByRole('dialog').getByRole('button', { name: '처음으로' }).tap();
   await pad.getByRole('button', { name: '시작하기' }).waitFor({ timeout: 20000 });
   await enterEvent();
   for (let i = 0; i < 12 && !(await pad.getByRole('button', { name: /주민 평가 →/ }).isVisible().catch(() => false)); i += 1) {

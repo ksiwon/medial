@@ -18,7 +18,28 @@ export const night = {
   deep: '#15150f',
   accent: '#e2542c',
   accentSoft: 'rgba(226, 84, 44, 0.16)',
+  /** White: text and marks laid on the accent, a pin's ring, a speech bubble. */
+  white: '#ffffff',
+  /** The warning amber (a cost, an emergency day). */
+  warn: '#e8c46a',
+  /** A request that was answered. */
+  info: '#3d6ea8',
+  /** The faintest accent: a card that is the one in force. */
+  accentWash: '#fff6f2',
 } as const;
+
+/** The speech bubble of a line already told (the one now is `night.white`) and its small label. */
+export const bubble = { past: '#e9e5dd', label: '#6b675f' } as const;
+
+/** The scene's photo frame, and the ground shown while its picture has not loaded. */
+export const photo = { frame: '#2a2b28', empty: '#34352f' } as const;
+
+/** The opening film's map: the far land (Korea) and the near land (the county). */
+export const land = { far: '#3a3b33', near: '#55574b' } as const;
+
+/** A drawn villager: skin of a portrait, and the four shirts a figure is dressed from. */
+export const skin = '#d9a877';
+export const shirts = ['#557f79', '#7b7895', '#b38b57', '#63819b'] as const;
 
 /** What a resident's claim was: one tone and one mark per kind, so it never rests on colour alone. `wish` takes the
  *  accent because a wish is what becomes a request. */
@@ -50,10 +71,24 @@ export const font = {
   small: `calc(12px * ${K})`,
 } as const;
 
+/** The font sizes in use, and no other: a caption, the reading size, a lead, a title, a heading, a display and a
+ *  hero. Through `px`, so a wall screen reads them bigger. */
+export const type = {
+  caption: px(12),
+  body: px(16),
+  lead: px(20),
+  title: px(24),
+  heading: px(28),
+  display: px(32),
+  hero: px(48),
+} as const;
+
 /** The scale every gap, padding and margin on the reading pages is picked from.
  *  Named steps, not numbers, so two pages that mean "a little" or "a section apart"
  *  cannot drift to 14 and 16. Each goes through the type scale (`px`). */
 export const space = {
+  /** A hairline gap, between two things that touch (a row of pins). */
+  hair: px(2),
   xs: px(4),
   sm: px(8),
   md: px(12),
@@ -79,3 +114,9 @@ export const radius = {
 export const inkA = (a: number) => `rgba(246, 241, 232, ${a})`;
 export const accentA = (a: number) => `rgba(226, 84, 44, ${a})`;
 export const shadeA = (a: number) => `rgba(0, 0, 0, ${a})`;
+/** White at an opacity: a name tag set on a picture. */
+export const whiteA = (a: number) => `rgba(255, 255, 255, ${a})`;
+/** The same for the night ground's own blacks: the opening film's ground (`night.deep`), the panel and the ground. */
+export const deepA = (a: number) => `rgba(21, 21, 15, ${a})`;
+export const panelA = (a: number) => `rgba(27, 28, 24, ${a})`;
+export const groundA = (a: number) => `rgba(18, 19, 16, ${a})`;

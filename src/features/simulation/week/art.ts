@@ -20,7 +20,7 @@ export const backdropOf = (frame: Frame, art: ReadonlySet<string>): string | nul
 /** How a figure is stood in the frame; decided by the pose, not by the picture. */
 export type Fit = 'tall' | 'work' | 'seat' | 'wide';
 export const FIT: Record<Pose, Fit> = {
-  stand: 'tall', phone: 'tall', desk: 'tall', work: 'work', lying: 'wide', resting: 'wide', cpr: 'wide',
+  stand: 'tall', phone: 'tall', desk: 'tall', work: 'work', lying: 'wide', fallen: 'wide', resting: 'wide', cpr: 'wide',
 };
 
 /**
@@ -35,6 +35,7 @@ export function figureOf(actorId: string, pose: Pose, frame: Frame, art: Readonl
       : pose === 'stand' ? [`${id}.stand`, `${id}.phone`]
         : pose === 'phone' ? [`${id}.phone`, `${id}.stand`]
           : pose === 'cpr' ? [`${id}.cpr+P8.lying`]
-            : [`${id}.${pose}`];
+            : pose === 'fallen' ? [`${id}.fallen`, `${id}.lying`]
+              : [`${id}.${pose}`];
   return wanted.find((name) => art.has(name)) ?? null;
 }

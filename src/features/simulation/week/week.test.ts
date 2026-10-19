@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import fixture from './week.fixture.json';
-import { beforeLines, dayOf, eventOf, eventsInOrder, isWeak, nameOf, numberOf, positionIn, progress, requestsOf } from './selectors';
+import { beforeLines, dayOf, eventOf, eventsInOrder, isWeak, nameOf, numberOf, positionIn, runsOf, versionOf } from './selectors';
 import { useWeekStore } from './store';
 import type { Week } from './types';
 
 const week = fixture as unknown as Week;
-const reset = () => useWeekStore.setState({
-  loaded: true, week, error: null, introStarted: true, pathStarted: false, step: 'week', eventId: null, requestId: null,
-  lineIndex: 0, openActor: null, seen: [],
+const reset = (w: Week = week) => useWeekStore.setState({
+  loaded: true, week: w, error: null, introStarted: true, pathStarted: false, step: 'week', eventId: null,
+  lineIndex: 0, seen: [], paths: {}, considering: null, generating: false, closingWords: false,
 });
 
 describe('the week', () => {
@@ -41,8 +41,8 @@ describe('the week', () => {
   it('gives an emergency no request cards and every other event at least one', () => {
     const e6 = eventOf(week, 'E6')!;
     expect(e6.noChoice).toBe(true);
-    expect(requestsOf(e6)).toEqual([]);
-    for (const event of week.events.filter((e) => !e.noChoice)) expect(requestsOf(event).length).toBeGreaterThan(0);
+    expect(versionOf(e6, [])!.requests).toEqual([]);
+    for (const event of week.events.filter((e) => !e.noChoice)) expect(versionOf(event, [])!.requests.length).toBeGreaterThan(0);
   });
 
   it('marks a request the residents only weakly support as weak', () => {
@@ -74,49 +74,99 @@ describe('the week', () => {
     expect(positionIn(scenes, 999).done).toBe(true);
   });
 
-  it('counts what has been read', () => {
-    expect(progress(week, new Set(['E1', 'E3']))).toEqual({ seen: 2, of: 8 });
+  it('reads an event in versions: ver1 is as it first ran, and a request makes the next', () => {
+    const E1 = eventOf(week, 'E1')!;
+    const first = versionOf(E1, [])!;
+    expect(first).toMatchObject({ number: 1, chain: [] });
+    expect(first.scenes).toBe(E1.before.scenes);
+    expect(first.evaluations).toBe(E1.before.evaluations);
+    expect(first.requests).toBe(E1.requests);
+    const second = versionOf(E1, ['A'])!;
+    const A = E1.requests.find((r) => r.id === 'A')!;
+    expect(second).toMatchObject({ number: 2, path: ['A'] });
+    expect(second.scenes).toEqual([A.after.scene]);
+    expect(second.evaluations).toBe(A.after.evaluations);
+    expect(second.requests).toBe(A.after.requests);
+    // A request the event does not offer there makes no version.
+    expect(versionOf(E1, ['Z'])).toBeNull();
+    expect(versionOf(E1, ['A', 'Z'])).toBeNull();
+    expect(versionOf(null, [])).toBeNull();
+    // An emergency offers nothing, whatever the records say.
+    expect(versionOf(eventOf(week, 'E6')!, [])!.requests).toEqual([]);
+  });
+
+  it('goes a version deeper where the records go deeper, and stops where they stop', () => {
+    const deeper = week;
+    const E1 = eventOf(deeper, 'E1')!;
+    const third = versionOf(E1, ['A', 'B'])!;
+    expect(third.number).toBe(3);
+    expect(third.chain.map((q) => q.id)).toEqual(['A', 'B']);
+    expect(third.requests).toEqual([]);
+    expect(versionOf(E1, ['A'])!.requests.map((q) => q.id)).toEqual(['B', 'C']);
+  });
+
+  it('counts how many times the AI has been changed', () => {
+    expect(runsOf({})).toBe(0);
+    expect(runsOf({ E1: ['A', 'B'], E3: ['B'], E4: [] })).toBe(3);
   });
 });
 
 describe('the walk', () => {
-  beforeEach(reset);
+  beforeEach(() => reset());
+  const s = () => useWeekStore.getState();
 
-  it('goes week -> event -> evaluations -> choose -> after -> result, then back to the week', () => {
-    const s = () => useWeekStore.getState();
+  it('goes week -> event -> evaluations -> choose, and a choice makes the next version, back at the week', () => {
     s().openEvent('E1');
-    expect(s().step).toBe('before');
+    expect(s().step).toBe('telling');
+    expect(s().seen).toEqual(['E1']);
     s().goEvaluations();
     expect(s().step).toBe('evaluations');
-    s().afterEvaluations();
+    s().goChoose();
     expect(s().step).toBe('choose');
     s().chooseRequest('A');
-    expect(s()).toMatchObject({ step: 'after', requestId: 'A', lineIndex: 0 });
-    s().goResult();
-    expect(s().step).toBe('result');
-    expect(s().seen).toEqual(['E1']);
-    s().backToWeek();
-    expect(s()).toMatchObject({ step: 'week', eventId: null, requestId: null });
+    // The wall says a new simulation is being made; the event is already one version on.
+    expect(s()).toMatchObject({ step: 'choose', generating: true, paths: { E1: ['A'] }, considering: null });
+    s().endGenerating();
+    expect(s()).toMatchObject({ step: 'week', eventId: null, generating: false, paths: { E1: ['A'] } });
   });
 
-  it('skips the choice for an emergency and goes straight to its result', () => {
-    const s = () => useWeekStore.getState();
-    s().openEvent('E6');
-    s().goEvaluations();
-    s().afterEvaluations();
-    expect(s().step).toBe('result');
+  it('reads the next version when the event is opened again, and offers what that version offers', () => {
+    reset(week);
+    s().openEvent('E1'); s().goEvaluations(); s().goChoose(); s().chooseRequest('A'); s().endGenerating();
+    s().openEvent('E1'); s().goEvaluations(); s().goChoose();
+    expect(s().step).toBe('choose');
+    // Only the requests ver2 offers can be chosen from here, not ver1's.
+    s().chooseRequest('Z');
+    expect(s().paths.E1).toEqual(['A']);
+    s().chooseRequest('B');
+    expect(s().paths.E1).toEqual(['A', 'B']);
+    s().endGenerating();
+    expect(s().step).toBe('week');
+  });
+
+  it('ends an event where nothing is left to choose: the way on is back at the week', () => {
+    reset(week);
+    useWeekStore.setState({ paths: { E1: ['A', 'B'] } });
+    s().openEvent('E1'); s().goEvaluations(); s().goChoose();
+    expect(s().step).toBe('week');
+    // An emergency is read, never chosen.
+    s().openEvent('E6'); s().goEvaluations(); s().goChoose();
+    expect(s()).toMatchObject({ step: 'week', paths: { E1: ['A', 'B'] } });
     expect(s().seen).toContain('E6');
   });
 
-  it('drops a choice that does not belong: from another screen, or a request the event does not have', () => {
-    const s = () => useWeekStore.getState();
+  it('drops a choice that does not belong: from another screen, or a request the version does not offer', () => {
     s().openEvent('E1');
     s().chooseRequest('A');
-    expect(s().step).toBe('before');
+    expect(s().paths).toEqual({});
     s().goEvaluations();
-    s().afterEvaluations();
+    s().goChoose();
     s().chooseRequest('Z');
-    expect(s().step).toBe('choose');
+    expect(s()).toMatchObject({ step: 'choose', paths: {}, generating: false });
+    s().consider('Z');
+    expect(s().considering).toBeNull();
+    s().consider('A');
+    expect(s().considering).toBe('A');
   });
 
   it('does not open an event that is not in the week', () => {
@@ -124,11 +174,9 @@ describe('the walk', () => {
     expect(useWeekStore.getState().eventId).toBeNull();
   });
 
-  it('forgets everything on restart, including what was read', () => {
-    const s = () => useWeekStore.getState();
-    s().openEvent('E1');
-    s().goResult();
+  it('forgets everything on restart, including the versions made', () => {
+    s().openEvent('E1'); s().goEvaluations(); s().goChoose(); s().chooseRequest('A'); s().endGenerating();
     s().restart();
-    expect(s()).toMatchObject({ introStarted: false, pathStarted: false, eventId: null, seen: [] });
+    expect(s()).toMatchObject({ introStarted: false, pathStarted: false, eventId: null, seen: [], paths: {}, generating: false });
   });
 });

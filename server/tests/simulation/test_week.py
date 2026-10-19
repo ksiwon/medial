@@ -156,3 +156,33 @@ def test_the_front_end_fixture_is_what_the_server_sends():
         "week.fixture.json 이 서버가 내려주는 주와 다릅니다. 다시 만드세요: "
         "cd server && python -c \"import json;from app.simulation.week import load_week;"
         "open('../src/features/simulation/week/week.fixture.json','w',encoding='utf-8').write(json.dumps(load_week(),ensure_ascii=False,indent=1))\"")
+
+
+def test_a_version_may_offer_requests_of_its_own(copy: Path):
+    week = load_week(copy)
+    event = next(e for e in week["events"] if e["id"] == "E1")
+    first = next(r for r in event["requests"] if r["id"] == "A")
+    assert [r["id"] for r in first["after"]["requests"]] == ["B", "C"]
+    # A request on the last version offers nothing more; the document says so with an empty list, not a missing key.
+    assert first["after"]["requests"][0]["after"]["requests"] == []
+    # Every version of E1, E4 and E5 offers two requests of its own (a choice, not one card to accept), except
+    # E5's first, where the residents' words left no second request with a basis; the other events stop at ver2.
+    deeper = {e["id"] for e in week["events"] if any(r["after"]["requests"] for r in e["requests"])}
+    assert deeper == {"E1", "E4", "E5"}
+    for e in week["events"]:
+        if e["id"] in deeper:
+            for r in e["requests"]:
+                want = 1 if (e["id"], r["id"]) == ("E5", "A") else 2
+                assert len(r["after"]["requests"]) == want, (e["id"], r["id"])
+
+
+def test_a_request_on_a_later_version_must_start_from_how_the_ai_ran_on_it(copy: Path):
+    edit(copy / "briefs.json", lambda d: next(e for e in d["events"] if e["id"] == "E1")["requests"]["A"]["requests"]["B"]["rules"][0]["before"].update(count=99))
+    with pytest.raises(WeekError, match="앞 버전이 돌던 값"):
+        load_week(copy)
+
+
+def test_a_request_on_a_later_version_needs_its_own_basis_too(copy: Path):
+    edit(copy / "evaluations.json", lambda d: d["links"].update({"E1.A.B": {**d["links"]["E1.A.B"], "verdict": "none"}}))
+    with pytest.raises(WeekError, match="E1.A.B"):
+        load_week(copy)

@@ -1,16 +1,19 @@
 import { create } from 'zustand';
 import { api, ApiError } from '../api/client';
+import { versionOf, type Paths } from './selectors';
 import type { Step, Week } from './types';
 
 // Where the visitor is in the week. One path, no branches to back out of:
 //
-//   week  ->  before (the event's scenes)  ->  evaluations  ->  choose  ->  after (the request's scene)  ->  result
-//                                                  \_ an emergency has no choose: it goes back to the week _/
+//   week  ->  telling (the event's scenes, as they ran in the version being read)  ->  evaluations  ->  choose
+//        ^______________________ a choice makes the next version of that event, and the wall is back at the week _/
 //   ... and from the week (or when nobody is left at the tablet) the closing: what was changed this visit, then the
 //   closing words, then back to the start (week/auto.ts keeps those clocks).
 //
-// Every scene and evaluation was written and checked before the exhibition (server/.../week.py); choosing a
-// request opens what that request's scene already says. Nothing here runs anything.
+// An event is read in versions: ver1 is how it first ran, and choosing a request makes ver2 (that request's scene and
+// what the residents made of it); opening the event again reads ver2, and offers requests of its own. A version with
+// nothing to choose is the end of that event. Every scene and evaluation was written and checked before the exhibition
+// (server/.../week.py); a choice opens what that request's record already says. Nothing here runs anything.
 
 interface WeekState {
   loaded: boolean;
@@ -21,17 +24,17 @@ interface WeekState {
   pathStarted: boolean;
   step: Step;
   eventId: string | null;
-  requestId: string | null;
-  /** The line the telling has reached, counted across the scenes of the current step. */
+  /** The line the telling has reached, counted across the scenes of the version being read. */
   lineIndex: number;
   /** Which resident's card is open on the evaluations page (null: the list). */
-  openActor: string | null;
-  /** The events the visitor has finished, so the week can say what is left to read. */
+  /** The events the visitor has opened. Not shown: only whether anyone has been here at all. */
   seen: string[];
-  /** The request chosen in each finished event (null: an emergency, read and not chosen), for the closing page. */
-  chosen: Record<string, string | null>;
+  /** The requests chosen in each event, in order: its version is the path's length + 1. */
+  paths: Paths;
   /** The request a finger rests on at the tablet before it is confirmed: lit on the wall, nothing runs yet. */
   considering: string | null;
+  /** A request was just confirmed: the wall says a new simulation is being made for a few seconds, then the week. */
+  generating: boolean;
   /** The closing page has gone on from what was changed to the closing words. */
   closingWords: boolean;
   /** When the tablet last pressed anything (ms): every waiting clock counts from it. */
@@ -43,11 +46,12 @@ interface WeekState {
   openEvent: (eventId: string) => void;
   setLine: (index: number) => void;
   goEvaluations: () => void;
-  openResident: (actor: string | null) => void;
-  /** After the evaluations: an emergency is finished, anything else goes on to its requests. */
-  afterEvaluations: () => void;
+  /** Back to the telling of this version, from its evaluations. */
+  backToTelling: () => void;
+  /** After the evaluations: on to the requests of this version. */
+  goChoose: () => void;
   chooseRequest: (requestId: string) => void;
-  goResult: () => void;
+  endGenerating: () => void;
   backToWeek: () => void;
   consider: (requestId: string | null) => void;
   /** The visitor is done: the closing page. */
@@ -66,12 +70,11 @@ export const useWeekStore = create<WeekState>((set, get) => ({
   pathStarted: false,
   step: 'week',
   eventId: null,
-  requestId: null,
   lineIndex: 0,
-  openActor: null,
   seen: [],
-  chosen: {},
+  paths: {},
   considering: null,
+  generating: false,
   closingWords: false,
   lastPress: 0,
 
@@ -85,65 +88,64 @@ export const useWeekStore = create<WeekState>((set, get) => ({
   },
 
   startIntro: () => set({ introStarted: true }),
-  enterWeek: () => set({ pathStarted: true, step: 'week', eventId: null, requestId: null, lineIndex: 0, openActor: null }),
+  enterWeek: () => set({ pathStarted: true, step: 'week', eventId: null, lineIndex: 0 }),
 
   openEvent: (eventId) => {
     if (!get().week?.events.some((e) => e.id === eventId)) return;
-    set({ pathStarted: true, step: 'before', eventId, requestId: null, lineIndex: 0, openActor: null });
-  },
-
-  setLine: (lineIndex) => set({ lineIndex: Math.max(0, lineIndex) }),
-  goEvaluations: () => set({ step: 'evaluations', openActor: null, lineIndex: 0 }),
-  openResident: (openActor) => set({ openActor }),
-
-  afterEvaluations: () => {
-    const { week, eventId } = get();
-    const event = week?.events.find((e) => e.id === eventId);
-    if (!event) return;
-    if (event.noChoice) {
-      set((s) => ({
-        step: 'result', seen: s.seen.includes(event.id) ? s.seen : [...s.seen, event.id], chosen: { ...s.chosen, [event.id]: null },
-        lineIndex: 0, openActor: null,
-      }));
-      return;
-    }
-    set({ step: 'choose', openActor: null, considering: null });
-  },
-
-  chooseRequest: (requestId) => {
-    const { week, eventId, step } = get();
-    // A press that does not belong to this screen is dropped: the tablet may be a moment behind.
-    if (step !== 'choose') return;
-    const event = week?.events.find((e) => e.id === eventId);
-    if (!event?.requests.some((r) => r.id === requestId)) return;
-    set({ step: 'after', requestId, lineIndex: 0, openActor: null, considering: null });
-  },
-
-  goResult: () => {
-    const { eventId, requestId } = get();
-    if (!eventId) return;
     set((s) => ({
-      step: 'result', lineIndex: 0, openActor: null, seen: s.seen.includes(eventId) ? s.seen : [...s.seen, eventId],
-      chosen: { ...s.chosen, [eventId]: requestId },
+      pathStarted: true, step: 'telling', eventId, lineIndex: 0,
+      seen: s.seen.includes(eventId) ? s.seen : [...s.seen, eventId],
     }));
   },
 
-  backToWeek: () => set({ step: 'week', eventId: null, requestId: null, lineIndex: 0, openActor: null, considering: null }),
+  setLine: (index) => set({ lineIndex: Math.max(index, 0) }),
+
+  goEvaluations: () => set({ step: 'evaluations', lineIndex: 0, considering: null }),
+
+  backToTelling: () => set({ step: 'telling', lineIndex: 0 }),
+
+  goChoose: () => {
+    const { week, eventId, paths } = get();
+    const version = versionOf(week?.events.find((e) => e.id === eventId) ?? null, paths[eventId ?? ''] ?? []);
+    // Nothing to choose on this version (an emergency, or the last one): it ends here, back at the week.
+    if (!version || version.requests.length === 0) { get().backToWeek(); return; }
+    set({ step: 'choose', considering: null });
+  },
+
+  chooseRequest: (requestId) => {
+    const { week, eventId, step, paths, generating } = get();
+    // A press that does not belong to this screen is dropped: the tablet may be a moment behind. A choice already
+    // made is made: while the new simulation is being made no second request is taken (the version it leads to may
+    // offer a request of the same name).
+    if (step !== 'choose' || !eventId || generating) return;
+    const version = versionOf(week?.events.find((e) => e.id === eventId) ?? null, paths[eventId] ?? []);
+    if (!version?.requests.some((r) => r.id === requestId)) return;
+    set((s) => ({ paths: { ...s.paths, [eventId]: [...(s.paths[eventId] ?? []), requestId] }, considering: null, generating: true }));
+  },
+
+  // The new simulation is "made": what follows is the week, with the event one version on.
+  endGenerating: () => {
+    if (!get().generating) return;
+    set({ generating: false });
+    get().backToWeek();
+  },
+
+  backToWeek: () => set({ step: 'week', eventId: null, lineIndex: 0, considering: null }),
 
   consider: (considering) => {
-    const { week, eventId, step } = get();
+    const { week, eventId, step, paths } = get();
     if (step !== 'choose') return;
-    const event = week?.events.find((e) => e.id === eventId);
-    if (considering !== null && !event?.requests.some((r) => r.id === considering)) return;
+    const version = versionOf(week?.events.find((e) => e.id === eventId) ?? null, paths[eventId ?? ''] ?? []);
+    if (considering !== null && !version?.requests.some((r) => r.id === considering)) return;
     set({ considering });
   },
 
-  finish: () => set({ pathStarted: true, step: 'closing', eventId: null, requestId: null, lineIndex: 0, openActor: null, considering: null, closingWords: false }),
+  finish: () => set({ pathStarted: true, step: 'closing', eventId: null, lineIndex: 0, considering: null, closingWords: false }),
   showClosingWords: () => { if (get().step === 'closing') set({ closingWords: true }); },
   touch: () => set({ lastPress: Date.now() }),
 
   restart: () => set({
-    introStarted: false, pathStarted: false, step: 'week', eventId: null, requestId: null, lineIndex: 0, openActor: null, seen: [],
-    chosen: {}, considering: null, closingWords: false,
+    introStarted: false, pathStarted: false, step: 'week', eventId: null, lineIndex: 0, seen: [],
+    paths: {}, considering: null, generating: false, closingWords: false,
   }),
 }));

@@ -14,21 +14,21 @@ const week = fixture as unknown as Week;
 const walk = () => useWeekStore.getState();
 const at = (patch: Partial<ReturnType<typeof useWeekStore.getState>>) => useWeekStore.setState(patch);
 
-const reset = () => useWeekStore.setState({
-  loaded: true, week, error: null, introStarted: false, pathStarted: false, step: 'week', eventId: null,
-  requestId: null, lineIndex: 0, openActor: null, seen: [],
+const reset = (w: Week = week) => useWeekStore.setState({
+  loaded: true, week: w, error: null, introStarted: false, pathStarted: false, step: 'week', eventId: null,
+  lineIndex: 0, seen: [], paths: {}, considering: null, generating: false, closingWords: false,
 });
 
-beforeEach(reset);
+beforeEach(() => reset());
 afterEach(cleanup);
 
 describe('the tablet starts the walk', () => {
   it('moves nothing until it has started: no press opens an event that is not on', () => {
-    for (const name of ['skipScene', 'toEvaluations', 'toChoose', 'toResult', 'closeResident', 'week'] as const) apply({ name });
+    for (const name of ['skipScene', 'toEvaluations', 'toChoose', 'toTelling', 'week'] as const) apply({ name });
     apply({ name: 'openEvent', id: 'E1' });
     apply({ name: 'line', value: 1 });
     apply({ name: 'choose', id: 'A' });
-    expect(walk()).toMatchObject({ introStarted: false, pathStarted: false, step: 'week', eventId: null, requestId: null, lineIndex: 0 });
+    expect(walk()).toMatchObject({ introStarted: false, pathStarted: false, step: 'week', eventId: null, paths: {}, lineIndex: 0 });
   });
 
   it('start opens the film once; a second start changes nothing', () => {
@@ -47,9 +47,9 @@ describe('the tablet starts the walk', () => {
   });
 
   it('home from anywhere goes back to the waiting screen and forgets what was read', () => {
-    at({ introStarted: true, pathStarted: true, step: 'evaluations', eventId: 'E1', openActor: 'P1', seen: ['E1'] });
+    at({ introStarted: true, pathStarted: true, step: 'evaluations', eventId: 'E1', seen: ['E1'] });
     apply({ name: 'home' });
-    expect(walk()).toMatchObject({ introStarted: false, pathStarted: false, step: 'week', eventId: null, openActor: null, seen: [] });
+    expect(walk()).toMatchObject({ introStarted: false, pathStarted: false, step: 'week', eventId: null, seen: [] });
   });
 });
 
@@ -60,7 +60,7 @@ describe('the week, from the tablet', () => {
     apply({ name: 'openEvent', id: 'E99' });
     expect(walk()).toMatchObject({ step: 'week', eventId: null });
     apply({ name: 'openEvent', id: 'E3' });
-    expect(walk()).toMatchObject({ step: 'before', eventId: 'E3', lineIndex: 0 });
+    expect(walk()).toMatchObject({ step: 'telling', eventId: 'E3', lineIndex: 0 });
   });
 
   it('does not open a second event on top of the first: the week is where the next one is picked', () => {
@@ -100,26 +100,20 @@ describe('a telling, from the tablet', () => {
     apply({ name: 'line', value: 1 });
     apply({ name: 'skipScene' });
     expect(walk()).toMatchObject({ step: 'evaluations', lineIndex: 0 });
-    apply({ name: 'toResult' });
-    expect(walk().step).toBe('evaluations');
   });
 });
 
 describe('the evaluations, from the tablet', () => {
   beforeEach(() => { at({ introStarted: true, pathStarted: true }); apply({ name: 'openEvent', id: 'E1' }); apply({ name: 'toEvaluations' }); });
-  const asked = () => week.events.find((e) => e.id === 'E1')!.before.evaluations;
 
-  it('opens one resident\'s card, and the same press for someone who was not in the event opens nothing', () => {
-    apply({ name: 'openResident', id: asked()[0].actor });
-    expect(walk().openActor).toBe(asked()[0].actor);
-    apply({ name: 'openResident', id: 'P99' });
-    expect(walk().openActor).toBe(asked()[0].actor);
-  });
-
-  it('closing a card brings the list back', () => {
-    apply({ name: 'openResident', id: asked()[0].actor });
-    apply({ name: 'closeResident' });
-    expect(walk().openActor).toBeNull();
+  it('goes back to the telling, and the way back from the requests is these evaluations', () => {
+    apply({ name: 'toTelling' });
+    expect(walk()).toMatchObject({ step: 'telling', lineIndex: 0 });
+    apply({ name: 'toEvaluations' });
+    apply({ name: 'toChoose' });
+    expect(walk().step).toBe('choose');
+    apply({ name: 'toEvaluations' });
+    expect(walk()).toMatchObject({ step: 'evaluations', considering: null });
   });
 });
 
@@ -128,49 +122,67 @@ describe('choosing, from the tablet', () => {
 
   const toChoose = (id: string) => { apply({ name: 'openEvent', id }); apply({ name: 'toEvaluations' }); apply({ name: 'toChoose' }); };
 
-  it('only a request of this event can be chosen', () => {
+  it('only a request of this version can be chosen', () => {
     toChoose('E1');
     expect(walk().step).toBe('choose');
     apply({ name: 'choose', id: 'Z' });
-    expect(walk()).toMatchObject({ step: 'choose', requestId: null });
+    expect(walk()).toMatchObject({ step: 'choose', paths: {}, generating: false });
     apply({ name: 'choose', id: 'A' });
-    expect(walk()).toMatchObject({ step: 'after', requestId: 'A', lineIndex: 0 });
+    expect(walk()).toMatchObject({ paths: { E1: ['A'] }, generating: true });
   });
 
-  it('a choice cannot be taken back: once made, a second one does nothing', () => {
+  it('a choice cannot be taken back: once made, a second one does nothing, and the walk waits for the new simulation', () => {
     toChoose('E1');
     apply({ name: 'choose', id: 'A' });
     apply({ name: 'choose', id: 'C' });
-    expect(walk().requestId).toBe('A');
+    expect(walk().paths.E1).toEqual(['A']);
+    // While the wall makes the new simulation the tablet cannot send it elsewhere.
+    for (const name of ['week', 'finish', 'toChoose', 'toEvaluations'] as const) apply({ name });
+    expect(walk()).toMatchObject({ step: 'choose', generating: true });
   });
 
   it('a choose pressed while another screen is on does nothing', () => {
     apply({ name: 'openEvent', id: 'E1' });
     apply({ name: 'choose', id: 'A' });
-    expect(walk()).toMatchObject({ step: 'before', requestId: null });
+    expect(walk()).toMatchObject({ step: 'telling', paths: {} });
   });
 
-  it('an emergency has nothing to choose: it ends in its result, and counts as read', () => {
+  it('an emergency has nothing to choose: it ends back at the week, and counts as read', () => {
     apply({ name: 'openEvent', id: 'E6' });
     apply({ name: 'toEvaluations' });
     apply({ name: 'toChoose' });
-    expect(walk()).toMatchObject({ step: 'result', requestId: null });
+    expect(walk()).toMatchObject({ step: 'week', paths: {} });
     expect(walk().seen).toContain('E6');
   });
 
-  it('after the chosen scene the result is reached by the tablet, and counts the event as read', () => {
+  it('a chosen request is "made" for a moment, then the week shows the event one version on', () => {
     toChoose('E1');
     apply({ name: 'choose', id: 'A' });
-    apply({ name: 'toResult' });
-    expect(walk().step).toBe('result');
-    expect(walk().seen).toEqual(['E1']);
+    useWeekStore.getState().endGenerating();
+    expect(walk()).toMatchObject({ step: 'week', eventId: null, generating: false, paths: { E1: ['A'] } });
+    // Opened again, the event is told as ver2: the scene that request made.
+    apply({ name: 'openEvent', id: 'E1' });
+    const event = week.events.find((e) => e.id === 'E1')!;
+    expect(scenesOf(event, walk().paths.E1)).toEqual([event.requests.find((r) => r.id === 'A')!.after.scene]);
+  });
+
+  it('offers on ver2 what ver2 offers, and a version with nothing to offer sends the visitor back to the week', () => {
+    reset(week);
+    at({ introStarted: true, pathStarted: true });
+    toChoose('E1'); apply({ name: 'choose', id: 'A' }); useWeekStore.getState().endGenerating();
+    toChoose('E1');
+    expect(walk().step).toBe('choose');
+    apply({ name: 'choose', id: 'B' }); useWeekStore.getState().endGenerating();
+    expect(walk().paths.E1).toEqual(['A', 'B']);
+    toChoose('E1');
+    expect(walk().step).toBe('week');
   });
 });
 
 describe('what the wall says it shows', () => {
   const state = (over: Partial<Parameters<typeof describeStage>[0]> = {}) => describeStage({
-    week, introStarted: true, pathStarted: true, step: 'week', eventId: null, requestId: null, lineIndex: 0,
-    openActor: null, seen: [], ...over,
+    week, introStarted: true, pathStarted: true, step: 'week', eventId: null, lineIndex: 0,
+    paths: {}, ...over,
   });
 
   it('says idle before the walk and intro during the film, with nothing else to press', () => {
@@ -179,30 +191,24 @@ describe('what the wall says it shows', () => {
     expect(state({ pathStarted: false }).week).toEqual([]);
   });
 
-  it('lists the whole week for the tablet, with what is read and what is an emergency', () => {
-    const s = state({ seen: ['E1'] });
+  it('lists the whole week for the tablet, with each event\'s version and what is an emergency', () => {
+    const s = state({ paths: { E1: ['A'] } });
     expect(s.phase).toBe('week');
     expect(s.week.map((d) => d.day)).toEqual(['월', '화', '수', '목', '금', '토', '일']);
     expect(s.week.find((d) => d.day === '화')!.events).toEqual([]);
-    expect(s.week.find((d) => d.day === '월')!.events[0]).toMatchObject({ id: 'E1', seen: true, noChoice: false });
+    expect(s.week.find((d) => d.day === '월')!.events[0]).toMatchObject({ id: 'E1', version: 2, noChoice: false });
+    expect(s.week.flatMap((d) => d.events).find((e) => e.id === 'E3')!.version).toBe(1);
     expect(s.week.flatMap((d) => d.events).find((e) => e.id === 'E6')!.noChoice).toBe(true);
-    expect([s.seen, s.total]).toEqual([1, 8]);
+    expect(s.runs).toBe(1);
   });
 
   it('tells where in a telling the wall is, and says it is done only on the last line', () => {
     const event = week.events.find((e) => e.id === 'E1')!;
     const last = event.before.scenes.reduce((n, s) => n + s.lines.length, 0) - 1;
-    const first = state({ step: 'before', eventId: 'E1', lineIndex: 0 });
-    expect(first).toMatchObject({ phase: 'before', toldAll: false, line: 0 });
+    const first = state({ step: 'telling', eventId: 'E1', lineIndex: 0 });
+    expect(first).toMatchObject({ phase: 'telling', toldAll: false, line: 0, version: 1 });
     expect(first.scene).toMatchObject({ index: 0, of: event.before.scenes.length });
-    expect(state({ step: 'before', eventId: 'E1', lineIndex: last }).toldAll).toBe(true);
-  });
-
-  it('lists the residents of the event, and only the one who is open as open', () => {
-    const event = week.events.find((e) => e.id === 'E1')!;
-    const s = state({ step: 'evaluations', eventId: 'E1', openActor: event.before.evaluations[0].actor });
-    expect(s.residents.map((r) => r.id)).toEqual(event.before.evaluations.map((e) => e.actor));
-    expect(s.openActor).toBe(event.before.evaluations[0].actor);
+    expect(state({ step: 'telling', eventId: 'E1', lineIndex: last }).toldAll).toBe(true);
   });
 
   it('offers each request by its place in the event: the tablet shows its number, the wall shows the card', () => {
@@ -211,24 +217,36 @@ describe('what the wall says it shows', () => {
     expect(s.requests).toEqual(event.requests.map((r) => ({ id: r.id, label: r.label })));
   });
 
-  it('offers an emergency no requests', () => {
+  it('offers an emergency no requests, and says there is nothing to choose', () => {
     expect(state({ step: 'evaluations', eventId: 'E6' }).requests).toEqual([]);
     expect(state({ step: 'evaluations', eventId: 'E6' }).event?.noChoice).toBe(true);
+    expect(state({ step: 'evaluations', eventId: 'E6' }).leaf).toBe(true);
+    expect(state({ step: 'evaluations', eventId: 'E1' }).leaf).toBe(false);
   });
 
-  it('tells the scene a chosen request led to, not the event\'s own', () => {
+  it('says which version is being read and what it offers: ver2 offers what that request leads to', () => {
+    const E1 = week.events.find((e) => e.id === 'E1')!;
+    const second = state({ step: 'choose', eventId: 'E1', paths: { E1: ['A'] } });
+    expect(second.version).toBe(2);
+    expect(second.requests).toEqual(E1.requests.find((r) => r.id === 'A')!.after.requests.map((r) => ({ id: r.id, label: r.label })));
+    expect(second.leaf).toBe(false);
+    expect(state({ step: 'choose', eventId: 'E1', paths: { E1: ['A', 'B'] } })).toMatchObject({ version: 3, leaf: true });
+  });
+
+  it('tells the scene of the version being read, not always the event\'s own', () => {
     const event = week.events.find((e) => e.id === 'E1')!;
-    expect(scenesOf(event, 'before', null)).toEqual(event.before.scenes);
-    expect(scenesOf(event, 'after', 'A')).toEqual([event.requests.find((r) => r.id === 'A')!.after.scene]);
-    expect(evaluationsOf(event, 'result', 'A')).toEqual(event.requests.find((r) => r.id === 'A')!.after.evaluations);
-    expect(evaluationsOf(event, 'evaluations', null)).toEqual(event.before.evaluations);
+    expect(scenesOf(event, [])).toEqual(event.before.scenes);
+    expect(scenesOf(event, ['A'])).toEqual([event.requests.find((r) => r.id === 'A')!.after.scene]);
+    expect(evaluationsOf(event, ['A'])).toEqual(event.requests.find((r) => r.id === 'A')!.after.evaluations);
+    expect(evaluationsOf(event, [])).toEqual(event.before.evaluations);
+    expect(scenesOf(event, ['Z'])).toEqual([]);
   });
 });
 
 describe('the waiting screen', () => {
   it('asks the visitor to use the tablet, and has nothing to press itself', () => {
     const { container } = render(<IdleScreen art={new Set()} />);
-    expect(screen.getByText('Dially')).toBeDefined();
+    expect(screen.getByAltText('Dially')).toBeDefined();
     expect(screen.getByText(/태블릿에서 시작하기/)).toBeDefined();
     expect(container.querySelectorAll('button')).toHaveLength(0);
   });

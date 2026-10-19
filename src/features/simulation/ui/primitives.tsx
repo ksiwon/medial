@@ -1,5 +1,5 @@
 import styled, { css } from 'styled-components';
-import { accentA, inkA, night, font, px, radius } from './theme';
+import { accentA, font, inkA, night, px, radius, space } from './theme';
 
 // The few shared atoms the screens use: the rounded label, a notice, and inline code.
 
@@ -23,7 +23,7 @@ export const pill = (size: keyof typeof PILL) => css`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: ${space.sm};
   box-sizing: border-box;
   height: ${px(PILL[size].h)};
   padding: 0 ${px(PILL[size].x)};
@@ -37,12 +37,12 @@ export const pill = (size: keyof typeof PILL) => css`
 /** Blocking problems and honest notices (the server not answering, a week that broke a rule). Not a decorative card. */
 export const Callout = styled.div<{ $tone?: 'info' | 'error' }>`
   display: flex;
-  gap: ${px(12)};
+  gap: ${space.md};
   align-items: flex-start;
   font-size: ${font.body};
   line-height: 1.55;
   border-radius: ${radius.panel};
-  padding: ${px(12)} ${px(16)};
+  padding: ${space.md} ${space.lg};
   color: ${night.ink};
   border: 1px solid ${(p) => (p.$tone === 'error' ? night.accent : night.line)};
   background: ${(p) => (p.$tone === 'error' ? accentA(0.16) : night.panel)};
@@ -52,7 +52,7 @@ export const Mono = styled.code`
   font-size: ${font.small};
   background: ${inkA(0.1)};
   border-radius: ${radius.xs};
-  padding: 0 ${px(4)};
+  padding: 0 ${space.xs};
   color: ${night.mute};
   word-break: break-all;
 `;

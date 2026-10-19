@@ -1,5 +1,7 @@
+// Lengths here are plain px, not `px()`/`space`/`type` tokens: the tablet is one fixed-resolution device, so there is no `--k` scale to go through (colours and corners still come from ui/theme).
 import styled, { css, keyframes } from 'styled-components';
-import { accentA, font, inkA, night, radius } from '../../ui/theme';
+import Logo from '../../ui/Logo';
+import { accentA, font, inkA, night, radius, shadeA } from '../../ui/theme';
 
 // The tablet's parts. An iPad Air held landscape (1180 x 820), touched with a finger, at arm's length:
 // everything pressable is at least TOUCH tall, there is no hover anywhere, and a press answers at once
@@ -86,7 +88,7 @@ export const Button = styled.button<{ $tone?: Tone; $big?: boolean }>`
   font-weight: 800;
   letter-spacing: -0.01em;
   white-space: nowrap;
-  color: ${(p) => (p.$tone === 'primary' ? '#fff' : night.ink)};
+  color: ${(p) => (p.$tone === 'primary' ? night.white : night.ink)};
   background: ${(p) => (p.$tone === 'primary' ? night.accent : p.$tone === 'quiet' ? 'transparent' : inkA(0.1))};
   border: 1px solid ${(p) => (p.$tone === 'primary' ? night.accent : p.$tone === 'quiet' ? inkA(0.24) : inkA(0.3))};
 `;
@@ -95,7 +97,8 @@ export const Button = styled.button<{ $tone?: Tone; $big?: boolean }>`
 export const Next = styled(Button).attrs({ $tone: 'primary' })`
   animation: ${pulse} 2.2s ease-in-out infinite;
   /* Not yet pressable: an outline, not a dimmed orange that still read as the button to press. */
-  &:disabled { opacity: 1; animation: none; color: ${night.mute}; background: transparent; border-color: ${inkA(0.24)}; }
+  /* A faint, flat ghost - no pulse, no border to press - so it cannot be taken for a button. */
+  &:disabled { opacity: 0.4; animation: none; color: ${night.faint}; background: transparent; border-color: ${inkA(0.1)}; border-style: dashed; cursor: not-allowed; pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { animation: none; }
 `;
 
@@ -105,6 +108,7 @@ export const Card = styled.button<{ $on?: boolean }>`
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   align-items: flex-start;
   gap: 8px;
   min-height: ${TOUCH + 16}px;
@@ -155,7 +159,6 @@ const BarBox = styled.header`
   align-items: center;
   gap: 24px;
   min-height: ${TOUCH}px;
-  > b { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; }
   > em { font-style: normal; font-size: 20px; font-weight: 800; color: ${night.accent}; }
   > span { flex: 1; }
 `;
@@ -163,7 +166,7 @@ const BarBox = styled.header`
 export function TopBar({ place, home }: { place: string | null; home: React.ReactNode }) {
   return (
     <BarBox>
-      <b>Dially</b>
+      <Logo height="32px" />
       {place && <em>{place}</em>}
       <span />
       {home}
@@ -185,3 +188,18 @@ export const Notice = styled.div<{ $tone?: 'warn' | 'quiet' }>`
   border: 1px solid ${(p) => (p.$tone === 'quiet' ? night.line : night.accent)};
   &::before { content: ''; width: 12px; height: 12px; border-radius: ${radius.round}; background: ${(p) => (p.$tone === 'quiet' ? night.faint : night.accent)}; }
 `;
+
+/** Over the page when one question must be answered before anything happens: a request to run, the way back to the start. */
+export const Ask = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: ${shadeA(0.62)};
+  > section { width: min(640px, 86%); display: flex; flex-direction: column; gap: 24px; padding: 32px; border-radius: ${radius.card}; background: ${night.panel}; border: 1px solid ${night.accent}; }
+  > section > h2 { margin: 0; font-size: 32px; line-height: 1.3; font-weight: 800; letter-spacing: -0.03em; word-break: keep-all; }
+  > section > p { margin: 0; font-size: 20px; line-height: 1.5; color: ${night.mute}; word-break: keep-all; }
+  > section > div { display: flex; gap: 16px; justify-content: flex-end; }
+`;
+

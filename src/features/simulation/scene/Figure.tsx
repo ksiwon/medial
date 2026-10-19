@@ -1,4 +1,5 @@
 import { api } from '../api/client';
+import { shirts } from '../ui/theme';
 import type { Fit } from '../week/art';
 
 // One person in a frame: their picture when one was drawn, otherwise a plain silhouette with their number.
@@ -13,7 +14,7 @@ export function Figure({ picture, actorId, fit }: { picture: string | null; acto
   // Sized by the frame (SceneView's Person box); the picture only fills it.
   if (picture) return <img src={api.artUrl(picture)} alt="" draggable={false} />;
   const { w, h } = BOX[fit];
-  const shirt = ['#557f79', '#7b7895', '#b38b57', '#63819b'][(Number(actorId.replace(/\D/g, '')) || 6) % 4];
+  const shirt = shirts[(Number(actorId.replace(/\D/g, '')) || 6) % 4];
   return (
     <svg viewBox={`0 0 ${w * 100} ${h * 100}`} aria-hidden>
       {fit === 'wide' ? (

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { positionIn, requestOf, eventOf, dayOf, nameOf } from '../week/selectors';
+import { positionIn, eventOf, dayOf, runsOf, versionOf, type Paths } from '../week/selectors';
 import { useWeekStore } from '../week/store';
 import type { Evaluation, Week, WeekEvent, WeekScene } from '../week/types';
 import { postState } from './bus';
-import { IDLE_STATE, type Command, type DayBrief, type Phase, type RequestBrief, type ResidentBrief, type StageState } from './protocol';
+import { IDLE_STATE, type Command, type DayBrief, type Phase, type RequestBrief, type StageState } from './protocol';
 import { useStream } from './stream';
 import type { AutoAction } from '../week/auto';
 
@@ -14,21 +14,14 @@ import type { AutoAction } from '../week/auto';
 // a screen that has gone must not open another telling. Nothing here starts a run: every scene and every
 // evaluation was written and checked before the exhibition (server/app/simulation/week.py).
 
-/** The scenes the wall is telling right now: the event's own, or the one a chosen request led to. */
-export function scenesOf(event: WeekEvent | null, step: string, requestId: string | null): WeekScene[] {
-  if (!event) return [];
-  if (step === 'after') {
-    const request = requestOf(event, requestId);
-    return request ? [request.after.scene] : [];
-  }
-  return event.before.scenes;
+/** The scenes the wall is telling right now: those of the version of the event being read. */
+export function scenesOf(event: WeekEvent | null, path: readonly string[]): WeekScene[] {
+  return versionOf(event, path)?.scenes ?? [];
 }
 
-/** The evaluations on the page: those of the event as it ran, or of the request's scene after it was chosen. */
-export function evaluationsOf(event: WeekEvent | null, step: string, requestId: string | null): Evaluation[] {
-  if (!event) return [];
-  if (step === 'result' && requestId) return requestOf(event, requestId)?.after.evaluations ?? [];
-  return event.before.evaluations;
+/** The evaluations on the page: what the residents made of the version being read. */
+export function evaluationsOf(event: WeekEvent | null, path: readonly string[]): Evaluation[] {
+  return versionOf(event, path)?.evaluations ?? [];
 }
 
 /** Apply one press. Every press is also a sign someone is at the tablet: the page's clock starts over. */
@@ -45,6 +38,7 @@ export function runAuto(action: AutoAction): void {
 function run(command: Command): void {
   const w = useWeekStore.getState();
   const event = eventOf(w.week ?? ({ events: [] } as unknown as Week), w.eventId);
+  const path = w.paths[w.eventId ?? ''] ?? [];
   const on = (step: string) => w.pathStarted && w.step === step;
   switch (command.name) {
     case 'start':
@@ -57,32 +51,29 @@ function run(command: Command): void {
       if (on('week')) w.openEvent(command.id);
       return;
     case 'line': {
-      if (!(on('before') || on('after')) || !event) return;
-      const scenes = scenesOf(event, w.step, w.requestId);
+      if (!on('telling') || !event) return;
+      const scenes = scenesOf(event, path);
       const total = scenes.reduce((n, sc) => n + sc.lines.length, 0);
       w.setLine(Math.min(Math.max(w.lineIndex + command.value, 0), Math.max(total - 1, 0)));
       return;
     }
     case 'skipScene': {
-      if (!(on('before') || on('after')) || !event) return;
-      const scenes = scenesOf(event, w.step, w.requestId);
+      if (!on('telling') || !event) return;
+      const scenes = scenesOf(event, path);
       const at = positionIn(scenes, w.lineIndex);
       const next = scenes.slice(0, at.scene + 1).reduce((n, sc) => n + sc.lines.length, 0);
       w.setLine(Math.min(next, positionIn(scenes, 9999).total - 1));
       return;
     }
     case 'toEvaluations':
-      if (on('before')) w.goEvaluations();
-      else if (on('after')) w.goResult();
+      // From the telling, and back from the requests (the way back is the residents' words).
+      if ((on('telling') || on('choose')) && !w.generating) w.goEvaluations();
       return;
-    case 'openResident':
-      if ((on('evaluations') || on('result')) && evaluationsOf(event, w.step, w.requestId).some((e) => e.actor === command.id)) w.openResident(command.id);
-      return;
-    case 'closeResident':
-      if (on('evaluations') || on('result')) w.openResident(null);
+    case 'toTelling':
+      if (on('evaluations')) w.backToTelling();
       return;
     case 'toChoose':
-      if (on('evaluations')) w.afterEvaluations();
+      if (on('evaluations')) w.goChoose();
       return;
     case 'consider':
       w.consider(command.id);
@@ -90,14 +81,11 @@ function run(command: Command): void {
     case 'choose':
       w.chooseRequest(command.id);
       return;
-    case 'toResult':
-      if (on('after')) w.goResult();
-      return;
     case 'week':
-      if (w.pathStarted && w.step !== 'week' && w.step !== 'closing') w.backToWeek();
+      if (w.pathStarted && w.step !== 'week' && w.step !== 'closing' && !w.generating) w.backToWeek();
       return;
     case 'finish':
-      if (w.pathStarted && (w.step === 'week' || w.step === 'result' || w.step === 'choose')) w.finish();
+      if (w.pathStarted && (w.step === 'week' || w.step === 'choose') && !w.generating) w.finish();
       return;
     case 'closingWords':
       w.showClosingWords();
@@ -108,41 +96,43 @@ function run(command: Command): void {
   }
 }
 
-const requestBrief = (event: WeekEvent): RequestBrief[] => event.requests.map((r) => ({ id: r.id, label: r.label }));
+const requestBrief = (event: WeekEvent, path: readonly string[]): RequestBrief[] =>
+  (versionOf(event, path)?.requests ?? []).map((r) => ({ id: r.id, label: r.label }));
 
-const residentBrief = (week: Week, list: Evaluation[]): ResidentBrief[] =>
-  list.map((e) => ({ id: e.actor, name: nameOf(week, e.actor), marks: e.claims.map((c) => c.kind) }));
-
-const weekBrief = (week: Week, seen: string[], chosen: Record<string, string | null>): DayBrief[] =>
+const weekBrief = (week: Week, paths: Paths): DayBrief[] =>
   week.days.map((d) => ({
     day: d.day,
     events: d.events.map((id) => {
       const e = eventOf(week, id)!;
-      const at = e.requests.findIndex((r) => r.id === chosen[id]);
-      return { id, title: e.title, noChoice: e.noChoice, seen: seen.includes(id), chosen: at >= 0 ? at + 1 : null };
+      return { id, title: e.title, noChoice: e.noChoice, version: (paths[id]?.length ?? 0) + 1 };
     }),
   }));
 
 /** What the wall shows right now, for the tablet. Pure: the same store always says the same thing. */
 export function describeStage(args: {
   week: Week | null; introStarted: boolean; pathStarted: boolean; step: string; eventId: string | null;
-  requestId: string | null; lineIndex: number; openActor: string | null; seen: string[];
-  considering?: string | null; closingWords?: boolean; chosen?: Record<string, string | null>;
+  lineIndex: number; paths?: Paths;
+  considering?: string | null; generating?: boolean; closingWords?: boolean;
 }): StageState {
   const { week } = args;
   if (!week) return IDLE_STATE;
   if (!args.pathStarted) return { ...IDLE_STATE, phase: args.introStarted ? 'intro' : 'idle' };
+  const paths = args.paths ?? {};
   const phase = args.step as Phase;
   const event = eventOf(week, args.eventId);
+  const path = paths[args.eventId ?? ''] ?? [];
+  const version = versionOf(event, path);
   const base: StageState = {
-    ...IDLE_STATE, phase, week: weekBrief(week, args.seen, args.chosen ?? {}), seen: args.seen.length,
-    total: week.days.reduce((n, d) => n + d.events.length, 0),
+    ...IDLE_STATE, phase, week: weekBrief(week, paths), runs: runsOf(paths),
     event: event ? { id: event.id, title: event.title, day: dayOf(week, event.id), noChoice: event.noChoice } : null,
+    version: version?.number ?? 1,
+    leaf: version ? version.requests.length === 0 : false,
+    generating: args.generating ?? false,
     closingWords: args.closingWords ?? false,
   };
   if (!event) return base;
-  if (phase === 'before' || phase === 'after') {
-    const scenes = scenesOf(event, phase, args.requestId);
+  if (phase === 'telling') {
+    const scenes = scenesOf(event, path);
     const at = positionIn(scenes, args.lineIndex);
     const scene = scenes[at.scene];
     return {
@@ -150,10 +140,7 @@ export function describeStage(args: {
       scene: scene ? { time: scene.time, index: at.scene, of: scenes.length } : null,
     };
   }
-  if (phase === 'evaluations' || phase === 'result') {
-    return { ...base, residents: residentBrief(week, evaluationsOf(event, phase, args.requestId)), openActor: args.openActor };
-  }
-  if (phase === 'choose') return { ...base, requests: requestBrief(event), considering: args.considering ?? null };
+  if (phase === 'choose') return { ...base, requests: requestBrief(event, path), considering: args.considering ?? null };
   return base;
 }
 
@@ -211,8 +198,8 @@ export function useWall(): { paired: boolean } {
   const w = useWeekStore();
   latest.current = describeStage({
     week: w.week, introStarted: w.introStarted, pathStarted: w.pathStarted, step: w.step, eventId: w.eventId,
-    requestId: w.requestId, lineIndex: w.lineIndex, openActor: w.openActor, seen: w.seen,
-    considering: w.considering, closingWords: w.closingWords, chosen: w.chosen,
+    lineIndex: w.lineIndex, paths: w.paths,
+    considering: w.considering, generating: w.generating, closingWords: w.closingWords,
   });
 
   // After every render: the cheap comparison above decides whether anything goes out.

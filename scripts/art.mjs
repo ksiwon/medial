@@ -99,10 +99,17 @@ const POSE = {
   drive: { size: SQUARE, body: 'Seen from the waist up in the driver\'s seat, the frame cropping at the waist: both arms reaching forward and down out of frame as if holding a steering wheel (do not draw the wheel), a seatbelt across the chest, eyes on the road ahead.' },
   seated: { size: SQUARE, body: 'Seen from the waist up in a car passenger seat, the frame cropping at the waist: a seatbelt across the chest, turned slightly toward the driver as if talking.' },
   lying: { size: WIDE, body: 'Lying unconscious on his back on a floor, eyes closed, arms loose at his sides, seen from the eye level of someone kneeling nearby. Calm and non-graphic: no injury, no blood.' },
-  // 감기로 누워 쉬는 모습. 쓰러진 것(lying)과 다르다: 눈을 감고, 모자를 벗고, 이불을 덮고, 편안히 옆으로.
-  resting: { size: WIDE, body: 'Lying on his side on a floor mat in a living room, asleep or half-asleep with eyes closed, a thin quilted blanket pulled up to his chest, his head on a small pillow, a damp cloth on his forehead. He is NOT wearing any hat, shoes or boots and is in plain indoor sleepwear (a faded long-sleeved grey top). Calm, tired and ill, not injured, not collapsed. Seen from the eye level of someone sitting beside him.' },
+  // 넘어져 바닥에 있지만 의식이 있다: 눈을 뜨고, 말을 한다. 쓰러져 의식 없는 것(lying)과 다르다.
+  fallen: { size: WIDE, body: 'Lying on a floor on his back after a fall but fully awake and conscious: eyes open, head lifted slightly and turned toward someone standing nearby, one hand pressed to his hip, the other palm down on the floor as if trying and failing to push himself up, a pained, embarrassed expression. Seen from the eye level of someone standing nearby. Calm and non-graphic: no injury, no blood.' },
+  // 감기로 누워 쉬는 모습. 쓰러진 것(lying)과 다르다: 눈을 뜨고 말을 하고 있다(잠든 것이 아니다), 모자를 벗고, 이불을 덮고, 편안히 옆으로.
+  resting: { size: WIDE, body: 'Lying on his side on a floor mat in a living room, awake but feverish and weak, eyes open and looking toward someone standing nearby as if answering them, a thin quilted blanket pulled up to his chest, his head on a small pillow, a damp cloth on his forehead. He is NOT wearing any hat, shoes or boots and is in plain indoor sleepwear (a faded long-sleeved grey top). Calm, tired and ill, not injured, not collapsed. Seen from the eye level of someone sitting beside him.' },
   'work.FARM': { size: TALL, body: 'Full body, crouching over a vegetable row, weeding with a short Korean hand hoe (homi) in one hand, work gloves, absorbed in the work and not looking up.' },
   'work.SEA': { size: TALL, body: 'Full body, standing with feet apart, pulling a wet fishing net hand over hand with rubber gloves, absorbed in the work and not looking up.' },
+};
+
+/** 사람마다 다르게 그려야 하는 자세. 같은 `resting` 이어도 감기로 누운 것과 허리가 아파 누운 것은 다른 장면이다. */
+const POSE_FOR = {
+  'P11.resting': 'Lying on her side on a floor mat in the back room of a house, a thin blanket over her legs, one hand pressed to her lower back, a pillow under her head, her brow slightly drawn from the ache, eyes open and tired. She is NOT wearing an apron or shoes; plain home clothes (a floral blouse and loose trousers). Calm, in pain but not injured or collapsed. Seen from the eye level of someone standing at the door.',
 };
 
 /** 그림 하나의 요청. 모르는 장소·사람·자세면 그 이유. */
@@ -113,7 +120,7 @@ function jobOf(name) {
   if (!PEOPLE[id]) return { why: `${id} 의 모습이 정해지지 않았다 (PEOPLE)` };
   if (!POSE[pose]) return { why: `자세 ${pose} 를 모른다 (POSE)` };
   const P = POSE[pose], who = PEOPLE[id];
-  return { job: { size: P.size, transparent: true, prompt: `${STYLE}\n${LAYER} A single figure: ${who.look}. ${pronoun(P.body, who.sex)} ${FACE}` } };
+  return { job: { size: P.size, transparent: true, prompt: `${STYLE}\n${LAYER} A single figure: ${who.look}. ${pronoun(POSE_FOR[name] ?? P.body, who.sex)} ${FACE}` } };
 }
 
 // ---------------------------------------------------------------------------

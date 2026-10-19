@@ -1,12 +1,51 @@
-import type { Line, Week, WeekEvent, WeekRequest, WeekScene } from './types';
+import type { Evaluation, Line, Week, WeekEvent, WeekRequest, WeekScene } from './types';
 
 // What the screens ask of the week. Pure: the same week always answers the same.
 
 export const eventOf = (week: Week, id: string | null): WeekEvent | null =>
   week.events.find((e) => e.id === id) ?? null;
 
-export const requestOf = (event: WeekEvent | null, id: string | null): WeekRequest | null =>
-  event?.requests.find((r) => r.id === id) ?? null;
+/**
+ * An event as it can be read: ver1 is how it first ran; choosing a request on a version makes the next one, which is
+ * that request's scene and the residents' words about it, and offers requests of its own. A version is named by the
+ * path of requests that led to it (ver1: none).
+ */
+export interface Version {
+  /** 1 for the event as it first ran, 2 after one request, 3 after two. */
+  number: number;
+  path: string[];
+  /** The requests made along the path, in order. */
+  chain: WeekRequest[];
+  scenes: WeekScene[];
+  evaluations: Evaluation[];
+  /** What can be chosen from this version: nothing on the last one, and nothing in an emergency. */
+  requests: WeekRequest[];
+}
+
+export function versionOf(event: WeekEvent | null, path: readonly string[]): Version | null {
+  if (!event) return null;
+  let offered = event.noChoice ? [] : event.requests;
+  const chain: WeekRequest[] = [];
+  let scenes = event.before.scenes;
+  let evaluations = event.before.evaluations;
+  for (const id of path) {
+    const next = offered.find((r) => r.id === id);
+    if (!next) return null;
+    chain.push(next);
+    scenes = [next.after.scene];
+    evaluations = next.after.evaluations;
+    offered = next.after.requests;
+  }
+  return { number: path.length + 1, path: [...path], chain, scenes, evaluations, requests: offered };
+}
+
+/** How many times the visitor has had the AI changed (a request chosen, a new simulation made) before the closing opens. */
+export const RUNS_TO_CLOSE = 5;
+
+/** The requests chosen so far in each event, in order: the event's version is the path's length + 1. */
+export type Paths = Record<string, string[]>;
+
+export const runsOf = (paths: Paths): number => Object.values(paths).reduce((n, p) => n + p.length, 0);
 
 /** The weekday an event falls on this session. The pool does not know: the schedule does. */
 export const dayOf = (week: Week, eventId: string): string | null =>
@@ -45,11 +84,6 @@ export function numberOf(scenes: WeekScene[], sceneIndex: number, lineIndex: num
 
 /** Whether the residents' words only weakly support a request. Shown as such. */
 export const isWeak = (request: WeekRequest): boolean => request.basis.verdict === 'weak';
-
-/** The sentences a card reads: the part of the rule that changes, before and after, in the designer's own words. */
-export function requestsOf(event: WeekEvent): WeekRequest[] {
-  return event.noChoice ? [] : event.requests;
-}
 
 /** Events in the order the week tells them: by day, and within a day the order the session placed them. */
 export function eventsInOrder(week: Week): WeekEvent[] {

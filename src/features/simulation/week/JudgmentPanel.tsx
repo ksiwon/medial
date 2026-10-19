@@ -1,6 +1,6 @@
 import styled, { css } from 'styled-components';
 import { pill } from '../ui/primitives';
-import { inkA, night, px, radius, space } from '../ui/theme';
+import { inkA, night, px, radius, space, type } from '../ui/theme';
 import type { ContactWay, Judgment } from './judgment';
 import { nameOf } from './selectors';
 import type { Week } from './types';
@@ -13,12 +13,12 @@ import type { Week } from './types';
 
 const Box = styled.aside<{ $absent: boolean }>`
   flex: none;
-  width: ${px(360)};
+  width: ${px(520)};
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: ${space.sm};
-  padding: ${space.lg} ${space.lg} ${space.lg} ${space.md};
+  gap: ${space.md};
+  padding: ${space.xl};
   background: ${night.panel};
   border-left: 1px solid ${night.line};
   overflow: hidden;
@@ -26,48 +26,43 @@ const Box = styled.aside<{ $absent: boolean }>`
 `;
 
 const Kicker = styled.div`
-  font-size: ${px(12)};
+  font-size: ${type.caption};
   font-weight: 800;
   letter-spacing: 0.09em;
   color: ${night.accent};
 `;
 
 const Title = styled.div`
-  font-size: ${px(20)};
+  font-size: ${type.lead};
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.3;
   word-break: keep-all;
-  > small { display: block; margin-top: ${space.xs}; font-size: ${px(12)}; font-weight: 600; color: ${night.mute}; }
+  > small { display: block; margin-top: ${space.xs}; font-size: ${type.caption}; font-weight: 600; color: ${night.mute}; }
 `;
 
 const Steps = styled.ol`
   list-style: none;
   margin: ${space.sm} 0 0;
   padding: 0;
-  flex: 1 1 auto;
-  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: ${space.lg};
-  overflow: hidden;
 `;
 
-const Step = styled.li<{ $on: boolean; $grow?: boolean }>`
+const Step = styled.li<{ $on: boolean }>`
   display: flex;
   flex-direction: column;
-  gap: ${space.sm};
+  gap: ${space.md};
   min-height: 0;
-  /* Only what it knows gives way when the panel is full (its oldest lines fall off); the rules never do. */
-  ${(p) => (p.$grow ? css`flex: 1 1 auto; overflow: hidden;` : css`flex: none;`)}
   border-left: ${px(4)} solid ${(p) => (p.$on ? night.accent : inkA(0.14))};
-  padding: ${px(2)} 0 ${px(2)} ${space.md};
+  padding: ${space.xs} 0 ${space.xs} ${space.lg};
   transition: border-color 0.45s ease;
-  > h4 { margin: 0; font-size: ${px(12)}; font-weight: 800; letter-spacing: 0.06em; color: ${night.mute}; }
+  > h4 { margin: 0; font-size: ${type.caption}; font-weight: 800; letter-spacing: 0.06em; color: ${night.mute}; }
 `;
 
 const None = styled.div`
-  font-size: ${px(16)};
+  font-size: ${type.body};
   line-height: 1.5;
   color: ${night.faint};
   word-break: keep-all;
@@ -79,62 +74,53 @@ const Log = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  gap: ${space.sm};
-  min-height: 0;
-  flex: 1 1 auto;
-  overflow: hidden;
+  gap: ${space.md};
 `;
 
 const Said = styled.div<{ $heard: boolean; $new: boolean }>`
-  font-size: ${px(16)};
+  font-size: ${type.body};
   line-height: 1.5;
   word-break: keep-all;
   color: ${(p) => (p.$new ? night.ink : night.mute)};
-  > b { ${pill('xs')} margin-right: ${space.sm}; font-weight: 800; color: ${(p) => (p.$heard ? night.ink : '#fff')}; background: ${(p) => (p.$heard ? inkA(0.14) : night.accent)}; }
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  > b { ${pill('xs')} margin-right: ${space.sm}; font-weight: 800; color: ${(p) => (p.$heard ? night.ink : night.white)}; background: ${(p) => (p.$heard ? inkA(0.14) : night.accent)}; }
 `;
 
 const RuleRow = styled.div<{ $changed: boolean }>`
   display: flex;
   flex-direction: column;
-  gap: ${space.xs};
-  font-size: ${px(16)};
+  gap: ${space.sm};
+  font-size: ${type.body};
   line-height: 1.5;
   word-break: keep-all;
   > b { font-weight: 800; display: flex; align-items: center; gap: ${space.sm}; flex-wrap: wrap; }
-  > b > em { ${pill('xs')} font-style: normal; font-weight: 800; color: #fff; background: ${night.accent}; }
+  > b > em { ${pill('xs')} font-style: normal; font-weight: 800; color: ${night.white}; background: ${night.accent}; }
   > s { color: ${night.faint}; text-decoration-color: ${inkA(0.35)}; }
-  > span { ${(p) => p.$changed && css`font-size: ${px(20)}; line-height: 1.4; padding: ${space.xs} ${space.sm}; border-radius: ${radius.control}; background: ${night.accentSoft}; box-shadow: inset ${px(4)} 0 0 ${night.accent}; font-weight: 700;`} }
+  > i { font-style: normal; font-weight: 800; line-height: 1; color: ${night.accent}; font-size: ${type.lead}; padding-left: ${space.sm}; }
+  > span { ${(p) => p.$changed && css`font-size: ${type.lead}; line-height: 1.4; padding: ${space.sm} ${space.md}; border-radius: ${radius.control}; background: ${night.accentSoft}; font-weight: 700;`} }
 `;
 
 const ContactRow = styled.div<{ $answered: boolean }>`
   display: flex;
   align-items: center;
   gap: ${space.sm};
-  font-size: ${px(16)};
+  font-size: ${type.body};
   > b { font-weight: 800; }
   > span { color: ${night.mute}; }
   > em { ${pill('xs')} margin-left: auto; font-style: normal; font-weight: 800;
-    color: ${(p) => (p.$answered ? '#fff' : night.deep)}; background: ${(p) => (p.$answered ? '#3d6ea8' : night.ink)}; }
-`;
-
-const Away = styled.div`
-  flex: none;
-  border: 1px dashed ${inkA(0.4)};
-  border-radius: ${radius.panel};
-  padding: ${space.md};
-  font-size: ${px(16)};
-  line-height: 1.5;
-  color: ${night.mute};
-  word-break: keep-all;
-  > strong { display: block; font-size: ${px(16)}; color: ${night.ink}; margin-bottom: ${space.xs}; }
+    color: ${(p) => (p.$answered ? night.white : night.deep)}; background: ${(p) => (p.$answered ? night.info : night.ink)}; }
 `;
 
 const WAY: Record<ContactWay, string> = { phone: '전화', speaker: '안부 스피커', here: '곁에서' };
 
 /** How many of the newest lines the log keeps on screen. */
-const LOG = 5;
+const LOG = 2;
 
-export default function JudgmentPanel({ week, judgment, after }: { week: Week; judgment: Judgment; after: boolean }) {
+export default function JudgmentPanel({ week, judgment, version }: {
+  week: Week; judgment: Judgment;
+  /** Which version of the event is being told (1 = as it first ran). */
+  version: number;
+}) {
   const j = judgment;
   const who = (id: string) => (id === 'AI' ? 'AI' : nameOf(week, id));
   const shown = j.knows.slice(-LOG);
@@ -142,12 +128,12 @@ export default function JudgmentPanel({ week, judgment, after }: { week: Week; j
     <Box $absent={!j.present} aria-label="AI의 판단">
       <Kicker>AI의 판단</Kicker>
       <Title>
-        {after ? '고른 요청이 반영된 규칙으로' : '수정 전 규칙으로'}
-        <small>AI가 이 사건에서 직접 듣고 말한 것만 보입니다</small>
+        {version > 1 ? `ver${version} · 고른 요청이 반영된 규칙` : 'ver1 · 처음 규칙'}
+        {!j.present && <small>AI는 이 장면을 보지 못합니다 · 여기서 오간 말은 AI의 기록에 남지 않습니다</small>}
       </Title>
       <Steps>
-        <Step $on={j.knows.length > 0} $grow>
-          <h4>지금 아는 것</h4>
+        <Step $on={j.knows.length > 0}>
+          <h4>지금 아는 것 · AI가 직접 듣고 말한 것만</h4>
           {shown.length ? (
             <Log>
               {j.knows.length > LOG && <None>… 앞의 {j.knows.length - LOG}줄</None>}
@@ -165,7 +151,7 @@ export default function JudgmentPanel({ week, judgment, after }: { week: Week; j
           {!j.emergency && j.rules.map((r) => (
             <RuleRow key={r.label} $changed={r.was !== null}>
               <b>{r.label}{r.was !== null && <em>고른 요청으로 바뀜</em>}</b>
-              {r.was !== null && <s>{r.was}</s>}
+              {r.was !== null && <><s>{r.was}</s><i aria-hidden>↓</i></>}
               <span>{r.sentence}</span>
             </RuleRow>
           ))}
@@ -179,12 +165,6 @@ export default function JudgmentPanel({ week, judgment, after }: { week: Week; j
           )) : <None>아직 연락한 사람이 없습니다</None>}
         </Step>
       </Steps>
-      {!j.present && (
-        <Away>
-          <strong>AI는 이 장면을 보지 못합니다</strong>
-          여기서 오간 말은 AI의 기록에 남지 않습니다. 패널은 AI가 마지막으로 알던 그대로입니다.
-        </Away>
-      )}
     </Box>
   );
 }

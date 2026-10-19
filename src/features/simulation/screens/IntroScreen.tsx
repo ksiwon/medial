@@ -4,8 +4,9 @@ import { api } from '../api/client';
 import type { VoiceClip } from '../api/types';
 import { EUNJEOM, KAIST, KOREA, NAMHAE, NAMHAE_TOWN, NEAR } from '../intro/koreaMap';
 import { narrationOf, playNarration } from '../scene/voice';
+import Logo from '../ui/Logo';
 import PillText from '../ui/PillText';
-import { accentA, font, inkA, night, radius } from '../ui/theme';
+import { accentA, deepA, font, inkA, land, night, radius } from '../ui/theme';
 
 // The exhibition's opening: a film, not a screen. Nobody touches it.
 //
@@ -26,7 +27,7 @@ import { accentA, font, inkA, night, radius } from '../ui/theme';
 // map is drawn from public boundaries (scripts/korea_outline.py).
 
 const INK = night.deep;
-const PAPER = '#f6f1e8';
+const PAPER = night.ink;
 const ACCENT = night.accent;
 
 /**
@@ -34,30 +35,29 @@ const ACCENT = night.accent;
  * The sub-lines and the chips are not read. A test keeps these and the fixture the same.
  */
 export const INTRO_SAY = [
-  'Dially는 마을 주민 시뮬레이터입니다. 시골의 낮, 병원은 읍내에 있고 주민들은 밭과 바다에 계시죠.',
+  '시골의 낮, 병원은 읍내에 있고 주민들은 밭과 바다에 계시죠.',
   '어르신들은 병원에 가야 할 일이 잦지만, 병원은 멀어서 웬만하면 참으십니다.',
   '문제는, 어르신을 살펴 줄 사람이 마을에 없다는 겁니다. 그 일은 이장님 한 분께 이미 몰려 있습니다.',
   '이런 고충을 해결하고자, 서비스 디자이너가 어르신의 안부를 살피고 이웃과 병원을 이어 줄 조율자 AI의 초안을 제안하며, 이를 도입하고자 합니다.',
   '도입에 앞서 주민 대상 실증 연구로 이 초안을 고쳐야 하지만, 마을이 멀어 자주 찾아가기도, 오래 묻기도 어렵습니다.',
-  '그래서 가기 어려운 한 시골마을을 시뮬레이션, Dially로 대신 만들었습니다. 실제 인터뷰를 바탕으로, 열두 분 모두를 스스로 판단하고 움직이는 AI 에이전트로 세웠습니다.',
-  '이제 여러분이, 초안을 들고 온 서비스 디자이너가 되어 봅니다. 한 주의 사건 중 하나를 골라 지켜보고, 주민 에이전트의 평가를 읽고, 수정 요청 하나를 골라 초안을 고칩니다. 직접 가지 못해도, 어르신들의 고충을 미리 확인할 수 있습니다.',
+  '그래서 가기 어려운 한 시골마을을 시뮬레이션, Dially로 대신 만들었습니다. 실제 인터뷰를 바탕으로, 열두 분 모두를 스스로 판단하고 움직이는 AI 에이전트로 세웠습니다. Dially를 통해 직접 가지 못해도 어르신들의 고충을 미리 확인할 수 있게 되어, 서비스 디자이너가 도입 전 도구로 쓰게 됩니다.',
+  '이제 관객 여러분이, 초안을 들고 온 서비스 디자이너가 되어 봅니다. 주민 에이전트의 평가를 읽고 AI 조율자를 개선합니다.',
 ] as const;
 
 /** Scenes 4 and 5 are said in one go but shown a sentence at a time (INTRO_SAY joined). */
-const SAY_FOUR = ['그래서 가기 어려운 한 시골마을을 시뮬레이션, Dially로 대신 만들었습니다.', '실제 인터뷰를 바탕으로, 열두 분 모두를 스스로 판단하고 움직이는 AI 에이전트로 세웠습니다.'] as const;
+const SAY_FOUR = ['그래서 가기 어려운 한 시골마을을 시뮬레이션, Dially로 대신 만들었습니다.', '실제 인터뷰를 바탕으로, 열두 분 모두를 스스로 판단하고 움직이는 AI 에이전트로 세웠습니다.', 'Dially를 통해 직접 가지 못해도 어르신들의 고충을 미리 확인할 수 있게 되어,', '서비스 디자이너가 도입 전 도구로 쓰게 됩니다.'] as const;
 /** Scene 2's second caption is one sentence of the narration shown in two pieces. */
 const SAY_MEDIAL = [
   '이런 고충을 해결하고자, 서비스 디자이너가 어르신의 안부를 살피고 이웃과 병원을 이어 줄',
   '조율자 AI의 초안을 제안하며, 이를 도입하고자 합니다.',
 ] as const;
 const SAY_FIVE = [
-  '이제 여러분이, 초안을 들고 온 서비스 디자이너가 되어 봅니다.',
-  '한 주의 사건 중 하나를 골라 지켜보고,\n주민 에이전트의 평가를 읽고, 수정 요청 하나를 골라 초안을 고칩니다.',
-  '직접 가지 못해도, 어르신들의 고충을 미리 확인할 수 있습니다.',
+  '이제 관객 여러분이, 초안을 들고 온 서비스 디자이너가 되어 봅니다.',
+  '주민 에이전트의 평가를 읽고 AI 조율자를 개선합니다.',
 ] as const;
 
 /** Scene lengths in ms with no voice: they are the least a scene runs. */
-const BASE_MS = [5500, 5500, 12000, 9000, 12500, 13000];
+const BASE_MS = [5500, 5500, 12000, 9000, 19000, 11000];
 
 /** A caption is spoken from just after it appears; the next one appears when the narrator is done. */
 const LEAD_S = 0.5;
@@ -160,8 +160,8 @@ const Picture = styled.div<{ $src: string | null; $on: boolean; $dim?: boolean }
     position: absolute;
     inset: 0;
     background: ${(p) => (p.$dim
-      ? 'rgba(21, 21, 15, 0.8)'
-      : `linear-gradient(180deg, rgba(21, 21, 15, 0.1) 0%, rgba(21, 21, 15, 0) 38%, rgba(21, 21, 15, 0.55) 66%, rgba(21, 21, 15, 0.82) 100%)`)};
+      ? deepA(0.8)
+      : `linear-gradient(180deg, ${deepA(0.1)} 0%, ${deepA(0)} 38%, ${deepA(0.55)} 66%, ${deepA(0.82)} 100%)`)};
   }
 `;
 
@@ -178,7 +178,7 @@ const Fog = styled.div`
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(0deg, rgba(21, 21, 15, 0.94) 0%, rgba(21, 21, 15, 0.8) 22%, rgba(21, 21, 15, 0) 44%);
+  background: linear-gradient(0deg, ${deepA(0.94)} 0%, ${deepA(0.8)} 22%, ${deepA(0)} 44%);
 `;
 
 const Caption = styled.div`
@@ -203,7 +203,7 @@ const Eyebrow = styled.div<{ $on: boolean }>`
   margin-left: -0.9em;
   padding: 0.4em 0.9em;
   border-radius: ${radius.pill};
-  background: rgba(21, 21, 15, 0.62);
+  background: ${deepA(0.62)};
   font-size: clamp(12px, 1.1vw, 56px);
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -212,9 +212,10 @@ const Eyebrow = styled.div<{ $on: boolean }>`
   ${(p) => p.$on && css`animation: ${rise} 0.5s ease 0.1s forwards;`}
 `;
 
-const Line = styled.h1<{ $on: boolean; $delay?: number; $long?: boolean }>`
+const Line = styled.h1<{ $on: boolean; $delay?: number }>`
   margin: 16px 0 0;
-  font-size: ${(p) => (p.$long ? 'clamp(24px, 2.9vw, 152px)' : 'clamp(28px, 3.6vw, 192px)')};
+  /* One size for every caption: the longest (the two-line ones of scenes 3 and 4) is what it is picked by. */
+  font-size: clamp(24px, 3.1vw, 160px);
   line-height: 1.24;
   font-weight: 800;
   letter-spacing: -0.035em;
@@ -276,7 +277,7 @@ const Corner = styled.div`
 const Disclaimer = styled.div`
   padding: 0.4em 1em;
   border-radius: ${radius.pill};
-  background: rgba(21, 21, 15, 0.55);
+  background: ${deepA(0.55)};
   font-size: clamp(12px, 0.85vw, 44px);
   letter-spacing: 0.02em;
   color: ${inkA(0.82)};
@@ -286,10 +287,6 @@ const Brand = styled.div`
   position: absolute;
   top: clamp(20px, 1.5vw, 60px);
   left: clamp(24px, 4vw, 120px);
-  font-size: clamp(16px, 1.05vw, 52px);
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  color: ${PAPER};
   z-index: 2;
 `;
 
@@ -347,7 +344,7 @@ const Camera = styled.g`
 /** Straight-line kilometres between two points of the outline. */
 const km = (a: [number, number], b: [number, number]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
-const PLATE = 'rgba(21, 21, 15, 0.86)';
+const PLATE = deepA(0.86);
 
 function PlaceFilm() {
   /** Every time of the map film, scaled together (the narration ends well before the film did). */
@@ -385,12 +382,12 @@ function PlaceFilm() {
         <Camera style={{ '--wide': wide.transform, '--close': close.transform } as React.CSSProperties}>
           {/* The provinces are simplified for a glance; up close they would draw a
               coast that is not there, so they leave as the camera arrives. */}
-          <path className="gone" style={t(6.2)} d={KOREA} fill="#3a3b33" stroke="rgba(246,241,232,0.35)" strokeWidth={0.6} vectorEffect="non-scaling-stroke" />
+          <path className="gone" style={t(6.2)} d={KOREA} fill={land.far} stroke={inkA(0.35)} strokeWidth={0.6} vectorEffect="non-scaling-stroke" />
           {/* The close-up's coast fades in as the camera arrives; at a glance it is
               the same land the provinces already draw. */}
           <g className="in" style={t(5.6)}>
-            <path d={NEAR} fill="#3a3b33" stroke="rgba(246,241,232,0.3)" strokeWidth={0.8} vectorEffect="non-scaling-stroke" />
-            <path d={NAMHAE} fill="#55574b" stroke="rgba(246,241,232,0.7)" strokeWidth={1.2} vectorEffect="non-scaling-stroke" />
+            <path d={NEAR} fill={land.far} stroke={inkA(0.3)} strokeWidth={0.8} vectorEffect="non-scaling-stroke" />
+            <path d={NAMHAE} fill={land.near} stroke={inkA(0.7)} strokeWidth={1.2} vectorEffect="non-scaling-stroke" />
           </g>
 
           {/* The wide frame: where the study comes from, and the line south.
@@ -442,7 +439,7 @@ function PlaceFilm() {
               </g>
               <g className="in" style={t(3.3)}>
                 <PillText x={nX + clear(11, 24)} y={nY + 8 * u} size={24 * u} weight={800} fill={PAPER} plate={PLATE} text="남해" />
-                <PillText x={(kX + nX) / 2 + 46 * u} y={(kY + nY) / 2} size={18 * u} weight={700} fill="rgba(246,241,232,0.85)"
+                <PillText x={(kX + nX) / 2 + 46 * u} y={(kY + nY) / 2} size={18 * u} weight={700} fill={inkA(0.85)}
                   plate={PLATE} text={`직선 약 ${Math.round(km(KAIST, EUNJEOM) / 10) * 10}km`} />
               </g>
             </g>
@@ -451,7 +448,7 @@ function PlaceFilm() {
             </g>
             <g className="in" style={t(8.6)}>
               {/* The name centred on the marker; the place under it, plates aligned on their left edges. */}
-              <PillText x={eX + clear(14, 30)} y={eY + 10 * u} size={30 * u} weight={800} fill="#fff" plate={ACCENT} text="은점마을" />
+              <PillText x={eX + clear(14, 30)} y={eY + 10 * u} size={30 * u} weight={800} fill={night.white} plate={ACCENT} text="은점마을" />
               <PillText x={eX + clear(14, 30) - 30 * 0.82 * u + 16 * 0.82 * u} y={eY + 55 * u} size={16 * u} weight={700} fill={PAPER}
                 plate={PLATE} text="남해군 삼동면 · 바닷가" />
             </g>
@@ -490,21 +487,21 @@ function Diagram({ after }: { after: number }) {
       <g className="in" style={at(0.4)}>
         <rect x={10} y={185} width={210} height={120} rx={30} fill={PAPER} />
         {label(115, 240, 28, INK, '서비스 디자이너', 800)}
-        {label(115, 278, 21, '#55574b', '관객 여러분', 700)}
+        {label(115, 278, 21, land.near, '관객 여러분', 700)}
       </g>
       {arrow('M 228 245 L 292 245', 1.1, PAPER, [296, 245, 0], 0.5)}
       <g className="in" style={at(1.3)}>{label(260, 222, 20, PAPER, '초안', 700)}</g>
       <g className="in" style={at(1.6)}>
         <rect x={300} y={185} width={210} height={120} rx={30} fill={accentA(0.22)} stroke={ACCENT} strokeWidth={3} />
         {label(405, 240, 34, PAPER, 'AI 조율자', 800)}
-        {label(405, 278, 21, 'rgba(246,241,232,0.8)', '안부 확인 · 초안', 700)}
+        {label(405, 278, 21, inkA(0.8), '안부 확인 · 초안', 700)}
       </g>
 
       {/* 2. The village it will be applied to is built. */}
       {arrow('M 518 245 L 632 245', 2.3, PAPER, [636, 245, 0], 0.6)}
       <g className="in" style={at(2.6)}>{label(575, 222, 20, PAPER, '시험', 700)}</g>
       <g className="in" style={at(2.9)}>
-        <rect x={640} y={10} width={550} height={390} rx={36} fill="rgba(21,21,15,0.62)" stroke="rgba(246,241,232,0.55)"
+        <rect x={640} y={10} width={550} height={390} rx={36} fill={deepA(0.62)} stroke={inkA(0.55)}
           strokeWidth={2} strokeDasharray="10 10" />
         {label(915, 64, 32, PAPER, '시뮬레이션 마을', 800)}
         {label(915, 98, 20, ACCENT, 'Dially · 주민 AI 에이전트 12', 700)}
@@ -518,15 +515,15 @@ function Diagram({ after }: { after: number }) {
       {arrow('M 915 444 L 915 416', after + 0.4, ACCENT, [915, 412, -90], 0.25)}
       {Array.from({ length: 12 }, (_, i) => (
         <g key={i} className="in" style={at(after + 0.7 + i * 0.06)}>
-          <circle cx={705 + (i % 6) * 84} cy={160 + Math.floor(i / 6) * 76} r={30} fill="rgba(246,241,232,0.14)"
+          <circle cx={705 + (i % 6) * 84} cy={160 + Math.floor(i / 6) * 76} r={30} fill={inkA(0.14)}
             stroke={PAPER} strokeWidth={2} />
           {label(705 + (i % 6) * 84, 169 + Math.floor(i / 6) * 76, 22, PAPER, String(i + 1), 700)}
         </g>
       ))}
       {['119 구급대원', '보건소'].map((who, i) => (
         <g key={who} className="in" style={at(after + 1.5 + i * 0.15)}>
-          <rect x={680 + i * 240} y={300} width={220} height={60} rx={30} fill="rgba(246,241,232,0.12)"
-            stroke="rgba(246,241,232,0.5)" strokeWidth={1.5} />
+          <rect x={680 + i * 240} y={300} width={220} height={60} rx={30} fill={inkA(0.12)}
+            stroke={inkA(0.5)} strokeWidth={1.5} />
           {label(790 + i * 240, 340, 26, PAPER, who, 700)}
         </g>
       ))}
@@ -604,7 +601,7 @@ const Route = styled.svg<{ $on: boolean }>`
   /* The mask the dots appear through: a fat line that draws itself along the road. */
   .sweep {
     fill: none;
-    stroke: #fff;
+    stroke: ${night.white};
     stroke-width: 40;
     stroke-linecap: round;
     stroke-dasharray: 1;
@@ -653,7 +650,7 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
 
   return (
     <Stage aria-label="소개">
-      <Brand>Dially</Brand>
+      <Brand><Logo height="clamp(36px, 3.2vw, 128px)" /></Brand>
       <Corner>
         <Disclaimer>그림과 대화는 모두 시뮬레이션입니다 · 이름은 가명입니다</Disclaimer>
       </Corner>
@@ -661,8 +658,8 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
       <Scene $on={on(0)}>
         <Picture $src={src('FARM')} $on={scene >= 0} />
         <Caption>
-          <Eyebrow $on={on(0)}>하루의 풍경</Eyebrow>
-          <Line $on={on(0)}>{'Dially는 마을 주민 시뮬레이터입니다.\n시골의 낮, 병원은 읍내에 있고\n주민들은 밭과 바다에 계시죠.'}</Line>
+          <Eyebrow $on={on(0)}>시골의 풍경</Eyebrow>
+          <Line $on={on(0)}>{'시골의 낮, 병원은 읍내에 있고\n주민들은 밭과 바다에 계시죠.'}</Line>
         </Caption>
       </Scene>
 
@@ -684,7 +681,7 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
                   <path d="M 0 0 C -14 -22 -36 -40 -36 -68 a 36 36 0 1 1 72 0 C 36 -40 14 -22 0 0 Z" fill={PAPER} />
                   <rect x={-6.5} y={-90} width={13} height={44} rx={3.5} fill={ACCENT} />
                   <rect x={-22} y={-74.5} width={44} height={13} rx={3.5} fill={ACCENT} />
-                  <PillText x={-54} y={-57} anchor="end" size={30} weight={800} fill={PAPER} plate="rgba(21, 21, 15, 0.82)" text="남해읍 병원" />
+                  <PillText x={-54} y={-57} anchor="end" size={30} weight={800} fill={PAPER} plate={deepA(0.82)} text="남해읍 병원" />
                 </g>
               </g>
             </>
@@ -701,7 +698,7 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
         <Caption>
           <Timed $on={on(2)} $at={0.2} $until={layout.two.until}>
             <Eyebrow $on={on(2)}>살펴 줄 사람이 없다</Eyebrow>
-            <Line $on={on(2)} $delay={0.3} $long>{'문제는, 어르신을 살펴 줄 사람이 마을에 없다는 겁니다.\n그 일은 이장님 한 분께 이미 몰려 있습니다.'}</Line>
+            <Line $on={on(2)} $delay={0.3}>{'문제는, 어르신을 살펴 줄 사람이 마을에 없다는 겁니다.\n그 일은 이장님 한 분께 이미 몰려 있습니다.'}</Line>
           </Timed>
         </Caption>
         {SAY_MEDIAL.map((text, k) => (
@@ -728,7 +725,7 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
         <Fog />
         <Caption>
           <Eyebrow $on={on(3)}>서비스 디자이너의 고충</Eyebrow>
-          <Line $on={on(3)} $long>도입에 앞서 주민 대상 실증 연구로 이 초안을 고쳐야 하지만, 마을이 멀어 자주 찾아가기도, 오래 묻기도 어렵습니다.</Line>
+          <Line $on={on(3)}>도입에 앞서 주민 대상 실증 연구로 이 초안을 고쳐야 하지만, 마을이 멀어 자주 찾아가기도, 오래 묻기도 어렵습니다.</Line>
         </Caption>
       </Scene>
 
@@ -737,9 +734,9 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
         {on(4) && <Diagram after={layout.said.four[1]} />}
         {SAY_FOUR.map((text, k) => (
           <Caption key={k}>
-            <Timed $on={on(4)} $at={k === 0 ? 0.2 : layout.said.four[1] - 0.1} $until={k === 0 ? layout.said.four[1] - 0.2 : undefined}>
+            <Timed $on={on(4)} $at={k === 0 ? 0.2 : layout.said.four[k] - 0.1} $until={layout.said.four[k + 1] === undefined ? undefined : layout.said.four[k + 1] - 0.2}>
               <Eyebrow $on={on(4)}>Dially</Eyebrow>
-              <Line $on={on(4)} $delay={k === 0 ? 0.3 : layout.said.four[1]}>{text}</Line>
+              <Line $on={on(4)} $delay={k === 0 ? 0.3 : layout.said.four[k]}>{text}</Line>
             </Timed>
           </Caption>
         ))}

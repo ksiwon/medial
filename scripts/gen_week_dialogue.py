@@ -83,13 +83,22 @@ def load() -> dict:
     return json.loads(BRIEFS.read_text(encoding="utf-8"))
 
 
+def walk_requests(requests: dict, path: tuple[str, ...] = ()):
+    """Every request of an event as (name, request): ``A`` is offered on the first version, ``A.B`` is offered on the
+    version request A made (ver3), and so on down."""
+    for rid, req in requests.items():
+        yield ".".join(path + (rid,)), req
+        yield from walk_requests(req.get("requests", {}), path + (rid,))
+
+
 def scenes_of(data: dict, only: list[str] | None):
-    """Every scene to write as (key, event, kind, brief). Keys: ``E1.s1`` (before) and ``E1.A`` (after request A).
-    ``--only E1`` takes the event, ``--only E1.A`` one scene."""
+    """Every scene to write as (key, event, kind, brief). Keys: ``E1.s1`` (before), ``E1.A`` (after request A) and
+    ``E1.A.B`` (after request B, offered on the version A made). ``--only E1`` takes the event, ``--only E1.A`` that
+    scene and the ones under it."""
     out = []
     for ev in data["events"]:
         keys = [("%s.%s" % (ev["id"], k), "before", s) for k, s in ev["scenes"].items()]
-        keys += [("%s.%s" % (ev["id"], k), "after", r["scene"]) for k, r in ev["requests"].items()]
+        keys += [("%s.%s" % (ev["id"], k), "after", r["scene"]) for k, r in walk_requests(ev["requests"])]
         for key, kind, brief in keys:
             if only and not any(key == o or key.startswith(o + ".") for o in only):
                 continue
@@ -215,7 +224,7 @@ def read() -> None:
         out += ["### 수정 전", ""]
         for k, s in ev["scenes"].items():
             out += _scene(made.get("%s.%s" % (ev["id"], k)), s["scene"])
-        for k, r in ev["requests"].items():
+        for k, r in walk_requests(ev["requests"]):
             out += ["### 요청 %s — %s" % (k, r["label"]), "",
                     "- 번역되는 규칙: " + ", ".join(x["type"] for x in r["rules"]),
                     "- 기대: %s" % r["expect"], "- 부담: %s" % r["cost"], ""]
@@ -241,7 +250,7 @@ def _html(data: dict, made: dict) -> str:
     for ev in data["events"]:
         body.append('<section><h2>%s · %s</h2><p class="gist">%s</p><h3>수정 전</h3>' % (ev["id"], e(ev["title"]), e(ev["gist"])))
         body += [scene("%s.%s" % (ev["id"], k), s["scene"]) for k, s in ev["scenes"].items()]
-        for k, r in ev["requests"].items():
+        for k, r in walk_requests(ev["requests"]):
             body.append('<h3>요청 %s <small>%s</small></h3><p class="meta">규칙: %s · 기대: %s · 부담: %s</p>' % (
                 k, e(r["label"]), e(", ".join(x["type"] for x in r["rules"])), e(r["expect"]), e(r["cost"])))
             body.append(scene("%s.%s" % (ev["id"], k), r["scene"]["scene"]))
