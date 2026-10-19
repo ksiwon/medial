@@ -179,8 +179,12 @@ def write_styles():
     for ev in briefs["events"]:
         for k, sc in ev["scenes"].items():
             situation["%s.%s" % (ev["id"], k)] = sc["scene"]
-        for k, r in ev["requests"].items():
-            situation["%s.%s" % (ev["id"], k)] = r["scene"]["scene"]
+        def walk(requests, prefix):
+            # A request's scene is keyed by its path (E1.A, then E1.A.B for a request offered on the version A made).
+            for k, r in requests.items():
+                situation["%s.%s" % (prefix, k)] = r["scene"]["scene"]
+                walk(r.get("requests", {}), "%s.%s" % (prefix, k))
+        walk(ev["requests"], ev["id"])
     scenes = json.load(open(DIALOGUE, encoding="utf-8"))["scenes"]
     out = dict(styles_of_record())
     for key, scene in scenes.items():
@@ -332,6 +336,9 @@ def main():
     mk = sub.add_parser("make")
     mk.add_argument("--limit", type=int, default=90, help="calls per key (the daily quota is 100 per project)")
     mk.add_argument("--model", default=MODEL)
+    mk.add_argument("--only", nargs="*", help="make only these scenes (E4.B.B intro ...), e.g. to try a line before the rest")
+    mk.add_argument("--fallback", help="for a line whose voice is out of quota today, use this model's recording of it if there is one "
+                                       "(kept as temporary: the next run makes the line again with --model)")
     mk.add_argument("--budget-won", type=float, default=1000.0,
                     help="stop before the run would spend more than this many won (default 1000; counted from the audio actually returned)")
     args = ap.parse_args()
@@ -357,6 +364,8 @@ def main():
         return
     if problems:
         raise SystemExit("만들 수 없다:\n- " + "\n- ".join(problems))
+    if args.only:
+        todo = [it for it in todo if it["scene"] in args.only]
     AUDIO = AUDIO_ROOT / args.model
     AUDIO.mkdir(parents=True, exist_ok=True)
     raw_dir = AUDIO / "raw"
@@ -439,6 +448,17 @@ def main():
                     continue  # this line failed even after the retries: leave it for the next run, go on to the next
                 # Every key that holds this voice is spent. Only this speaker's lines wait for another day; the lines of
                 # speakers held by a key with quota left go on being made.
+                fallback = AUDIO_ROOT / args.fallback / it["file"] if args.fallback else None
+                if fallback is not None and fallback.exists():
+                    # Temporary: another model's recording stands in. Its hash says so, so the next run does not take it
+                    # for this model's and makes the line again.
+                    path.write_bytes(fallback.read_bytes())
+                    kept.setdefault(it["scene"], []).append({
+                        "index": it["index"], "speaker": it["speaker"], "text": it["text"], "spoken": it["spoken"],
+                        "style": it["style"], "voice": it["voice"], "hash": "fallback:%s:%s" % (args.fallback, it["hash"]),
+                        "file": it["file"], "seconds": round(seconds(path), 2)})
+                    print("temporary %s: %s's recording" % (it["file"], args.fallback))
+                    continue
                 if it["speaker"] not in waiting:
                     print("quota spent for %s's voice (%s); its remaining lines wait for the next run"
                           % (it["speaker"], ", ".join("%s %d/%d" % (k, spent[k], args.limit) for k in holders[it["speaker"]]) or "no key"))
@@ -464,11 +484,14 @@ def main():
         print("left for the next run: %s %d lines" % (sp, len(files)))
     print("billed this run: about %.1f won (budget %.0f won)" % (spent_won, args.budget_won))
     # scenes.json: the lines of each scene in order. manifest.json: the same by 'speaker|text', which is what the screen reads.
+    if args.only:   # the scenes not asked for keep their rows
+        rows_before = json.load(open(index, encoding="utf-8")) if index.exists() else {}
+        kept = {**rows_before, **kept}
     index.write_text(json.dumps(kept, ensure_ascii=False, indent=1), encoding="utf-8")
     manifest = {"%s|%s" % (row["speaker"], row["text"]): {"file": row["file"], "seconds": row["seconds"]}
                 for rows in kept.values() for row in rows}
     (AUDIO / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=1), encoding="utf-8")
-    if sum(len(rows) for rows in kept.values()) == len(todo):  # every line has its sound; the rest is from an older voice or text
+    if not args.only and sum(len(rows) for rows in kept.values()) == len(todo):  # every line has its sound; the rest is from an older voice or text
         keep = {row["file"] for rows in kept.values() for row in rows}
         for old in AUDIO.glob("*.wav"):
             if old.name not in keep:
