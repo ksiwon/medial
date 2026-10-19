@@ -35,7 +35,7 @@ const WALKS = {
   quick: [['E5', 1], ['E5', 1]],
 };
 // 소리가 없는 화면을 읽는 시간(ms): 사람이 눈으로 따라가는 만큼. 대사는 소리 길이가 정한다.
-const PACE = { line: 3800, evaluations: 9000, choose: 7000, week: 3500, closing: 9000, afterVoice: 900 };
+const PACE = { line: 3800, evaluations: 6500, choose: 5500, pick: 1500, week: 2500, closing: 7000, afterVoice: 500 };
 
 // 모니터 페이지에 심는 장치: 소리를 틀고(play) 멈추고(pause) 크기를 바꾸는(volume) 일을 시각과 함께 적는다.
 const AUDIO_PROBE = () => {
@@ -109,7 +109,11 @@ async function main() {
     await tap(new RegExp(titleOf(id)));
     // 장면은 스스로 한 줄씩 흘러간다(줄마다 소리 길이 + 0.8초). 누르지 않고 마지막 줄이 나올 때까지 기다린 뒤,
     // 마지막 줄의 소리가 끝나기를 기다렸다가 주민 평가로 간다.
-    await pad.getByRole('button', { name: /주민 평가 →/ }).waitFor({ state: 'visible', timeout: 300000 });
+    await pad.getByRole('button', { name: /주민 평가 →/ }).waitFor({ state: 'visible', timeout: 120000 }).catch(async (e) => {
+      await pad.screenshot({ path: path.join(OUT, `stuck-${id}-pad.png`) }).catch(() => {});
+      await wall.screenshot({ path: path.join(OUT, `stuck-${id}-wall.png`) }).catch(() => {});
+      throw e;
+    });
     await finishLastLine();
     await tap(/주민 평가 →/);
     await sleep(PACE.evaluations);
@@ -117,7 +121,7 @@ async function main() {
       await tap(/수정 요청 고르기 →/);
       await sleep(PACE.choose);
       await pad.getByRole('button', { name: /^1/ }).tap();
-      await sleep(2000);
+      await sleep(PACE.pick);
       await tap(/^돌리기$/);
     } else {
       await tap(/이번 주로 →/);
