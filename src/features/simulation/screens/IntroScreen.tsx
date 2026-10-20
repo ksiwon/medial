@@ -10,13 +10,16 @@ import { accentA, deepA, font, inkA, land, night, radius } from '../ui/theme';
 
 // The exhibition's opening: a film, not a screen. Nobody touches it.
 //
-// Six scenes run on one clock and end by opening day one (onFinish). The order
-// is the one the researcher set (2026-10-10): what rural care is like (the
-// hospital is in town, by day everyone is in the field or at sea), why it is
-// hard (the road is long, help comes by a neighbour), that an AI Care
-// Orchestrator is needed, why trying one in the village is hard (every visit is
-// far and people are out), so the village is simulated from twelve real
-// interviews, and a service designer runs, mends and reruns a service in it.
+// Nine scenes run on one clock and end by opening day one (onFinish). The order
+// is the one the researcher set (2026-10-20): what a service designer does (the
+// job, as a journey map on a desk), why it is hard in a small community (a draft
+// has to be asked of the few who will use it, who are far and busy, and mending
+// it cannot be checked), Desimer (interviews of a small group, one agent each,
+// the service run among them first - not standing in for the people), and then
+// one case: rural care (the hospital is in town, by day everyone is in the field
+// or at sea), the road, the AI Care Orchestrator's draft, why this village cannot
+// be visited, so its twelve are raised from real interviews, and the visitor is
+// the service designer who runs, mends and reruns the service among them.
 // Nothing here is a control. The first setting is fixed (selectors/tree
 // openingOf), so there is no choice to make until day one ends. No statistics:
 // every claim is one the interviews or the map carry.
@@ -33,20 +36,30 @@ const ACCENT = night.accent;
 /**
  * The big captions, which the narrator reads (fixtures/exhibition/narration.json, spoken once ahead of time).
  * The sub-lines and the chips are not read. A test keeps these and the fixture the same.
+ * Three clips open the film (the service designer's job and trouble, then Desimer), then the case: the village, the
+ * road, the missing carer and the AI's draft, why this village cannot be visited, the twelve built from interviews,
+ * and the visitor's part.
  */
 export const INTRO_SAY = [
+  '서비스 디자이너라는 직업을 아시나요? 서비스 디자이너는 사람들이 서비스를 만나고 쓰고 마치는 전 과정의 경험을 설계하는 사람입니다. 서비스를 내놓기 전에는 초안을 만들어, 쓸 사람들의 이야기를 듣고 고쳐 가며 다듬습니다.',
+  '서비스가 좋은지는 초안만 봐서는 알 수 없고, 실제로 쓸 사람들에게 써 보게 하고 물어야 알 수 있습니다. 특히 작은 공동체는 사람이 적어, 한 분 한 분의 반응이 서비스의 성패를 가르기도 합니다. 그런데 그런 곳은 대개 현장이 멀고 구성원들이 바빠서, 자주 찾아가 오래 묻기가 어렵습니다. 그러면 초안을 고칠 때마다 다시 확인하기 어려워서, 고친 서비스가 정말 나아졌는지 알기 어렵습니다.',
+  '그래서 Designer를 위한 Simulator, Desimer를 만들었습니다. 소규모 그룹을 인터뷰해, 구성원 한 분 한 분을 스스로 판단하고 움직이는 AI 에이전트로 세우고, 그 안에서 서비스를 미리 돌려 보는 시뮬레이션 도구입니다. 실제 사람을 대신하는 것이 아니라, 현장에 가기 전에 초안을 미리 살펴보게 돕습니다. 이번에는 한 사례, 시골마을에 들일 의료 AI 조율자를 다뤄 봅니다.',
   '시골의 낮, 병원은 읍내에 있고 주민들은 밭과 바다에 계시죠.',
   '어르신들은 병원에 가야 할 일이 잦지만, 병원은 멀어서 웬만하면 참으십니다.',
   '문제는, 어르신을 살펴 줄 사람이 마을에 없다는 겁니다. 그 일은 이장님 한 분께 이미 몰려 있습니다.',
   '이런 고충을 해결하고자, 서비스 디자이너가 어르신의 안부를 살피고 이웃과 병원을 이어 줄 조율자 AI의 초안을 제안하며, 이를 도입하고자 합니다.',
-  '도입에 앞서 주민 대상 실증 연구로 이 초안을 고쳐야 하지만, 마을이 멀어 자주 찾아가기도, 오래 묻기도 어렵습니다.',
-  '그래서 가기 어려운 한 시골마을을 시뮬레이션, Dially로 대신 만들었습니다. 실제 인터뷰를 바탕으로, 열두 분 모두를 스스로 판단하고 움직이는 AI 에이전트로 세웠습니다. Dially를 통해 직접 가지 못해도 어르신들의 고충을 미리 확인할 수 있게 되어, 서비스 디자이너가 도입 전 도구로 쓰게 됩니다.',
+  '이 마을도 멀어서, 초안을 들고 자주 찾아가 물을 수는 없습니다.',
+  '그래서 이 마을의 열두 분을, 실제 인터뷰를 바탕으로 AI 에이전트로 세웠습니다. Desimer로 현장에 가기 전에 어르신들의 고충을 미리 살펴볼 수 있어, 서비스 디자이너가 도입 전 도구로 쓰게 됩니다.',
   '이제 관객 여러분이, 초안을 들고 온 서비스 디자이너가 되어 봅니다. 주민 에이전트의 평가를 읽고 AI 조율자를 개선합니다.',
 ] as const;
 
-/** Scenes 4 and 5 are said in one go but shown a sentence at a time (INTRO_SAY joined). */
-const SAY_FOUR = ['그래서 가기 어려운 한 시골마을을 시뮬레이션, Dially로 대신 만들었습니다.', '실제 인터뷰를 바탕으로, 열두 분 모두를 스스로 판단하고 움직이는 AI 에이전트로 세웠습니다.', 'Dially를 통해 직접 가지 못해도 어르신들의 고충을 미리 확인할 수 있게 되어,', '서비스 디자이너가 도입 전 도구로 쓰게 됩니다.'] as const;
-/** Scene 2's second caption is one sentence of the narration shown in two pieces. */
+/** A clip of several sentences is shown a sentence at a time, each from where the voice reaches it (INTRO_SAY joined). */
+const SAY_JOB = ['서비스 디자이너라는 직업을 아시나요?', '서비스 디자이너는 사람들이 서비스를 만나고 쓰고 마치는 전 과정의 경험을 설계하는 사람입니다.', '서비스를 내놓기 전에는 초안을 만들어, 쓸 사람들의 이야기를 듣고 고쳐 가며 다듬습니다.'] as const;
+const SAY_TROUBLE = ['서비스가 좋은지는 초안만 봐서는 알 수 없고, 실제로 쓸 사람들에게 써 보게 하고 물어야 알 수 있습니다.', '특히 작은 공동체는 사람이 적어, 한 분 한 분의 반응이 서비스의 성패를 가르기도 합니다.', '그런데 그런 곳은 대개 현장이 멀고 구성원들이 바빠서, 자주 찾아가 오래 묻기가 어렵습니다.', '그러면 초안을 고칠 때마다 다시 확인하기 어려워서, 고친 서비스가 정말 나아졌는지 알기 어렵습니다.'] as const;
+const SAY_TOOL = ['그래서 Designer를 위한 Simulator, Desimer를 만들었습니다.', '소규모 그룹을 인터뷰해, 구성원 한 분 한 분을 스스로 판단하고 움직이는 AI 에이전트로 세우고,', '그 안에서 서비스를 미리 돌려 보는 시뮬레이션 도구입니다.', '실제 사람을 대신하는 것이 아니라, 현장에 가기 전에 초안을 미리 살펴보게 돕습니다.', '이번에는 한 사례, 시골마을에 들일 의료 AI 조율자를 다뤄 봅니다.'] as const;
+/** The twelve are built from interviews: shown in three pieces (the diagram's interviews and residents follow the first). */
+const SAY_BUILT = ['그래서 이 마을의 열두 분을, 실제 인터뷰를 바탕으로 AI 에이전트로 세웠습니다.', 'Desimer로 현장에 가기 전에 어르신들의 고충을 미리 살펴볼 수 있어,', '서비스 디자이너가 도입 전 도구로 쓰게 됩니다.'] as const;
+/** The AI's draft is one sentence of the narration shown in two pieces. */
 const SAY_MEDIAL = [
   '이런 고충을 해결하고자, 서비스 디자이너가 어르신의 안부를 살피고 이웃과 병원을 이어 줄',
   '조율자 AI의 초안을 제안하며, 이를 도입하고자 합니다.',
@@ -57,13 +70,14 @@ const SAY_FIVE = [
 ] as const;
 
 /** Scene lengths in ms with no voice: they are the least a scene runs. */
-const BASE_MS = [5500, 5500, 12000, 9000, 19000, 11000];
+const BASE_MS = [9000, 15000, 17000, 5500, 5500, 12000, 6000, 19000, 11000];
 
 /** A caption is spoken from just after it appears; the next one appears when the narrator is done. */
 const LEAD_S = 0.5;
-/** The diagram of scene 4 is drawn within this many seconds of its second sentence (the last arrow ends it), and the arrow then stays. */
-const DIAGRAM_S = 2.6;
-const ARROW_HOLD_S = 3;
+/** The camera pulling back onto the model takes this long; the second scene's first sentence waits for it. */
+const PULL_S = 1.6;
+/** A scene the camera dives out of keeps this long after its last word, for the dive. */
+const DIVE_S = 1.2;
 const GAP_S = 0.7;
 const TAIL_S = 1.4;
 
@@ -71,10 +85,10 @@ interface Layout {
   /** Each scene's length, ms. */
   ms: number[];
   total: number;
-  /** Scene 2 has two captions: the first is gone at `until`, the second arrives at `next`. */
+  /** The AI scene has two captions: the first is gone at `until`, the second arrives at `next`. */
   two: { until: number; next: number };
-  /** Scenes 4 and 5 show their narration a sentence at a time: the second each sentence's caption arrives. */
-  said: { three: number[]; four: number[]; five: number[] };
+  /** Scenes that show their narration a sentence at a time: the second each sentence's caption arrives. */
+  said: { job: number[]; trouble: number[]; tool: number[]; medial: number[]; built: number[]; five: number[] };
   /** The narration of each scene: the clip and the second it starts. */
   cues: { file: string; at: number }[][];
 }
@@ -96,25 +110,28 @@ export function layoutOf(voices: Record<string, VoiceClip> | null | undefined): 
     let used = 0;
     return sentences.map((t) => { const at = LEAD_S + (span * used) / all; used += t.length; return at; });
   };
-  const four = starts(5, SAY_FOUR);
-  const until = Math.max(5.2, LEAD_S + sec(2) + 0.4);
+  const trouble = starts(1, SAY_TROUBLE).map((x) => x + PULL_S);
+  const built = starts(8, SAY_BUILT);
+  const until = Math.max(5.2, LEAD_S + sec(5) + 0.4);
   const next = until + GAP_S;
-  const medial = starts(3, SAY_MEDIAL).map((at) => next + 0.3 + (at - LEAD_S)); // the clip starts 0.3 s after the caption
+  const medial = starts(6, SAY_MEDIAL).map((at) => next + 0.3 + (at - LEAD_S)); // the clip starts 0.3 s after the caption
   const ms = [
-    Math.max(BASE_MS[0], end(LEAD_S, 0) * 1000),
-    Math.max(BASE_MS[1], end(LEAD_S, 1) * 1000),
-    Math.max(BASE_MS[2], end(next + 0.3, 3) * 1000),
-    Math.max(BASE_MS[3], end(LEAD_S, 4) * 1000),
-    // The diagram's last arrow is drawn at the end of its timeline and then stays a while before the scene is left.
-    Math.max(BASE_MS[4], end(LEAD_S, 5) * 1000, (four[1] + DIAGRAM_S + ARROW_HOLD_S) * 1000),
-    Math.max(BASE_MS[5], end(LEAD_S, 6) * 1000),
+    Math.max(BASE_MS[0], (end(LEAD_S, 0) + DIVE_S) * 1000),
+    Math.max(BASE_MS[1], end(LEAD_S + PULL_S, 1) * 1000),
+    Math.max(BASE_MS[2], (end(LEAD_S, 2) + DIVE_S) * 1000),
+    Math.max(BASE_MS[3], end(LEAD_S, 3) * 1000),
+    Math.max(BASE_MS[4], end(LEAD_S, 4) * 1000),
+    Math.max(BASE_MS[5], end(next + 0.3, 6) * 1000),
+    Math.max(BASE_MS[6], end(LEAD_S, 7) * 1000),
+    Math.max(BASE_MS[7], end(LEAD_S, 8) * 1000),
+    Math.max(BASE_MS[8], end(LEAD_S, 9) * 1000),
   ];
   return {
     ms,
     total: ms.reduce((x, y) => x + y, 0),
     two: { until, next },
-    said: { three: medial, four, five: starts(6, SAY_FIVE) },
-    cues: [cue(0, LEAD_S), cue(1, LEAD_S), [...cue(2, LEAD_S), ...cue(3, next + 0.3)], cue(4, LEAD_S), cue(5, LEAD_S), cue(6, LEAD_S)],
+    said: { job: starts(0, SAY_JOB), trouble, tool: starts(2, SAY_TOOL), medial, built, five: starts(9, SAY_FIVE) },
+    cues: [cue(0, LEAD_S), cue(1, LEAD_S + PULL_S), cue(2, LEAD_S), cue(3, LEAD_S), cue(4, LEAD_S), [...cue(5, LEAD_S), ...cue(6, next + 0.3)], cue(7, LEAD_S), cue(8, LEAD_S), cue(9, LEAD_S)],
   };
 }
 
@@ -185,7 +202,7 @@ const Caption = styled.div`
   position: absolute;
   left: clamp(32px, 7vw, 120px);
   right: clamp(32px, 7vw, 120px);
-  max-width: 72vw;
+  max-width: 80vw;
   bottom: clamp(56px, 11vh, 220px);
 `;
 
@@ -459,82 +476,6 @@ function PlaceFilm() {
   );
 }
 
-// ---- Scene 4: the Dially, as the people around it ---------------------
-
-/**
- * Drawn while the narrator says the Dially was built (scene 4), in the order of the work it stands for:
- * the designer conceives the AI orchestrator, the simulated village is built to apply it to, the real interviews raise its twelve
- * residents (from `after`, when that sentence begins), and last the residents' evaluation travels back to the
- * designer. Every arrow is drawn after the thing it leaves and before the thing it reaches.
- */
-function Diagram({ after }: { after: number }) {
-  const label = (x: number, y: number, size: number, fill: string, text: string, weight = 800) => (
-    <text x={x} y={y} fontSize={size} fontWeight={weight} fill={fill} textAnchor="middle">{text}</text>
-  );
-  /** A line that draws itself, its head appearing only when it arrives (a marker would show before the line is drawn). */
-  const arrow = (d: string, delay: number, color: string, head: [number, number, number], dur = 0.7) => (
-    <>
-      <path className="draw" d={d} pathLength={1} fill="none" stroke={color} strokeWidth={4} strokeLinecap="round"
-        style={{ ...at(delay), animationDuration: `${dur}s` }} />
-      <path className="in" d="M 0 0 L -22 -12 L -22 12 z" fill={color} transform={`translate(${head[0]} ${head[1]}) rotate(${head[2]})`}
-        style={at(delay + dur * 0.85)} />
-    </>
-  );
-  return (
-    <Drawn viewBox="0 0 1200 540" aria-hidden style={{ left: '7vw', top: '8vh', width: '66vw', height: 'auto' }}>
-
-      {/* 1. The designer conceives the AI orchestrator. */}
-      <g className="in" style={at(0.4)}>
-        <rect x={10} y={185} width={210} height={120} rx={30} fill={PAPER} />
-        {label(115, 240, 28, INK, '서비스 디자이너', 800)}
-        {label(115, 278, 21, land.near, '관객 여러분', 700)}
-      </g>
-      {arrow('M 228 245 L 292 245', 1.1, PAPER, [296, 245, 0], 0.5)}
-      <g className="in" style={at(1.3)}>{label(260, 222, 20, PAPER, '초안', 700)}</g>
-      <g className="in" style={at(1.6)}>
-        <rect x={300} y={185} width={210} height={120} rx={30} fill={accentA(0.22)} stroke={ACCENT} strokeWidth={3} />
-        {label(405, 240, 34, PAPER, 'AI 조율자', 800)}
-        {label(405, 278, 21, inkA(0.8), '안부 확인 · 초안', 700)}
-      </g>
-
-      {/* 2. The village it will be applied to is built. */}
-      {arrow('M 518 245 L 632 245', 2.3, PAPER, [636, 245, 0], 0.6)}
-      <g className="in" style={at(2.6)}>{label(575, 222, 20, PAPER, '시험', 700)}</g>
-      <g className="in" style={at(2.9)}>
-        <rect x={640} y={10} width={550} height={390} rx={36} fill={deepA(0.62)} stroke={inkA(0.55)}
-          strokeWidth={2} strokeDasharray="10 10" />
-        {label(915, 64, 32, PAPER, '시뮬레이션 마을', 800)}
-        {label(915, 98, 20, ACCENT, 'Dially · 주민 AI 에이전트 12', 700)}
-      </g>
-
-      {/* 3. The interviews it stands on, and the residents raised from them. */}
-      <g className="in" style={at(after + 0.1)}>
-        <rect x={700} y={450} width={430} height={66} rx={33} fill="none" stroke={ACCENT} strokeWidth={2.5} />
-        {label(915, 492, 24, PAPER, '실제 인터뷰 12 · 근거', 700)}
-      </g>
-      {arrow('M 915 444 L 915 416', after + 0.4, ACCENT, [915, 412, -90], 0.25)}
-      {Array.from({ length: 12 }, (_, i) => (
-        <g key={i} className="in" style={at(after + 0.7 + i * 0.06)}>
-          <circle cx={705 + (i % 6) * 84} cy={160 + Math.floor(i / 6) * 76} r={30} fill={inkA(0.14)}
-            stroke={PAPER} strokeWidth={2} />
-          {label(705 + (i % 6) * 84, 169 + Math.floor(i / 6) * 76, 22, PAPER, String(i + 1), 700)}
-        </g>
-      ))}
-      {['119 구급대원', '보건소'].map((who, i) => (
-        <g key={who} className="in" style={at(after + 1.5 + i * 0.15)}>
-          <rect x={680 + i * 240} y={300} width={220} height={60} rx={30} fill={inkA(0.12)}
-            stroke={inkA(0.5)} strokeWidth={1.5} />
-          {label(790 + i * 240, 340, 26, PAPER, who, 700)}
-        </g>
-      ))}
-
-      {/* 4. The residents' evaluation travels back to the designer. */}
-      {arrow('M 640 340 C 520 500, 249 513, 124 326', after + 1.9, ACCENT, [115, 313, -124], 0.7)}
-      <g className="in" style={at(after + 2.4)}>{label(380, 518, 22, PAPER, '주민 에이전트가 AI를 평가', 700)}</g>
-    </Drawn>
-  );
-}
-
 const Chain = styled.div<{ $on: boolean; $delay: number }>`
   margin-top: 28px;
   display: flex;
@@ -612,6 +553,509 @@ const Route = styled.svg<{ $on: boolean }>`
   .pulse { fill: none; stroke: ${PAPER}; stroke-width: 3; opacity: 0; animation: ${pulse} 1.8s ease-out 3.2s infinite; transform-box: fill-box; transform-origin: center; }
 `;
 
+// ---- The camera: the opening's pictures are one desk, dollied through --------------
+
+/** A picture arrives from close up (the camera pulls back into it) ... */
+const pushOut = keyframes`from { transform: scale(var(--oz, 1.8)); filter: blur(12px); } to { transform: scale(1); filter: blur(0); }`;
+/** ... and the one leaving is dived into, so two pictures read as one move through the desk. */
+const dive = keyframes`from { transform: scale(1); filter: blur(0); } to { transform: scale(var(--dz, 2.4)); filter: blur(8px); }`;
+
+/**
+ * The camera of a scene: it holds the picture and what is drawn on it, and moves them together. `$out`: the camera
+ * pulls back on arrival; `$diveAt`: the second (of the scene) the camera starts to dive into the point `--ox --oy`.
+ */
+const Dolly = styled.div<{ $on: boolean; $out?: boolean; $diveAt?: number }>`
+  position: absolute;
+  inset: 0;
+  transform-origin: var(--ox, 50%) var(--oy, 50%);
+  ${(p) => p.$on && p.$out && p.$diveAt !== undefined && css`animation: ${pushOut} 2.6s cubic-bezier(0.16, 0.7, 0.2, 1) forwards, ${dive} 3s ease-in ${p.$diveAt}s forwards;`}
+  ${(p) => p.$on && p.$out && p.$diveAt === undefined && css`animation: ${pushOut} 2.6s cubic-bezier(0.16, 0.7, 0.2, 1) forwards;`}
+  ${(p) => p.$on && !p.$out && p.$diveAt !== undefined && css`animation: ${dive} 3s ease-in ${p.$diveAt}s forwards;`}
+`;
+
+/** A second picture laid over the first, which fades in at `$at` seconds (the board turns from a community into the village). */
+const Dissolve = styled.div<{ $on: boolean; $at: number }>`
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  ${(p) => p.$on && css`animation: ${fade} 1.8s ease ${p.$at}s forwards;`}
+`;
+
+/** Dust in the lamp light, and a soft dark edge: what makes the stills read as a room, not a slide. */
+const floatUp = keyframes`
+  0% { transform: translate3d(0, 4vh, 0); opacity: 0; }
+  15% { opacity: var(--a, 0.5); }
+  85% { opacity: var(--a, 0.5); }
+  100% { transform: translate3d(var(--dx, 2vw), -16vh, 0); opacity: 0; }
+`;
+const Motes = styled.div`
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+  mix-blend-mode: screen;
+  > i {
+    position: absolute;
+    border-radius: 50%;
+    background: ${inkA(0.9)};
+    width: var(--s, 4px);
+    height: var(--s, 4px);
+    left: var(--x);
+    top: var(--y);
+    opacity: 0;
+    animation: ${floatUp} var(--d, 18s) ease-in-out var(--l, 0s) infinite;
+  }
+`;
+const Vignette = styled.div`
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 46%, ${deepA(0)} 52%, ${deepA(0.5)} 100%);
+`;
+const MOTES = Array.from({ length: 26 }, (_, i) => ({
+  x: `${(i * 37) % 100}%`, y: `${(i * 53) % 100}%`, s: `${3 + (i % 4) * 1.5}px`, d: `${14 + (i % 7) * 2.5}s`,
+  l: `${-(i % 9) * 2}s`, a: 0.25 + (i % 5) * 0.1, dx: `${(i % 2 ? 1 : -1) * (1 + (i % 3))}vw`,
+}));
+function Atmosphere() {
+  return (
+    <>
+      <Vignette />
+      <Motes aria-hidden>
+        {MOTES.map((m, i) => <i key={i} style={{ '--x': m.x, '--y': m.y, '--s': m.s, '--d': m.d, '--l': m.l, '--a': m.a, '--dx': m.dx } as React.CSSProperties} />)}
+      </Motes>
+    </>
+  );
+}
+
+// ---- What is drawn on the pictures: in each picture's own 1536x1024 box -----------
+
+const ripple = keyframes`0% { transform: scale(0.9); opacity: 0.85; } 100% { transform: scale(1.7); opacity: 0; }`;
+const bob = keyframes`0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); }`;
+const stick = keyframes`from { transform: translateY(-16px) scale(1.14); opacity: 0; } 60% { opacity: 1; } to { transform: none; opacity: 1; }`;
+const lift = keyframes`from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; }`;
+const flutter = keyframes`0%, 100% { transform: scaleX(1) skewY(0deg); } 50% { transform: scaleX(0.94) skewY(3deg); }`;
+const flicker = keyframes`0%, 100% { opacity: 0.92; } 40% { opacity: 0.7; } 60% { opacity: 1; }`;
+const fold = keyframes`from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); }`;
+
+/** Over a picture, in the picture's own box and moved with it: what the scene says. */
+const Over = styled(Route)`
+  .in { opacity: 0; animation: ${fade} 0.6s ease forwards; }
+  .out { animation: ${keyframes`to { opacity: 0 }`} 0.8s ease forwards; }
+  .ring { fill: none; stroke: ${ACCENT}; stroke-width: 3; transform-box: fill-box; transform-origin: center; animation: ${ripple} 2.6s ease-out infinite; }
+  .bob { animation: ${bob} 3.4s ease-in-out infinite; }
+  .lift { animation: ${lift} 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+  .flutter { transform-box: fill-box; transform-origin: left center; animation: ${flutter} 3.4s ease-in-out infinite; }
+  .flicker { animation: ${flicker} 3s ease-in-out infinite; }
+  .stick { animation: ${stick} 0.55s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+  .mark { transform-box: fill-box; transform-origin: center; animation: ${fold} 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+  /* A line of light: a soft glow under a thin bright core, both drawn along the path, and a spark that runs ahead of them. */
+  .trail-glow { fill: none; stroke: ${accentA(0.55)}; stroke-width: 14; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; filter: blur(8px); animation: ${draw} 2.4s ease-in-out forwards; }
+  .trail-core { fill: none; stroke: ${inkA(0.8)}; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: ${draw} 2.4s ease-in-out forwards; }
+  /* A pencil line: wobbled a little by the filter, drawn along its length. */
+  .pencil { fill: none; stroke: ${PAPER}; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; filter: url(#pencil); animation: ${draw} 0.9s ease forwards; }
+  .thread { fill: none; stroke: ${inkA(0.34)}; stroke-width: 1.6; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: ${draw} 1.1s ease forwards; }
+`;
+
+const cardFall = keyframes`
+  from { transform: translate(var(--fx, -60px), -460px) rotate(calc(var(--r, 0deg) - 26deg)); opacity: 0; }
+  55% { opacity: 1; }
+  to { transform: translate(0, 0) rotate(var(--r, 0deg)); opacity: 1; }
+`;
+const cardGone = keyframes`to { transform: translate(0, 8px) rotate(var(--r, 0deg)) scale(0.2); opacity: 0; }`;
+const CardLayer = styled.g`
+  .card { animation: ${cardFall} 1.1s cubic-bezier(0.2, 0.7, 0.3, 1) both, ${cardGone} 0.5s ease forwards; }
+`;
+
+/** What every overlay draws with: the soft shadow under paper, the pencil's wobble, the notes' paper, the lights. */
+const SHARED = (
+  <>
+    <filter id="slip-shadow" x="-20%" y="-30%" width="140%" height="200%">
+      <feDropShadow dx="0" dy="9" stdDeviation="8" floodColor={INK} floodOpacity="0.55" />
+    </filter>
+    <filter id="pencil" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="4" result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+    <linearGradient id="note-yellow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stopColor={night.noteLight} />
+      <stop offset="0.16" stopColor={night.note} />
+      <stop offset="1" stopColor={night.noteDeep} />
+    </linearGradient>
+    <linearGradient id="note-accent" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stopColor={night.accentWash} stopOpacity="0.5" />
+      <stop offset="0.16" stopColor={ACCENT} />
+      <stop offset="1" stopColor={night.accentDeep} />
+    </linearGradient>
+    <radialGradient id="orb">
+      <stop offset="0" stopColor={night.noteLight} stopOpacity="0.7" />
+      <stop offset="0.3" stopColor={night.warn} stopOpacity="0.4" />
+      <stop offset="0.65" stopColor={ACCENT} stopOpacity="0.16" />
+      <stop offset="1" stopColor={ACCENT} stopOpacity="0" />
+    </radialGradient>
+  </>
+);
+
+const noteWidth = (text: string, size: number) =>
+  [...text].reduce((w, c) => w + (/[ㄱ-힝]/.test(c) ? 0.98 : c === ' ' ? 0.32 : 0.62) * size, 0) + size * 1.7;
+
+/**
+ * A sticky note laid on the picture: a lighter strip where it holds, a lifted corner, a soft shadow, a little crooked.
+ * It sticks on at second `s`.
+ */
+function Postit({ x, y, text, size = 32, anchor = 'start', tilt = -2, accent = false, s }: {
+  x: number; y: number; text: string; size?: number; anchor?: 'start' | 'middle' | 'end'; tilt?: number; accent?: boolean; s: number;
+}) {
+  const w = noteWidth(text, size);
+  const h = size * 2.3;
+  const c = size * 0.62;
+  const x0 = anchor === 'end' ? -w : anchor === 'middle' ? -w / 2 : 0;
+  const body = `M ${x0} ${-h / 2} H ${x0 + w} V ${h / 2 - c} L ${x0 + w - c} ${h / 2} H ${x0} Z`;
+  return (
+    <g className="in" style={at(s)}>
+      <g transform={`translate(${x} ${y}) rotate(${tilt})`}>
+        <g className="stick" style={at(s)}>
+          <g filter="url(#slip-shadow)">
+            <path d={body} fill={`url(#${accent ? 'note-accent' : 'note-yellow'})`} />
+          </g>
+          <rect x={x0} y={-h / 2} width={w} height={size * 0.5} fill={night.white} opacity={0.2} />
+          <path d={`M ${x0 + w} ${h / 2 - c} L ${x0 + w - c} ${h / 2} L ${x0 + w - c} ${h / 2 - c} Z`} fill={accent ? night.accentDeep : night.noteDeep} opacity={0.9} />
+          <text x={x0 + w / 2} y={size * 0.4} fontSize={size} fontWeight={800} fill={accent ? night.white : INK} textAnchor="middle">{text}</text>
+        </g>
+      </g>
+    </g>
+  );
+}
+
+/**
+ * The little things of the model: painted pictures of handmade miniatures with their words already painted on
+ * (INTRO.prop.*, scripts/art.mjs), laid on the board in the lamp's light. A piece is placed by the point of it that
+ * touches the board.
+ */
+const PROP_SIZE = 1024;
+const ground = (x: number, y: number, rx: number) => (
+  <ellipse cx={x} cy={y} rx={rx} ry={rx * 0.28} fill={INK} opacity={0.42} style={{ filter: 'blur(8px)' }} />
+);
+
+/** The picture of a piece at scale `k`, its point `(ax, ay)` on the board at `(x, y)`; `clip` keeps only a band of its height. */
+function Prop({ name, ax, ay, x, y, k, clip }: { name: string; ax: number; ay: number; x: number; y: number; k: number; clip?: [number, number] }) {
+  const id = `clip-${name}`;
+  return (
+    <g transform={`translate(${x - ax * k} ${y - ay * k}) scale(${k})`}>
+      {clip && <clipPath id={id}><rect x={0} y={clip[0]} width={PROP_SIZE} height={clip[1] - clip[0]} /></clipPath>}
+      <image href={api.artUrl(name)} width={PROP_SIZE} height={PROP_SIZE} clipPath={clip ? `url(#${id})` : undefined} style={{ filter: 'brightness(0.84) sepia(0.22) saturate(1.05) contrast(1.04)' }} />
+    </g>
+  );
+}
+
+/** A piece set down at second `s`: it settles from a little above, with its shadow under it. */
+function Piece({ name, x, y, ax, ay, k, s, shadow, clip }: {
+  name: string; x: number; y: number; ax: number; ay: number; k: number; s: number; shadow: number; clip?: [number, number];
+}) {
+  return (
+    <g className="in" style={at(s)}>
+      <g className="lift" style={at(s)}>
+        {ground(x, y, shadow)}
+        <Prop name={name} ax={ax} ay={ay} x={x} y={y} k={k} clip={clip} />
+      </g>
+    </g>
+  );
+}
+
+/** A placard on a stand (INTRO.prop.field / case / villagers): `(x, y)` is where its feet stand. */
+const Plaque = ({ name, x, y, s }: { name: string; x: number; y: number; s: number }) => (
+  <Piece name={name} x={x} y={y} ax={520} ay={830} k={0.36} s={s} shadow={120} />
+);
+/** A pennant on a pin (INTRO.prop.reaction / service): `(x, y)` is where the pin's point stands; the pin is shown short. */
+const Flag = ({ name, x, y, s }: { name: string; x: number; y: number; s: number }) => (
+  <Piece name={name} x={x} y={y} ax={310} ay={560} k={0.34} s={s} shadow={24} clip={[70, 560]} />
+);
+/** The signpost of the road's end (INTRO.prop.far): the cross on its disc, the words on its board. */
+const Signpost = ({ x, y, s }: { x: number; y: number; s: number }) => (
+  <Piece name="INTRO.prop.far" x={x} y={y} ax={510} ay={700} k={0.27} s={s} shadow={22} clip={[40, 700]} />
+);
+/** A version of the proposal, a sheet of paper (INTRO.prop.doc1 / doc2 / draft). */
+const Sheet = ({ name, x, y, k = 0.26, s }: { name: string; x: number; y: number; k?: number; s: number }) => (
+  <Piece name={name} x={x} y={y} ax={520} ay={560} k={k} s={s} shadow={120} />
+);
+
+/** A line of light drawn along `d` from second `s`, a spark running ahead of it. */
+function Trail({ d, s, dur = 2.4 }: { d: string; s: number; dur?: number }) {
+  const style = { animationDelay: `${s}s`, animationDuration: `${dur}s` };
+  return (
+    <g>
+      <path className="trail-glow" pathLength={1} d={d} style={style} />
+      <path className="trail-core" pathLength={1} d={d} style={style} />
+      <circle r={7} fill={night.noteLight} opacity={0}>
+        <animate attributeName="opacity" values="0;0.85;0.85;0" keyTimes="0;0.04;0.92;1" dur={`${dur + 0.2}s`} begin={`${s}s`} fill="freeze" />
+        <animateMotion dur={`${dur}s`} begin={`${s}s`} path={d} fill="freeze" calcMode="spline" keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.25 1" />
+      </circle>
+    </g>
+  );
+}
+
+/** An interview note that falls to where a person stands: a picture of a ruled card. */
+function Note({ x, y, s, rot = 0 }: { x: number; y: number; s: number; rot?: number }) {
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <g className="card" style={{ animationDelay: `${s}s, ${s + 1.3}s`, '--r': `${rot}deg`, '--fx': `${-30 - (rot * 6)}px` } as React.CSSProperties}>
+        <Prop name="INTRO.prop.card" ax={520} ay={520} x={0} y={0} k={0.09} />
+      </g>
+    </g>
+  );
+}
+
+/** A person as an agent: a light that hangs a little above them and drifts, joined to where they stand by a thread of it. */
+function Agent({ x, y, s }: { x: number; y: number; s: number }) {
+  return (
+    <g className="in" style={at(s)}>
+      <ellipse cx={x} cy={y} rx={14} ry={5} fill="none" stroke={accentA(0.9)} strokeWidth={1.8} />
+      <ellipse className="ring" cx={x} cy={y} rx={14} ry={5} style={at(s)} />
+      <path d={`M ${x} ${y - 48} L ${x} ${y - 6}`} stroke={accentA(0.5)} strokeWidth={2} />
+      <g className="bob" style={{ animationDelay: `${(x % 7) * 0.31}s` }}>
+        <circle cx={x} cy={y - 56} r={42} fill="url(#orb)" />
+        <circle cx={x} cy={y - 56} r={5} fill={night.noteLight} opacity={0.85} />
+      </g>
+    </g>
+  );
+}
+
+/** Threads of light between each agent and its two nearest, each with a spark that runs along it. */
+function Wires({ points, s, lift = 58 }: { points: readonly (readonly [number, number])[]; s: number; lift?: number }) {
+  const pairs = new Set<string>();
+  points.forEach((p, i) => {
+    points.map((q, j) => [j, Math.hypot(p[0] - q[0], p[1] - q[1])] as const).filter(([j]) => j !== i)
+      .sort((a, b) => a[1] - b[1]).slice(0, 2).forEach(([j]) => pairs.add(i < j ? `${i}-${j}` : `${j}-${i}`));
+  });
+  return (
+    <>
+      {[...pairs].map((key, n) => {
+        const [i, j] = key.split('-').map(Number);
+        const a = [points[i][0], points[i][1] - lift];
+        const b = [points[j][0], points[j][1] - lift];
+        const dx = b[0] - a[0];
+        const dy = b[1] - a[1];
+        const bend = (n % 2 ? 1 : -1) * 0.16;
+        const d = `M ${a[0]} ${a[1]} Q ${(a[0] + b[0]) / 2 - dy * bend} ${(a[1] + b[1]) / 2 + dx * bend} ${b[0]} ${b[1]}`;
+        return (
+          <g key={key}>
+            <path className="thread" pathLength={1} d={d} style={at(s + n * 0.08)} />
+            <circle r={3} fill={night.noteLight} opacity={0}>
+              <animate attributeName="opacity" values="0;0.7;0.7;0" keyTimes="0;0.1;0.9;1" dur="3.4s" begin={`${s + 1 + n * 0.3}s`} repeatCount="indefinite" />
+              <animateMotion dur="3.4s" begin={`${s + 1 + n * 0.3}s`} path={d} repeatCount="indefinite" />
+            </circle>
+          </g>
+        );
+      })}
+    </>
+  );
+}
+
+/** The twelve people of the model board (the community) and of the village's board, where they stand in each picture. */
+const COMMUNITY: readonly (readonly [number, number])[] = [
+  [871, 342], [846, 374], [795, 452], [874, 444], [902, 469], [1063, 477], [1035, 508], [999, 535], [1139, 488], [1157, 369], [1203, 429], [1018, 640],
+];
+/** The twelve houses of the village's model, where a window of each is (on the picture of INTRO.model.village). */
+const HOUSES: readonly (readonly [number, number])[] = [
+  [604, 269], [690, 211], [799, 194], [747, 291], [604, 349], [701, 366], [844, 360], [616, 446], [741, 446], [896, 434], [821, 589], [770, 514],
+];
+/** The road that leaves the community's board across the desk, as far as the point where it stops: the way to the people, which does not go through. */
+const FAR_ROAD: [number, number][] = [[1172, 412], [1200, 465], [1235, 520], [1275, 560], [1320, 615], [1355, 660], [1385, 705], [1410, 750], [1450, 795]];
+
+// ---- The job: a journey map on a desk, and the loop of mending it ----------------
+
+/** Over INTRO.studio: the four boxes of the journey map (centres) and the loop that runs back from the last to the first. */
+const JOURNEY: [number, number][] = [[418, 650], [615, 613], [790, 580], [960, 553]];
+const LOOP_PATH = 'M 998 594 C 940 716, 560 764, 444 692';
+const JOURNEY_PATH = smooth(JOURNEY);
+
+function JourneyMap({ on, job }: { on: boolean; job: number[] }) {
+  const stops = ['만나고', '쓰고', '마치고'];
+  return (
+    <Over $on={on} viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid slice" aria-hidden>
+      {on && (
+        <>
+          <defs>{SHARED}</defs>
+          <Trail d={JOURNEY_PATH} s={job[1] + 0.8} dur={2.6} />
+          {stops.map((text, i) => (
+            <g key={text}>
+              <g className="in" style={at(job[1] + 0.6 + i * 0.9)}>
+                <ellipse className="ring" cx={JOURNEY[i][0]} cy={JOURNEY[i][1]} rx={64} ry={38} style={at(job[1] + 0.6 + i * 0.9)} />
+              </g>
+              <Postit x={JOURNEY[i][0] - 10 + i * 12} y={JOURNEY[i][1] - 104 - i * 4} anchor="middle" size={30} tilt={i * 3 - 4} text={text} s={job[1] + 0.6 + i * 0.9} />
+            </g>
+          ))}
+          <Trail d={LOOP_PATH} s={job[2] + 0.4} dur={2.8} />
+          <Postit x={720} y={800} anchor="middle" size={32} tilt={-2} accent text="듣고 고친다" s={job[2] + 2.4} />
+        </>
+      )}
+    </Over>
+  );
+}
+
+// ---- Each sentence shows one thing: it comes in as the voice reaches it and leaves as the next begins ----
+
+const fadeOut = keyframes`to { opacity: 0; }`;
+/** What is shown between two seconds of a scene: it comes in at `from`, and is gone by `to` (open-ended: it stays). */
+const PhaseG = styled.g<{ $from: number; $to?: number }>`
+  opacity: 0;
+  animation: ${fade} 0.5s ease ${(p) => p.$from}s forwards${(p) => (p.$to === undefined ? '' : css`, ${fadeOut} 0.6s ease ${p.$to}s forwards`)};
+`;
+function Phase({ from, to, children }: { from: number; to?: number; children: React.ReactNode }) {
+  return <PhaseG $from={from} $to={to}>{children}</PhaseG>;
+}
+
+// ---- The trouble: a draft, the few who will use it, the road that does not go through ----
+
+function Trouble({ on, t }: { on: boolean; t: number[] }) {
+  const far = smooth(FAR_ROAD);
+  const one = COMMUNITY[1];
+  const end = (k: number) => (t[k + 1] === undefined ? undefined : t[k + 1] - 0.3);
+  return (
+    <Over $on={on} viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid slice" aria-hidden>
+      {on && (
+        <>
+          <defs>
+            {SHARED}
+            <radialGradient id="spot" cx={one[0]} cy={one[1]} r={430} gradientUnits="userSpaceOnUse">
+              <stop offset="0" stopColor={INK} stopOpacity="0" />
+              <stop offset="0.45" stopColor={INK} stopOpacity="0.15" />
+              <stop offset="1" stopColor={INK} stopOpacity="0.72" />
+            </radialGradient>
+          </defs>
+
+          {/* 1. The draft is carried to the people who will use it: a sheet with a folded corner lands, and they are marked. */}
+          <Phase from={t[0]} to={end(1)}>
+            {COMMUNITY.map(([x, y], i) => (
+              <g key={i} className="in" style={at(t[0] + 1.4 + i * 0.1)}>
+                <ellipse cx={x} cy={y} rx={14} ry={5} fill="none" stroke={inkA(0.8)} strokeWidth={1.6} />
+              </g>
+            ))}
+          </Phase>
+          <Phase from={t[0]} to={t[0] + 4.2}>
+            <CardLayer>
+              <g transform="translate(880 440)">
+                <g className="card" style={{ animationDelay: `${t[0] + 0.1}s, ${t[0] + 3.4}s`, '--r': '-4deg', '--fx': '-200px' } as React.CSSProperties}>
+                  {ground(0, 50, 100)}
+                  <Prop name="INTRO.prop.draft" ax={520} ay={560} x={0} y={0} k={0.28} />
+                </g>
+              </g>
+            </CardLayer>
+          </Phase>
+
+          {/* 2. Few of them: one person is lit, the rest fall away, and a flag says whose. */}
+          <Phase from={t[1]} to={end(2)}>
+            <rect x={-100} y={-100} width={1740} height={1240} fill="url(#spot)" />
+            <ellipse cx={one[0]} cy={one[1]} rx={16} ry={6} fill="none" stroke={accentA(0.95)} strokeWidth={2} />
+            <ellipse className="ring" cx={one[0]} cy={one[1]} rx={16} ry={6} />
+            <g className="bob">
+              <circle cx={one[0]} cy={one[1] - 56} r={50} fill="url(#orb)" />
+              <circle cx={one[0]} cy={one[1] - 56} r={6} fill={night.noteLight} opacity={0.9} />
+            </g>
+            <path d={`M ${one[0]} ${one[1] - 48} L ${one[0]} ${one[1] - 6}`} stroke={accentA(0.6)} strokeWidth={2} />
+            <Flag name="INTRO.prop.reaction" x={one[0] + 66} y={one[1] + 62} s={t[1] + 0.6} />
+          </Phase>
+
+          {/* 3. Far and busy: a light sets out along the road and stops at a sign. */}
+          <Phase from={t[2]} to={end(3)}>
+            <Trail d={far} s={t[2] + 0.2} dur={2.4} />
+            <Signpost x={1172} y={414} s={t[2] + 0.2} />
+          </Phase>
+
+          {/* 4. Mended, run again, and nothing says whether it got better: the old version, the new, and a lit question. */}
+          <Phase from={t[3]}>
+            <Sheet name="INTRO.prop.doc1" x={318} y={430} k={0.19} s={t[3] + 0.2} />
+            <Sheet name="INTRO.prop.doc2" x={342} y={545} k={0.19} s={t[3] + 1} />
+            <g className="in" style={at(t[3] + 1.8)}>
+              {ground(400, 365, 24)}
+              <Prop name="INTRO.prop.question" ax={510} ay={905} x={400} y={365} k={0.14} />
+            </g>
+          </Phase>
+        </>
+      )}
+    </Over>
+  );
+}
+
+// ---- The tool: interviews become agents, and the service is run among them ----------
+
+/** `t`: where each of the five sentences begins (the name; the interviews; the service among them; not standing in; this case). */
+function Making({ on, t }: { on: boolean; t: number[] }) {
+  return (
+    <Over $on={on} viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid slice" aria-hidden>
+      {on && (
+        <>
+          <defs>{SHARED}</defs>
+          {/* 2. A note of the interview falls to each person, who is taken in as an agent. */}
+          <Phase from={t[1]} to={t[4] - 0.2}>
+            <CardLayer>
+              {COMMUNITY.map(([x, y], i) => <Note key={i} x={x} y={y - 30} s={t[1] + 0.2 + i * 0.2} rot={(i % 5) * 4 - 8} />)}
+            </CardLayer>
+            {COMMUNITY.map(([x, y], i) => <Agent key={i} x={x} y={y} s={t[1] + 1 + i * 0.2} />)}
+          </Phase>
+          {/* 3. ... the threads of them, and the service set down among them. */}
+          <Phase from={t[2]} to={t[4] - 0.2}>
+            <Wires points={COMMUNITY} s={t[2] + 0.1} />
+            <Flag name="INTRO.prop.service" x={940} y={500} s={t[2] + 1.2} />
+          </Phase>
+          {/* 4. Not standing in for anyone; 5. this time, one case. */}
+          <Phase from={t[3]} to={t[4] - 0.2}>
+            <Plaque name="INTRO.prop.field" x={340} y={540} s={t[3] + 0.2} />
+          </Phase>
+          <Phase from={t[4]}>
+            <Plaque name="INTRO.prop.case" x={340} y={540} s={t[4] + 0.6} />
+          </Phase>
+        </>
+      )}
+    </Over>
+  );
+}
+
+// ---- The case's twelve: raised from interviews, on the village's board -------------
+
+/** `t`: where each of the three sentences begins (built from interviews; before going to the field; the designer's tool). */
+function Built({ on, t }: { on: boolean; t: number[] }) {
+  return (
+    <Over $on={on} viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid slice" aria-hidden>
+      {on && (
+        <>
+          <defs>{SHARED}</defs>
+          {/* An interview falls on each house, and the house is lit: the twelve were raised from twelve interviews. */}
+          <Phase from={t[0]}>
+            <CardLayer>
+              {HOUSES.map(([x, y], i) => <Note key={i} x={x} y={y - 30} s={t[0] + 0.2 + i * 0.2} rot={(i % 5) * 4 - 8} />)}
+            </CardLayer>
+            {HOUSES.map(([x, y], i) => (
+              <g key={i} className="in" style={at(t[0] + 1 + i * 0.2)}>
+                <circle cx={x} cy={y} r={46} fill="url(#orb)" />
+                <circle cx={x} cy={y} r={6} fill={night.noteLight} opacity={0.9} />
+              </g>
+            ))}
+          </Phase>
+          {/* The houses are joined: the village that the service will run in. */}
+          <Phase from={t[1]}>
+            <Wires points={HOUSES} s={t[1] + 0.1} lift={0} />
+            <Plaque name="INTRO.prop.villagers" x={340} y={540} s={t[1] + 0.4} />
+          </Phase>
+        </>
+      )}
+    </Over>
+  );
+}
+
+/** One caption of a scene that shows its sentences one at a time: arrives at `at`, gone when the next arrives. */
+function Said({ on, at: from, next, first, eyebrow, children }: { on: boolean; at: number; next?: number; first: boolean; eyebrow: string; children: string }) {
+  return (
+    <Caption>
+      <Timed $on={on} $at={first ? 0.2 : from - 0.1} $until={next === undefined ? undefined : next - 0.2}>
+        <Eyebrow $on={on}>{eyebrow}</Eyebrow>
+        <Line $on={on} $delay={first ? 0.3 : from}>{children}</Line>
+      </Timed>
+    </Caption>
+  );
+}
+
 interface Props {
   onFinish: () => void;
   /** The recordings of the narrator's lines, by 'NARRATOR|text'. Absent: the film runs silent at its base lengths. */
@@ -650,23 +1094,61 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
 
   return (
     <Stage aria-label="소개">
+      <Atmosphere />
       <Brand><Logo height="clamp(36px, 3.2vw, 128px)" /></Brand>
       <Corner>
         <Disclaimer>그림과 대화는 모두 시뮬레이션입니다 · 이름은 가명입니다</Disclaimer>
       </Corner>
 
+      {/* The job, its trouble, the tool: one camera over one desk. The journey map is dived into; the model on the desk is what
+          arrives; the model turns into the village, and the village is dived into. Each shows its sentences one at a time. */}
       <Scene $on={on(0)}>
-        <Picture $src={src('FARM')} $on={scene >= 0} />
-        <Caption>
-          <Eyebrow $on={on(0)}>시골의 풍경</Eyebrow>
-          <Line $on={on(0)}>{'시골의 낮, 병원은 읍내에 있고\n주민들은 밭과 바다에 계시죠.'}</Line>
-        </Caption>
+        <Dolly $on={on(0)} $diveAt={Math.max(layout.ms[0] / 1000 - 3.2, 4)} style={{ '--ox': '44%', '--oy': '66%', '--dz': 3.4 } as React.CSSProperties}>
+          <Picture $src={src('INTRO.studio')} $on={scene >= 0} />
+          <JourneyMap on={on(0)} job={layout.said.job} />
+        </Dolly>
+        {SAY_JOB.map((text, k) => (
+          <Said key={k} on={on(0)} at={layout.said.job[k]} next={layout.said.job[k + 1]} first={k === 0} eyebrow="서비스 디자이너라는 직업">{text}</Said>
+        ))}
       </Scene>
 
       <Scene $on={on(1)}>
-        <Picture $src={src('INTRO.road')} $on={scene >= 1} />
-        <Route $on={on(1)} viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid slice" aria-hidden>
-          {on(1) && (
+        <Dolly $on={on(1)} $out style={{ '--ox': '44%', '--oy': '66%', '--oz': 2.6 } as React.CSSProperties}>
+          <Picture $src={src('INTRO.model')} $on={scene >= 1} />
+          <Trouble on={on(1)} t={layout.said.trouble} />
+        </Dolly>
+        {SAY_TROUBLE.map((text, k) => (
+          <Said key={k} on={on(1)} at={layout.said.trouble[k]} next={layout.said.trouble[k + 1]} first={k === 0} eyebrow="서비스 디자이너의 고민">{text}</Said>
+        ))}
+      </Scene>
+
+      <Scene $on={on(2)}>
+        <Dolly $on={on(2)} $diveAt={Math.max(layout.ms[2] / 1000 - 3, 6)} style={{ '--ox': '60%', '--oy': '40%', '--dz': 2.8 } as React.CSSProperties}>
+          <Picture $src={src('INTRO.model')} $on={scene >= 2} />
+          <Dissolve $on={on(2)} $at={layout.said.tool[4] - 0.2}>
+            <Picture $src={src('INTRO.model.village')} $on={scene >= 2} />
+          </Dissolve>
+          <Making on={on(2)} t={layout.said.tool} />
+        </Dolly>
+        {SAY_TOOL.map((text, k) => (
+          <Said key={k} on={on(2)} at={layout.said.tool[k]} next={layout.said.tool[k + 1]} first={k === 0} eyebrow="Desimer">{text}</Said>
+        ))}
+      </Scene>
+
+      <Scene $on={on(3)}>
+        <Dolly $on={on(3)} $out style={{ '--ox': '30%', '--oy': '30%', '--oz': 2.2 } as React.CSSProperties}>
+          <Picture $src={src('FARM')} $on={scene >= 3} />
+        </Dolly>
+        <Caption>
+          <Eyebrow $on={on(3)}>시골의 풍경</Eyebrow>
+          <Line $on={on(3)}>{'시골의 낮, 병원은 읍내에 있고\n주민들은 밭과 바다에 계시죠.'}</Line>
+        </Caption>
+      </Scene>
+
+      <Scene $on={on(4)}>
+        <Picture $src={src('INTRO.road')} $on={scene >= 4} />
+        <Route $on={on(4)} viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid slice" aria-hidden>
+          {on(4) && (
             <>
               <defs>
                 <mask id="road-reveal" maskUnits="userSpaceOnUse" x="-200" y="-200" width="2000" height="1600">
@@ -688,26 +1170,26 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
           )}
         </Route>
         <Caption>
-          <Eyebrow $on={on(1)}>의료는 멀다</Eyebrow>
-          <Line $on={on(1)}>어르신들은 병원에 가야 할 일이 잦지만, 병원은 멀어서 웬만하면 참으십니다.</Line>
+          <Eyebrow $on={on(4)}>의료는 멀다</Eyebrow>
+          <Line $on={on(4)}>어르신들은 병원에 가야 할 일이 잦지만, 병원은 멀어서 웬만하면 참으십니다.</Line>
         </Caption>
       </Scene>
 
-      <Scene $on={on(2)}>
-        <Picture $src={src('HOME')} $on={scene >= 2} />
+      <Scene $on={on(5)}>
+        <Picture $src={src('HOME')} $on={scene >= 5} />
         <Caption>
-          <Timed $on={on(2)} $at={0.2} $until={layout.two.until}>
-            <Eyebrow $on={on(2)}>살펴 줄 사람이 없다</Eyebrow>
-            <Line $on={on(2)} $delay={0.3}>{'문제는, 어르신을 살펴 줄 사람이 마을에 없다는 겁니다.\n그 일은 이장님 한 분께 이미 몰려 있습니다.'}</Line>
+          <Timed $on={on(5)} $at={0.2} $until={layout.two.until}>
+            <Eyebrow $on={on(5)}>살펴 줄 사람이 없다</Eyebrow>
+            <Line $on={on(5)} $delay={0.3}>{'문제는, 어르신을 살펴 줄 사람이 마을에 없다는 겁니다.\n그 일은 이장님 한 분께 이미 몰려 있습니다.'}</Line>
           </Timed>
         </Caption>
         {SAY_MEDIAL.map((text, k) => (
           <Caption key={k}>
-            <Timed $on={on(2)} $at={(k === 0 ? layout.two.next : layout.said.three[1]) - 0.1} $until={k === 0 ? layout.said.three[1] - 0.2 : undefined}>
-              <Eyebrow $on={on(2)}>AI CARE ORCHESTRATOR</Eyebrow>
-              <Line $on={on(2)} $delay={k === 0 ? layout.two.next : layout.said.three[1]}>{text}</Line>
+            <Timed $on={on(5)} $at={(k === 0 ? layout.two.next : layout.said.medial[1]) - 0.1} $until={k === 0 ? layout.said.medial[1] - 0.2 : undefined}>
+              <Eyebrow $on={on(5)}>AI CARE ORCHESTRATOR</Eyebrow>
+              <Line $on={on(5)} $delay={k === 0 ? layout.two.next : layout.said.medial[1]}>{text}</Line>
               {k === 1 && (
-                <Chain $on={on(2)} $delay={layout.said.three[1] + 0.6}>
+                <Chain $on={on(5)} $delay={layout.said.medial[1] + 0.6}>
                   <span>안부 확인</span><i>→</i>
                   <span>이웃 연결</span><i>→</i>
                   <span>병원 동행</span>
@@ -718,42 +1200,52 @@ export default function IntroScreen({ onFinish, voices = null }: Props) {
         ))}
       </Scene>
 
-      <Scene $on={on(3)}>
+      <Scene $on={on(6)}>
         <Ground />
         {/* Stays mounted through the next scene's arrival so the map fades out under the village picture instead of vanishing at once. */}
-        {(scene === 3 || scene === 4) && <PlaceFilm />}
+        {(scene === 6 || scene === 7) && <PlaceFilm />}
         <Fog />
         <Caption>
-          <Eyebrow $on={on(3)}>서비스 디자이너의 고충</Eyebrow>
-          <Line $on={on(3)}>도입에 앞서 주민 대상 실증 연구로 이 초안을 고쳐야 하지만, 마을이 멀어 자주 찾아가기도, 오래 묻기도 어렵습니다.</Line>
+          <Eyebrow $on={on(6)}>이 사례의 어려움</Eyebrow>
+          <Line $on={on(6)}>이 마을도 멀어서, 초안을 들고 자주 찾아가 물을 수는 없습니다.</Line>
         </Caption>
       </Scene>
 
-      <Scene $on={on(4)}>
-        <Picture $src={src('INTRO.village')} $on={scene >= 4} $dim />
-        {on(4) && <Diagram after={layout.said.four[1]} />}
-        {SAY_FOUR.map((text, k) => (
+      <Scene $on={on(7)}>
+        <Dolly $on={on(7)} $out style={{ '--ox': '60%', '--oy': '40%', '--oz': 1.5 } as React.CSSProperties}>
+          <Picture $src={src('INTRO.model.village')} $on={scene >= 7} />
+          <Built on={on(7)} t={layout.said.built} />
+        </Dolly>
+        {SAY_BUILT.map((text, k) => (
           <Caption key={k}>
-            <Timed $on={on(4)} $at={k === 0 ? 0.2 : layout.said.four[k] - 0.1} $until={layout.said.four[k + 1] === undefined ? undefined : layout.said.four[k + 1] - 0.2}>
-              <Eyebrow $on={on(4)}>Dially</Eyebrow>
-              <Line $on={on(4)} $delay={k === 0 ? 0.3 : layout.said.four[k]}>{text}</Line>
+            <Timed $on={on(7)} $at={k === 0 ? 0.2 : layout.said.built[k] - 0.1} $until={layout.said.built[k + 1] === undefined ? undefined : layout.said.built[k + 1] - 0.2}>
+              <Eyebrow $on={on(7)}>Desimer</Eyebrow>
+              <Line $on={on(7)} $delay={k === 0 ? 0.3 : layout.said.built[k]}>{text}</Line>
+              {k === 2 && (
+                <Chain $on={on(7)} $delay={layout.said.built[k] + 0.6}>
+                  <span>AI 조율자 초안</span><i>→</i>
+                  <span>열두 분이 겪고</span><i>→</i>
+                  <span>평가하고</span><i>→</i>
+                  <span>초안을 고친다</span>
+                </Chain>
+              )}
             </Timed>
           </Caption>
         ))}
       </Scene>
 
-      <Scene $on={on(5)}>
-        <Picture $src={src('INTRO.desk')} $on={scene >= 5} />
+      <Scene $on={on(8)}>
+        <Picture $src={src('INTRO.desk')} $on={scene >= 8} />
         {SAY_FIVE.map((text, k) => {
           const at = layout.said.five[k];
           const next = layout.said.five[k + 1];
           return (
             <Caption key={k}>
-              <Timed $on={on(5)} $at={k === 0 ? 0.2 : at - 0.1} $until={next === undefined ? undefined : next - 0.2}>
-                <Eyebrow $on={on(5)}>서비스 디자이너가 되어 보기</Eyebrow>
-                <Line $on={on(5)} $delay={k === 0 ? 0.3 : at}>{text}</Line>
+              <Timed $on={on(8)} $at={k === 0 ? 0.2 : at - 0.1} $until={next === undefined ? undefined : next - 0.2}>
+                <Eyebrow $on={on(8)}>서비스 디자이너가 되어 보기</Eyebrow>
+                <Line $on={on(8)} $delay={k === 0 ? 0.3 : at}>{text}</Line>
                 {k === 1 && (
-                  <Chain $on={on(5)} $delay={at + 0.9}>
+                  <Chain $on={on(8)} $delay={at + 0.9}>
                     <span>사건을 본다</span><i>→</i>
                     <span>주민 에이전트가 AI를 평가한다</span><i>→</i>
                     <span>요청 하나로 고친다</span><i>→</i>

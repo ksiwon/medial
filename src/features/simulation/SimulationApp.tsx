@@ -27,7 +27,7 @@ import WeekScreen from './week/WeekScreen';
 // touched; the tablet (stage/PadApp) presses, and stage/wall.ts does what was pressed and says what is on
 // screen. The walk is one path through a week (week/):
 //
-//   소개 영상    - what Dially is and who the visitor is;
+//   소개 영상    - what Desimer is and who the visitor is;
 //   이번 주      - seven days, an event on some of them; the visitor picks one;
 //   사건 장면    - the event as it ran, a line at a time;
 //   주민 평가    - the residents in it, in their words, with the lines each rests on;

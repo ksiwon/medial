@@ -99,7 +99,7 @@ class ReadsOnly:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Dially exhibition server", version="4")
+    app = FastAPI(title="Desimer exhibition server", version="5")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],

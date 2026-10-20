@@ -176,7 +176,7 @@ def main() -> None:
     master, missing = mix_audio(meta, audio_dir)
     wav = out / "audio.wav"
     write_wav(wav, master)
-    final = out / f"Dially_v4_{meta['walk']}.mp4"
+    final = out / f"Desimer_v5_{meta['walk']}.mp4"
     ffmpeg("-i", str(screen), "-i", str(wav), "-map", "0:v", "-map", "1:a", "-c:v", "copy",
            "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-shortest", str(final))
     print("영상:", final)

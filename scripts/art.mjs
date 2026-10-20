@@ -112,8 +112,68 @@ const POSE_FOR = {
   'P11.resting': 'Lying on her side on a floor mat in the back room of a house, a thin blanket over her legs, one hand pressed to her lower back, a pillow under her head, her brow slightly drawn from the ache, eyes open and tired. She is NOT wearing an apron or shoes; plain home clothes (a floral blouse and loose trousers). Calm, in pain but not injured or collapsed. Seen from the eye level of someone standing at the door.',
 };
 
+// ---------------------------------------------------------------------------
+// 소개 영상의 그림(INTRO.*). 옛 INTRO.desk · road · village · return 은 이 파일 밖에서 그렸다 — 새로 그리는 것만 여기 있다.
+// ---------------------------------------------------------------------------
+const INTRO_STYLE = [
+  'Semi-realistic painted illustration, like a frame from a quiet, grounded graphic novel.',
+  'Natural, slightly muted colors; warm low evening light. Not photographic, not 3D render, not anime, not cartoonish.',
+  'No text, letters, numbers, signs with writing, logos, watermark, or UI. No people.',
+].join(' ');
+const INTRO = {
+  // Scene A of the opening (the service designer's job): a desk with a journey map, before any village appears.
+  // The opening's camera comes down from that desk onto a handmade model on it: first a small community in general,
+  // then (the same board, the same pose) the coastal village of the case.
+  'INTRO.model': 'A handmade miniature model of a small community on a wooden desk, seen from above at a three-quarter angle, lit by a warm desk lamp, tilt-shift shallow depth of field. A flat cardboard base painted in soft green and ochre carries about twelve small paper-and-wood houses with tiny warm lit windows, arranged loosely around a small open square with three little trees. A narrow road leaves the board at its lower right edge and runs on across the bare wooden desk. Simple faceless wooden peg figures, each a little different in height, stand in the square and by the houses; no faces. Quiet, handmade, like a prototype a designer built. COMPOSITION: the model board sits in the right two thirds of the frame, seen from the left-front at about forty degrees above the desk; its nearest corner points toward the lower middle of the frame. The whole left third of the frame, the lower-left corner and the top-left corner are plain dark wooden desk falling into deep soft shadow and out-of-focus darkness, completely empty (no objects, no pencil, no notes, no plant there). The lamp stands at the upper right. Keep the entire board inside the frame with margin.',
+  'INTRO.model.village': 'The same handmade miniature model board, same camera and framing and lamp light, now a coastal village: about twelve small houses with blue and orange tile roofs step up a hillside on the left of the board, a small harbour of painted blue paper sea on the right with tiny toy fishing boats and a short breakwater, two small persimmon trees dotted with orange beads, a low wall of tiny grey pebbles, a narrow lane between the houses. A road leaves the board at its lower right edge and runs on across the bare wooden desk. Simple faceless wooden peg figures stand on the lane and by the harbour; no faces. Tilt-shift, shallow depth of field. COMPOSITION: the model board sits in the right two thirds of the frame, seen from the left-front at about forty degrees above the desk; its nearest corner points toward the lower middle of the frame. The whole left third of the frame, the lower-left corner and the top-left corner are plain dark wooden desk falling into deep soft shadow and out-of-focus darkness, completely empty (no objects, no pencil, no notes, no plant there). The lamp stands at the upper right. Keep the entire board inside the frame with margin.',
+  'INTRO.studio': 'A desk of a service designer by a window in a small city design studio at dusk, seen from a slight angle above the desk. On the desk lies a large sheet of paper with a customer-journey map: three or four rounded boxes joined by hand-drawn arrows and a loop arrow returning to the first box, with no writing in the boxes; a neat row of yellow sticky notes along one edge of the sheet; a ceramic coffee mug on a cork coaster, a pencil, a closed grey laptop. Through the window a warm sunset over a city skyline with low hills. Plain walls.',
+};
+
+// 소개 모형 위에 놓는 작은 소품: 글자는 앱이 얹으므로 그림에는 글이 없다(투명 배경).
+const PROP_STYLE = [
+  'Photographed handmade miniature prop for an architectural model, like a small hand-crafted object from a prototype: painted wood, paper and thin brass; soft warm lamp light; shallow depth of field.',
+  'Seen from a three-quarter angle slightly from above, the whole object in frame, centred, on a fully transparent background with no floor and no cast ground shadow.',
+  'No text, letters, numbers or symbols anywhere on it: every board, face and cloth is blank.',
+].join(' ');
+// 글자가 그려진 소품: 글은 장면에 쓰는 그대로(한글) 소품의 면에 손으로 칠한 듯 적는다.
+const LETTERED = [
+  'Photographed handmade miniature prop for an architectural model: painted wood, paper and thin brass; soft warm lamp light; shallow depth of field.',
+  'Seen from a three-quarter angle slightly from above, the whole object in frame, centred, on a fully transparent background with no floor and no cast ground shadow.',
+  'The lettering is part of the object, hand-painted in a clean, bold, legible Korean (Hangul) brush-sans, flat on the face, each character complete and correct, nothing else written anywhere.',
+].join(' ');
+const LETTERS = {
+  'INTRO.prop.far': 'A tiny signpost: a thin dark wooden post with one wide hand-cut weathered cream wooden board near the top, facing the viewer, and a small round enamel disc fixed above it showing one bold orange-red diagonal X mark like a multiplication sign (two crossing diagonal strokes, NOT a plus sign and NOT a medical cross). The board reads exactly: "멀다 · 바쁘다".',
+  'INTRO.prop.reaction': 'A tiny pin flag: a thin brass pin with a cream cloth pennant with a swallowtail end, gently waving, facing the viewer. The pennant reads exactly: "한 분의 반응".',
+  'INTRO.prop.service': 'A tiny pin flag: a thin brass pin with an orange cloth pennant with a swallowtail end, gently waving, facing the viewer. The pennant reads exactly: "서비스" in cream lettering.',
+  'INTRO.prop.field': 'A tiny museum placard on a little stand: a wide dark wooden plaque with a thin brass edge, tilted back on two small brass legs, facing the viewer. It reads exactly, on two lines, in warm cream lettering: first line "현장 방문 준비용", second line "실제 사람을 대신하지 않음".',
+  'INTRO.prop.case': 'A tiny museum placard on a little stand: a wide dark wooden plaque with a thin brass edge, tilted back on two small brass legs, facing the viewer. It reads exactly, on two lines: first line "이번 사례" in warm cream lettering, second line "시골마을 의료 AI 조율자" in orange lettering.',
+  'INTRO.prop.villagers': 'A tiny museum placard on a little stand: a wide dark wooden plaque with a thin brass edge, tilted back on two small brass legs, facing the viewer. It reads exactly, on two lines: first line "은점마을" in warm cream lettering, second line "주민 AI 에이전트 12" in orange lettering.',
+  'INTRO.prop.v1': 'A single small painted wooden toy block, a cube with softly rounded corners in cream white, with the characters "v1" painted large and dark on its top face, seen from above at three quarters.',
+  'INTRO.prop.v2': 'A single small painted wooden toy block, a cube with softly rounded corners in warm orange, with the characters "v2" painted large in cream on its top face, seen from above at three quarters.',
+  'INTRO.prop.doc1': 'A single sheet of cream paper lying flat and slightly curled, one corner folded over, like a service proposal: the heading "서비스 초안" printed in bold dark lettering near the top, three short grey rule lines beneath it, and a small round dark ink stamp in the lower corner reading "v1".',
+  'INTRO.prop.doc2': 'A single sheet of cream paper lying flat and slightly curled, one corner folded over, like a revised service proposal: the heading "서비스 초안" printed in bold dark lettering near the top, four short grey rule lines beneath it, one of them underlined in orange, and a small round orange ink stamp in the lower corner reading "v2".',
+  'INTRO.prop.draft': 'A single sheet of cream paper lying flat and slightly curled, one corner folded over, with the heading "서비스 초안" printed in bold dark lettering near the top and three short grey rule lines beneath it.',
+};
+
+const PROPS = {
+  'INTRO.prop.signpost': 'A tiny signpost: a thin dark wooden post with one wide blank hand-cut wooden board fixed near the top, facing the viewer, and a small round blank enamel disc fixed above the board.',
+  'INTRO.prop.flag': 'A tiny pin flag: a thin brass pin standing upright with a small cream cloth pennant with a swallowtail end, blank, gently waving, fixed at the top of the pin.',
+  'INTRO.prop.plaque': 'A tiny museum placard on a little stand: a wide dark wooden plaque with a thin brass edge, slightly tilted back on two small brass legs, its face blank.',
+  'INTRO.prop.sheet': 'A single sheet of cream paper lying flat and slightly curled, with one corner folded over, blank, as a small paper model of a document.',
+  'INTRO.prop.card': 'A single small ruled index card in off-white with a thin red head line and faint blue rule lines, no writing, lying flat, slightly curled at one corner.',
+  'INTRO.prop.question': 'A hand-cut wooden question mark standing upright, painted warm cream, thick like a toy letter, with a small brass pin at its foot.',
+  'INTRO.prop.block.cream': 'A single small painted wooden toy block, a cube with softly rounded corners in cream white, its faces blank.',
+  'INTRO.prop.block.orange': 'A single small painted wooden toy block, a cube with softly rounded corners in warm orange, its faces blank.',
+};
+
 /** 그림 하나의 요청. 모르는 장소·사람·자세면 그 이유. */
 function jobOf(name) {
+  if (LETTERS[name]) return { job: { size: '1024x1024', transparent: true, prompt: `${LETTERED}
+Object: ${LETTERS[name]}` } };
+  if (PROPS[name]) return { job: { size: '1024x1024', transparent: true, prompt: `${PROP_STYLE}
+Object: ${PROPS[name]}` } };
+  if (INTRO[name]) return { job: { size: WIDE, transparent: false, prompt: `${INTRO_STYLE}
+Scene: ${INTRO[name]}` } };
   if (PLACES[name]) return { job: { size: WIDE, transparent: false, prompt: `${STYLE}\nScene: ${PLACES[name]} No people.` } };
   const [id, ...rest] = name.split('.');
   const pose = rest.join('.');

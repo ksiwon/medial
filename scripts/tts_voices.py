@@ -156,7 +156,7 @@ def make(names):
         gender, text = SPECS[name]
         for attempt in range(6):
             body = {"store": True, "voice": {"model": "gemini-3.8-flash-tts", "type": "prompted",
-                                             "display_name": "dially-" + name, "gender": gender,
+                                             "display_name": "desimer-" + name, "gender": gender,
                                              "language_code": "ko-KR", "prompted": {"input": text}}}
             try:
                 new = call("POST", "", body)["id"]

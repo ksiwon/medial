@@ -1,6 +1,6 @@
 """What the voice is told to read (scripts/tts_scenes.py): the week's lines with their numbers and names written out.
 
-Nothing here calls a voice or a model. A line the voice would misread - a bare 12시, a clock time, "Dially" - is
+Nothing here calls a voice or a model. A line the voice would misread - a bare 12시, a clock time, "Desimer" - is
 fixed in the text it is sent, so the recording says what the screen shows.
 """
 import json
@@ -22,7 +22,8 @@ import tts_scenes as t  # noqa: E402
     ("11시~13시는 손님이 몰려", "열한 시에서 한 시는 손님이 몰려"),
     ("두 시간 걸려요", "두 시간 걸려요"),
     ("60분 뒤에 방송해요", "육십 분 뒤에 방송해요"),
-    ("Dially는 마을 주민 시뮬레이터입니다", "다이얼리는 마을 주민 시뮬레이터입니다"),
+    ("Desimer는 소규모 그룹 서비스 디자인 시뮬레이션 도구입니다", "디시머는 소규모 그룹 서비스 디자인 시뮬레이션 도구입니다"),
+    ("Designer를 위한 Simulator, Desimer", "디자이너를 위한 시뮬레이터, 디시머"),
     ("AI가 알려 줬제", "에이아이가 알려 줬제"),
 ])
 def test_what_the_voice_reads(written, said):

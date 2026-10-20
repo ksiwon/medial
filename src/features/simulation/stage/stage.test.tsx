@@ -246,7 +246,7 @@ describe('what the wall says it shows', () => {
 describe('the waiting screen', () => {
   it('asks the visitor to use the tablet, and has nothing to press itself', () => {
     const { container } = render(<IdleScreen art={new Set()} />);
-    expect(screen.getByAltText('Dially')).toBeDefined();
+    expect(screen.getByAltText('Desimer')).toBeDefined();
     expect(screen.getByText(/태블릿에서 시작하기/)).toBeDefined();
     expect(container.querySelectorAll('button')).toHaveLength(0);
   });

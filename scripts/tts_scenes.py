@@ -116,8 +116,8 @@ def sino(n: int) -> str:
     return ("" if tens == 1 else SINO[tens]) + "십" + ("" if ones == 0 else SINO[ones])
 
 
-#: Words the voice would get wrong as written. "Dially" is Dial + Diary: said 다이얼리, as it is meant to sound.
-SAY = [("Dially", "다이얼리"), ("AI", "에이아이")]
+#: Words the voice would get wrong as written. "Desimer" is designer + sim: said 디시머, as it is meant to sound.
+SAY = [("Desimer", "디시머"), ("Designer", "디자이너"), ("Simulator", "시뮬레이터"), ("AI", "에이아이")]
 
 
 def hour_word(h: int) -> str:

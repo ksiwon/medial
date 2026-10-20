@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Dially 전시 서버와 화면을 띄운다. 미리 만들어 둔 한 주(fixtures/week)와 그림·음성만 읽는다.
+# Desimer 전시 서버와 화면을 띄운다. 미리 만들어 둔 한 주(fixtures/week)와 그림·음성만 읽는다.
 # 모델을 부르지 않고 키를 읽지 않는다.
 #
 #   ./run-exhibition.sh            띄우고 브라우저를 연다
