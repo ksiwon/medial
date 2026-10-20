@@ -169,7 +169,7 @@ const Said = styled.div<{ $side: 'l' | 'r'; $old: boolean; $low: boolean }>`
     display: ${(p) => (p.$old ? 'none' : 'block')};
     position: absolute;
     ${(p) => (p.$low ? css`bottom: ${px(-12)};` : css`top: ${px(-12)};`)}
-    ${(p) => (p.$side === 'l' ? css`left: ${px(8)};` : css`right: ${px(8)};`)}
+    ${(p) => (p.$side === 'l' ? css`left: var(--tail, ${px(8)});` : css`right: var(--tail, ${px(8)});`)}
     border: ${px(8)} solid transparent;
     ${(p) => (p.$low ? css`border-bottom: none; border-top: ${px(12)} solid ${night.white};` : css`border-top: none; border-bottom: ${px(12)} solid ${night.white};`)}
   }
@@ -181,7 +181,9 @@ const AiColumn = styled.div`
   position: absolute;
   right: ${space.lg};
   bottom: 13%;
-  width: min(44%, ${px(560)});
+  /* Room enough that the longest line the AI says (44 characters) is one line or two, never three; each bubble is then set
+     to the width of its words (shrinkWrap). */
+  width: min(72%, ${px(900)});
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -255,6 +257,74 @@ interface Props {
   voices?: Record<string, VoiceClip> | null;
 }
 
+/** How many lines a bubble's words fill (the label above them is not counted). */
+function linesOf(el: HTMLElement): number {
+  const range = document.createRange();
+  const tops = new Set<number>();
+  for (const node of Array.from(el.childNodes)) {
+    if (node.nodeType !== Node.TEXT_NODE) continue;
+    range.selectNodeContents(node);
+    for (const r of Array.from(range.getClientRects())) if (r.width > 0) tops.add(Math.round(r.top));
+  }
+  return tops.size;
+}
+
+/** A bubble is two lines at most and as wide as its widest line. CSS can do neither for wrapped text: a box that had to
+ *  wrap stays at its maximum width (a line balanced into two short ones leaves a wide empty end), and a speaker near the
+ *  edge leaves too little room, so the words fall into three lines. So the box is measured by where its words really are:
+ *  when they need more than two lines it is widened (it may then run past the room beside its speaker - it slides back
+ *  inside the picture and its tail keeps pointing at the face), and then it is set to the width of its words plus its
+ *  padding. The scale a bubble is drawn at while it pops in or fades back is divided out. */
+function shrinkWrap(el: HTMLElement) {
+  el.style.width = '';
+  el.style.translate = '';
+  el.style.removeProperty('--tail');
+  if (el.dataset.max !== undefined) el.style.maxWidth = el.dataset.max;
+  const scale = () => el.getBoundingClientRect().width / (el.offsetWidth || 1) || 1;
+  const room = el.parentElement ? el.parentElement.clientWidth : 0;
+  if (linesOf(el) > 2 && room > 0 && el.dataset.max !== undefined) {
+    let low = el.offsetWidth;
+    let high = room;
+    el.style.maxWidth = `${high}px`;
+    if (linesOf(el) <= 2) {
+      for (let i = 0; i < 12 && high - low > 2; i += 1) {
+        const mid = (low + high) / 2;
+        el.style.maxWidth = `${mid}px`;
+        if (linesOf(el) <= 2) high = mid; else low = mid;
+      }
+      el.style.maxWidth = `${Math.ceil(high)}px`;
+    }
+  }
+  const range = document.createRange();
+  let left = Infinity;
+  let right = -Infinity;
+  for (const node of Array.from(el.childNodes)) {
+    range.selectNodeContents(node);
+    for (const r of Array.from(range.getClientRects())) {
+      if (r.width === 0) continue;
+      left = Math.min(left, r.left);
+      right = Math.max(right, r.right);
+    }
+  }
+  if (right > left) {
+    const style = getComputedStyle(el);
+    const frame = ['paddingLeft', 'paddingRight', 'borderLeftWidth', 'borderRightWidth'].reduce((n, key) => n + (Number.parseFloat(style[key as 'paddingLeft']) || 0), 0);
+    const wanted = Math.ceil((right - left) / scale() + frame) + 1;
+    if (wanted < el.offsetWidth) el.style.width = `${wanted}px`;
+  }
+  // Past the picture's edge: slide back in, and let the tail keep pointing at the face it was set on.
+  const box = el.parentElement?.getBoundingClientRect();
+  if (box && el.dataset.max !== undefined) {
+    const at = el.getBoundingClientRect();
+    const k = scale();
+    const out = at.right > box.right ? (at.right - box.right) / k : at.left < box.left ? -(box.left - at.left) / k : 0;
+    if (Math.abs(out) > 0.5) {
+      el.style.translate = `${-out}px 0`;
+      el.style.setProperty('--tail', `calc(${Math.abs(out)}px + ${px(8)})`);
+    }
+  }
+}
+
 export default function SceneView({ week, scene, line, art, seconds, position, voices = null }: Props) {
   const [pushed, setPushed] = useState(false);
   useEffect(() => {
@@ -318,10 +388,22 @@ export default function SceneView({ week, scene, line, art, seconds, position, v
     const again = window.setInterval(measure, 400);
     return () => window.clearInterval(again);
   }, [scene.key, speakers]); // eslint-disable-line react-hooks/exhaustive-deps
+  const boxRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    const fit = () => box?.querySelectorAll<HTMLElement>('[data-shrink]').forEach(shrinkWrap);
+    fit();
+    // The picture settles after it is first drawn (the panels beside it, the fonts): fit again as soon as its size is final.
+    const again = requestAnimationFrame(fit);
+    const watch = typeof ResizeObserver === 'undefined' || !box ? null : new ResizeObserver(fit);
+    if (box) watch?.observe(box);
+    void document.fonts?.ready.then(fit);
+    return () => { cancelAnimationFrame(again); watch?.disconnect(); };
+  }, [scene.key, line, faces]);
   const talkTop = Math.min(40, ...scene.frames.flatMap((f) => Object.values(f.who).map((pose) => PLACE[FIT[pose]].head))) + 10;
 
   return (
-    <Box aria-label={`${scene.time} ${scene.situation}`}>
+    <Box ref={boxRef} aria-label={`${scene.time} ${scene.situation}`}>
       <Frames>
         {scene.frames.map((frame, fi) => {
           const ids = Object.keys(frame.who);
@@ -361,7 +443,7 @@ export default function SceneView({ week, scene, line, art, seconds, position, v
             ? { marginLeft: `${at}%`, maxWidth: `min(${BUBBLE_MAX}, ${100 - at}%)`, top: drop }
             : { marginLeft: 'auto', marginRight: `${100 - at}%`, maxWidth: `min(${BUBBLE_MAX}, ${at}%)`, top: drop };
           return (
-            <Said key={`${b.line.n}`} ref={(el) => { if (el) bubbleRefs.current.set(b.line.n, el); else bubbleRefs.current.delete(b.line.n); }} $old={b.old} $low={faces[b.line.speaker]?.low ?? false} $side={toward === 'right' ? 'l' : 'r'} style={style}>
+            <Said key={`${b.line.n}`} data-shrink data-max={style.maxWidth} ref={(el) => { if (el) bubbleRefs.current.set(b.line.n, el); else bubbleRefs.current.delete(b.line.n); }} $old={b.old} $low={faces[b.line.speaker]?.low ?? false} $side={toward === 'right' ? 'l' : 'r'} style={style}>
               <b>{nameOf(week, b.line.speaker)}</b>
               {b.line.text}
             </Said>
@@ -370,7 +452,7 @@ export default function SceneView({ week, scene, line, art, seconds, position, v
       </Talk>
       <AiColumn>
         {bubbles.filter((b) => b.line.speaker === 'AI').map((b) => (
-          <AiSaid key={`${b.line.n}`} $old={b.old}>
+          <AiSaid key={`${b.line.n}`} data-shrink $old={b.old}>
             <b>{scene.frames[aiFrame]?.device ? `AI · ${scene.frames[aiFrame].device}` : 'AI'}</b>
             {b.line.text}
           </AiSaid>
