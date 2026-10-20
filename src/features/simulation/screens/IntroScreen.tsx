@@ -70,14 +70,14 @@ const SAY_FIVE = [
 ] as const;
 
 /** Scene lengths in ms with no voice: they are the least a scene runs. */
-const BASE_MS = [9000, 15000, 17000, 5500, 5500, 12000, 6000, 19000, 11000];
+const BASE_MS = [9000, 15000, 17000, 5500, 5500, 12000, 6000, 12500, 8000];
 
 /** A caption is spoken from just after it appears; the next one appears when the narrator is done. */
 const LEAD_S = 0.5;
 /** The camera pulling back onto the model takes this long; the second scene's first sentence waits for it. */
-const PULL_S = 1.6;
+const PULL_S = 0.8;
 /** A scene the camera dives out of keeps this long after its last word, for the dive. */
-const DIVE_S = 1.2;
+const DIVE_S = 0.8;
 const GAP_S = 0.7;
 const TAIL_S = 1.4;
 
