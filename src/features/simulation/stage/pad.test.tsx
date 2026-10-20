@@ -22,28 +22,28 @@ describe('the week', () => {
 
   it('lists every day, leaves a quiet day empty, has one button per event, and one short line above and the count below', () => {
     const { press } = pressed();
-    const { container } = render(<Week s={state({ phase: 'week', week, runs: 1 })} press={press} />);
+    const { container } = render(<Week s={state({ phase: 'week', week, runs: 1, reads: 3 })} press={press} />);
     expect(screen.getByLabelText('조용한 날')).toBeDefined();
     expect(names(container).filter((n) => n && !n.includes('마무리'))).toHaveLength(3);
     expect(container.querySelectorAll('p')).toHaveLength(2);
-    expect(screen.getByText(/고친 횟수 1/)).toBeDefined();
+    expect(screen.getByText(/본 버전 3 · 고친 횟수 1/)).toBeDefined();
   });
 
-  it('says in words that five or more changes open the closing scene - and never "n of 5", as if five were all', () => {
-    render(<Week s={state({ phase: 'week', week, runs: 2 })} press={pressed().press} />);
-    expect(screen.getByText(/5번 이상 고치면 마무리 장면으로 넘어갈 수 있어요/)).toBeDefined();
+  it('says in words that five or more versions read open the closing scene - and never "n of 5", as if five were all', () => {
+    render(<Week s={state({ phase: 'week', week, reads: 2 })} press={pressed().press} />);
+    expect(screen.getByText(/5번 이상 보면 마무리 장면으로 넘어갈 수 있어요/)).toBeDefined();
     expect(screen.queryByText(/\/ ?5/)).toBeNull();
   });
 
-  it('opens the closing at the fifth change, and not before', () => {
+  it('opens the closing with the fifth version read, and not before', () => {
     const a = pressed();
-    render(<Week s={state({ phase: 'week', week, runs: 5 })} press={a.press} />);
+    render(<Week s={state({ phase: 'week', week, reads: 5 })} press={a.press} />);
     fireEvent.click(screen.getByText('마무리 장면 보기 →'));
     expect(a.sent).toEqual([{ name: 'finish' }]);
     cleanup();
     const b = pressed();
-    render(<Week s={state({ phase: 'week', week, runs: 4 })} press={b.press} />);
-    // Always on the page, but an outline that does not answer until the fifth change.
+    render(<Week s={state({ phase: 'week', week, reads: 4 })} press={b.press} />);
+    // Always on the page, but an outline that does not answer until the fifth version.
     const closing = screen.getByText('마무리 장면 보기 →') as HTMLButtonElement;
     expect(closing.disabled).toBe(true);
     fireEvent.click(closing);

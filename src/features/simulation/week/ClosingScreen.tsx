@@ -4,7 +4,7 @@ import { api } from '../api/client';
 import type { VoiceClip } from '../api/types';
 import { narrationOf, playNarration } from '../scene/voice';
 import { deepA, inkA, night, px, radius, space, type } from '../ui/theme';
-import { dayOf, eventOf, runsOf, versionOf, type Paths } from './selectors';
+import { dayOf, eventOf, eventsRead, runsOf, versionOf, type Paths } from './selectors';
 import type { Week } from './types';
 
 // The end of a visit, in the opening film's tone: the desk painting under a dark veil. First what the visitor
@@ -90,8 +90,8 @@ const Close = styled.div`
   > p { margin: 0; font-size: ${type.title}; line-height: 1.7; color: ${inkA(0.86)}; }
 `;
 
-export default function ClosingScreen({ week, paths, words, art, voices }: {
-  week: Week; paths: Paths; words: boolean;
+export default function ClosingScreen({ week, paths, read, words, art, voices }: {
+  week: Week; paths: Paths; read: readonly string[]; words: boolean;
   art: ReadonlySet<string>; voices: Record<string, VoiceClip> | null;
 }) {
   const at = useMemo(() => closingAt(voices), [voices]);
@@ -121,7 +121,7 @@ export default function ClosingScreen({ week, paths, words, art, voices }: {
           <>
             <Head>
               <small>마무리 · 이번에 고친 것</small>
-              <h1>{changed.length}개의 사건을 {runsOf(paths)}번 고쳤습니다</h1>
+              <h1>{eventsRead(read)}개의 사건, {read.length}개의 버전을 보고 {runsOf(paths)}번 고쳤습니다</h1>
               <p>사건마다 따로 고쳤습니다. 한 사건에서 고친 규칙은 다른 사건에 이어지지 않습니다. 결과는 미리 만들어 둔 시뮬레이션이며 실제 주민의 의견이 아닙니다.</p>
             </Head>
             <Rows>

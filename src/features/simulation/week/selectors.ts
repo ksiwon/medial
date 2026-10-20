@@ -39,11 +39,16 @@ export function versionOf(event: WeekEvent | null, path: readonly string[]): Ver
   return { number: path.length + 1, path: [...path], chain, scenes, evaluations, requests: offered };
 }
 
-/** How many times the visitor has had the AI changed (a request chosen, a new simulation made) before the closing opens. */
-export const RUNS_TO_CLOSE = 5;
+/** How many versions the visitor has read (ver1 of an event, or a later version a request made) before the closing opens. */
+export const READS_TO_CLOSE = 5;
 
 /** The requests chosen so far in each event, in order: the event's version is the path's length + 1. */
 export type Paths = Record<string, string[]>;
+
+/** A version read, as the store keeps it: the event and the version, so reading the same version twice counts once. */
+export const readKey = (eventId: string, version: number): string => `${eventId}@${version}`;
+/** How many different events those versions belong to. */
+export const eventsRead = (read: readonly string[]): number => new Set(read.map((k) => k.split('@')[0])).size;
 
 export const runsOf = (paths: Paths): number => Object.values(paths).reduce((n, p) => n + p.length, 0);
 

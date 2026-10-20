@@ -231,9 +231,11 @@ interface Props {
   now: string | null;
   /** The requests chosen in each event: its card shows the version they made, and what the residents said of it. */
   paths: Paths;
+  /** The versions read so far (`readKey`s). */
+  read: readonly string[];
 }
 
-export default function WeekScreen({ week, art, now, paths }: Props) {
+export default function WeekScreen({ week, art, now, paths, read }: Props) {
   const days = timetable(week, AXIS);
   // A quiet day is narrow; the rest share the width.
   const cols = days.map((d) => (d.blocks.length === 0 ? 'minmax(0, 0.4fr)' : 'minmax(0, 1fr)')).join(' ');
@@ -247,7 +249,7 @@ export default function WeekScreen({ week, art, now, paths }: Props) {
           <Head key={d.day} $empty={d.blocks.length === 0}>
             <b>{d.day}</b>
             {d.blocks.length > 0 && <span>사건 {d.blocks.length}</span>}
-            {i === days.length - 1 && <em>고친 횟수 {runsOf(paths)}</em>}
+            {i === days.length - 1 && <em>본 버전 {read.length} · 고친 횟수 {runsOf(paths)}</em>}
           </Head>
         ))}
       </Row>

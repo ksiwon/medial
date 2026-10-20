@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { inkA, night, radius } from '../../ui/theme';
-import { RUNS_TO_CLOSE } from '../../week/selectors';
+import { READS_TO_CLOSE } from '../../week/selectors';
 import type { Command, StageState } from '../protocol';
 import { Ask, Button, Card, Grid, Hint, Next, Page, Row, Spacer, Stage } from './kit';
 
@@ -68,9 +68,9 @@ const EventButton = styled(Card)`
 `;
 
 export function Week({ s, press }: { s: StageState; press: Press }) {
-  // Not "n of 5": the visitor may change the AI as often as they like; five is only where the closing opens, and the
+  // Not "n of 5": the visitor may read as many versions as they like; five is only where the closing opens, and the
   // page says so in those words ("5번 이상") for as long as it is on.
-  const opens = s.runs >= RUNS_TO_CLOSE;
+  const opens = s.reads >= READS_TO_CLOSE;
   return (
     <Page>
       <Hint>보고 싶은 사건을 누르세요</Hint>
@@ -90,10 +90,10 @@ export function Week({ s, press }: { s: StageState; press: Press }) {
           </DayRow>
         ))}
       </WeekList>
-      {/* The closing is always on the page, so the way out is known; until the fifth change it is an outline that does not answer. */}
+      {/* The closing is always on the page, so the way out is known; until the fifth version it is an outline that does not answer. */}
       <Row>
         <Spacer />
-        <Hint>고친 횟수 {s.runs} · {RUNS_TO_CLOSE}번 이상 고치면 마무리 장면으로 넘어갈 수 있어요</Hint>
+        <Hint>본 버전 {s.reads} · 고친 횟수 {s.runs} · {READS_TO_CLOSE}번 이상 보면 마무리 장면으로 넘어갈 수 있어요</Hint>
         <Next disabled={!opens} onClick={() => press({ name: 'finish' })}>마무리 장면 보기 →</Next>
       </Row>
     </Page>
@@ -232,7 +232,7 @@ export function Choose({ s, press }: { s: StageState; press: Press }) {
 export function Closing({ s, press }: { s: StageState; press: Press }) {
   return (
     <Stage>
-      <h1>{s.week.flatMap((d) => d.events).filter((e) => e.version > 1).length}개의 사건을 {s.runs}번 고쳤습니다</h1>
+      <h1>{s.events}개의 사건, {s.reads}개의 버전을 보고 {s.runs}번 고쳤습니다</h1>
       {/* The closing words are always heard before the way back: the start button only comes up once they are on the wall. */}
       {s.closingWords
         ? <Button $tone="primary" $big onClick={() => press({ name: 'home' })}>처음으로</Button>

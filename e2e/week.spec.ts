@@ -61,13 +61,13 @@ async function intoTheWeek({ wall, pad }: Screens) {
   await expect(wall.getByLabel('이번 주')).toBeVisible();
 }
 
-test('한 주를 걷는다: 사건 → 장면 → 평가 → 요청 → 새 버전, 다시 이번 주 · 5번 이상 고치면 마무리', async ({ browser, baseURL }) => {
+test('한 주를 걷는다: 사건 → 장면 → 평가 → 요청 → 새 버전, 다시 이번 주 · 버전을 5번 이상 보면 마무리', async ({ browser, baseURL }) => {
   const s = await open(browser, baseURL!);
   const { wall, pad } = s;
   await intoTheWeek(s);
   expect(await noHorizontalScroll(wall)).toBe(true);
   // the tablet says in words where the closing opens, and shows no "read" mark
-  await expect(pad.getByText(/5번 이상 고치면 마무리 장면으로 넘어갈 수 있어요/)).toBeVisible();
+  await expect(pad.getByText(/5번 이상 보면 마무리 장면으로 넘어갈 수 있어요/)).toBeVisible();
   await expect(pad.getByText(/읽음|✓/)).toHaveCount(0);
 
   // an event with a choice: Monday's
@@ -133,15 +133,18 @@ test('한 주를 걷는다: 사건 → 장면 → 평가 → 요청 → 새 버�
   await tap(pad, /이번 주로 →/);
   await expect(wall.getByLabel('이번 주')).toBeVisible();
 
-  // three more changes (each event once), and the fifth opens the closing; before that it is not offered
+  // three more changes (each event once): the closing opens with the fifth version read, not the fifth change
   await change(s, /병원 태워다 주고 데려오기/);
-  await change(s, /낙상 후 못 일어남/);
+  await expect(pad.getByText(/본 버전 4/)).toBeVisible();
   await expect(pad.getByRole('button', { name: /마무리 장면 보기/ })).toBeDisabled();
+  await change(s, /낙상 후 못 일어남/);
+  await expect(pad.getByText(/본 버전 5/)).toBeVisible();
+  await expect(pad.getByRole('button', { name: /마무리 장면 보기/ })).toBeEnabled();
   await change(s, /보건소장의 안내 전달/);
   await expect(pad.getByText(/고친 횟수 5/)).toBeVisible();
   await tap(pad, /마무리 장면 보기/);
   await expect(wall.getByLabel('마무리')).toBeVisible();
-  await expect(wall.getByText(/개의 사건을 5번 고쳤습니다/)).toBeVisible();
+  await expect(wall.getByText(/4개의 사건, 6개의 버전을 보고 5번 고쳤습니다/)).toBeVisible();
   // the way back is not offered until the closing words have been heard
   await expect(pad.getByRole('button', { name: '처음으로', exact: true })).toHaveCount(0);
   await tap(pad, /마무리 말/);

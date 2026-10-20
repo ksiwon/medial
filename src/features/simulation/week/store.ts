@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { api, ApiError } from '../api/client';
-import { versionOf, type Paths } from './selectors';
+import { readKey, versionOf, type Paths } from './selectors';
 import type { Step, Week } from './types';
 
 // Where the visitor is in the week. One path, no branches to back out of:
@@ -27,8 +27,8 @@ interface WeekState {
   /** The line the telling has reached, counted across the scenes of the version being read. */
   lineIndex: number;
   /** Which resident's card is open on the evaluations page (null: the list). */
-  /** The events the visitor has opened. Not shown: only whether anyone has been here at all. */
-  seen: string[];
+  /** The versions the visitor has opened, as `readKey`s: how many are read opens the closing, and whether anyone has been here at all. */
+  read: string[];
   /** The requests chosen in each event, in order: its version is the path's length + 1. */
   paths: Paths;
   /** The request a finger rests on at the tablet before it is confirmed: lit on the wall, nothing runs yet. */
@@ -71,7 +71,7 @@ export const useWeekStore = create<WeekState>((set, get) => ({
   step: 'week',
   eventId: null,
   lineIndex: 0,
-  seen: [],
+  read: [],
   paths: {},
   considering: null,
   generating: false,
@@ -92,10 +92,10 @@ export const useWeekStore = create<WeekState>((set, get) => ({
 
   openEvent: (eventId) => {
     if (!get().week?.events.some((e) => e.id === eventId)) return;
-    set((s) => ({
-      pathStarted: true, step: 'telling', eventId, lineIndex: 0,
-      seen: s.seen.includes(eventId) ? s.seen : [...s.seen, eventId],
-    }));
+    set((s) => {
+      const key = readKey(eventId, (s.paths[eventId]?.length ?? 0) + 1);
+      return { pathStarted: true, step: 'telling', eventId, lineIndex: 0, read: s.read.includes(key) ? s.read : [...s.read, key] };
+    });
   },
 
   setLine: (index) => set({ lineIndex: Math.max(index, 0) }),
@@ -145,7 +145,7 @@ export const useWeekStore = create<WeekState>((set, get) => ({
   touch: () => set({ lastPress: Date.now() }),
 
   restart: () => set({
-    introStarted: false, pathStarted: false, step: 'week', eventId: null, lineIndex: 0, seen: [],
+    introStarted: false, pathStarted: false, step: 'week', eventId: null, lineIndex: 0, read: [],
     paths: {}, considering: null, generating: false, closingWords: false,
   }),
 }));

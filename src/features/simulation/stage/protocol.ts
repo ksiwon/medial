@@ -47,6 +47,9 @@ export interface StageState {
   week: DayBrief[];
   /** How many times the visitor has had the AI changed so far (a request chosen). */
   runs: number;
+  /** How many versions the visitor has read so far (the closing opens at five), and in how many different events. */
+  reads: number;
+  events: number;
   /** The open event, and the weekday it falls on this session. */
   event: { id: string; title: string; day: string | null; noChoice: boolean } | null;
   /** Reading a telling: the scene it is in, how far through, and whether it is done. */
@@ -68,7 +71,7 @@ export interface StageState {
 }
 
 export const IDLE_STATE: StageState = {
-  phase: 'idle', week: [], runs: 0, event: null, scene: null, version: 1, leaf: false, line: 0, lines: 0, toldAll: false,
+  phase: 'idle', week: [], runs: 0, reads: 0, events: 0, event: null, scene: null, version: 1, leaf: false, line: 0, lines: 0, toldAll: false,
   requests: [], considering: null, generating: false, closingWords: false,
 };
 

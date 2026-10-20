@@ -155,7 +155,7 @@ export default function SimulationApp() {
   // Every page that waits counts down (week/auto.ts); a press on the tablet starts it over.
   const auto = autoOf({
     pathStarted: w.pathStarted, step: w.step, eventId: w.eventId, toldAll: telling && at.done,
-    leaf: version ? version.requests.length === 0 : false, seen: w.seen.length, closingWords: w.closingWords, lastPress: w.lastPress,
+    leaf: version ? version.requests.length === 0 : false, seen: w.read.length, closingWords: w.closingWords, lastPress: w.lastPress,
   });
   const left = useCountdown(auto, runAuto);
 
@@ -208,7 +208,7 @@ export default function SimulationApp() {
       {(paired || w.pathStarted || w.introStarted) && !w.pathStarted && !w.introStarted && <IdleScreen art={s.art} />}
       {!w.pathStarted && w.introStarted && <IntroScreen voices={s.voices} onFinish={w.enterWeek} />}
 
-      {showWeek && <WeekScreen week={week} art={s.art} now={null} paths={w.paths} />}
+      {showWeek && <WeekScreen week={week} art={s.art} now={null} paths={w.paths} read={w.read} />}
       {w.pathStarted && telling && scene && event && version && (
         <Telling>
           <VillageMap village={s.village} frames={scene.frames} people={week.people} art={s.art} />
@@ -226,7 +226,7 @@ export default function SimulationApp() {
         <ChooseScreen week={week} event={event} version={version} art={s.art} considering={w.considering} />
       )}
       {w.pathStarted && w.step === 'closing' && (
-        <ClosingScreen week={week} paths={w.paths} words={w.closingWords} art={s.art} voices={s.voices} />
+        <ClosingScreen week={week} paths={w.paths} read={w.read} words={w.closingWords} art={s.art} voices={s.voices} />
       )}
 
       {w.pathStarted && (

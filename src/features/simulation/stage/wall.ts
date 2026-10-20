@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { positionIn, eventOf, dayOf, runsOf, versionOf, type Paths } from '../week/selectors';
+import { positionIn, eventOf, dayOf, eventsRead, runsOf, versionOf, type Paths } from '../week/selectors';
 import { useWeekStore } from '../week/store';
 import type { Evaluation, Week, WeekEvent, WeekScene } from '../week/types';
 import { postState } from './bus';
@@ -111,7 +111,7 @@ const weekBrief = (week: Week, paths: Paths): DayBrief[] =>
 /** What the wall shows right now, for the tablet. Pure: the same store always says the same thing. */
 export function describeStage(args: {
   week: Week | null; introStarted: boolean; pathStarted: boolean; step: string; eventId: string | null;
-  lineIndex: number; paths?: Paths;
+  lineIndex: number; paths?: Paths; read?: readonly string[];
   considering?: string | null; generating?: boolean; closingWords?: boolean;
 }): StageState {
   const { week } = args;
@@ -124,6 +124,7 @@ export function describeStage(args: {
   const version = versionOf(event, path);
   const base: StageState = {
     ...IDLE_STATE, phase, week: weekBrief(week, paths), runs: runsOf(paths),
+    reads: args.read?.length ?? 0, events: eventsRead(args.read ?? []),
     event: event ? { id: event.id, title: event.title, day: dayOf(week, event.id), noChoice: event.noChoice } : null,
     version: version?.number ?? 1,
     leaf: version ? version.requests.length === 0 : false,
@@ -198,7 +199,7 @@ export function useWall(): { paired: boolean } {
   const w = useWeekStore();
   latest.current = describeStage({
     week: w.week, introStarted: w.introStarted, pathStarted: w.pathStarted, step: w.step, eventId: w.eventId,
-    lineIndex: w.lineIndex, paths: w.paths,
+    lineIndex: w.lineIndex, paths: w.paths, read: w.read,
     considering: w.considering, generating: w.generating, closingWords: w.closingWords,
   });
 

@@ -7,7 +7,7 @@ import type { Week } from './types';
 const week = fixture as unknown as Week;
 const reset = (w: Week = week) => useWeekStore.setState({
   loaded: true, week: w, error: null, introStarted: true, pathStarted: false, step: 'week', eventId: null,
-  lineIndex: 0, seen: [], paths: {}, considering: null, generating: false, closingWords: false,
+  lineIndex: 0, read: [], paths: {}, considering: null, generating: false, closingWords: false,
 });
 
 describe('the week', () => {
@@ -118,7 +118,7 @@ describe('the walk', () => {
   it('goes week -> event -> evaluations -> choose, and a choice makes the next version, back at the week', () => {
     s().openEvent('E1');
     expect(s().step).toBe('telling');
-    expect(s().seen).toEqual(['E1']);
+    expect(s().read).toEqual(['E1@1']);
     s().goEvaluations();
     expect(s().step).toBe('evaluations');
     s().goChoose();
@@ -152,7 +152,7 @@ describe('the walk', () => {
     // An emergency is read, never chosen.
     s().openEvent('E6'); s().goEvaluations(); s().goChoose();
     expect(s()).toMatchObject({ step: 'week', paths: { E1: ['A', 'B'] } });
-    expect(s().seen).toContain('E6');
+    expect(s().read).toContain('E6@1');
   });
 
   it('drops a choice that does not belong: from another screen, or a request the version does not offer', () => {
@@ -177,6 +177,6 @@ describe('the walk', () => {
   it('forgets everything on restart, including the versions made', () => {
     s().openEvent('E1'); s().goEvaluations(); s().goChoose(); s().chooseRequest('A'); s().endGenerating();
     s().restart();
-    expect(s()).toMatchObject({ introStarted: false, pathStarted: false, eventId: null, seen: [], paths: {}, generating: false });
+    expect(s()).toMatchObject({ introStarted: false, pathStarted: false, eventId: null, read: [], paths: {}, generating: false });
   });
 });

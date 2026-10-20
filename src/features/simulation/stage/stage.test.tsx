@@ -16,7 +16,7 @@ const at = (patch: Partial<ReturnType<typeof useWeekStore.getState>>) => useWeek
 
 const reset = (w: Week = week) => useWeekStore.setState({
   loaded: true, week: w, error: null, introStarted: false, pathStarted: false, step: 'week', eventId: null,
-  lineIndex: 0, seen: [], paths: {}, considering: null, generating: false, closingWords: false,
+  lineIndex: 0, read: [], paths: {}, considering: null, generating: false, closingWords: false,
 });
 
 beforeEach(() => reset());
@@ -47,9 +47,9 @@ describe('the tablet starts the walk', () => {
   });
 
   it('home from anywhere goes back to the waiting screen and forgets what was read', () => {
-    at({ introStarted: true, pathStarted: true, step: 'evaluations', eventId: 'E1', seen: ['E1'] });
+    at({ introStarted: true, pathStarted: true, step: 'evaluations', eventId: 'E1', read: ['E1@1'] });
     apply({ name: 'home' });
-    expect(walk()).toMatchObject({ introStarted: false, pathStarted: false, step: 'week', eventId: null, seen: [] });
+    expect(walk()).toMatchObject({ introStarted: false, pathStarted: false, step: 'week', eventId: null, read: [] });
   });
 });
 
@@ -152,7 +152,7 @@ describe('choosing, from the tablet', () => {
     apply({ name: 'toEvaluations' });
     apply({ name: 'toChoose' });
     expect(walk()).toMatchObject({ step: 'week', paths: {} });
-    expect(walk().seen).toContain('E6');
+    expect(walk().read).toContain('E6@1');
   });
 
   it('a chosen request is "made" for a moment, then the week shows the event one version on', () => {
