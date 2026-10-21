@@ -51,7 +51,8 @@ async function intoTheWeek({ wall, pad }: Screens) {
   await tap(pad, '시작하기');
   await expect(pad.getByRole('button', { name: /건너뛰기/ })).toBeVisible();
   await tap(pad, /건너뛰기/);
-  await expect(wall.getByLabel('이번 주')).toBeVisible({ timeout: 20_000 });
+  // The film's last scene ("now you are the service designer") plays out before the week.
+  await expect(wall.getByLabel('이번 주')).toBeVisible({ timeout: 40_000 });
   await expect(pad.getByLabel('조용한 날').first()).toBeVisible();
   // 처음으로는 묻는 창부터: 계속 보기를 누르면 그대로다.
   await tap(pad, /↺ 처음으로/);
@@ -148,7 +149,7 @@ test('한 주를 걷는다: 사건 → 장면 → 평가 → 요청 → 새 버�
   // the way back is not offered until the closing words have been heard
   await expect(pad.getByRole('button', { name: '처음으로', exact: true })).toHaveCount(0);
   await tap(pad, /마무리 말/);
-  await expect(wall.getByText('서비스 디자이너의 일은 초안을 고쳐 나가는 일입니다.')).toBeVisible({ timeout: 10_000 });
+  await expect(wall.getByText('서비스 디자이너에게 중요한 것은, 초안을 여러 번 돌려 보며 더 나은 서비스로 다듬어 가는 과정입니다.')).toBeVisible({ timeout: 10_000 });
   await expect(pad.getByRole('button', { name: '처음으로', exact: true })).toBeVisible();
 
   expect(s.problems).toEqual([]);

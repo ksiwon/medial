@@ -27,11 +27,8 @@ export const night = {
   /** The faintest accent: a card that is the one in force. */
   accentWash: '#fff6f2',
   /** The deep end of the accent: the shade of an orange note, a lifted corner. */
-  accentDeep: '#b9411d',
   /** A sticky note on a picture: the lit strip, the paper, the shade, and the lifted corner's. */
   noteLight: '#f8e58f',
-  note: '#f0d56e',
-  noteDeep: '#d6b44a',
 } as const;
 
 /** The speech bubble of a line already told (the one now is `night.white`) and its small label. */

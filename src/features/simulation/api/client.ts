@@ -44,16 +44,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
+/** Recordings and pictures are renumbered and redrawn between runs under the same names; a browser that kept one by its date
+ *  would show the old picture or play the old voice. A new address for every page load asks again. */
+const LOADED_AT = Date.now();
+
 export const api = {
   /** The week the exhibition reads: events, scenes, evaluations, requests - joined and checked on the server. */
   week: () => request<Week>('/week'),
   /** Scene pictures (scripts/art.mjs → local-data/art/): served locally, never bundled. */
   art: () => request<{ names: string[] }>('/village/art'),
-  artUrl: (name: string) => `${BASE}/village/art/${encodeURIComponent(name)}`,
+  artUrl: (name: string) => `${BASE}/village/art/${encodeURIComponent(name)}?t=${LOADED_AT}`,
   /** The village map (local-data/normalized/, git-ignored): places, homes and the source raster, never bundled. */
   village: () => request<Village>('/village/map'),
   villageMapUrl: () => `${BASE}/village/map.png`,
   /** The spoken lines (scripts/tts_scenes.py → local-data/audio/), keyed 'speaker|text'. */
   voices: () => request<{ lines: Record<string, VoiceClip> }>('/village/voice'),
-  voiceUrl: (file: string) => `${BASE}/village/voice/${encodeURIComponent(file)}`,
+  voiceUrl: (file: string) => `${BASE}/village/voice/${encodeURIComponent(file)}?t=${LOADED_AT}`,
 };

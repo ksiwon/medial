@@ -81,7 +81,7 @@ async function main() {
   const titleOf = (id) => titles.find((e) => e.id === id).title;
 
   // 지금까지 튼 대사 소리(파일 이름)와 마지막으로 튼 시각.
-  const voicePlays = () => wall.evaluate(() => (window.__audioLog || []).filter((e) => e.op === 'play' && /\/village\/voice\//.test(e.src || '')).map((e) => ({ t: e.t, file: decodeURIComponent(e.src.split('/').pop()) })));
+  const voicePlays = () => wall.evaluate(() => (window.__audioLog || []).filter((e) => e.op === 'play' && /\/village\/voice\//.test(e.src || '')).map((e) => ({ t: e.t, file: decodeURIComponent(e.src.split('/').pop().split('?')[0]) })));
   // 마지막 줄이 막 나왔을 때: 그 줄의 소리가 끝나고 숨 한 번 쉴 때까지.
   const finishLastLine = async () => {
     const plays = await voicePlays();
@@ -97,6 +97,8 @@ async function main() {
   await pad.goto(`http://${pairing.addresses[0]}:${new URL(BASE).port}/?role=pad&t=${encodeURIComponent(pairing.token)}`);
   await pad.getByRole('button', { name: '연결하기' }).tap();
   await pad.getByText('시작하기').waitFor({ timeout: 30000 });
+  // 소리가 다 내려받아질 때까지 기다린다(전시장에서는 벽 화면이 미리 열려 있어 이 기다림이 없다).
+  await sleep(25000);
   // 영상은 여기서부터가 본편: 앞의 연결 장면은 합칠 때 잘라 낸다.
   const tStart = Date.now();
   await sleep(1500);
@@ -134,13 +136,12 @@ async function main() {
   if (await pad.getByRole('button', { name: /마무리 장면 보기/ }).isEnabled().catch(() => false)) {
     await tap(/마무리 장면 보기/);
     await sleep(PACE.closing);
-    const heard = (await voicePlays()).length;
     await tap(/마무리 말/);
     // 마무리 말(나레이션 5줄)은 마지막 줄의 소리가 끝날 때까지 보여 준다.
     const last = 'outro_05_NARRATOR.wav';
     for (let i = 0; i < 240; i += 1) {
       const now = await voicePlays();
-      if (now.length > heard && now.some((p) => p.file === last)) break;
+      if (now.some((p) => p.file === last)) break;
       await sleep(500);
     }
     await sleep(((seconds[last] ?? 6) * 1000) + 4000);

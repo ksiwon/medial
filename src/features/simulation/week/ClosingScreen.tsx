@@ -14,10 +14,10 @@ import type { Week } from './types';
 
 /** The closing words, which the narrator reads (fixtures/exhibition/narration.json `outro`). A test keeps the two the same. */
 export const CLOSE_SAY = [
-  '서비스 디자이너의 일은 초안을 고쳐 나가는 일입니다.',
+  '서비스 디자이너에게 중요한 것은, 초안을 여러 번 돌려 보며 더 나은 서비스로 다듬어 가는 과정입니다.',
   '어떤 수정 요청을 고르느냐에 따라, 같은 마을의 같은 일도 어르신께는 다른 경험이 됩니다.',
   '그런데 멀고 사람이 드문 곳에서는, 그 선택의 결과를 현장에서 오래 지켜볼 수 없습니다.',
-  '그래서 Desimer는, 현장에 가기 전에 초안을 미리 시험해 보는 도구가 됩니다.',
+  '그래서 현장에 가기 전에, 초안을 미리 여러 번 돌려 볼 수 있는 도구 Desimer를 만들었습니다.',
   '작은 공동체에 서비스를 들이려는 서비스 디자이너의 현장 연구 부담을 덜어, 더 나은 서비스를 만들도록 돕습니다.',
 ] as const;
 
@@ -41,7 +41,8 @@ const Film = styled.div<{ $src: string | null }>`
   display: flex;
   align-items: center;
   background: ${night.deep} ${(p) => (p.$src ? `url(${p.$src})` : 'none')} center / cover no-repeat;
-  &::before { content: ''; position: absolute; inset: 0; background: ${deepA(0.86)}; }
+  /* The painting shows through on the right; the words sit on the darker left. */
+  &::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, ${deepA(0.88)} 0%, ${deepA(0.7)} 50%, ${deepA(0.32)} 100%); }
   > * { position: relative; }
 `;
 

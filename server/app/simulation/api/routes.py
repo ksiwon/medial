@@ -53,7 +53,12 @@ def art_file(name: str) -> Any:
     index = art_index()
     if name not in index:
         raise HTTPException(status_code=404, detail="이 그림은 없다: %s" % name)
-    return FileResponse(art_dir() / index[name], media_type="image/webp")
+    return FileResponse(art_dir() / index[name], media_type="image/webp", headers=REVALIDATE)
+
+
+# The recordings and pictures are renumbered and redrawn between runs under the same names: a browser that kept the old
+# file by its date would play the old voice under the new caption. no-cache makes it ask first (the file answers 304 when it is unchanged).
+REVALIDATE = {"Cache-Control": "no-cache"}
 
 
 @router.get("/village/map")
@@ -67,7 +72,7 @@ def village_map_png() -> Any:
     path = village_map_file()
     if path is None:
         raise HTTPException(status_code=404, detail="마을 지도 파일이 없다 (local-data/normalized)")
-    return FileResponse(path, media_type="image/png")
+    return FileResponse(path, media_type="image/png", headers=REVALIDATE)
 
 
 @router.get("/village/voice")
@@ -80,7 +85,7 @@ def voices() -> dict[str, Any]:
 def voice_file(file: str) -> Any:
     if file not in {row["file"] for row in voice_index().values()}:
         raise HTTPException(status_code=404, detail="이 음성은 없다: %s" % file)
-    return FileResponse(voice_dir() / file, media_type="audio/wav")
+    return FileResponse(voice_dir() / file, media_type="audio/wav", headers=REVALIDATE)
 
 
 class ReadsOnly:

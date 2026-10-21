@@ -21,6 +21,8 @@ interface WeekState {
   error: string | null;
   /** The visitor pressed start and the opening film has been played or skipped. */
   introStarted: boolean;
+  /** The tablet skipped the film: it goes to its last scene ("now you are the service designer"), not past it. */
+  introSkipped: boolean;
   pathStarted: boolean;
   step: Step;
   eventId: string | null;
@@ -42,6 +44,7 @@ interface WeekState {
 
   init: () => Promise<void>;
   startIntro: () => void;
+  skipIntro: () => void;
   enterWeek: () => void;
   openEvent: (eventId: string) => void;
   setLine: (index: number) => void;
@@ -67,6 +70,7 @@ export const useWeekStore = create<WeekState>((set, get) => ({
   week: null,
   error: null,
   introStarted: false,
+  introSkipped: false,
   pathStarted: false,
   step: 'week',
   eventId: null,
@@ -87,7 +91,8 @@ export const useWeekStore = create<WeekState>((set, get) => ({
     }
   },
 
-  startIntro: () => set({ introStarted: true }),
+  startIntro: () => set({ introStarted: true, introSkipped: false }),
+  skipIntro: () => set({ introSkipped: true }),
   enterWeek: () => set({ pathStarted: true, step: 'week', eventId: null, lineIndex: 0 }),
 
   openEvent: (eventId) => {
@@ -145,7 +150,7 @@ export const useWeekStore = create<WeekState>((set, get) => ({
   touch: () => set({ lastPress: Date.now() }),
 
   restart: () => set({
-    introStarted: false, pathStarted: false, step: 'week', eventId: null, lineIndex: 0, read: [],
+    introStarted: false, introSkipped: false, pathStarted: false, step: 'week', eventId: null, lineIndex: 0, read: [],
     paths: {}, considering: null, generating: false, closingWords: false,
   }),
 }));

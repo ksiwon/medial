@@ -6,7 +6,7 @@ rem multibyte comment text in the wrong places and runs pieces of the comments a
 rem Ctrl+C stops only what this script started; run-exhibition.cmd --stop stops it from another window.
 setlocal
 cd /d "%~dp0"
-set "BASH=%ProgramFiles%\Gitinash.exe"
+set "BASH=%ProgramFiles%\Git\bin\bash.exe"
 if not exist "%BASH%" set "BASH=bash"
 "%BASH%" run-exhibition.sh %*
 if errorlevel 1 pause

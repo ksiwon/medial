@@ -45,7 +45,8 @@ function run(command: Command): void {
       if (!w.introStarted && !w.pathStarted) w.startIntro();
       return;
     case 'skipIntro':
-      if (w.introStarted && !w.pathStarted) w.enterWeek();
+      // The first press takes the film to its last scene; a second one (or the film's end) goes on to the week.
+      if (w.introStarted && !w.pathStarted) { if (w.introSkipped) w.enterWeek(); else w.skipIntro(); }
       return;
     case 'openEvent':
       if (on('week')) w.openEvent(command.id);

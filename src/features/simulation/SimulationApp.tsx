@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import styled from 'styled-components';
 import IdleScreen from './screens/IdleScreen';
 import IntroScreen from './screens/IntroScreen';
-import PairScreen from './screens/PairScreen';
+import AttractScreen from './screens/AttractScreen';
 import { runAuto, useWall } from './stage/wall';
 import { useAssets } from './assets';
 import { useAmbient } from './ui/ambient';
@@ -204,9 +204,9 @@ export default function SimulationApp() {
     <Root>
       {(s.error || w.error) && <Notices><Callout $tone="error"><div style={{ flex: 1 }}>{s.error ?? w.error}</div></Callout></Notices>}
 
-      {!paired && !w.pathStarted && !w.introStarted && <PairScreen />}
+      {!paired && !w.pathStarted && !w.introStarted && <AttractScreen art={s.art} />}
       {(paired || w.pathStarted || w.introStarted) && !w.pathStarted && !w.introStarted && <IdleScreen art={s.art} />}
-      {!w.pathStarted && w.introStarted && <IntroScreen voices={s.voices} onFinish={w.enterWeek} />}
+      {!w.pathStarted && w.introStarted && <IntroScreen voices={s.voices} skipped={w.introSkipped} onFinish={w.enterWeek} />}
 
       {showWeek && <WeekScreen week={week} art={s.art} now={null} paths={w.paths} read={w.read} />}
       {w.pathStarted && telling && scene && event && version && (

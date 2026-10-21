@@ -12,10 +12,12 @@ import { duckAmbient } from '../ui/ambient';
 
 const pool = new Map<string, HTMLAudioElement>();
 
-/** Fetch every recording now, so a line never waits for its sound to arrive. */
+/** Fetch every recording now, so a line never waits for its sound to arrive. The narrator's come first: the opening
+ *  film and the closing page are what a visitor meets before the rest. */
 export function preloadVoices(clips: Record<string, VoiceClip>) {
   if (typeof Audio === 'undefined') return;
-  for (const { file } of Object.values(clips)) {
+  const first = Object.entries(clips).sort(([a], [b]) => Number(b.startsWith('NARRATOR|')) - Number(a.startsWith('NARRATOR|')));
+  for (const [, { file }] of first) {
     if (pool.has(file)) continue;
     const audio = new Audio(api.voiceUrl(file));
     audio.preload = 'auto';
@@ -31,6 +33,24 @@ const audioOf = (file: string) => {
   }
   return audio ?? null;
 };
+
+/** Resolves when every one of these recordings can play through, or after `limitMs` (a missing sound never holds the film). */
+export function whenLoaded(files: string[], limitMs: number): Promise<void> {
+  const waits = files.map((file) => {
+    const audio = audioOf(file);
+    if (!audio || audio.readyState >= 3) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      audio.preload = 'auto';
+      audio.addEventListener('canplaythrough', () => resolve(), { once: true });
+      audio.addEventListener('error', () => resolve(), { once: true });
+      audio.load();
+    });
+  });
+  return Promise.race([
+    Promise.all(waits).then(() => undefined),
+    new Promise<void>((resolve) => { window.setTimeout(resolve, limitMs); }),
+  ]);
+}
 
 /** The recording of a spoken line, by who said it and what: the manifest keys it 'speaker|text'. */
 export const clipOf = (voices: Record<string, VoiceClip> | null | undefined, speaker: string, text: string): VoiceClip | null =>

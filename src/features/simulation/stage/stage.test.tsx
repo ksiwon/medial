@@ -38,10 +38,12 @@ describe('the tablet starts the walk', () => {
     expect(walk()).toMatchObject({ introStarted: true, pathStarted: false });
   });
 
-  it('skipping the film opens the week, and only while the film is on', () => {
+  it('skipping the film takes it to its last scene first, then opens the week, and only while the film is on', () => {
     apply({ name: 'skipIntro' });
-    expect(walk().pathStarted).toBe(false);
+    expect(walk()).toMatchObject({ pathStarted: false, introSkipped: false });
     apply({ name: 'start' });
+    apply({ name: 'skipIntro' });
+    expect(walk()).toMatchObject({ pathStarted: false, introSkipped: true });
     apply({ name: 'skipIntro' });
     expect(walk()).toMatchObject({ pathStarted: true, step: 'week' });
   });
