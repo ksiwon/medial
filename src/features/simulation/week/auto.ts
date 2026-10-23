@@ -21,9 +21,11 @@ export const AUTO_S = {
   summary: 15,
   /** The closing words, before the start again. */
   closing: 90,
+  /** The rules opened over a page, before they close by themselves. */
+  rules: 30,
 } as const;
 
-export type AutoAction = 'toEvaluations' | 'toChoose' | 'week' | 'finish' | 'closingWords' | 'home';
+export type AutoAction = 'toEvaluations' | 'toChoose' | 'week' | 'finish' | 'closingWords' | 'home' | 'rules';
 
 export interface Auto {
   /** What changes when it runs out; a new key starts the clock over. */
@@ -45,12 +47,15 @@ export interface AutoState {
   seen: number;
   closingWords: boolean;
   lastPress: number;
+  /** The rules are open over the page: their own clock closes them, and the page's waits. */
+  rulesOpen?: boolean;
 }
 
 /** The clock the page is on, or null for a page that waits for no one (the film, a telling still being told). */
 export function autoOf(s: AutoState): Auto | null {
   if (!s.pathStarted) return null;
   const key = (what: string) => `${what}:${s.eventId ?? ''}:${s.lastPress}`;
+  if (s.rulesOpen) return { key: key('rules'), seconds: AUTO_S.rules, action: 'rules', say: '규칙 창을 닫습니다' };
   switch (s.step) {
     case 'draft':
       return { key: key('draft'), seconds: AUTO_S.draft, action: 'week', say: '이번 주로 넘어갑니다' };

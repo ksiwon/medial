@@ -49,7 +49,7 @@ async function main() {
   const port = new URL(BASE).port;
   await pad.goto(`http://${pairing.addresses[0]}:${port}/?role=pad&t=${encodeURIComponent(pairing.token)}`);
   await pad.getByRole('button', { name: '연결하기' }).tap();
-  await pad.getByText('시작하기').waitFor({ timeout: 30000 });
+  await pad.getByText('시작하기').waitFor({ timeout: 180000 }); // 그림·음성을 모두 받으면 "로딩 중..."이 "시작하기"로 바뀐다
   await settle(1500);
   await shot(wall, '01-wall-idle'); await shot(pad, '01-pad-idle');
 

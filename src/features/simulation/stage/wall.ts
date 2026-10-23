@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { positionIn, eventOf, dayOf, eventsRead, runsOf, versionOf, type Paths } from '../week/selectors';
+import { assetsReady, useAssets } from '../assets';
 import { useWeekStore } from '../week/store';
 import type { Evaluation, Week, WeekEvent, WeekScene } from '../week/types';
 import { postState } from './bus';
@@ -26,7 +27,10 @@ export function evaluationsOf(event: WeekEvent | null, path: readonly string[]):
 
 /** Apply one press. Every press is also a sign someone is at the tablet: the page's clock starts over. */
 export function apply(command: Command): void {
-  useWeekStore.getState().touch();
+  const w = useWeekStore.getState();
+  w.touch();
+  // The rules are a look aside: any other press closes them before it does what it does.
+  if (command.name !== 'rules' && w.rulesOpen) w.setRulesOpen(false);
   run(command);
 }
 
@@ -42,7 +46,8 @@ function run(command: Command): void {
   const on = (step: string) => w.pathStarted && w.step === step;
   switch (command.name) {
     case 'start':
-      if (!w.introStarted && !w.pathStarted) w.startIntro();
+      // Nothing starts until every picture and voice is here (assets.ts): a late one left a scene bare or silent.
+      if (!w.introStarted && !w.pathStarted && w.week && assetsReady()) w.startIntro();
       return;
     case 'skipIntro':
       // The first press takes the film to its last scene; a second one (or the film's end) goes on to the draft.
@@ -91,6 +96,11 @@ function run(command: Command): void {
     case 'closingWords':
       w.showClosingWords();
       return;
+    case 'rules':
+      // Open on any page of the walk but the draft (which is the rules) and the closing; pressed again, closed.
+      if (w.rulesOpen) w.setRulesOpen(false);
+      else if (w.pathStarted && w.step !== 'draft' && w.step !== 'closing' && !w.generating) w.setRulesOpen(true);
+      return;
     case 'home':
       if (w.pathStarted || w.introStarted) w.restart();
       return;
@@ -113,24 +123,26 @@ const weekBrief = (week: Week, paths: Paths): DayBrief[] =>
 export function describeStage(args: {
   week: Week | null; introStarted: boolean; pathStarted: boolean; step: string; eventId: string | null;
   lineIndex: number; paths?: Paths; read?: readonly string[];
-  considering?: string | null; generating?: boolean; closingWords?: boolean;
+  considering?: string | null; generating?: boolean; closingWords?: boolean; ready?: boolean; rulesOpen?: boolean;
 }): StageState {
   const { week } = args;
+  const ready = Boolean(week) && (args.ready ?? false);
   if (!week) return IDLE_STATE;
-  if (!args.pathStarted) return { ...IDLE_STATE, phase: args.introStarted ? 'intro' : 'idle' };
+  if (!args.pathStarted) return { ...IDLE_STATE, ready, phase: args.introStarted ? 'intro' : 'idle' };
   const paths = args.paths ?? {};
   const phase = args.step as Phase;
   const event = eventOf(week, args.eventId);
   const path = paths[args.eventId ?? ''] ?? [];
   const version = versionOf(event, path);
   const base: StageState = {
-    ...IDLE_STATE, phase, week: weekBrief(week, paths), runs: runsOf(paths),
+    ...IDLE_STATE, ready, phase, week: weekBrief(week, paths), runs: runsOf(paths),
     reads: args.read?.length ?? 0, events: eventsRead(args.read ?? []),
     event: event ? { id: event.id, title: event.title, day: dayOf(week, event.id), noChoice: event.noChoice } : null,
     version: version?.number ?? 1,
     leaf: version ? version.requests.length === 0 : false,
     generating: args.generating ?? false,
     closingWords: args.closingWords ?? false,
+    rulesOpen: args.rulesOpen ?? false,
   };
   if (!event) return base;
   if (phase === 'telling') {
@@ -198,10 +210,12 @@ export function useWall(): { paired: boolean } {
   });
 
   const w = useWeekStore();
+  const assets = useAssets();
   latest.current = describeStage({
+    ready: assets.status === 'ready',
     week: w.week, introStarted: w.introStarted, pathStarted: w.pathStarted, step: w.step, eventId: w.eventId,
     lineIndex: w.lineIndex, paths: w.paths, read: w.read,
-    considering: w.considering, generating: w.generating, closingWords: w.closingWords,
+    considering: w.considering, generating: w.generating, closingWords: w.closingWords, rulesOpen: w.rulesOpen,
   });
 
   // After every render: the cheap comparison above decides whether anything goes out.

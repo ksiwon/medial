@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { api } from '../api/client';
 import bgmUrl from '../assets/bgm.mp3';
 
 // The exhibition's background sound: one quiet pad (scripts/make_bgm.py) looping under the whole walk,
@@ -20,10 +21,11 @@ export function duckAmbient(on: boolean) {
   level();
 }
 
-export function useAmbient() {
+export function useAmbient(ready: boolean) {
   useEffect(() => {
-    if (typeof Audio === 'undefined') return undefined;
-    const audio = new Audio(bgmUrl);
+    if (!ready || typeof Audio === 'undefined') return undefined;
+    const audio = new Audio(api.bundledUrl(bgmUrl));
+    audio.dataset.source = bgmUrl;
     audio.loop = true;
     bed = audio;
     level();
@@ -40,5 +42,5 @@ export function useAmbient() {
       audio.pause();
       bed = null;
     };
-  }, []);
+  }, [ready]);
 }

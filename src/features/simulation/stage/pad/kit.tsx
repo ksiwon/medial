@@ -163,12 +163,13 @@ const BarBox = styled.header`
   > span { flex: 1; }
 `;
 
-export function TopBar({ place, home }: { place: string | null; home: React.ReactNode }) {
+export function TopBar({ place, home, rules }: { place: string | null; home: React.ReactNode; rules?: React.ReactNode }) {
   return (
     <BarBox>
       <Logo height="32px" />
       {place && <em>{place}</em>}
       <span />
+      {rules}
       {home}
     </BarBox>
   );

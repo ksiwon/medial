@@ -42,6 +42,8 @@ interface WeekState {
   closingWords: boolean;
   /** When the tablet last pressed anything (ms): every waiting clock counts from it. */
   lastPress: number;
+  /** The rules as they stand are open over the page (the tablet's "현재 규칙"); a telling waits under them. */
+  rulesOpen: boolean;
 
   init: () => Promise<void>;
   startIntro: () => void;
@@ -62,6 +64,7 @@ interface WeekState {
   /** The visitor is done: the closing page. */
   finish: () => void;
   showClosingWords: () => void;
+  setRulesOpen: (open: boolean) => void;
   /** A press reached the wall: someone is still there. */
   touch: () => void;
   restart: () => void;
@@ -83,6 +86,7 @@ export const useWeekStore = create<WeekState>((set, get) => ({
   generating: false,
   closingWords: false,
   lastPress: 0,
+  rulesOpen: false,
 
   init: async () => {
     if (get().loaded) return;
@@ -150,9 +154,10 @@ export const useWeekStore = create<WeekState>((set, get) => ({
   finish: () => set({ pathStarted: true, step: 'closing', eventId: null, lineIndex: 0, considering: null, closingWords: false }),
   showClosingWords: () => { if (get().step === 'closing') set({ closingWords: true }); },
   touch: () => set({ lastPress: Date.now() }),
+  setRulesOpen: (rulesOpen) => set({ rulesOpen }),
 
   restart: () => set({
     introStarted: false, introSkipped: false, pathStarted: false, step: 'week', eventId: null, lineIndex: 0, read: [],
-    paths: {}, considering: null, generating: false, closingWords: false,
+    paths: {}, considering: null, generating: false, closingWords: false, rulesOpen: false,
   }),
 }));

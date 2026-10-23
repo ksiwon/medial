@@ -24,6 +24,8 @@ export type Command =
   | { name: 'week' }
   | { name: 'finish' }
   | { name: 'closingWords' }
+  /** The rules as they stand, over the wall's page; pressed again (or anything else pressed) it goes. */
+  | { name: 'rules' }
   | { name: 'home' };
 
 /** One day of the week, for the tablet's list: which events fall on it. */
@@ -43,6 +45,8 @@ export interface RequestBrief {
  *  takes to know what a press does - no more: the tablet is touched, the wall is read (2026-10-18). */
 export interface StageState {
   phase: Phase;
+  /** Every picture and voice the walk uses is held on the wall, and the week is read: only then is "start" taken. */
+  ready: boolean;
   /** The week, always: the tablet's list of events to pick from. */
   week: DayBrief[];
   /** How many times the visitor has had the AI changed so far (a request chosen). */
@@ -68,11 +72,13 @@ export interface StageState {
   generating: boolean;
   /** Closing: the closing words are up (rather than the list of what was changed). */
   closingWords: boolean;
+  /** The rules as they stand are open over the wall's page. */
+  rulesOpen: boolean;
 }
 
 export const IDLE_STATE: StageState = {
-  phase: 'idle', week: [], runs: 0, reads: 0, events: 0, event: null, scene: null, version: 1, leaf: false, line: 0, lines: 0, toldAll: false,
-  requests: [], considering: null, generating: false, closingWords: false,
+  phase: 'idle', ready: false, week: [], runs: 0, reads: 0, events: 0, event: null, scene: null, version: 1, leaf: false, line: 0, lines: 0, toldAll: false,
+  requests: [], considering: null, generating: false, closingWords: false, rulesOpen: false,
 };
 
 export const STAGE_API = '/api/sim/stage';

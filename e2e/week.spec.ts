@@ -24,7 +24,8 @@ async function open(browser: Browser, baseURL: string): Promise<Screens> {
   const pairing = await (await wall.request.get(`${baseURL}/api/sim/stage/pairing`)).json() as { token: string };
   await pad.goto(`${baseURL}/?role=pad&t=${encodeURIComponent(pairing.token)}`);
   await pad.getByRole('button', { name: '연결하기' }).tap();
-  await expect(pad.getByRole('button', { name: '시작하기' })).toBeVisible({ timeout: 30_000 });
+  // 그림·음성을 모두 받을 때까지 버튼은 "로딩 중..."이다.
+  await expect(pad.getByRole('button', { name: '시작하기' })).toBeVisible({ timeout: 180_000 });
   // The server pairs one wall and one tablet: a test closes its screens so the next one is not "replaced" by them.
   return { wall, pad, problems, close: async () => { await wallContext.close(); await padContext.close(); } };
 }

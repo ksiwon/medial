@@ -1,5 +1,6 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { useAssets } from '../assets';
 import IdleScreen from '../screens/IdleScreen';
 import fixture from '../week/week.fixture.json';
 import { useWeekStore } from '../week/store';
@@ -16,10 +17,11 @@ const at = (patch: Partial<ReturnType<typeof useWeekStore.getState>>) => useWeek
 
 const reset = (w: Week = week) => useWeekStore.setState({
   loaded: true, week: w, error: null, introStarted: false, pathStarted: false, step: 'week', eventId: null,
-  lineIndex: 0, read: [], paths: {}, considering: null, generating: false, closingWords: false,
+  lineIndex: 0, read: [], paths: {}, considering: null, generating: false, closingWords: false, rulesOpen: false,
 });
 
-beforeEach(() => reset());
+// Every picture and voice is held (assets.ts) unless a test says otherwise.
+beforeEach(() => { reset(); useAssets.setState({ status: 'ready' }); });
 afterEach(cleanup);
 
 describe('the tablet starts the walk', () => {
@@ -29,6 +31,17 @@ describe('the tablet starts the walk', () => {
     apply({ name: 'line', value: 1 });
     apply({ name: 'choose', id: 'A' });
     expect(walk()).toMatchObject({ introStarted: false, pathStarted: false, step: 'week', eventId: null, paths: {}, lineIndex: 0 });
+  });
+
+  it('start is not taken until every picture and voice is held, and the tablet is told so', () => {
+    useAssets.setState({ status: 'loading' });
+    apply({ name: 'start' });
+    expect(walk().introStarted).toBe(false);
+    expect(describeStage({ week, introStarted: false, pathStarted: false, step: 'week', eventId: null, lineIndex: 0, ready: false }).ready).toBe(false);
+    useAssets.setState({ status: 'ready' });
+    apply({ name: 'start' });
+    expect(walk().introStarted).toBe(true);
+    expect(describeStage({ week, introStarted: false, pathStarted: false, step: 'week', eventId: null, lineIndex: 0, ready: true }).ready).toBe(true);
   });
 
   it('start opens the film once; a second start changes nothing', () => {
@@ -263,5 +276,29 @@ describe('which screen an address is for', () => {
     expect(roleOf('?role=wall')).toBe('wall');
     expect(roleOf('')).toBeNull();
     expect(roleOf('?role=admin')).toBeNull();
+  });
+});
+
+describe('the rules as they stand', () => {
+  it('open over a page of the walk, close when pressed again or when anything else is pressed', () => {
+    apply({ name: 'rules' });
+    expect(walk().rulesOpen).toBe(false); // not before the walk
+    at({ introStarted: true, pathStarted: true, step: 'week' });
+    apply({ name: 'rules' });
+    expect(walk().rulesOpen).toBe(true);
+    apply({ name: 'rules' });
+    expect(walk().rulesOpen).toBe(false);
+    apply({ name: 'rules' });
+    apply({ name: 'openEvent', id: 'E1' });
+    expect(walk()).toMatchObject({ rulesOpen: false, step: 'telling', eventId: 'E1' });
+  });
+
+  it('are not opened on the draft, which is the rules, nor on the closing', () => {
+    at({ introStarted: true, pathStarted: true, step: 'draft' });
+    apply({ name: 'rules' });
+    expect(walk().rulesOpen).toBe(false);
+    at({ step: 'closing' });
+    apply({ name: 'rules' });
+    expect(walk().rulesOpen).toBe(false);
   });
 });

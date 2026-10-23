@@ -6,7 +6,6 @@ import AttractScreen from './screens/AttractScreen';
 import { runAuto, useWall } from './stage/wall';
 import { useAssets } from './assets';
 import { useAmbient } from './ui/ambient';
-import { preloadArt } from './ui/Portrait';
 import { Callout, Mono } from './ui/primitives';
 import { font, night, px, radius, space, type } from './ui/theme';
 import { useUiScale } from './ui/uiScale';
@@ -17,6 +16,7 @@ import { judgmentAt } from './week/judgment';
 import JudgmentPanel from './week/JudgmentPanel';
 import Logo from './ui/Logo';
 import DraftScreen from './week/DraftScreen';
+import RulesModal from './week/RulesModal';
 import { ChooseScreen, EvaluationsScreen, GeneratingScreen } from './week/ReviewScreens';
 import SceneView from './week/SceneView';
 import { eventOf, positionIn, versionOf } from './week/selectors';
@@ -113,9 +113,10 @@ const GENERATING_MS = 4000;
 
 export default function SimulationApp() {
   useUiScale();
-  useAmbient();
   const { paired } = useWall();
   const s = useAssets();
+  // The background sound is held with everything else; it starts once it is here.
+  useAmbient(s.status === 'ready');
   const w = useWeekStore();
 
   useEffect(() => {
@@ -123,9 +124,6 @@ export default function SimulationApp() {
     void w.init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Every drawing, fetched while the film plays: the first scene and the evaluation faces are already here.
-  useEffect(() => { preloadArt(s.art); }, [s.art]);
 
   const week = w.week;
   const event = week ? eventOf(week, w.eventId) : null;
@@ -142,10 +140,11 @@ export default function SimulationApp() {
   const onLine = flat[Math.min(w.lineIndex, Math.max(flat.length - 1, 0))];
   const lineFor = onLine ? lineMs(s.voices, onLine.speaker, onLine.text, LINE_MS) : LINE_MS;
   useEffect(() => {
-    if (!w.pathStarted || !telling || at.done) return undefined;
+    // The rules opened over a telling hold it where it is: the visitor is reading something else.
+    if (!w.pathStarted || !telling || at.done || w.rulesOpen) return undefined;
     const timer = window.setTimeout(() => w.setLine(w.lineIndex + 1), lineFor);
     return () => window.clearTimeout(timer);
-  }, [w.pathStarted, telling, at.done, w.lineIndex, w.eventId, w.step, lineFor]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [w.pathStarted, telling, at.done, w.lineIndex, w.eventId, w.step, lineFor, w.rulesOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A confirmed request is "made" for a few seconds before it is told: the record was written ahead, this is only the wait.
   useEffect(() => {
@@ -157,7 +156,7 @@ export default function SimulationApp() {
   // Every page that waits counts down (week/auto.ts); a press on the tablet starts it over.
   const auto = autoOf({
     pathStarted: w.pathStarted, step: w.step, eventId: w.eventId, toldAll: telling && at.done,
-    leaf: version ? version.requests.length === 0 : false, seen: w.read.length, closingWords: w.closingWords, lastPress: w.lastPress,
+    leaf: version ? version.requests.length === 0 : false, seen: w.read.length, closingWords: w.closingWords, lastPress: w.lastPress, rulesOpen: w.rulesOpen,
   });
   const left = useCountdown(auto, runAuto);
 
@@ -231,6 +230,8 @@ export default function SimulationApp() {
       {w.pathStarted && w.step === 'closing' && (
         <ClosingScreen week={week} paths={w.paths} read={w.read} words={w.closingWords} art={s.art} voices={s.voices} />
       )}
+
+      {w.pathStarted && w.rulesOpen && week && <RulesModal week={week} paths={w.paths} eventId={w.eventId} />}
 
       {w.pathStarted && (
         <Foot>

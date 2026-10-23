@@ -80,9 +80,15 @@ export default function PadApp() {
     <Button $tone="quiet" onClick={() => setAsking(true)}>↺ 처음으로</Button>
   );
 
+  // The rules as they stand open on the wall, from any page of the walk but the draft (which is the rules) and the closing.
+  const withRules: Phase[] = ['week', 'telling', 'evaluations', 'choose'];
+  const rules = withRules.includes(state.phase) && !state.generating ? (
+    <Button $tone={state.rulesOpen ? 'primary' : 'quiet'} onClick={() => press({ name: 'rules' })}>{state.rulesOpen ? '규칙 닫기' : '현재 규칙'}</Button>
+  ) : null;
+
   return (
     <Screen>
-      <TopBar place={state.event ? `${state.event.day ?? ''} · ${state.event.title}` : null} home={home} />
+      <TopBar place={state.event ? `${state.event.day ?? ''} · ${state.event.title}` : null} home={home} rules={rules} />
       {link === 'lost' && <Notice>큰 화면과의 연결이 끊겼습니다. 다시 연결하는 중입니다…</Notice>}
       {link === 'live' && !wall && <Notice>큰 화면이 아직 연결되지 않았습니다.</Notice>}
       {notice === 'no-wall' && <Notice>큰 화면이 그것을 받지 못했습니다. 잠시 뒤 다시 눌러 주세요.</Notice>}
@@ -106,7 +112,7 @@ export default function PadApp() {
 
 function PadStage({ s, press }: { s: StageState; press: Press }) {
   switch (s.phase) {
-    case 'idle': return <Waiting press={press} />;
+    case 'idle': return <Waiting s={s} press={press} />;
     case 'intro': return <Watching press={press} />;
     case 'draft': return <Draft press={press} />;
     case 'week': return <Week s={s} press={press} />;

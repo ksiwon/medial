@@ -47,7 +47,8 @@ const AUDIO_PROBE = () => {
   const play = P.play;
   const pause = P.pause;
   P.play = function (...a) {
-    log.push({ t: Date.now(), id: idOf(this), op: 'play', src: this.currentSrc || this.src, loop: this.loop, vol: this.volume, at: this.currentTime });
+    // The page plays held copies (blob: addresses); the file it stands for is on the element (data-source).
+    log.push({ t: Date.now(), id: idOf(this), op: 'play', src: (this.dataset && this.dataset.source) || this.currentSrc || this.src, loop: this.loop, vol: this.volume, at: this.currentTime });
     return play.apply(this, a);
   };
   P.pause = function (...a) {
@@ -96,9 +97,7 @@ async function main() {
   const pairing = await (await fetch(`${BASE}/api/sim/stage/pairing`)).json();
   await pad.goto(`http://${pairing.addresses[0]}:${new URL(BASE).port}/?role=pad&t=${encodeURIComponent(pairing.token)}`);
   await pad.getByRole('button', { name: '연결하기' }).tap();
-  await pad.getByText('시작하기').waitFor({ timeout: 30000 });
-  // 소리가 다 내려받아질 때까지 기다린다(전시장에서는 벽 화면이 미리 열려 있어 이 기다림이 없다).
-  await sleep(25000);
+  await pad.getByText('시작하기').waitFor({ timeout: 180000 }); // 그림·음성을 모두 받으면 "로딩 중..."이 "시작하기"로 바뀐다
   // 영상은 여기서부터가 본편: 앞의 연결 장면은 합칠 때 잘라 낸다.
   const tStart = Date.now();
   await sleep(1500);

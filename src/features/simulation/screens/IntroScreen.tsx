@@ -3,7 +3,7 @@ import styled, { css, keyframes } from 'styled-components';
 import { api } from '../api/client';
 import type { VoiceClip } from '../api/types';
 import { EUNJEOM, KAIST, KOREA, NAMHAE, NAMHAE_TOWN, NEAR } from '../intro/koreaMap';
-import { narrationOf, playNarration, whenLoaded } from '../scene/voice';
+import { narrationOf, playNarration } from '../scene/voice';
 import Logo from '../ui/Logo';
 import PillText from '../ui/PillText';
 import { accentA, deepA, font, inkA, land, night, radius } from '../ui/theme';
@@ -178,25 +178,6 @@ const Picture = styled.div<{ $src: string | null; $on: boolean; $dim?: boolean }
       ? deepA(0.8)
       : `linear-gradient(180deg, ${deepA(0.1)} 0%, ${deepA(0)} 38%, ${deepA(0.55)} 66%, ${deepA(0.82)} 100%)`)};
   }
-`;
-
-/** Shown while the narration is still being fetched: the film waits for its voice, and says so. */
-const breathe = keyframes`0%, 100% { opacity: 0.45; } 50% { opacity: 1; }`;
-const Loading = styled.div`
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: clamp(8px, 1vw, 40px);
-  text-align: center;
-  color: ${inkA(0.86)};
-  font-size: clamp(20px, 2vw, 80px);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  > small { font-size: clamp(16px, 1.2vw, 48px); font-weight: 500; color: ${inkA(0.62)}; letter-spacing: 0; }
-  animation: ${breathe} 2.2s ease-in-out infinite;
 `;
 
 /** A ground with nothing painted on it, for the scenes that draw their own picture. */
@@ -1037,15 +1018,7 @@ export default function IntroScreen({ onFinish, voices = null, skipped = false }
   const layout = useMemo(() => layoutOf(voices), [voices]);
   const [scene, setScene] = useState(0);
   const [pictures, setPictures] = useState<Set<string>>(new Set());
-  // The film starts when its narration can play: a press on "시작하기" that ran ahead of the sound turned the pages in silence.
-  const files = useMemo(() => layout.cues.flat().map((cue) => cue.file), [layout]);
-  const [loaded, setLoaded] = useState(files.length === 0);
-  useEffect(() => {
-    if (loaded) return undefined;
-    let live = true;
-    void whenLoaded(files, 15000).then(() => { if (live) setLoaded(true); });
-    return () => { live = false; };
-  }, [files, loaded]);
+  // Every picture and narration is already held when the film starts: "시작하기" is not taken before (assets.ts).
 
   useEffect(() => {
     let live = true;
@@ -1054,34 +1027,31 @@ export default function IntroScreen({ onFinish, voices = null, skipped = false }
   }, []);
 
   useEffect(() => {
-    if (skipped && loaded) setScene((n) => Math.max(n, layout.ms.length - 1));
-  }, [skipped, loaded, layout]);
+    if (skipped) setScene((n) => Math.max(n, layout.ms.length - 1));
+  }, [skipped, layout]);
 
   // The parent re-renders while the film runs; the clock must not restart with it.
   const finish = useRef(onFinish);
   finish.current = onFinish;
   useEffect(() => {
-    if (!loaded) return undefined;
     if (scene >= layout.ms.length) { finish.current(); return undefined; }
     const timer = window.setTimeout(() => setScene((n) => n + 1), layout.ms[scene]);
     return () => window.clearTimeout(timer);
-  }, [scene, layout, loaded]);
+  }, [scene, layout]);
 
   // The narrator: each caption is read as it comes up, and everything stops when the scene or the film does.
   useEffect(() => {
-    if (!loaded) return undefined;
     const stops: (() => void)[] = [];
     const timers = (layout.cues[scene] ?? []).map((cue) => window.setTimeout(() => stops.push(playNarration(cue.file)), cue.at * 1000));
     return () => { timers.forEach(window.clearTimeout); stops.forEach((stop) => stop()); };
-  }, [scene, layout, loaded]);
+  }, [scene, layout]);
 
   const src = (name: string) => (pictures.has(name) ? api.artUrl(name) : null);
-  const on = (i: number) => loaded && scene === i;
+  const on = (i: number) => scene === i;
 
   return (
     <Stage aria-label="소개">
       <Atmosphere />
-      {!loaded && <Loading role="status"><span>소개를 준비하고 있습니다</span><small>소리를 불러오는 중…</small></Loading>}
       <Brand><Logo height="clamp(36px, 3.2vw, 128px)" /></Brand>
       <Corner>
         <Disclaimer>그림과 대화는 모두 시뮬레이션입니다 · 이름은 가명입니다</Disclaimer>
@@ -1091,7 +1061,7 @@ export default function IntroScreen({ onFinish, voices = null, skipped = false }
           arrives; the model turns into the village, and the village is dived into. Each shows its sentences one at a time. */}
       <Scene $on={on(0)}>
         <Dolly>
-          <Picture $src={src('INTRO.studio')} $on={loaded} />
+          <Picture $src={src('INTRO.studio')} $on />
           <JourneyMap on={on(0)} job={layout.said.job} />
         </Dolly>
         {SAY_JOB.map((text, k) => (

@@ -23,7 +23,7 @@ const check = (ok, name, detail = '') => { results.push(ok); console.log(ok ? ' 
   const padUrl = `${BASE.replace('localhost', pairing.addresses[0])}/?role=pad&t=${encodeURIComponent(pairing.token)}`;
   await pad.goto(padUrl);
   await pad.getByRole('button', { name: '연결하기' }).tap();
-  await pad.getByRole('button', { name: '시작하기' }).waitFor({ timeout: 20000 });
+  await pad.getByRole('button', { name: '시작하기' }).waitFor({ timeout: 180000 });
 
   // 소개를 건너뛰어 이번 주로, 거기서 첫 사건을 연다. 이야기는 혼자 흘러서 느린 시험에서는 벌써 끝나
   // "주민의 피드백 →" 가 나와 있을 수 있다.
@@ -40,7 +40,7 @@ const check = (ok, name, detail = '') => { results.push(ok); console.log(ok ? ' 
   const startOver = async () => {
     const home = pad.getByRole('button', { name: /처음으로/ }).first();
     if (await home.count()) { await home.tap(); await pad.getByRole('dialog').getByRole('button', { name: '처음으로' }).tap(); }
-    await pad.getByRole('button', { name: '시작하기' }).waitFor({ timeout: 20000 });
+    await pad.getByRole('button', { name: '시작하기' }).waitFor({ timeout: 180000 });
   };
 
   console.log('· 모니터를 새로고침해도 태블릿이 같은 화면을 다시 받는다');
@@ -48,7 +48,7 @@ const check = (ok, name, detail = '') => { results.push(ok); console.log(ok ? ' 
   await wall.reload();
   await wall.getByLabel('AI 대기 화면').waitFor({ timeout: 20000 }).catch(() => {});
   // 새 모니터 화면은 기록을 처음부터 시작한다: 태블릿은 그것을 따라가야 하고 낡은 화면을 들고 있으면 안 된다
-  await pad.getByRole('button', { name: '시작하기' }).waitFor({ timeout: 20000 });
+  await pad.getByRole('button', { name: '시작하기' }).waitFor({ timeout: 180000 });
   check(true, '모니터 새로고침 뒤 태블릿이 낡은 장면 화면을 들고 있지 않다');
 
   console.log('· 한 모니터만 일한다: 모니터 화면을 두 개 열어도 눌림이 두 번 처리되지 않는다');
@@ -86,7 +86,7 @@ const check = (ok, name, detail = '') => { results.push(ok); console.log(ok ? ' 
   // 어디까지 걸어갔든(연타로 이야기가 끝나 자동으로 넘어갔을 수 있다) 처음으로 돌아가 알려진 자리에서 시작한다.
   const homeBtn = pad.getByRole('button', { name: /처음으로/ }).first();
   await homeBtn.tap(); await pad.getByRole('dialog').getByRole('button', { name: '처음으로' }).tap();
-  await pad.getByRole('button', { name: '시작하기' }).waitFor({ timeout: 20000 });
+  await pad.getByRole('button', { name: '시작하기' }).waitFor({ timeout: 180000 });
   await enterEvent();
   for (let i = 0; i < 12 && !(await pad.getByRole('button', { name: /주민의 피드백 →/ }).isVisible().catch(() => false)); i += 1) {
     await pad.getByRole('button', { name: '다음 장면으로 →' }).tap({ timeout: 3000 }).catch(() => {});

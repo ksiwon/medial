@@ -48,18 +48,6 @@ const Disc = styled.div<{ $size: number }>`
   }
 `;
 
-/** Starts loading every drawn picture (47 small files, ~11 MB, served from this machine),
- *  so neither a reading page's faces nor a scene's backdrop and figures are an empty
- *  frame while a large picture arrives for the first time. */
-export function preloadArt(art: ReadonlySet<string>) {
-  for (const id of art) {
-    const url = api.artUrl(id);
-    const image = new Image();
-    image.onload = () => loaded.add(url);
-    image.src = url;
-  }
-}
-
 /** The pictures already in the browser: a face that is there is drawn at once, with no frame of the number first. */
 const loaded = new Set<string>();
 

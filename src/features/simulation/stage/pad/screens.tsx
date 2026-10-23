@@ -14,11 +14,12 @@ export type Press = (command: Command) => void;
 
 // ---- before the walk ---------------------------------------------------------
 
-export function Waiting({ press }: { press: Press }) {
+/** Until the wall holds every picture and voice, the start is not offered: the button says it is still loading. */
+export function Waiting({ s, press }: { s: StageState; press: Press }) {
   return (
     <Stage>
       <h1>서비스 디자이너가 되어 보세요</h1>
-      <Button $tone="primary" $big onClick={() => press({ name: 'start' })}>시작하기</Button>
+      <Button $tone="primary" $big disabled={!s.ready} onClick={() => press({ name: 'start' })}>{s.ready ? '시작하기' : '로딩 중...'}</Button>
     </Stage>
   );
 }
