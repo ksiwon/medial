@@ -255,3 +255,32 @@ def test_a_change_that_leaves_out_a_trouble_stops_the_read(copy: Path):
     edit(copy / "evaluations.json", forget_one)
     with pytest.raises(WeekError, match="빠뜨리거나"):
         load_week(copy)
+
+
+def test_a_weak_basis_says_why(copy: Path):
+    week = load_week()
+    for event in week["events"]:
+        for request in event["requests"]:
+            if request["basis"]["verdict"] == "weak":
+                assert request["basis"]["why"]
+
+    def forget_why(data):
+        key = next(k for k, v in data["links"].items() if v["verdict"] == "weak")
+        data["links"][key].pop("why")
+
+    edit(copy / "evaluations.json", forget_why)
+    with pytest.raises(WeekError, match="이유가 없습니다"):
+        load_week(copy)
+
+
+def test_a_change_read_once_stops_the_read(copy: Path):
+    def one_reading(data):
+        for change in data["changes"].values():
+            for c in change.values():
+                if c["presence"] == "both":
+                    c["votes"] = 1
+                    return
+
+    edit(copy / "evaluations.json", one_reading)
+    with pytest.raises(WeekError, match="다수결"):
+        load_week(copy)

@@ -39,6 +39,8 @@ KINDS = {"good", "bad", "neutral", "unknown", "wish"}
 GROUNDS = {"하루", "건강", "의료 행동", "디지털", "AI 태도", "관계", "연기 지침"}
 #: What a change sorts: the uncomfortable and the wished-for.
 TROUBLE = {"bad", "wish"}
+#: How many readings a change is the majority of (scripts/gen_week_evaluations.py VOTES).
+VOTES = 3
 
 
 class WeekError(ValueError):
@@ -118,6 +120,8 @@ def _change(key: str, recorded: dict[str, Any] | None, before: list[dict[str, An
         presence = "both" if actor in was and actor in now else "before" if actor in was else "after"
         if c["presence"] != presence:
             raise WeekError("%s %s 의 피드백 변화가 등장 여부를 잘못 적었습니다" % (key, actor))
+        if presence == "both" and c.get("votes") != VOTES:
+            raise WeekError("%s %s 의 피드백 변화가 %d번 읽은 다수결이 아닙니다(compare)" % (key, actor, VOTES))
         troubles = [i for i, x in enumerate(was[actor]["claims"]) if x["kind"] in TROUBLE] if actor in was else []
         fresh = [i for i, x in enumerate(now[actor]["claims"]) if x["kind"] in TROUBLE] if actor in now else []
         if sorted(c["resolved"] + c["remaining"] + c["unclear"]) != troubles or any(i not in fresh for i in c["new"]):
@@ -205,6 +209,9 @@ def load_week(weeks_dir: Path = WEEK_DIR) -> dict[str, Any]:
             if link is None or link["verdict"] not in VERDICTS:
                 # A request with no basis in what the residents said is not a choice we show.
                 raise WeekError("%s 는 주민 평가에서 근거를 찾지 못했습니다(연결 점검)" % key)
+            if link["verdict"] == "weak" and not link.get("why"):
+                # A weak basis says why it is weak: beside a direct one on the same words, it would read as a contradiction.
+                raise WeekError("%s 의 약한 근거에 이유가 없습니다(explain)" % key)
             now = dict(running)
             for rule in req["rules"]:
                 now[rule["type"]] = rule["after"]
@@ -216,7 +223,7 @@ def load_week(weeks_dir: Path = WEEK_DIR) -> dict[str, Any]:
                 "cost": req["cost"],
                 "rules": [_rule_change(eid, r) for r in req["rules"]],
                 "basis": {"verdict": link["verdict"], "actor": link["actor"] or None, "quote": link["basis"] or None,
-                          "kind": link.get("kind") or None},
+                          "kind": link.get("kind") or None, "why": link.get("why") or None},
                 "after": {
                     "scene": _scene(key, req["scene"], dialogue),
                     "evaluations": after_evals,

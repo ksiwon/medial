@@ -3,6 +3,7 @@
     python scripts/gen_week_evaluations.py make                  # every resident in every scene variant
     python scripts/gen_week_evaluations.py make --only E1 E4.B   # an event, or one variant
     python scripts/gen_week_evaluations.py link                  # which before-evaluation each request rests on
+    python scripts/gen_week_evaluations.py explain               # why a weak basis is weak, one line per request
     python scripts/gen_week_evaluations.py compare               # how each request moved each resident's feedback
     python scripts/gen_week_evaluations.py read                  # evaluations.json -> evaluations.html, for the researcher
 
@@ -305,6 +306,58 @@ def link(only: list[str] | None) -> None:
     OUT.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
+EXPLAIN_SYSTEM = """당신은 서비스 디자이너의 조수다. 수정 요청 하나와, 그 요청의 근거로 '약하다'고 판정된 주민 피드백 한 마디를 읽는다. 판정은 이미 났다 — 바꾸지 않는다.
+
+할 일
+- 이 한 마디가 요청의 어느 부분을 말하고, 어느 부분은 말하지 않는지 한 문장으로 쓴다(why).
+- 15~60자, '~함'·'~음'·'~않음' 같은 명사형으로 끝낸다. 예: "형에게 알리는 것은 말하지만, 목소리를 다시 확인하는 것은 말하지 않음."
+- 피드백에 없는 말을 지어내지 않는다. 요청을 좋게 보이게 쓰지 않는다.
+
+JSON으로 why만 돌려준다."""
+
+EXPLAIN_SCHEMA = {
+    "type": "object", "additionalProperties": False,
+    "properties": {"why": {"type": "string"}},
+    "required": ["why"],
+}
+
+
+def explain(only: list[str] | None) -> None:
+    """Why a request only weakly rests on the words it quotes, in one line, for the request card: several requests
+    of one version often rest on the same words, and one is direct where another is weak - said without a reason, the
+    two verdicts read as a contradiction (2026-10-23). The verdict is ``link``'s and is not asked again."""
+    client = Model()
+    briefs, _ = load()
+    data = json.loads(OUT.read_text(encoding="utf-8"))
+    links = data["links"]
+    for ev in briefs["events"]:
+        for rid, r in walk_requests(ev["requests"]):
+            key = "%s.%s" % (ev["id"], rid)
+            link = links.get(key)
+            if not link or link["verdict"] != "weak" or (only and key not in only and ev["id"] not in only):
+                continue
+            payload = {"수정 요청": r["label"], "근거로 든 주민 피드백": link["basis"], "판정": "약한 근거"}
+            feedback, why = None, None
+            for attempt in range(RETRIES + 1):
+                ask = dict(payload, **({"지난번 시도에서 고칠 것": feedback} if feedback else {}))
+                text = client.ask(EXPLAIN_SYSTEM, ask, EXPLAIN_SCHEMA, "basis_why", 300)["why"].strip()
+                bad = []
+                if not 12 <= len(text) <= 70:
+                    bad.append("길이 %d자(15~60자)" % len(text))
+                if text.rstrip(".!? ")[-1:] in ENDINGS_NOT_ALLOWED:
+                    bad.append("명사형(~함·~음)으로 끝나지 않음")
+                if not bad:
+                    why = text
+                    break
+                feedback = bad
+                print("  [%s] 다시 (%d): %s" % (key, attempt + 1, bad))
+            if why is None:
+                raise SystemExit("%s 의 이유가 %d번 모두 맞지 않았습니다" % (key, RETRIES + 1))
+            link["why"] = why
+            print("== %s %s" % (key, why))
+    OUT.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
 COMPARE_SYSTEM = """당신은 서비스 디자이너의 조수다. 같은 주민이 같은 사건을 두 버전으로 겪고 남긴 피드백 두 개를 읽는다. 앞 버전에서 요청 하나를 골라 고친 것이 뒤 버전이다. 주민은 앞 버전을 기억하지 못하므로, 뒤 피드백은 앞 버전과 비교하는 말을 하지 않는다.
 
 할 일
@@ -325,11 +378,46 @@ COMPARE_SCHEMA = {
 
 #: What a comparison sorts: the uncomfortable and the wished-for. What was good is not "resolved" or "new".
 TROUBLE = ("bad", "wish")
+#: How many times each comparison is read. One reading was left to chance (2026-10-23): a trouble is resolved or remaining
+#: only when most readings say so, and unclear when they split; a trouble is new when most readings say so.
+VOTES = 3
+
+
+def compare_once(client: Model, payload: dict, was: list[int], now: list[int], tag: str) -> dict:
+    """One reading of two feedbacks, checked: every earlier trouble sorted once, new ones only from the later."""
+    feedback = None
+    for attempt in range(RETRIES + 1):
+        ask = dict(payload, **({"지난번 시도에서 고칠 것": feedback} if feedback else {}))
+        r = client.ask(COMPARE_SYSTEM, ask, COMPARE_SCHEMA, "feedback_change", 600)
+        sorted_was = r["resolved"] + r["remaining"] + r["unclear"]
+        bad = []
+        if sorted(sorted_was) != sorted(was):
+            bad.append("앞 번호 %s 가 resolved/remaining/unclear에 한 번씩 들어가야 함(받은 것 %s)" % (was, sorted_was))
+        if any(j not in now for j in r["new"]) or len(set(r["new"])) != len(r["new"]):
+            bad.append("new는 뒤 번호 %s 안에서 한 번씩" % now)
+        if not bad:
+            return r
+        feedback = bad
+        print("  [%s] 다시 (%d): %s" % (tag, attempt + 1, bad))
+    raise SystemExit("%s 의 비교가 %d번 모두 맞지 않았습니다" % (tag, RETRIES + 1))
+
+
+def vote(runs: list[dict], was: list[int], now: list[int]) -> dict[str, list[int]]:
+    """The readings' majority: an earlier trouble goes where most readings put it (unclear when no way has most);
+    a later trouble is new when most readings call it so."""
+    need = len(runs) // 2 + 1
+    out: dict[str, list[int]] = {"resolved": [], "remaining": [], "unclear": [], "new": []}
+    for i in was:
+        way = next((k for k in ("resolved", "remaining") if sum(i in r[k] for r in runs) >= need), "unclear")
+        out[way].append(i)
+    out["new"] = [j for j in now if sum(j in r["new"] for r in runs) >= need]
+    return out
 
 
 def compare(only: list[str] | None) -> None:
     """How each resident's feedback moved from the version a request was chosen on to the version it made: which of
-    their troubles were resolved, which remained, which cannot be told, and which are new. Stored as claim indices
+    their troubles were resolved, which remained, which cannot be told, and which are new - the majority of ``VOTES``
+    readings. Stored as claim indices
     (the words stay in the evaluations), per request, under ``changes``. Someone only in one of the two versions is
     not asked about: what they had to say is all gone or all new, and the screen says which."""
     client = Model()
@@ -361,25 +449,8 @@ def compare(only: list[str] | None) -> None:
                     "뒤 피드백": after[actor]["paragraph"],
                     "뒤의 불편·바람(번호: 말)": ["%d: %s" % (i, after[actor]["claims"][i]["text"]) for i in now],
                 }
-                res, feedback = None, None
-                for attempt in range(RETRIES + 1):
-                    if feedback:
-                        payload["지난번 시도에서 고칠 것"] = feedback
-                    r = client.ask(COMPARE_SYSTEM, payload, COMPARE_SCHEMA, "feedback_change", 600)
-                    sorted_was = r["resolved"] + r["remaining"] + r["unclear"]
-                    bad = []
-                    if sorted(sorted_was) != sorted(was):
-                        bad.append("앞 번호 %s 가 resolved/remaining/unclear에 한 번씩 들어가야 함(받은 것 %s)" % (was, sorted_was))
-                    if any(j not in now for j in r["new"]) or len(set(r["new"])) != len(r["new"]):
-                        bad.append("new는 뒤 번호 %s 안에서 한 번씩" % now)
-                    if not bad:
-                        res = r
-                        break
-                    feedback = bad
-                    print("  [%s %s] 다시 (%d): %s" % (key, actor, attempt + 1, bad))
-                if res is None:
-                    raise SystemExit("%s %s 의 비교가 %d번 모두 맞지 않았습니다" % (key, actor, RETRIES + 1))
-                out[actor] = {"presence": "both", **{k: res[k] for k in ("resolved", "remaining", "unclear", "new")}}
+                runs = [compare_once(client, payload, was, now, "%s %s" % (key, actor)) for _ in range(VOTES)]
+                out[actor] = {"presence": "both", "votes": VOTES, **vote(runs, was, now)}
             changes[key] = out
             for actor, c in out.items():
                 print("== %s %s %s 풀림%s 남음%s 모름%s 새%s" % (key, actor, c["presence"], c["resolved"], c["remaining"], c["unclear"], c["new"]))
@@ -441,9 +512,11 @@ def main() -> None:
     lk.add_argument("--only", nargs="*")
     cp = sub.add_parser("compare")
     cp.add_argument("--only", nargs="*")
+    xp = sub.add_parser("explain")
+    xp.add_argument("--only", nargs="*")
     args = ap.parse_args()
     {"read": lambda: read(), "make": lambda: make(args.only), "link": lambda: link(args.only),
-     "compare": lambda: compare(args.only)}[args.cmd]()
+     "compare": lambda: compare(args.only), "explain": lambda: explain(args.only)}[args.cmd]()
 
 
 if __name__ == "__main__":

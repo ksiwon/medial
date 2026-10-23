@@ -4,6 +4,7 @@ import { INTRO_SAY } from '../screens/IntroScreen';
 import { autoOf, AUTO_S, type AutoState } from './auto';
 import { CLOSE_SAY } from './ClosingScreen';
 import { JOBS } from './DraftScreen';
+import { sharedBases } from './ReviewScreens';
 import { judgmentAt, rulesIn } from './judgment';
 import { eventOf, timetable } from './selectors';
 import type { Week } from './types';
@@ -174,5 +175,19 @@ describe('the draft', () => {
     // What every event ran under before anything was chosen is the draft.
     const draft = new Map(week.draft.map((r) => [r.type, r.sentence]));
     for (const event of week.events) for (const rule of event.rules) expect(rule.sentence).toBe(draft.get(rule.type));
+  });
+});
+
+describe('the words requests rest on', () => {
+  it('are said once when more than one request of a version rests on them', () => {
+    for (const event of week.events) {
+      const groups = sharedBases(event.requests);
+      for (const g of groups) {
+        expect(g.numbers.length).toBeGreaterThan(1);
+        for (const n of g.numbers) expect(event.requests[n - 1].basis.quote).toBe(g.quote);
+      }
+    }
+    // The fall: all three requests rest on the brother's words.
+    expect(sharedBases(eventOf(week, 'E4')!.requests)).toEqual([expect.objectContaining({ actor: 'P7', numbers: [1, 2, 3] })]);
   });
 });

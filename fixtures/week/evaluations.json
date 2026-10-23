@@ -4589,25 +4589,29 @@
    "verdict": "weak",
    "actor": "P9",
    "basis": "AI가 차편이 없다고 늦게 알려 버스를 타려면 서둘러야 했음.",
-   "kind": "bad"
+   "kind": "bad",
+   "why": "차편이 없다는 안내 지연은 말하지만, 동시 문의와 먼저 되는 분 선택은 말하지 않음."
   },
   "E4.A": {
    "verdict": "weak",
    "actor": "P7",
    "basis": "AI를 통해 누군가 동생의 어려움을 일찍 알고 도울 수 있었으면 함.",
-   "kind": "wish"
+   "kind": "wish",
+   "why": "어려움의 조기 파악과 도움은 바라지만, 목소리 재확인과 사람 파견은 말하지 않음."
   },
   "E4.C": {
    "verdict": "weak",
    "actor": "P7",
    "basis": "AI를 통해 누군가 동생의 어려움을 일찍 알고 도울 수 있었으면 함.",
-   "kind": "wish"
+   "kind": "wish",
+   "why": "어려움을 일찍 알고 돕는 것은 말하지만, 보건소에 먼저 알려 전문가가 확인하는 것은 말하지 않음."
   },
   "E5.B": {
    "verdict": "weak",
    "actor": "HC_HEAD",
    "basis": "늦지 않게 전달해 달라는 요청에 방송 예정 시각을 알려 줌.",
-   "kind": "good"
+   "kind": "good",
+   "why": "늦지 않은 전달과 방송 예정 시각은 말하지만, 접수 즉시 방송은 말하지 않음."
   },
   "E5.C": {
    "verdict": "direct",
@@ -4619,7 +4623,8 @@
    "verdict": "weak",
    "actor": "P1",
    "basis": "AI의 안부 소리를 듣고도 일어나기 힘들어 답하지 못했음.",
-   "kind": "bad"
+   "kind": "bad",
+   "why": "일어나기 힘들어 답하지 못함은 말하지만, 재시도나 사람에게 알림은 말하지 않음."
   },
   "E7.C": {
    "verdict": "direct",
@@ -4637,7 +4642,8 @@
    "verdict": "weak",
    "actor": "P9",
    "basis": "태워 줄 사람을 구하지 못하면 더 일찍 알려 줬으면 함.",
-   "kind": "wish"
+   "kind": "wish",
+   "why": "태워 줄 사람이 없을 때 빠른 알림은 말하지만, 가까운 동선부터 묻는 것은 말하지 않음."
   },
   "E4.B": {
    "verdict": "direct",
@@ -4649,25 +4655,29 @@
    "verdict": "weak",
    "actor": "P10",
    "basis": "AI가 배우자의 안부를 살피는 데 도움을 줬는지 알 수 없음.",
-   "kind": "unknown"
+   "kind": "unknown",
+   "why": "배우자 안부 확인 효과는 알 수 없다고 하나, 미복약 시 남편에게 알리는 것은 말하지 않음."
   },
   "E7.B": {
    "verdict": "weak",
    "actor": "P11",
    "basis": "약을 나중으로 미루겠다고 했을 때 다시 챙겨 물어줬으면 함.",
-   "kind": "wish"
+   "kind": "wish",
+   "why": "복약을 다시 묻는 것은 말하지만, 즉시 보건소 통보와 퇴원 뒤 확인 위임은 말하지 않음."
   },
   "E8.B": {
    "verdict": "weak",
    "actor": "P1",
    "basis": "AI의 안부 소리를 듣고도 일어나기 힘들어 답하지 못했음.",
-   "kind": "bad"
+   "kind": "bad",
+   "why": "일어나기 힘들어 답하지 못한 점은 말하지만, 재호출 간격을 늘려 달라는 말은 없음."
   },
   "E2.A": {
    "verdict": "weak",
    "actor": "P11",
    "basis": "AI가 알려 준 약 도착 때까지는 참기 힘들었음.",
-   "kind": "bad"
+   "kind": "bad",
+   "why": "약 도착까지 기다리기 힘들었다고 말하지만, 이장님보다 가까운 분께 부탁하라는 말은 없음."
   },
   "E2.B": {
    "verdict": "direct",
@@ -4685,19 +4695,22 @@
    "verdict": "weak",
    "actor": "P1",
    "basis": "AI의 안부 소리를 듣고도 일어나기 힘들어 답하지 못했음.",
-   "kind": "bad"
+   "kind": "bad",
+   "why": "일어나기 힘들어 답하지 못한 것은 말하지만, 조기 보건소 연계나 방문은 말하지 않음."
   },
   "E1.A.B": {
    "verdict": "weak",
    "actor": "P1",
    "basis": "밭일 중 AI의 부름에 응답하려니 번거로웠음.",
-   "kind": "bad"
+   "kind": "bad",
+   "why": "밭일 중 응답의 번거로움은 말하지만, 연속 호출이나 연락 간격은 말하지 않음."
   },
   "E1.B.A": {
    "verdict": "weak",
    "actor": "P6",
    "basis": "평소 일과를 알려주지 않아 어디부터 찾아야 할지 막막함.",
-   "kind": "bad"
+   "kind": "bad",
+   "why": "일과를 몰라 찾기 막막함은 말하지만, 집·밭 구분과 이웃 두 분의 공동 확인은 말하지 않음."
   },
   "E1.C.B": {
    "verdict": "direct",
@@ -4721,13 +4734,15 @@
    "verdict": "weak",
    "actor": "P8",
    "basis": "AI 알림 뒤 보건소까지 나서게 되어 미안한 마음이 듦.",
-   "kind": "bad"
+   "kind": "bad",
+   "why": "보건소까지 나서게 된 미안함은 말하지만, 이관 전 AI 재확인은 말하지 않음."
   },
   "E5.B.A": {
    "verdict": "weak",
    "actor": "P1",
    "basis": "AI가 어려운 안내를 쉬운 말로 풀어 줘 이해에 도움이 됐음.",
-   "kind": "good"
+   "kind": "good",
+   "why": "쉬운 말이 이해에 도움 됨은 말하지만, 접수 후 방송 전 시간을 두는 것은 말하지 않음"
   },
   "E5.C.A": {
    "verdict": "direct",
@@ -4739,7 +4754,8 @@
    "verdict": "weak",
    "actor": "P1",
    "basis": "밭일 중 AI의 부름에 응답하려니 번거로웠음.",
-   "kind": "bad"
+   "kind": "bad",
+   "why": "응답의 번거로움은 말하지만, 한 번 더 연락하거나 무응답 시 다음 사람에게 넘기는 것은 말하지 않음."
   },
   "E1.B.B": {
    "verdict": "direct",
@@ -4751,7 +4767,8 @@
    "verdict": "weak",
    "actor": "P6",
    "basis": "AI가 다시 방문을 부탁하지 않고 상황만 알려 줌.",
-   "kind": "neutral"
+   "kind": "neutral",
+   "why": "재방문 부탁 없이 상황만 알린 점은 말하지만, 이장님께 재확인을 부탁하는 것은 말하지 않음."
   },
   "E4.A.A": {
    "verdict": "direct",
@@ -4769,13 +4786,15 @@
    "verdict": "weak",
    "actor": "P8",
    "basis": "AI 알림 뒤 보건소까지 나서게 되어 미안한 마음이 듦.",
-   "kind": "bad"
+   "kind": "bad",
+   "why": "보건소 개입에 대한 미안함은 말하지만, 30분 관찰이나 개입 기준은 말하지 않음."
   },
   "E5.B.B": {
    "verdict": "weak",
    "actor": "P1",
    "basis": "AI가 어려운 안내를 쉬운 말로 풀어 줘 이해에 도움이 됐음.",
-   "kind": "good"
+   "kind": "good",
+   "why": "쉬운 말로 풀어 주는 것은 말하지만, 이해 여부를 확인하는 것은 말하지 않음."
   },
   "E5.C.B": {
    "verdict": "direct",
@@ -4797,6 +4816,7 @@
    },
    "P1": {
     "presence": "both",
+    "votes": 3,
     "resolved": [
      1
     ],
@@ -4810,11 +4830,12 @@
   "E1.A.B": {
    "P1": {
     "presence": "both",
-    "resolved": [],
-    "remaining": [],
-    "unclear": [
+    "votes": 3,
+    "resolved": [
      0
     ],
+    "remaining": [],
+    "unclear": [],
     "new": [
      1
     ]
@@ -4823,6 +4844,7 @@
   "E1.A.C": {
    "P1": {
     "presence": "both",
+    "votes": 3,
     "resolved": [
      0
     ],
@@ -4836,6 +4858,7 @@
   "E1.B": {
    "P6": {
     "presence": "both",
+    "votes": 3,
     "resolved": [],
     "remaining": [],
     "unclear": [
@@ -4859,6 +4882,7 @@
   "E1.B.A": {
    "P6": {
     "presence": "both",
+    "votes": 3,
     "resolved": [],
     "remaining": [
      1
@@ -4870,6 +4894,7 @@
   "E1.B.B": {
    "P6": {
     "presence": "both",
+    "votes": 3,
     "resolved": [
      1
     ],
@@ -4883,6 +4908,7 @@
   "E1.C": {
    "P6": {
     "presence": "both",
+    "votes": 3,
     "resolved": [],
     "remaining": [],
     "unclear": [
@@ -4906,6 +4932,7 @@
   "E1.C.B": {
    "P6": {
     "presence": "both",
+    "votes": 3,
     "resolved": [],
     "remaining": [
      1
@@ -4917,6 +4944,7 @@
   "E1.C.A": {
    "P6": {
     "presence": "both",
+    "votes": 3,
     "resolved": [],
     "remaining": [],
     "unclear": [
@@ -4970,6 +4998,7 @@
    },
    "P11": {
     "presence": "both",
+    "votes": 3,
     "resolved": [
      0
     ],
@@ -4994,6 +5023,7 @@
   "E2.C": {
    "P6": {
     "presence": "both",
+    "votes": 3,
     "resolved": [],
     "remaining": [],
     "unclear": [
@@ -5005,6 +5035,7 @@
    },
    "P11": {
     "presence": "both",
+    "votes": 3,
     "resolved": [
      1
     ],
@@ -5020,6 +5051,7 @@
   "E3.A": {
    "P9": {
     "presence": "both",
+    "votes": 3,
     "resolved": [],
     "remaining": [],
     "unclear": [
@@ -5027,7 +5059,6 @@
      1
     ],
     "new": [
-     0,
      1
     ]
    },
@@ -5051,6 +5082,7 @@
   "E3.B": {
    "P9": {
     "presence": "both",
+    "votes": 3,
     "resolved": [
      0,
      1
@@ -5082,6 +5114,7 @@
    },
    "P3": {
     "presence": "both",
+    "votes": 3,
     "resolved": [],
     "remaining": [],
     "unclear": [],
@@ -5093,6 +5126,7 @@
   "E4.A": {
    "P8": {
     "presence": "both",
+    "votes": 3,
     "resolved": [
      1
     ],
@@ -5116,6 +5150,7 @@
   "E4.A.B": {
    "P8": {
     "presence": "both",
+    "votes": 3,
     "resolved": [
      1
     ],
@@ -5167,6 +5202,7 @@
    },
    "P7": {
     "presence": "both",
+    "votes": 3,
     "resolved": [
      1
     ],
@@ -5202,6 +5238,7 @@
   "E4.B.B": {
    "P7": {
     "presence": "both",
+    "votes": 3,
     "resolved": [
      2
     ],
@@ -5215,6 +5252,7 @@
   "E4.C": {
    "P8": {
     "presence": "both",
+    "votes": 3,
     "resolved": [
      1
     ],
@@ -5245,6 +5283,7 @@
   "E4.C.B": {
    "HC_HEAD": {
     "presence": "both",
+    "votes": 3,
     "resolved": [],
     "remaining": [],
     "unclear": [],
@@ -5254,6 +5293,7 @@
    },
    "P8": {
     "presence": "both",
+    "votes": 3,
     "resolved": [],
     "remaining": [],
     "unclear": [
@@ -5268,6 +5308,7 @@
   "E4.C.A": {
    "HC_HEAD": {
     "presence": "both",
+    "votes": 3,
     "resolved": [],
     "remaining": [],
     "unclear": [],
@@ -5275,6 +5316,7 @@
    },
    "P8": {
     "presence": "both",
+    "votes": 3,
     "resolved": [],
     "remaining": [
      1
@@ -5293,6 +5335,7 @@
    },
    "P1": {
     "presence": "both",
+    "votes": 3,
     "resolved": [],
     "remaining": [],
     "unclear": [
@@ -5314,6 +5357,7 @@
   "E5.B.A": {
    "P1": {
     "presence": "both",
+    "votes": 3,
     "resolved": [],
     "remaining": [],
     "unclear": [],
@@ -5325,6 +5369,7 @@
   "E5.B.B": {
    "P1": {
     "presence": "both",
+    "votes": 3,
     "resolved": [],
     "remaining": [],
     "unclear": [],
@@ -5343,11 +5388,11 @@
    },
    "P1": {
     "presence": "both",
-    "resolved": [
-     1
-    ],
+    "votes": 3,
+    "resolved": [],
     "remaining": [
-     0
+     0,
+     1
     ],
     "unclear": [],
     "new": [
@@ -5367,6 +5412,7 @@
   "E5.C.A": {
    "P1": {
     "presence": "both",
+    "votes": 3,
     "resolved": [
      1
     ],
@@ -5378,6 +5424,7 @@
   "E5.C.B": {
    "P1": {
     "presence": "both",
+    "votes": 3,
     "resolved": [
      1
     ],
@@ -5401,6 +5448,7 @@
    },
    "P10": {
     "presence": "both",
+    "votes": 3,
     "resolved": [],
     "remaining": [],
     "unclear": [],
@@ -5412,6 +5460,7 @@
   "E7.B": {
    "P11": {
     "presence": "both",
+    "votes": 3,
     "resolved": [
      0
     ],
@@ -5443,6 +5492,7 @@
   "E7.C": {
    "P11": {
     "presence": "both",
+    "votes": 3,
     "resolved": [
      0
     ],
@@ -5472,6 +5522,7 @@
    },
    "P1": {
     "presence": "both",
+    "votes": 3,
     "resolved": [
      0
     ],
@@ -5492,6 +5543,7 @@
    },
    "P1": {
     "presence": "both",
+    "votes": 3,
     "resolved": [
      0
     ],
@@ -5512,6 +5564,7 @@
    },
    "P1": {
     "presence": "both",
+    "votes": 3,
     "resolved": [],
     "remaining": [
      0

@@ -93,7 +93,8 @@ export interface WeekRequest {
   /** The rules it changes, with the sentences the AI's judgment panel reads before and after (server rules.py). */
   rules: RuleChange[];
   /** How well the residents' own words support this request. 'weak' is shown as such, never hidden. */
-  basis: { verdict: Basis; actor: string | null; quote: string | null; kind: ClaimKind | null };
+  /** why: for a weak basis, what the words speak to and what they do not (scripts/gen_week_evaluations.py explain). */
+  basis: { verdict: Basis; actor: string | null; quote: string | null; kind: ClaimKind | null; why: string | null };
   /** The version this request makes: its scene, what the residents made of it, and what can be chosen from there (nothing on the last version). */
   after: { scene: WeekScene; evaluations: Evaluation[]; change: FeedbackChange[]; requests: WeekRequest[] };
 }

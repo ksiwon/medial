@@ -252,18 +252,29 @@ const Way = styled.div<{ $color: string }>`
   > i { font-style: normal; font-size: ${type.body}; color: ${night.faint}; }
 `;
 
-/** One way a trouble went, as a column: who said it and what. */
-function WayColumn({ way, items }: { way: keyof typeof changeTone; items: { name: string; text: string }[] }) {
+/** One way a trouble went, as a column: who said it and what. An empty column says "없음" only when there is truly
+ *  nothing; when some earlier troubles could not be told either way, it says how many (`unknown`). */
+function WayColumn({ way, items, unknown = 0 }: { way: keyof typeof changeTone; items: { name: string; text: string }[]; unknown?: number }) {
   const tone = changeTone[way];
   return (
     <Way $color={tone.color}>
       <small>{tone.label}</small>
       {items.length
         ? <ul>{items.map((x) => <li key={x.name + x.text}><b aria-hidden>{tone.mark}</b><span><em>{x.name}</em>{x.text}</span></li>)}</ul>
-        : <i>없음</i>}
+        : <i>{unknown > 0 ? `알 수 없음 ${unknown}가지` : '없음'}</i>}
     </Way>
   );
 }
+
+/** Said instead of three empty columns: nothing in the new feedback speaks to the earlier troubles. */
+const Untold = styled.p`
+  margin: 0;
+  font-size: ${type.title};
+  line-height: 1.45;
+  font-weight: 700;
+  color: ${night.ink};
+  word-break: keep-all;
+`;
 
 /** The feedback of the version before beside this one's: what the request resolved, left and brought. Who is in only
  *  one of the two versions is said so under the columns, not sorted: their trouble was neither solved nor kept. */
@@ -271,17 +282,22 @@ function FeedbackMoved({ change, from, to }: { change: FeedbackChange[]; from: n
   const pick = (k: 'resolved' | 'remaining' | 'new') => change.flatMap((c) => c[k].map((text) => ({ name: c.name, text })));
   const unclear = change.filter((c) => c.presence === 'both' && c.unclear.length > 0);
   const gone = change.filter((c) => c.presence === 'before');
+  // The earlier troubles nobody could sort: of residents still there, and of residents the new version does not have.
+  const unknown = change.reduce((n, c) => n + c.unclear.length, 0);
+  const sorted = pick('resolved').length + pick('remaining').length + pick('new').length > 0;
   return (
     <Moved aria-label="피드백의 변화">
       <header>
         <h2>ver{from} → ver{to}, 피드백이 이렇게 달라졌습니다</h2>
         <small>두 버전의 피드백을 모델이 읽고 나눈 해석입니다</small>
       </header>
-      <Ways>
-        <WayColumn way="resolved" items={pick('resolved')} />
-        <WayColumn way="remaining" items={pick('remaining')} />
-        <WayColumn way="new" items={pick('new')} />
-      </Ways>
+      {sorted ? (
+        <Ways>
+          <WayColumn way="resolved" items={pick('resolved')} unknown={unknown} />
+          <WayColumn way="remaining" items={pick('remaining')} unknown={unknown} />
+          <WayColumn way="new" items={pick('new')} />
+        </Ways>
+      ) : <Untold>이번 피드백은 앞 버전의 불편을 다시 다루지 않아, 이 요청으로 풀렸는지 알 수 없습니다.</Untold>}
       {(unclear.length > 0 || gone.length > 0) && (
         <p>
           {unclear.map((c) => `${c.name}: ${c.unclear.length}가지는 이번 피드백에 다시 나오지 않아 알 수 없음`).join(' · ')}
@@ -378,15 +394,32 @@ const Trade = styled.div`
 /** The rows a request card spans: the number, the sentence, the words, and the two boxes one over the other. */
 const ROWS = 5;
 
-export function RequestCard({ week, request, index, art, chosen }: {
-  week: Week; request: WeekRequest; index: number; art: ReadonlySet<string>; chosen?: boolean;
+/** Why a weak basis is weak, under its chip: what the words speak to and what they do not. */
+const Why = styled.span`
+  font-size: ${type.body};
+  line-height: 1.5;
+  color: ${night.mute};
+  word-break: keep-all;
+`;
+
+/** shared: the words this request rests on are said once above the cards (more than one request rests on them), so
+ *  the card says only how well they fit this request - and, when weakly, why. */
+export function RequestCard({ week, request, index, art, chosen, shared = false }: {
+  week: Week; request: WeekRequest; index: number; art: ReadonlySet<string>; chosen?: boolean; shared?: boolean;
 }) {
   const weak = request.basis.verdict === 'weak';
   return (
     <RequestBox $lit={chosen} $rows={ROWS}>
       <Chip $tone="accent">{index + 1}</Chip>
       <Ask>{request.label}</Ask>
-      {request.basis.actor && (
+      {request.basis.actor && (shared ? (
+        <Because $weak={weak}>
+          <div>
+            <Chip $tone={weak ? 'warn' : undefined}>{weak ? '근거가 약한 요청' : '이 말이 직접 근거'}</Chip>
+            {weak && request.basis.why && <Why>{request.basis.why}</Why>}
+          </div>
+        </Because>
+      ) : (
         <Because $weak={weak}>
           <header>
             <Portrait actorId={request.basis.actor} art={art} size={48} />
@@ -395,9 +428,10 @@ export function RequestCard({ week, request, index, art, chosen }: {
           <div>
             {weak && <Chip $tone="warn">근거가 약한 요청</Chip>}
             {request.basis.quote && <p>“{request.basis.quote}”</p>}
+            {weak && request.basis.why && <Why>{request.basis.why}</Why>}
           </div>
         </Because>
-      )}
+      ))}
       <Trade>
         <div><small>바라는 것</small><p>{request.expect}</p></div>
         <div className="cost"><small>따를 부담</small><p>{request.cost}</p></div>
@@ -406,12 +440,46 @@ export function RequestCard({ week, request, index, art, chosen }: {
   );
 }
 
+/** Words more than one request rests on, said once above the cards: who said them and which requests came of them. */
+const SharedWords = styled.blockquote`
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: ${space.lg};
+  padding: ${space.lg} ${space.xl};
+  border-radius: ${radius.card};
+  background: ${night.panel};
+  border: 1px solid ${night.line};
+  word-break: keep-all;
+  > header { display: flex; flex-direction: column; align-items: center; gap: ${space.xs}; flex: none; }
+  > header > b { font-size: ${type.caption}; font-weight: 800; }
+  > div { display: flex; flex-direction: column; gap: ${space.xs}; min-width: 0; }
+  > div > small { font-size: ${type.caption}; font-weight: 800; letter-spacing: 0.06em; color: ${night.accent}; }
+  > div > p { margin: 0; font-size: ${type.title}; line-height: 1.45; font-weight: 700; letter-spacing: -0.02em; }
+`;
+
+/** The requests of a version that rest on the same resident words, by those words: only groups of two or more. */
+export function sharedBases(requests: WeekRequest[]): { actor: string; quote: string; numbers: number[] }[] {
+  const groups = new Map<string, { actor: string; quote: string; numbers: number[] }>();
+  requests.forEach((r, i) => {
+    const { actor, quote } = r.basis;
+    if (!actor || !quote) return;
+    const key = `${actor}|${quote}`;
+    const group = groups.get(key) ?? { actor, quote, numbers: [] };
+    group.numbers.push(i + 1);
+    groups.set(key, group);
+  });
+  return [...groups.values()].filter((g) => g.numbers.length > 1);
+}
+
 export function ChooseScreen({ week, event, version, art, considering }: {
   week: Week; event: WeekEvent; version: Version; art: ReadonlySet<string>;
   /** The card a finger rests on at the tablet, before it is confirmed. */
   considering: string | null;
 }) {
   const requests = version.requests;
+  const shared = sharedBases(requests);
+  const isShared = (r: WeekRequest) => shared.some((g) => g.actor === r.basis.actor && g.quote === r.basis.quote);
   return (
     <Page aria-label="무엇을 고칠 것인가" $tight>
       <Head $compact>
@@ -420,8 +488,21 @@ export function ChooseScreen({ week, event, version, art, considering }: {
         <h1>{requests.length > 1 ? '무엇을 고칠 것인가' : '이 요청을 반영해 볼까요?'}</h1>
         <p>{requests.length > 1 ? '하나를 고르면, 같은 일이 그 요청대로 다시 펼쳐집니다.' : '반영하면, 같은 일이 그 요청대로 다시 펼쳐집니다.'}</p>
       </Head>
-      <Cards $n={requests.length} $center $rows={ROWS}>
-        {requests.map((r, i) => <RequestCard key={r.id} week={week} request={r} index={i} art={art} chosen={r.id === considering} />)}
+      {shared.map((g) => (
+        <SharedWords key={g.actor + g.quote}>
+          <header>
+            <Portrait actorId={g.actor} art={art} size={48} />
+            <b>{nameOf(week, g.actor)}</b>
+          </header>
+          <div>
+            <small>{g.numbers.length === requests.length ? `요청 ${requests.length}개 모두 이 말에서 나왔습니다` : `${g.numbers.join('·')}번 요청이 이 말에서 나왔습니다`}</small>
+            <p>“{g.quote}”</p>
+          </div>
+        </SharedWords>
+      ))}
+      {/* Under shared words the cards follow them; on their own they sit in the middle of the page. */}
+      <Cards $n={requests.length} $center={shared.length === 0} $rows={ROWS}>
+        {requests.map((r, i) => <RequestCard key={r.id} week={week} request={r} index={i} art={art} chosen={r.id === considering} shared={isShared(r)} />)}
       </Cards>
       <Foot>시뮬레이션 주민의 피드백입니다. 실제 주민의 만족도나 동의가 아니며, 나중에 실제 주민이 확인·반박할 대상입니다.</Foot>
     </Page>
