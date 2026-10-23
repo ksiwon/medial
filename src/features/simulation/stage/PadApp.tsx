@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createBus, postTo, type PressResult } from './bus';
 import { Ask, Button, Notice, Screen, TopBar } from './pad/kit';
-import { Choose, Closing, Evaluations, Join, Scan, Telling, Waiting, Watching, Week, type Press } from './pad/screens';
+import { Choose, Closing, Draft, Evaluations, Join, Scan, Telling, Waiting, Watching, Week, type Press } from './pad/screens';
 import {
   IDLE_STATE, STAGE_API, forgetPadToken, hasJoined, padToken, rememberJoined, type Command, type Link, type Phase, type StageState,
 } from './protocol';
@@ -108,6 +108,7 @@ function PadStage({ s, press }: { s: StageState; press: Press }) {
   switch (s.phase) {
     case 'idle': return <Waiting press={press} />;
     case 'intro': return <Watching press={press} />;
+    case 'draft': return <Draft press={press} />;
     case 'week': return <Week s={s} press={press} />;
     case 'telling': return <Telling s={s} press={press} />;
     case 'evaluations': return <Evaluations s={s} press={press} />;

@@ -54,6 +54,13 @@ export const claimTone = {
   wish: { mark: '→', label: '고치고 싶은 점', color: '#e2542c' },
 } as const;
 
+/** How a request moved a resident's trouble: one tone and one mark per way, as with claims. */
+export const changeTone = {
+  resolved: { mark: '✓', label: '풀린 불편', color: claimTone.good.color },
+  remaining: { mark: '＝', label: '남은 불편', color: night.warn },
+  new: { mark: '！', label: '새로 생긴 불편', color: claimTone.bad.color },
+} as const;
+
 const K = 'var(--k, 1)';
 
 /** The type scale's multiplier: 1 on a laptop, larger on a wall screen

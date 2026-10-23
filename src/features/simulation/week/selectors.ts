@@ -1,4 +1,4 @@
-import type { Evaluation, Line, Week, WeekEvent, WeekRequest, WeekScene } from './types';
+import type { Evaluation, FeedbackChange, Line, Week, WeekEvent, WeekRequest, WeekScene } from './types';
 
 // What the screens ask of the week. Pure: the same week always answers the same.
 
@@ -18,6 +18,8 @@ export interface Version {
   chain: WeekRequest[];
   scenes: WeekScene[];
   evaluations: Evaluation[];
+  /** How the last request moved each resident's feedback from the version before (null on ver1). */
+  change: FeedbackChange[] | null;
   /** What can be chosen from this version: nothing on the last one, and nothing in an emergency. */
   requests: WeekRequest[];
 }
@@ -28,15 +30,17 @@ export function versionOf(event: WeekEvent | null, path: readonly string[]): Ver
   const chain: WeekRequest[] = [];
   let scenes = event.before.scenes;
   let evaluations = event.before.evaluations;
+  let change: FeedbackChange[] | null = null;
   for (const id of path) {
     const next = offered.find((r) => r.id === id);
     if (!next) return null;
     chain.push(next);
     scenes = [next.after.scene];
     evaluations = next.after.evaluations;
+    change = next.after.change;
     offered = next.after.requests;
   }
-  return { number: path.length + 1, path: [...path], chain, scenes, evaluations, requests: offered };
+  return { number: path.length + 1, path: [...path], chain, scenes, evaluations, change, requests: offered };
 }
 
 /** How many versions the visitor has read (ver1 of an event, or a later version a request made) before the closing opens. */

@@ -9,7 +9,7 @@
 //
 // 소리는 이렇게 다룬다 (브라우저 녹화는 소리를 담지 못한다):
 //   1. 모니터 쪽 페이지에 "누가 언제 무슨 소리를 틀고 멈췄는지"를 적는 장치를 심는다(audioLog: 파일 이름과 시각만).
-//   2. 장면은 스스로 한 줄씩 흘러간다(소리 길이 + 0.8초). 누르지 않고 기다리고, 마지막 줄의 소리가 끝나면 주민 평가로 간다.
+//   2. 장면은 스스로 한 줄씩 흘러간다(소리 길이 + 0.8초). 누르지 않고 기다리고, 마지막 줄의 소리가 끝나면 주민의 피드백으로 간다.
 //   3. 끝나면 화면 영상 + 태블릿 작은 창 + audioLog 를 출력 폴더에 남기고 scripts/mix_walk.py 가 하나의 영상으로 합친다.
 //   음성 파일은 합칠 때 읽는다. 그래서 임시 녹음(lite)을 표준 모델로 바꾼 뒤에는 화면을 다시 녹화하지 않고
 //   `python scripts/mix_walk.py <출력폴더>` 만 다시 돌리면 된다. 바뀐 소리가 조금 길어도 다음 줄에 잘리지 않게,
@@ -35,7 +35,7 @@ const WALKS = {
   quick: [['E5', 1], ['E5', 1]],
 };
 // 소리가 없는 화면을 읽는 시간(ms): 사람이 눈으로 따라가는 만큼. 대사는 소리 길이가 정한다.
-const PACE = { line: 3800, evaluations: 6500, choose: 5500, pick: 1500, week: 2500, closing: 7000, afterVoice: 500 };
+const PACE = { draft: 12000, line: 3800, evaluations: 6500, choose: 5500, pick: 1500, week: 2500, closing: 7000, afterVoice: 500 };
 
 // 모니터 페이지에 심는 장치: 소리를 틀고(play) 멈추고(pause) 크기를 바꾸는(volume) 일을 시각과 함께 적는다.
 const AUDIO_PROBE = () => {
@@ -103,21 +103,24 @@ async function main() {
   const tStart = Date.now();
   await sleep(1500);
   await tap('시작하기');
-  // 소개는 끝까지 보여 준다(건너뛰기는 쓰지 않는다): 한 주가 뜰 때까지.
-  await wall.getByLabel('이번 주').waitFor({ state: 'visible', timeout: 180000 });
+  // 소개는 끝까지 보여 준다(건너뛰기는 쓰지 않는다): 초안이 뜰 때까지. 초안을 읽을 만큼 두고 이번 주로.
+  await wall.getByLabel('AI 조율자 초안').waitFor({ state: 'visible', timeout: 180000 });
+  await sleep(PACE.draft);
+  await tap(/이번 주로 →/);
+  await wall.getByLabel('이번 주').waitFor({ state: 'visible', timeout: 20000 });
   await sleep(PACE.week);
 
   for (const [id] of WALKS[WALK]) {
     await tap(new RegExp(titleOf(id)));
     // 장면은 스스로 한 줄씩 흘러간다(줄마다 소리 길이 + 0.8초). 누르지 않고 마지막 줄이 나올 때까지 기다린 뒤,
-    // 마지막 줄의 소리가 끝나기를 기다렸다가 주민 평가로 간다.
-    await pad.getByRole('button', { name: /주민 평가 →/ }).waitFor({ state: 'visible', timeout: 120000 }).catch(async (e) => {
+    // 마지막 줄의 소리가 끝나기를 기다렸다가 주민의 피드백으로 간다.
+    await pad.getByRole('button', { name: /주민의 피드백 →/ }).waitFor({ state: 'visible', timeout: 120000 }).catch(async (e) => {
       await pad.screenshot({ path: path.join(OUT, `stuck-${id}-pad.png`) }).catch(() => {});
       await wall.screenshot({ path: path.join(OUT, `stuck-${id}-wall.png`) }).catch(() => {});
       throw e;
     });
     await finishLastLine();
-    await tap(/주민 평가 →/);
+    await tap(/주민의 피드백 →/);
     await sleep(PACE.evaluations);
     if (await pad.getByRole('button', { name: /수정 요청 고르기 →/ }).isVisible().catch(() => false)) {
       await tap(/수정 요청 고르기 →/);

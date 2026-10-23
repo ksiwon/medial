@@ -5,6 +5,7 @@ import type { Step, Week } from './types';
 
 // Where the visitor is in the week. One path, no branches to back out of:
 //
+//   draft (once, after the film: the rules the designer brought)  ->
 //   week  ->  telling (the event's scenes, as they ran in the version being read)  ->  evaluations  ->  choose
 //        ^______________________ a choice makes the next version of that event, and the wall is back at the week _/
 //   ... and from the week (or when nobody is left at the tablet) the closing: what was changed this visit, then the
@@ -45,7 +46,8 @@ interface WeekState {
   init: () => Promise<void>;
   startIntro: () => void;
   skipIntro: () => void;
-  enterWeek: () => void;
+  /** The film is over: the draft the designer brought, then the week. */
+  enterDraft: () => void;
   openEvent: (eventId: string) => void;
   setLine: (index: number) => void;
   goEvaluations: () => void;
@@ -93,7 +95,7 @@ export const useWeekStore = create<WeekState>((set, get) => ({
 
   startIntro: () => set({ introStarted: true, introSkipped: false }),
   skipIntro: () => set({ introSkipped: true }),
-  enterWeek: () => set({ pathStarted: true, step: 'week', eventId: null, lineIndex: 0 }),
+  enterDraft: () => set({ pathStarted: true, step: 'draft', eventId: null, lineIndex: 0 }),
 
   openEvent: (eventId) => {
     if (!get().week?.events.some((e) => e.id === eventId)) return;

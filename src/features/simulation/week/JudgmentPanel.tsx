@@ -7,7 +7,8 @@ import type { Week } from './types';
 
 // The AI has no body on screen. This panel is where it is: what it knows, the rules it runs under, and who it spoke
 // to - beside the scene (what it says is the bubble; the panel used to repeat it word for word and was dropped
-// 2026-10-18, so the rules - after a request, the changed one - are the panel's largest words), for the whole telling (week/judgment.ts says where each comes from). When the
+// 2026-10-18, so the rules - after a request, the changed one - are the panel's largest words), for the whole telling (week/judgment.ts says where each comes from).
+// Only the rules this version is about are read out (2026-10-23); the event's others are named in one line. When the
 // scene happens where the AI is not, the panel dims and says it cannot see it: the world and what the AI observed
 // are never one thing.
 
@@ -100,6 +101,15 @@ const RuleRow = styled.div<{ $changed: boolean }>`
   > span { ${(p) => p.$changed && css`font-size: ${type.lead}; line-height: 1.4; padding: ${space.sm} ${space.md}; border-radius: ${radius.control}; background: ${night.accentSoft}; font-weight: 700;`} }
 `;
 
+/** The event's other rules: in force, but not what this version is about - named, not read out. */
+const Rest = styled.div`
+  font-size: ${type.caption};
+  line-height: 1.6;
+  color: ${night.faint};
+  word-break: keep-all;
+  > b { font-weight: 800; margin-right: ${space.sm}; }
+`;
+
 const ContactRow = styled.div<{ $answered: boolean }>`
   display: flex;
   align-items: center;
@@ -124,6 +134,8 @@ export default function JudgmentPanel({ week, judgment, version }: {
   const j = judgment;
   const who = (id: string) => (id === 'AI' ? 'AI' : nameOf(week, id));
   const shown = j.knows.slice(-LOG);
+  const focus = j.rules.filter((r) => r.focus);
+  const rest = j.rules.filter((r) => !r.focus);
   return (
     <Box $absent={!j.present} aria-label="AI의 판단">
       <Kicker>AI의 판단</Kicker>
@@ -148,13 +160,14 @@ export default function JudgmentPanel({ week, judgment, version }: {
         <Step $on={j.rules.length > 0}>
           <h4>걸린 규칙</h4>
           {j.emergency && <None>응급 상황입니다. 고를 수 있는 규칙을 두지 않았습니다.</None>}
-          {!j.emergency && j.rules.map((r) => (
+          {!j.emergency && focus.map((r) => (
             <RuleRow key={r.label} $changed={r.was !== null}>
               <b>{r.label}{r.was !== null && <em>고른 요청으로 바뀜</em>}</b>
               {r.was !== null && <><s>{r.was}</s><i aria-hidden>↓</i></>}
               <span>{r.sentence}</span>
             </RuleRow>
           ))}
+          {!j.emergency && rest.length > 0 && <Rest><b>그 밖의 규칙</b>{rest.map((r) => r.label).join(' · ')}</Rest>}
         </Step>
         <Step $on={j.contacts.length > 0}>
           <h4>연락한 사람</h4>

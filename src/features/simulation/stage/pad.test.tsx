@@ -92,8 +92,8 @@ describe('a telling', () => {
   it('offers only the way on to the evaluations once it has been told', () => {
     const { press, sent } = pressed();
     const { container } = render(<Telling s={state({ toldAll: true, line: 7, lines: 8 })} press={press} />);
-    expect(names(container)).toEqual(['주민 평가 →']);
-    fireEvent.click(screen.getByText('주민 평가 →'));
+    expect(names(container)).toEqual(['주민의 피드백 →']);
+    fireEvent.click(screen.getByText('주민의 피드백 →'));
     expect(sent).toEqual([{ name: 'toEvaluations' }]);
   });
 });
@@ -123,7 +123,7 @@ describe('choosing', () => {
   it('shows each request as its number and its sentence - what it hopes and costs is read on the wall', () => {
     const { press } = pressed();
     const { container } = render(<Choose s={state({ phase: 'choose', requests })} press={press} />);
-    expect(names(container)).toEqual(['1본인에게 먼저 기회를 주세요', '2간격을 두세요', '← 주민 평가']);
+    expect(names(container)).toEqual(['1본인에게 먼저 기회를 주세요', '2간격을 두세요', '← 주민의 피드백']);
   });
 
   it('a touch only picks and asks; the choice is made by "돌리기", and from then on nothing else answers', () => {

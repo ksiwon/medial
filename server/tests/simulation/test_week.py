@@ -186,3 +186,72 @@ def test_a_request_on_a_later_version_needs_its_own_basis_too(copy: Path):
     edit(copy / "evaluations.json", lambda d: d["links"].update({"E1.A.B": {**d["links"]["E1.A.B"], "verdict": "none"}}))
     with pytest.raises(WeekError, match="E1.A.B"):
         load_week(copy)
+
+
+def test_the_ai_ran_every_event_on_one_draft():
+    week = load_week()
+    draft = {r["type"]: r["sentence"] for r in week["draft"]}
+    assert draft
+    for event in week["events"]:
+        for rule in event["rules"]:
+            assert draft[rule["type"]] == rule["sentence"]
+
+
+def test_an_event_that_ran_on_another_draft_stops_the_read(copy: Path):
+    def no_retry_in_the_fall(data):
+        # Every request of the fall event says the AI did not call back: consistent within the event, not with the week.
+        event = next(e for e in data["events"] if e["id"] == "E4")
+        stack = list(event["requests"].values())
+        while stack:
+            req = stack.pop()
+            for rule in req["rules"]:
+                if rule["type"] == "retry_before_help":
+                    rule["before"] = {"count": 0, "intervalMinutes": 10}
+            stack += list(req.get("requests", {}).values())
+
+    edit(copy / "briefs.json", no_retry_in_the_fall)
+    with pytest.raises(WeekError, match="초안이 한 벌이 아닙니다"):
+        load_week(copy)
+
+
+def test_every_reading_says_which_part_of_the_interview_it_rests_on():
+    for event in load_week()["events"]:
+        stack = [event["before"]["evaluations"]] + [r["after"]["evaluations"] for r in event["requests"]]
+        for pool in stack:
+            for ev in pool:
+                ground = ev["grounding"]
+                assert ground["interviewed"] == ev["actor"].startswith("P")
+                assert bool(ground["field"]) == bool(ground["note"])
+                if not ground["interviewed"]:
+                    assert ground["field"] is None
+
+
+def test_every_request_says_how_it_moved_each_residents_feedback():
+    def walk(requests, before):
+        for request in requests:
+            after = request["after"]
+            people = {e["actor"] for e in before} | {e["actor"] for e in after["evaluations"]}
+            assert {c["actor"] for c in after["change"]} == people
+            for c in after["change"]:
+                if c["presence"] == "before":
+                    assert not (c["resolved"] or c["remaining"] or c["new"])
+                if c["presence"] == "after":
+                    assert not (c["resolved"] or c["remaining"] or c["unclear"])
+            walk(after["requests"], after["evaluations"])
+
+    for event in load_week()["events"]:
+        walk(event["requests"], event["before"]["evaluations"])
+
+
+def test_a_change_that_leaves_out_a_trouble_stops_the_read(copy: Path):
+    def forget_one(data):
+        for change in data["changes"].values():
+            for c in change.values():
+                for way in ("resolved", "remaining", "unclear"):
+                    if c[way]:
+                        c[way].pop()
+                        return
+
+    edit(copy / "evaluations.json", forget_one)
+    with pytest.raises(WeekError, match="빠뜨리거나"):
+        load_week(copy)

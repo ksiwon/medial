@@ -16,6 +16,7 @@ import ClosingScreen from './week/ClosingScreen';
 import { judgmentAt } from './week/judgment';
 import JudgmentPanel from './week/JudgmentPanel';
 import Logo from './ui/Logo';
+import DraftScreen from './week/DraftScreen';
 import { ChooseScreen, EvaluationsScreen, GeneratingScreen } from './week/ReviewScreens';
 import SceneView from './week/SceneView';
 import { eventOf, positionIn, versionOf } from './week/selectors';
@@ -28,9 +29,10 @@ import WeekScreen from './week/WeekScreen';
 // screen. The walk is one path through a week (week/):
 //
 //   소개 영상    - what Desimer is and who the visitor is;
+//   초안         - the AI's rules as the designer brought them, one set for the whole week;
 //   이번 주      - seven days, an event on some of them; the visitor picks one;
 //   사건 장면    - the event as it ran, a line at a time;
-//   주민 평가    - the residents in it, in their words, with the lines each rests on;
+//   주민의 피드백    - the residents in it, in their words, with the lines each rests on;
 //   수정 요청    - what the designer may change, with the resident words behind each (none for an emergency);
 //   반영된 결과  - the same event with the request in force, and what the residents made of it, beside what they
 //                 said before;
@@ -206,8 +208,9 @@ export default function SimulationApp() {
 
       {!paired && !w.pathStarted && !w.introStarted && <AttractScreen art={s.art} />}
       {(paired || w.pathStarted || w.introStarted) && !w.pathStarted && !w.introStarted && <IdleScreen art={s.art} />}
-      {!w.pathStarted && w.introStarted && <IntroScreen voices={s.voices} skipped={w.introSkipped} onFinish={w.enterWeek} />}
+      {!w.pathStarted && w.introStarted && <IntroScreen voices={s.voices} skipped={w.introSkipped} onFinish={w.enterDraft} />}
 
+      {w.pathStarted && w.step === 'draft' && <DraftScreen week={week} art={s.art} />}
       {showWeek && <WeekScreen week={week} art={s.art} now={null} paths={w.paths} read={w.read} />}
       {w.pathStarted && telling && scene && event && version && (
         <Telling>
@@ -215,7 +218,7 @@ export default function SimulationApp() {
           <SceneView week={week} scene={scene} line={w.lineIndex - before} art={s.art}
             seconds={(LINE_MS / 1000) * scene.lines.length} position={{ at: at.scene + 1, of: scenes.length }} voices={s.voices} />
           <JudgmentPanel week={week} version={version.number}
-            judgment={judgmentAt(event, version.chain, scenes, at.scene, w.lineIndex - before)} />
+            judgment={judgmentAt(event, version.chain, version.requests, scenes, at.scene, w.lineIndex - before)} />
         </Telling>
       )}
       {w.pathStarted && event && generating && <GeneratingScreen event={event} request={made} version={version?.number ?? 2} />}

@@ -7,7 +7,7 @@
 // about where the walk is. (The one-screen version of the exhibition lives on the
 // `single-screen` branch; this branch has the two screens only.)
 
-export type Phase = 'idle' | 'intro' | 'week' | 'telling' | 'evaluations' | 'choose' | 'closing';
+export type Phase = 'idle' | 'intro' | 'draft' | 'week' | 'telling' | 'evaluations' | 'choose' | 'closing';
 
 /** A press. `id` is only what the named press needs. */
 export type Command =

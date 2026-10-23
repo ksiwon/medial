@@ -1,6 +1,6 @@
 // 두 화면(모니터 + 태블릿)으로 한 사건의 버전 흐름을 걷고 단계마다 캡처한다.
 //   node scripts/capture_week.cjs [웹주소] [출력폴더] [사건id=E1] [요청id(쓰지 않음)] [close]
-// 사건 하나: 장면 → 주민 평가 → 요청 고르기 → 돌리기(생성 중) → 한 주(그 사건에 v2 칩) → 다시 열기(ver2 장면·평가).
+// 사건 하나: 장면 → 주민의 피드백 → 요청 고르기 → 돌리기(생성 중) → 한 주(그 사건에 v2 칩) → 다시 열기(ver2 장면·평가).
 // `close` 를 주면 이어서 다른 사건 넷을 한 번씩 고쳐 5번을 채우고 마무리 장면까지 찍는다.
 // 실행 중인 sim 서버(run-exhibition)가 필요하다. 기록은 읽기만 한다.
 const { chromium } = require('playwright');
@@ -13,7 +13,9 @@ const EVENT = process.argv[4] || 'E1';
 const CLOSE = process.argv[6] === 'close';
 fs.mkdirSync(OUT, { recursive: true });
 
-const WALL = { width: 2560, height: 1440 };
+// 모니터 크기는 MEDIAL_WALL=1440x900 처럼 바꿀 수 있다(노트북 창 점검).
+const [WALL_W, WALL_H] = (process.env.MEDIAL_WALL || '2560x1440').split('x').map(Number);
+const WALL = { width: WALL_W, height: WALL_H };
 const PAD = { width: 1180, height: 820 }; // iPad Air (4세대) 가로
 
 async function main() {
@@ -34,9 +36,9 @@ async function main() {
   };
   const titles = (await (await fetch(`${BASE}/api/sim/week`)).json()).events;
   const titleOf = (id) => titles.find((e) => e.id === id).title;
-  /** 장면을 끝까지 넘겨 "주민 평가 →" 가 보일 때까지. */
+  /** 장면을 끝까지 넘겨 "주민의 피드백 →" 가 보일 때까지. */
   const skipTelling = async () => {
-    for (let i = 0; i < 14 && !(await pad.getByRole('button', { name: /주민 평가 →/ }).isVisible().catch(() => false)); i += 1) {
+    for (let i = 0; i < 14 && !(await pad.getByRole('button', { name: /주민의 피드백 →/ }).isVisible().catch(() => false)); i += 1) {
       await pad.getByRole('button', { name: /넘기기/ }).tap({ timeout: 3000 }).catch(() => {});
       await settle(450);
     }
@@ -53,7 +55,10 @@ async function main() {
 
   await tap(pad, '시작하기'); await settle(2500);
   await shot(wall, '02-wall-intro');
-  await tap(pad, '건너뛰기'); await settle(1500);
+  await tap(pad, '건너뛰기');
+  await wall.getByLabel('AI 조율자 초안').waitFor({ state: 'visible', timeout: 40000 }); await settle(1800);
+  await shot(wall, '03a-wall-draft'); await shot(pad, '03a-pad-draft');
+  await tap(pad, /이번 주로 →/); await settle(1500);
   await shot(wall, '03-wall-week'); await shot(pad, '03-pad-week');
 
   // ---- ver1: 사건 하나를 연다 (태블릿에서 그 사건의 제목이 든 버튼)
@@ -63,7 +68,7 @@ async function main() {
   await shot(wall, '05-wall-scene-2');
   await skipTelling();
   await shot(wall, '06-wall-scene-end');
-  await tap(pad, /주민 평가 →/); await settle(1500);
+  await tap(pad, /주민의 피드백 →/); await settle(1500);
   await shot(wall, '07-wall-evaluations'); await shot(pad, '07-pad-evaluations');
 
   const emergency = !(await pad.getByRole('button', { name: /수정 요청 고르기 →/ }).isVisible().catch(() => false));
@@ -85,7 +90,7 @@ async function main() {
     await tap(pad, new RegExp(titleOf(EVENT))); await settle(2500);
     await shot(wall, '12-wall-v2-scene'); await shot(pad, '12-pad-v2-scene');
     await skipTelling();
-    await tap(pad, /주민 평가 →/); await settle(1500);
+    await tap(pad, /주민의 피드백 →/); await settle(1500);
     await shot(wall, '13-wall-v2-evaluations'); await shot(pad, '13-pad-v2-evaluations');
     // ver2 가 요청을 가졌으면(E1 · E4 · E5) 한 번 더 고른다: ver3.
     if (await pad.getByRole('button', { name: /수정 요청 고르기 →/ }).isVisible().catch(() => false)) {
@@ -99,7 +104,7 @@ async function main() {
       await tap(pad, new RegExp(titleOf(EVENT))); await settle(2500);
       await shot(wall, '13d-wall-v3-scene');
       await skipTelling();
-      await tap(pad, /주민 평가 →/); await settle(1500);
+      await tap(pad, /주민의 피드백 →/); await settle(1500);
       await shot(wall, '13e-wall-v3-evaluations'); await shot(pad, '13e-pad-v3-evaluations');
     }
     await tap(pad, /이번 주로 →/); await settle(1200);
@@ -113,7 +118,7 @@ async function main() {
     for (const more of ['E3', 'E4', 'E2', 'E5']) {
       await tap(pad, new RegExp(titleOf(more))); await settle(1500);
       await skipTelling();
-      await tap(pad, /주민 평가 →/); await tap(pad, /수정 요청 고르기 →/); await settle(800);
+      await tap(pad, /주민의 피드백 →/); await tap(pad, /수정 요청 고르기 →/); await settle(800);
       await pad.getByRole('button', { name: /^1/ }).tap(); await tap(pad, /^돌리기$/);
       await wall.getByLabel('이번 주').waitFor({ state: 'visible', timeout: 20000 });
       await settle(800);

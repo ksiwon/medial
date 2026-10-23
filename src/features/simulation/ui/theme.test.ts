@@ -25,6 +25,7 @@ const UNSCALED = ['../screens/IntroScreen.tsx', '../screens/IdleScreen.tsx', '..
 // A spacing that is not a step of the space scale and is used once: kept as it is, on purpose.
 const ONE_OFF_SPACING = [
   { file: '../week/ClosingScreen.tsx', text: 'px(96)', why: "the closing page's side margin, used once" },
+  { file: '../week/DraftScreen.tsx', text: 'px(96)', why: "the draft page's side margin: the closing's, on the same desk painting" },
 ];
 
 // A font size that is not a step of the type scale and is used once: kept as it is, on purpose.

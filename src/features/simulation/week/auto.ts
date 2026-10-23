@@ -9,6 +9,8 @@ import { useEffect, useRef, useState } from 'react';
 // visitor: the request page never goes on by itself, it only gives up to the closing when nobody is left.
 
 export const AUTO_S = {
+  /** The draft the designer brought, before the week. */
+  draft: 25,
   /** After a telling's last line has been read. */
   told: 8,
   /** The residents' words, as a list. */
@@ -50,8 +52,10 @@ export function autoOf(s: AutoState): Auto | null {
   if (!s.pathStarted) return null;
   const key = (what: string) => `${what}:${s.eventId ?? ''}:${s.lastPress}`;
   switch (s.step) {
+    case 'draft':
+      return { key: key('draft'), seconds: AUTO_S.draft, action: 'week', say: '이번 주로 넘어갑니다' };
     case 'telling':
-      return s.toldAll ? { key: key('told'), seconds: AUTO_S.told, action: 'toEvaluations', say: '주민 평가로 넘어갑니다' } : null;
+      return s.toldAll ? { key: key('told'), seconds: AUTO_S.told, action: 'toEvaluations', say: '주민의 피드백으로 넘어갑니다' } : null;
     case 'evaluations':
       return s.leaf
         ? { key: key('evaluations'), seconds: AUTO_S.evaluations, action: 'week', say: '이번 주로 돌아갑니다' }

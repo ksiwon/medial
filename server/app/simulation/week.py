@@ -13,6 +13,11 @@ The rules it keeps (AGENTS.md):
   resident was in; the kind is the simulated resident's reading of one thing, never a verdict on the whole;
 * an evaluation says it is simulated and carries the disclaimer;
 * a request says honestly how well the residents' own words support it (``basis``) - it is never dressed up;
+* a resident's reading says which part of their interview it rests on (``grounding``), or that it rests on none;
+* every request says how it moved each resident's feedback (``change``: resolved / remaining / unclear / new),
+  by pointing at the claims themselves, so the words are never written twice;
+* the AI ran every event on one draft: a rule has one value before anything is chosen, whichever event it is in
+  (``draft``);
 * an event marked ``noChoice`` has no request cards: some moments are read, not chosen;
 * nothing in the document is a score.
 """
@@ -30,6 +35,10 @@ DAYS = ["월", "화", "수", "목", "금", "토", "일"]
 #: 'direct' = a resident said it, 'weak' = said around it, 'none' = nobody did (such a request is not shown).
 VERDICTS = {"direct", "weak"}
 KINDS = {"good", "bad", "neutral", "unknown", "wish"}
+#: The parts of an interviewed resident's persona a reading may rest on (scripts/gen_week_evaluations.py FIELDS).
+GROUNDS = {"하루", "건강", "의료 행동", "디지털", "AI 태도", "관계", "연기 지침"}
+#: What a change sorts: the uncomfortable and the wished-for.
+TROUBLE = {"bad", "wish"}
 
 
 class WeekError(ValueError):
@@ -79,14 +88,47 @@ def _heard(actor: str, scene_keys: list[str], dialogue: dict[str, Any]) -> list[
 
 
 def _evaluation(ev: dict[str, Any], names: dict[str, str]) -> dict[str, Any]:
+    ground = ev.get("grounding")
+    if ground is None or ground["field"] not in GROUNDS | {""} or bool(ground["field"]) != bool(ground["note"]):
+        raise WeekError("%s.%s %s 의 평가에 인터뷰 근거 표기가 없거나 맞지 않습니다" % (ev["event"], ev["variant"], ev["actor"]))
     return {
         "actor": ev["actor"],
         "name": names.get(ev["actor"], ev["actor"]),
         "source": "simulated",
         "paragraph": ev["paragraph"],
         "claims": [{"kind": c["kind"], "text": c["text"], "citedLines": c["citedLines"]} for c in ev["claims"]],
+        # Only the twelve residents (P1-P12) were interviewed; the clinic head is a role, with no interview to rest on.
+        "grounding": {"field": ground["field"] or None, "note": ground["note"] or None, "interviewed": ev["actor"].startswith("P")},
         "disclaimer": ev["disclaimer"],
     }
+
+
+def _change(key: str, recorded: dict[str, Any] | None, before: list[dict[str, Any]], after: list[dict[str, Any]],
+            names: dict[str, str]) -> list[dict[str, Any]]:
+    """How one request moved each resident's feedback, in the claims' own words. Every trouble of the version it was
+    chosen on is resolved, remaining or unclear exactly once; a new one is a trouble of the version it made."""
+    if recorded is None:
+        raise WeekError("%s 의 피드백 변화가 없습니다(gen_week_evaluations.py compare)" % key)
+    was = {e["actor"]: e for e in before}
+    now = {e["actor"]: e for e in after}
+    if set(recorded) != set(was) | set(now):
+        raise WeekError("%s 의 피드백 변화가 다룬 사람이 두 버전의 사람과 다릅니다" % key)
+    out = []
+    for actor, c in recorded.items():
+        presence = "both" if actor in was and actor in now else "before" if actor in was else "after"
+        if c["presence"] != presence:
+            raise WeekError("%s %s 의 피드백 변화가 등장 여부를 잘못 적었습니다" % (key, actor))
+        troubles = [i for i, x in enumerate(was[actor]["claims"]) if x["kind"] in TROUBLE] if actor in was else []
+        fresh = [i for i, x in enumerate(now[actor]["claims"]) if x["kind"] in TROUBLE] if actor in now else []
+        if sorted(c["resolved"] + c["remaining"] + c["unclear"]) != troubles or any(i not in fresh for i in c["new"]):
+            raise WeekError("%s %s 의 피드백 변화가 불편을 빠뜨리거나 두 번 셌습니다" % (key, actor))
+        old = lambda ids: [was[actor]["claims"][i]["text"] for i in ids]  # noqa: E731
+        out.append({
+            "actor": actor, "name": names.get(actor, actor), "presence": presence,
+            "resolved": old(c["resolved"]), "remaining": old(c["remaining"]), "unclear": old(c["unclear"]),
+            "new": [now[actor]["claims"][i]["text"] for i in c["new"]],
+        })
+    return out
 
 
 def _rule_now(event_id: str, rule_type: str, values: dict[str, Any]) -> dict[str, Any]:
@@ -123,6 +165,7 @@ def load_week(weeks_dir: Path = WEEK_DIR) -> dict[str, Any]:
     names = _names(briefs)
     made = evaluations["evaluations"]
     links = evaluations.get("links", {})
+    changes = evaluations.get("changes", {})
 
     def evals_of(event_id: str, variant: str, scene_keys: list[str]) -> list[dict[str, Any]]:
         out = []
@@ -145,7 +188,8 @@ def load_week(weeks_dir: Path = WEEK_DIR) -> dict[str, Any]:
             out.append(_evaluation(ev, names))
         return out
 
-    def build_requests(eid: str, offered: dict[str, Any], path: list[str], running: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    def build_requests(eid: str, offered: dict[str, Any], path: list[str], running: dict[str, dict[str, Any]],
+                       evaluated: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """The requests offered on one version, each with the version it makes (its scene and the residents' words)
         and, in turn, the requests that version offers. ``running`` is how the AI runs on this version, by rule type:
         a request's ``before`` has to say exactly that, or the judgment panel would say two things."""
@@ -164,6 +208,7 @@ def load_week(weeks_dir: Path = WEEK_DIR) -> dict[str, Any]:
             now = dict(running)
             for rule in req["rules"]:
                 now[rule["type"]] = rule["after"]
+            after_evals = evals_of(eid, name, [key])
             out.append({
                 "id": rid,
                 "label": req["label"],
@@ -174,13 +219,16 @@ def load_week(weeks_dir: Path = WEEK_DIR) -> dict[str, Any]:
                           "kind": link.get("kind") or None},
                 "after": {
                     "scene": _scene(key, req["scene"], dialogue),
-                    "evaluations": evals_of(eid, name, [key]),
-                    "requests": build_requests(eid, req.get("requests", {}), here, now),
+                    "evaluations": after_evals,
+                    "change": _change(key, changes.get(key), evaluated, after_evals, names),
+                    "requests": build_requests(eid, req.get("requests", {}), here, now, after_evals),
                 },
             })
         return out
 
     events = []
+    #: The draft the designer brought: each rule's value before anything was chosen, the same in every event.
+    draft: dict[str, tuple[str, dict[str, Any]]] = {}
     for ev in briefs["events"]:
         eid = ev["id"]
         before_keys = ["%s.%s" % (eid, k) for k in ev["scenes"]]
@@ -195,7 +243,12 @@ def load_week(weeks_dir: Path = WEEK_DIR) -> dict[str, Any]:
             seen = baseline.setdefault(rule["type"], rule["before"])
             if seen != rule["before"]:
                 raise WeekError("%s 의 요청들이 %s 규칙의 수정 전 값을 다르게 말합니다" % (eid, rule["type"]))
-        requests = build_requests(eid, ev["requests"], [], dict(baseline))
+        before_evals = evals_of(eid, "before", before_keys)
+        requests = build_requests(eid, ev["requests"], [], dict(baseline), before_evals)
+        for rule_type, values in baseline.items():
+            seen = draft.setdefault(rule_type, (eid, values))
+            if seen[1] != values:
+                raise WeekError("초안이 한 벌이 아닙니다: %s 규칙이 %s 와 %s 에서 다릅니다" % (rule_type, seen[0], eid))
         if ev.get("noChoice") and requests:
             raise WeekError("%s 는 선택지 없는 사건인데 요청이 있습니다" % eid)
         events.append({
@@ -208,7 +261,7 @@ def load_week(weeks_dir: Path = WEEK_DIR) -> dict[str, Any]:
             "rules": [_rule_now(eid, t, v) for t, v in baseline.items()],
             "before": {
                 "scenes": [_scene(k, ev["scenes"][k.split(".", 1)[1]], dialogue) for k in before_keys],
-                "evaluations": evals_of(eid, "before", before_keys),
+                "evaluations": before_evals,
             },
             "requests": requests,
         })
@@ -227,4 +280,6 @@ def load_week(weeks_dir: Path = WEEK_DIR) -> dict[str, Any]:
         for other in (ev["precedes"],):
             if other and other in by_id and placed.index(ev["id"]) > placed.index(other):
                 raise WeekError("%s 는 %s 보다 앞선 날에 놓여야 합니다" % (ev["id"], other))
-    return {"days": days, "people": names, "events": events, "disclaimer": DISCLAIMER}
+    return {"days": days, "people": names, "events": events,
+            "draft": [_rule_now("draft", t, draft[t][1]) for t in rules.RULES if t in draft],
+            "disclaimer": DISCLAIMER}

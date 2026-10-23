@@ -3,6 +3,7 @@
     python scripts/gen_week_evaluations.py make                  # every resident in every scene variant
     python scripts/gen_week_evaluations.py make --only E1 E4.B   # an event, or one variant
     python scripts/gen_week_evaluations.py link                  # which before-evaluation each request rests on
+    python scripts/gen_week_evaluations.py compare               # how each request moved each resident's feedback
     python scripts/gen_week_evaluations.py read                  # evaluations.json -> evaluations.html, for the researcher
 
 One evaluation is one resident's paragraph about one *variant* of one event: the event as it ran (the *before*
@@ -15,13 +16,19 @@ real resident's opinion.
 
 What makes it an evaluation and not a summary is the evidence rule (AGENTS.md): a resident may cite only the lines
 they were in the scene for and heard. ``experienced`` is computed here from the dialogue - never by the model - and
-the check refuses any citation outside it. The after-scene evaluations are read as "this decision, as it landed";
-the before and after are not compared line by line, because who is in the scene changes with the request.
+the check refuses any citation outside it. The after-scene evaluations are read as "this decision, as it landed",
+written without the earlier version (a resident does not remember it). A resident's reading also rests on their
+interview: the persona summary (``PERSONAS``, outside the repository) goes in, and the part of it the reaction rests
+on comes out as one line (``grounding``), so a reaction the interview does not support shows as such.
 
 ``link`` is the other half of the chain *before evaluation -> request -> after evaluation*. The evaluations are written
 without knowing the requests (so they are not tuned to them); ``link`` then asks, per request, which before-evaluation
 it rests on and quotes the passage - or says it rests on none. A request with no basis is not hidden: it is reported,
 and the event's before scenes are what get fixed (docs/research/30 section 11), never the evaluation.
+
+``compare`` is the last link, *request -> how the feedback moved*: per request and per resident in both versions,
+which of their troubles the request resolved, which remained, which cannot be told, and which are new. It is a
+reading of two feedbacks, said on screen as one; someone in only one version is not compared, only shown as gone or new.
 
 Writes only files. The record (sim.sqlite3) is the later build step, after the researcher has read the evaluations.
 """
@@ -29,6 +36,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -45,14 +53,22 @@ BRIEFS = WEEK / "briefs.json"
 DIALOGUE = WEEK / "dialogue.json"
 OUT = WEEK / "evaluations.json"
 HTML = WEEK / "evaluations.html"
+#: The twelve residents' personas, anonymised, as the researcher wrote them from the interviews. Outside the repository
+#: (AGENTS.md: no source material in it): read here when evaluations are written, and only a resident's one-line
+#: grounding - which part of their interview a reaction rests on, in the model's words - is kept.
+PERSONAS = Path(os.environ.get("MEDIAL_PERSONAS") or ROOT.parents[1] / "5학년" / "AEL" / "URP" / "참여자 정보" / "은점마을_페르소나_익명.json")
+#: The parts of a persona a reaction may rest on. Its verbatim words (대표_발언) are never sent: a summary is enough.
+FIELDS = ["하루", "건강", "의료 행동", "디지털", "AI 태도", "관계", "연기 지침"]
 RETRIES = 3
 DISCLAIMER = "시뮬레이션 산출물이다. 실제 주민의 발언·만족도·임상 결과가 아니다."
 
-SYSTEM = """당신은 경남 남해군 은점마을의 한 주민이다. 방금 겪은 일을 되돌아보며, 안부를 살피고 이웃을 이어 주는 AI에 대한 생각을 짧게 말한다. 이것은 전시에서 '시뮬레이션 주민의 평가'로 읽힌다. 실제 주민의 의견이 아니다.
+SYSTEM = """당신은 경남 남해군 은점마을의 한 주민이다. 방금 겪은 일을 되돌아보며, 안부를 살피고 이웃을 이어 주는 AI에 대한 생각을 짧게 말한다. 이것은 전시에서 '시뮬레이션 주민의 피드백'으로 읽힌다. 실제 주민의 의견이 아니다.
 
 쓰는 법
 - 평가 기록의 문체로 쓴다. 문장은 모두 '~임', '~함', '~음', '~됨' 같은 명사형으로 끝낸다('~다', '~요', '~제', '~네'로 끝내지 않는다). 사투리와 구어체 말투를 쓰지 않는다. 1인칭 시점(내가 겪은 일)은 유지하되 '나는' 같은 주어는 꼭 필요할 때만 쓴다. 한 단락(60~120자)으로 쓴다. 번역투를 쓰지 않는다.
 - 인물 설명은 무엇을 겪었고 어떤 처지인지 알려 주는 용도이다. 그 사람의 말투를 흉내 내지 않는다.
+- 인터뷰 요약은 이 사람이 실제 인터뷰에서 보인 일과·건강·AI에 대한 태도와 우려다. 겪은 일을 이 사람이라면 어떻게 받아들일지는 인터뷰 요약에서 나와야 한다. 인터뷰 요약에 없는 성격·가치·걱정을 지어내지 않는다. 인터뷰 요약과 겪은 일이 어긋나면 겪은 대로 말하되 억지로 맞추지 않는다.
+- 끝으로 grounding을 쓴다: 이 반응이 가장 크게 기대는 인터뷰 요약의 항목 이름(field)과, 그 항목에서 이 반응과 이어지는 내용을 한 문장으로 다시 쓴 것(note, 15~60자, '~함'·'~임' 체, 인터뷰의 말을 그대로 옮기지 않는다). 기대는 항목이 없거나 인터뷰 요약이 없으면 field와 note를 모두 빈 문자열로 둔다.
 - 겪은 줄(ㄱ~) 안에서만 말한다. 자기가 없던 장면, 듣지 못한 말, 대화에 없는 사실(새 병명·시각·이름)은 말하지 않는다.
 - 단락 다음에 claims를 쓴다. claims는 겪은 일 하나하나에 대한 짧은 말(한 문장, 15~60자)이고, 각각 kind를 붙인다.
   good: 도움이 됐거나 안심이 된 점 / bad: 불편하거나 걱정되거나 아쉬운 점 / neutral: 좋다 나쁘다 하기 어려운 점 / unknown: 겪은 것만으로는 알 수 없는 점 / wish: 이렇게 고쳐 줬으면 하는 점.
@@ -63,7 +79,7 @@ SYSTEM = """당신은 경남 남해군 은점마을의 한 주민이다. 방금 
 - 규칙이 바뀐 뒤의 일이면 바뀐 동작이 어땠는지 겪은 대로 말한다. 이전 일은 기억하는 것처럼 말하지 않는다.
 - 시스템 용어('규칙', '한도', '공개 범위')를 쓰지 않고 일상말로 옮긴다.
 
-JSON으로 paragraph와 claims(kind, text, citedLines)만 돌려준다."""
+JSON으로 paragraph, claims(kind, text, citedLines), grounding(field, note)만 돌려준다."""
 
 # A sentence ending in one of these is spoken style (~다 ~요 ~제 ~네 ...), not the record style (~함 ~임 ~음).
 ENDINGS_NOT_ALLOWED = "다요죠제네어아지라나군걸데까"
@@ -79,14 +95,36 @@ SCHEMA = {
             "properties": {"kind": {"type": "string", "enum": KINDS}, "text": {"type": "string"},
                            "citedLines": {"type": "array", "items": {"type": "integer"}}},
             "required": ["kind", "text", "citedLines"]}},
+        "grounding": {"type": "object", "additionalProperties": False,
+                      "properties": {"field": {"type": "string", "enum": FIELDS + [""]}, "note": {"type": "string"}},
+                      "required": ["field", "note"]},
     },
-    "required": ["paragraph", "claims"],
+    "required": ["paragraph", "claims", "grounding"],
 }
 
 
 def load():
     return (json.loads(BRIEFS.read_text(encoding="utf-8")),
             json.loads(DIALOGUE.read_text(encoding="utf-8"))["scenes"])
+
+
+def interviews() -> dict[str, dict]:
+    """Each interviewed resident's persona summary, by P number - without their verbatim words. A role nobody was
+    interviewed as (the clinic head) has none, and says so."""
+    if not PERSONAS.exists():
+        raise SystemExit("페르소나 파일이 없습니다: %s (MEDIAL_PERSONAS 로 위치를 알려 주세요)" % PERSONAS)
+    out: dict[str, dict] = {}
+    for p in json.loads(PERSONAS.read_text(encoding="utf-8"))["페르소나"]:
+        summary = {"나이": p.get("나이"), "직업": p.get("직업")}
+        for f in FIELDS:
+            v = p.get(f)
+            if f == "건강" and isinstance(v, dict):
+                v = v.get("요약")
+            if f == "디지털" and isinstance(v, dict):
+                v = {k: v.get(k) for k in ("수준", "입력 선호")}
+            summary[f] = v
+        out[p["id"]] = summary
+    return out
 
 
 def variants_of(ev: dict) -> dict[str, list[str]]:
@@ -124,12 +162,18 @@ def residents_of(keys: list[str], dialogue: dict) -> list[str]:
     return seen
 
 
-def problems(paragraph: str, claims: list[dict], allowed: set[int]) -> list[str]:
+def problems(paragraph: str, claims: list[dict], allowed: set[int], grounding: dict, interviewed: bool) -> list[str]:
     bad: list[str] = []
+    if bool(grounding["field"]) != bool(grounding["note"].strip()):
+        bad.append("grounding의 field와 note는 함께 있거나 함께 비어야 함")
+    if grounding["field"] and not interviewed:
+        bad.append("인터뷰 요약이 없는 사람인데 grounding을 씀")
+    if grounding["note"] and not 10 <= len(grounding["note"]) <= 70:
+        bad.append("grounding note가 %d자(15~60자 안팎)" % len(grounding["note"]))
     n = len(paragraph)
     if not 40 <= n <= 150:
         bad.append("단락이 %d자(60~120자 안팎)" % n)
-    for sentence in [paragraph] + [c["text"] for c in claims]:
+    for sentence in [paragraph] + [c["text"] for c in claims] + ([grounding["note"]] if grounding["note"] else []):
         for part in re.split(r"(?<=[.!?])\s+", sentence.strip()):
             if part and part.rstrip(".!? ")[-1] in ENDINGS_NOT_ALLOWED:
                 bad.append("명사형(~함·~임)으로 끝나지 않음: %s" % part[-14:])
@@ -158,6 +202,7 @@ def make(only: list[str] | None) -> None:
     print("model:", client.id)
 
     briefs, dialogue = load()
+    people = interviews()
     made = json.loads(OUT.read_text(encoding="utf-8"))["evaluations"] if OUT.exists() else {}
     for ev in briefs["events"]:
         for vid, keys in variants_of(ev).items():
@@ -170,6 +215,7 @@ def make(only: list[str] | None) -> None:
                 allowed = {x["n"] for x in lines}
                 payload = {
                     "인물(처지만 참고하고 말투는 따르지 않는다)": briefs["voices"][actor],
+                    "인터뷰 요약": people.get(actor) or "없음(인터뷰하지 않은 역할)",
                     "겪은 줄(번호: 말한 사람: 말)": ["%d: %s: %s" % (x["n"], x["speaker"], x["text"]) for x in lines],
                     "사건": ev["title"],
                     "상황": ("AI의 규칙이 바뀐 뒤의 일" if request else "AI가 평소대로 한 일"),
@@ -181,7 +227,7 @@ def make(only: list[str] | None) -> None:
                     if feedback:
                         payload["지난번 시도에서 고칠 것"] = feedback
                     r = client.ask(SYSTEM, payload, SCHEMA, "resident_evaluation", 1500)
-                    bad = problems(r["paragraph"], r["claims"], allowed)
+                    bad = problems(r["paragraph"], r["claims"], allowed, r["grounding"], actor in people)
                     if best is None or len(bad) <= len(best[1]):
                         best = (r, bad)
                     if not bad:
@@ -191,11 +237,12 @@ def make(only: list[str] | None) -> None:
                 r, bad = best
                 made["%s.%s" % (tag, actor)] = {
                     "event": ev["id"], "variant": vid, "actor": actor, "source": "simulated",
-                    "experiencedLines": lines, "paragraph": r["paragraph"], "claims": r["claims"],
+                    "experiencedLines": lines, "paragraph": r["paragraph"], "claims": r["claims"], "grounding": r["grounding"],
                     "problems": bad, "disclaimer": DISCLAIMER,
                 }
                 print("== %s %s %s" % (tag, actor, "통과" if not bad else bad))
                 print("   ", r["paragraph"])
+                print("    인터뷰 근거:", r["grounding"]["field"] or "-", r["grounding"]["note"])
                 for c in r["claims"]:
                     print("    [%s] %s %s" % (c["kind"], c["text"], c["citedLines"]))
                 # Keep the links: they belong to the evaluations written before, and `make` only rewrites some.
@@ -258,6 +305,88 @@ def link(only: list[str] | None) -> None:
     OUT.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
+COMPARE_SYSTEM = """당신은 서비스 디자이너의 조수다. 같은 주민이 같은 사건을 두 버전으로 겪고 남긴 피드백 두 개를 읽는다. 앞 버전에서 요청 하나를 골라 고친 것이 뒤 버전이다. 주민은 앞 버전을 기억하지 못하므로, 뒤 피드백은 앞 버전과 비교하는 말을 하지 않는다.
+
+할 일
+- 앞 피드백의 불편·바람(번호가 붙은 것) 하나하나를 셋 중 하나로 나눈다.
+  resolved: 뒤 피드백이 같은 일에 대해 좋았다고 하거나, 그 불편이 생길 자리에서 다른 일이 있었다고 말한다.
+  remaining: 뒤 피드백에 같은 불편이 다시 나온다.
+  unclear: 뒤 피드백이 그 일에 대해 아무 말도 하지 않는다.
+- 뒤 피드백의 불편·바람(번호가 붙은 것) 가운데 앞 피드백에 없던 불편은 new에 넣는다. 앞의 것과 같은 불편이면 넣지 않는다.
+- 피드백에 적힌 말만 근거로 삼는다. 확신이 없으면 unclear다. 고친 것이 좋아 보이게 읽지 않는다.
+
+JSON으로 resolved, remaining, unclear(앞 번호들), new(뒤 번호들)만 돌려준다."""
+
+COMPARE_SCHEMA = {
+    "type": "object", "additionalProperties": False,
+    "properties": {k: {"type": "array", "items": {"type": "integer"}} for k in ("resolved", "remaining", "unclear", "new")},
+    "required": ["resolved", "remaining", "unclear", "new"],
+}
+
+#: What a comparison sorts: the uncomfortable and the wished-for. What was good is not "resolved" or "new".
+TROUBLE = ("bad", "wish")
+
+
+def compare(only: list[str] | None) -> None:
+    """How each resident's feedback moved from the version a request was chosen on to the version it made: which of
+    their troubles were resolved, which remained, which cannot be told, and which are new. Stored as claim indices
+    (the words stay in the evaluations), per request, under ``changes``. Someone only in one of the two versions is
+    not asked about: what they had to say is all gone or all new, and the screen says which."""
+    client = Model()
+    briefs, _ = load()
+    data = json.loads(OUT.read_text(encoding="utf-8"))
+    made = data["evaluations"]
+    changes = data.get("changes", {})
+    for ev in briefs["events"]:
+        for rid, _ in walk_requests(ev["requests"]):
+            key = "%s.%s" % (ev["id"], rid)
+            if only and key not in only and ev["id"] not in only:
+                continue
+            parent = rid.rsplit(".", 1)[0] if "." in rid else "before"
+            before = {v["actor"]: v for v in made.values() if v["event"] == ev["id"] and v["variant"] == parent}
+            after = {v["actor"]: v for v in made.values() if v["event"] == ev["id"] and v["variant"] == rid}
+            out: dict[str, dict] = {}
+            for actor in list(before) + [a for a in after if a not in before]:
+                was = [i for i, c in enumerate(before[actor]["claims"]) if c["kind"] in TROUBLE] if actor in before else []
+                now = [i for i, c in enumerate(after[actor]["claims"]) if c["kind"] in TROUBLE] if actor in after else []
+                if actor not in after:
+                    out[actor] = {"presence": "before", "resolved": [], "remaining": [], "unclear": was, "new": []}
+                    continue
+                if actor not in before:
+                    out[actor] = {"presence": "after", "resolved": [], "remaining": [], "unclear": [], "new": now}
+                    continue
+                payload = {
+                    "앞 피드백": before[actor]["paragraph"],
+                    "앞의 불편·바람(번호: 말)": ["%d: %s" % (i, before[actor]["claims"][i]["text"]) for i in was],
+                    "뒤 피드백": after[actor]["paragraph"],
+                    "뒤의 불편·바람(번호: 말)": ["%d: %s" % (i, after[actor]["claims"][i]["text"]) for i in now],
+                }
+                res, feedback = None, None
+                for attempt in range(RETRIES + 1):
+                    if feedback:
+                        payload["지난번 시도에서 고칠 것"] = feedback
+                    r = client.ask(COMPARE_SYSTEM, payload, COMPARE_SCHEMA, "feedback_change", 600)
+                    sorted_was = r["resolved"] + r["remaining"] + r["unclear"]
+                    bad = []
+                    if sorted(sorted_was) != sorted(was):
+                        bad.append("앞 번호 %s 가 resolved/remaining/unclear에 한 번씩 들어가야 함(받은 것 %s)" % (was, sorted_was))
+                    if any(j not in now for j in r["new"]) or len(set(r["new"])) != len(r["new"]):
+                        bad.append("new는 뒤 번호 %s 안에서 한 번씩" % now)
+                    if not bad:
+                        res = r
+                        break
+                    feedback = bad
+                    print("  [%s %s] 다시 (%d): %s" % (key, actor, attempt + 1, bad))
+                if res is None:
+                    raise SystemExit("%s %s 의 비교가 %d번 모두 맞지 않았습니다" % (key, actor, RETRIES + 1))
+                out[actor] = {"presence": "both", **{k: res[k] for k in ("resolved", "remaining", "unclear", "new")}}
+            changes[key] = out
+            for actor, c in out.items():
+                print("== %s %s %s 풀림%s 남음%s 모름%s 새%s" % (key, actor, c["presence"], c["resolved"], c["remaining"], c["unclear"], c["new"]))
+    data["changes"] = changes
+    OUT.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
 def read() -> None:
     """evaluations.json -> evaluations.html: the same page the dialogue is read on, one card per resident."""
     from html import escape as e
@@ -310,8 +439,11 @@ def main() -> None:
     sub.add_parser("read")
     lk = sub.add_parser("link")
     lk.add_argument("--only", nargs="*")
+    cp = sub.add_parser("compare")
+    cp.add_argument("--only", nargs="*")
     args = ap.parse_args()
-    {"read": lambda: read(), "make": lambda: make(args.only), "link": lambda: link(args.only)}[args.cmd]()
+    {"read": lambda: read(), "make": lambda: make(args.only), "link": lambda: link(args.only),
+     "compare": lambda: compare(args.only)}[args.cmd]()
 
 
 if __name__ == "__main__":

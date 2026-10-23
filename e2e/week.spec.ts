@@ -36,11 +36,11 @@ const noHorizontalScroll = (page: Page) => page.evaluate(() => document.document
 async function change({ wall, pad }: Screens, title: RegExp) {
   await tap(pad, title);
   await expect(pad.getByRole('button', { name: /넘기기/ })).toBeVisible();
-  for (let i = 0; i < 12 && !(await pad.getByRole('button', { name: /주민 평가 →/ }).isVisible().catch(() => false)); i += 1) {
+  for (let i = 0; i < 12 && !(await pad.getByRole('button', { name: /주민의 피드백 →/ }).isVisible().catch(() => false)); i += 1) {
     await pad.getByRole('button', { name: /넘기기/ }).tap({ timeout: 3000 }).catch(() => {});
     await wall.waitForTimeout(400);
   }
-  await tap(pad, /주민 평가 →/);
+  await tap(pad, /주민의 피드백 →/);
   await tap(pad, /수정 요청 고르기 →/);
   await pad.getByRole('button', { name: /^1/ }).tap();
   await tap(pad, /^돌리기$/);
@@ -51,8 +51,10 @@ async function intoTheWeek({ wall, pad }: Screens) {
   await tap(pad, '시작하기');
   await expect(pad.getByRole('button', { name: /건너뛰기/ })).toBeVisible();
   await tap(pad, /건너뛰기/);
-  // The film's last scene ("now you are the service designer") plays out before the week.
-  await expect(wall.getByLabel('이번 주')).toBeVisible({ timeout: 40_000 });
+  // The film's last scene ("now you are the service designer") plays out, then the draft the designer brought.
+  await expect(wall.getByLabel('AI 조율자 초안')).toBeVisible({ timeout: 40_000 });
+  await tap(pad, /이번 주로 →/);
+  await expect(wall.getByLabel('이번 주')).toBeVisible({ timeout: 20_000 });
   await expect(pad.getByLabel('조용한 날').first()).toBeVisible();
   // 처음으로는 묻는 창부터: 계속 보기를 누르면 그대로다.
   await tap(pad, /↺ 처음으로/);
@@ -83,19 +85,19 @@ test('한 주를 걷는다: 사건 → 장면 → 평가 → 요청 → 새 버�
   await expect(wall.getByLabel('AI의 판단')).toBeVisible();
   expect(await noHorizontalScroll(wall)).toBe(true);
   // the telling goes on by itself too; whichever way, it ends at the way on to the evaluations
-  await expect(pad.getByRole('button', { name: /주민 평가 →/ })).toBeVisible({ timeout: 60_000 });
-  await tap(pad, /주민 평가 →/);
+  await expect(pad.getByRole('button', { name: /주민의 피드백 →/ })).toBeVisible({ timeout: 60_000 });
+  await tap(pad, /주민의 피드백 →/);
   await expect(wall.getByLabel('주민이 겪은 일에 대해 한 말').first()).toBeVisible();
   await expect(wall.getByLabel('이 말이 근거로 든 대사')).toHaveCount(0);
-  await expect(wall.getByText('시뮬레이션 주민의 평가').first()).toBeVisible();
+  await expect(wall.getByText('시뮬레이션 주민의 피드백').first()).toBeVisible();
 
   // the requests: each says what it hopes for and what it costs
   await tap(pad, /수정 요청 고르기 →/);
   await expect(wall.getByText('바라는 것').first()).toBeVisible();
   await expect(wall.getByText('따를 부담').first()).toBeVisible();
   // the way back is the residents' words, and from there on to the requests again
-  await tap(pad, /← 주민 평가/);
-  await expect(wall.getByLabel('주민 평가')).toBeVisible();
+  await tap(pad, /← 주민의 피드백/);
+  await expect(wall.getByLabel('주민의 피드백')).toBeVisible();
   await tap(pad, /수정 요청 고르기 →/);
   await expect(wall.getByText('바라는 것').first()).toBeVisible();
   expect(await noHorizontalScroll(wall)).toBe(true);
@@ -115,8 +117,8 @@ test('한 주를 걷는다: 사건 → 장면 → 평가 → 요청 → 새 버�
   await tap(pad, /연락이 안 되어 찾아보기/);
   await expect(pad.getByText(/^ver2 ·/)).toBeVisible();
   await tap(pad, /넘기기/);
-  await expect(pad.getByRole('button', { name: /주민 평가 →/ })).toBeVisible({ timeout: 60_000 });
-  await tap(pad, /주민 평가 →/);
+  await expect(pad.getByRole('button', { name: /주민의 피드백 →/ })).toBeVisible({ timeout: 60_000 });
+  await tap(pad, /주민의 피드백 →/);
   await expect(wall.getByText(/ver1에서 바뀐 규칙/)).toBeVisible();
   await tap(pad, /수정 요청 고르기 →/);
   await pad.getByRole('button', { name: /^1/ }).tap();
@@ -127,8 +129,8 @@ test('한 주를 걷는다: 사건 → 장면 → 평가 → 요청 → 새 버�
   await tap(pad, /연락이 안 되어 찾아보기/);
   await expect(pad.getByText(/^ver3 ·/)).toBeVisible();
   await tap(pad, /넘기기/);
-  await expect(pad.getByRole('button', { name: /주민 평가 →/ })).toBeVisible({ timeout: 60_000 });
-  await tap(pad, /주민 평가 →/);
+  await expect(pad.getByRole('button', { name: /주민의 피드백 →/ })).toBeVisible({ timeout: 60_000 });
+  await tap(pad, /주민의 피드백 →/);
   await expect(wall.getByText('이 사건은 여기까지입니다. 다른 사건을 개선해 보세요.')).toBeVisible();
   await expect(pad.getByRole('button', { name: /수정 요청 고르기 →/ })).toHaveCount(0);
   await tap(pad, /이번 주로 →/);
@@ -163,8 +165,8 @@ test('응급 사건은 고르지 않는다: 요청 없이 주민이 겪은 일�
   await expect(pad.getByText('응급', { exact: true })).toBeVisible();
 
   await tap(pad, /119 구급 상황/);
-  await expect(pad.getByRole('button', { name: /주민 평가 →/ })).toBeVisible({ timeout: 90_000 });
-  await tap(pad, /주민 평가 →/);
+  await expect(pad.getByRole('button', { name: /주민의 피드백 →/ })).toBeVisible({ timeout: 90_000 });
+  await tap(pad, /주민의 피드백 →/);
   // nothing to choose: only the way back to the week is on the tablet, and the wall says why
   await expect(pad.getByRole('button', { name: /수정 요청 고르기 →/ })).toHaveCount(0);
   await expect(wall.getByText(/일어난 일을 읽습니다/)).toBeVisible();

@@ -32,6 +32,16 @@ export function Watching({ press }: { press: Press }) {
   );
 }
 
+/** The draft the designer brought is read on the wall; the tablet only goes on. */
+export function Draft({ press }: { press: Press }) {
+  return (
+    <Stage>
+      <h1>들고 온 초안을 큰 화면에서 읽어 보세요</h1>
+      <Button $tone="primary" $big onClick={() => press({ name: 'week' })}>이번 주로 →</Button>
+    </Stage>
+  );
+}
+
 // ---- the week ----------------------------------------------------------------
 
 /** The week, down the page: a day, and the events on it. The whole row of an event is the target. A day with
@@ -142,7 +152,7 @@ export function Telling({ s, press }: { s: StageState; press: Press }) {
       <Where>ver{s.version}{s.scene ? ` · ${s.scene.time} · 장면 ${s.scene.index + 1} / ${s.scene.of}` : ''}</Where>
       {s.toldAll ? (
         <Pads style={{ gridTemplateColumns: '1fr' }}>
-          <Next $big onClick={() => press({ name: 'toEvaluations' })}>주민 평가 →</Next>
+          <Next $big onClick={() => press({ name: 'toEvaluations' })}>주민의 피드백 →</Next>
         </Pads>
       ) : (
         <Pads>
@@ -208,7 +218,7 @@ export function Choose({ s, press }: { s: StageState; press: Press }) {
         ))}
       </Grid>
       <Row>
-        <Button $tone="quiet" onClick={() => press({ name: 'toEvaluations' })} disabled={sent !== null}>← 주민 평가</Button>
+        <Button $tone="quiet" onClick={() => press({ name: 'toEvaluations' })} disabled={sent !== null}>← 주민의 피드백</Button>
         <Spacer />
       </Row>
       {picked && sent === null && (

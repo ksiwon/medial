@@ -34,7 +34,26 @@ export interface Evaluation {
   paragraph: string;
   /** What they made of it, one thing at a time. A resident may have only good claims, only bad ones, or a mix. */
   claims: Claim[];
+  /** Which part of their interview this reading rests on: the persona field and the model's one line about it.
+   *  Both null when it rests on none - or the resident is a role nobody was interviewed as. */
+  grounding: { field: string | null; note: string | null; interviewed: boolean };
   disclaimer: string;
+}
+
+/**
+ * How one request moved one resident's feedback, in the claims' own words: their troubles (bad and wish) on the
+ * version it was chosen on, sorted as resolved, remaining or unclear (their feedback does not say), and the troubles
+ * the new version brought. A reading of two feedbacks (scripts/gen_week_evaluations.py compare), shown as one.
+ * presence: 'before' - not in the new version, so nothing of theirs can be told; 'after' - new to it.
+ */
+export interface FeedbackChange {
+  actor: string;
+  name: string;
+  presence: 'both' | 'before' | 'after';
+  resolved: string[];
+  remaining: string[];
+  unclear: string[];
+  new: string[];
 }
 
 /**
@@ -76,7 +95,7 @@ export interface WeekRequest {
   /** How well the residents' own words support this request. 'weak' is shown as such, never hidden. */
   basis: { verdict: Basis; actor: string | null; quote: string | null; kind: ClaimKind | null };
   /** The version this request makes: its scene, what the residents made of it, and what can be chosen from there (nothing on the last version). */
-  after: { scene: WeekScene; evaluations: Evaluation[]; requests: WeekRequest[] };
+  after: { scene: WeekScene; evaluations: Evaluation[]; change: FeedbackChange[]; requests: WeekRequest[] };
 }
 
 export interface WeekEvent {
@@ -97,10 +116,12 @@ export interface Week {
   days: { day: string; events: string[] }[];
   people: Record<string, string>;
   events: WeekEvent[];
+  /** The draft the designer brought: every rule's value before anything is chosen, one for the whole week. */
+  draft: Rule[];
   disclaimer: string;
 }
 
-/** Where the walk is. One path: the week, an event (its scenes, as they ran in the version being read), the residents'
+/** Where the walk is. One path: the draft the designer brought (once, after the introduction), the week, an event (its scenes, as they ran in the version being read), the residents'
  *  words, the request to choose - and a choice makes the next version, back at the week. When the visitor is done (or
  *  has gone), the closing words. */
-export type Step = 'week' | 'telling' | 'evaluations' | 'choose' | 'closing';
+export type Step = 'draft' | 'week' | 'telling' | 'evaluations' | 'choose' | 'closing';

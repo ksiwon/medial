@@ -1,14 +1,15 @@
 import styled, { css, keyframes } from 'styled-components';
 import Portrait from '../ui/Portrait';
 import { pill } from '../ui/primitives';
-import { accentA, claimTone, inkA, night, px, radius, space, type } from '../ui/theme';
+import { accentA, changeTone, claimTone, inkA, night, px, radius, space, type } from '../ui/theme';
 import { nameOf, type Version } from './selectors';
-import type { Claim, Evaluation, Week, WeekEvent, WeekRequest } from './types';
+import type { Claim, Evaluation, FeedbackChange, Week, WeekEvent, WeekRequest } from './types';
 
 // The pages that read what the residents said, for one version of an event:
 //
-//   Evaluations - who was in the event and what each made of it, (ver2 and on say what
-//                 the last request changed); a version with nothing to choose ends the event here, and says so;
+//   Evaluations - who was in the event and what each made of it, and which part of their interview it rests on;
+//                 ver2 and on say what the last request changed, and first how it moved the feedback (resolved,
+//                 remaining, new); a version with nothing to choose ends the event here, and says so;
 //   Choose      - the requests the designer may make on that version, each with the resident words that support it.
 //
 // What these pages must not do: put a score, a grade or a winner on anyone, or let a simulated resident read as a
@@ -121,14 +122,14 @@ const Claims = styled.ul`
   overflow: hidden;
 `;
 
-const ClaimRow = styled.li<{ $color: string }>`
+const ClaimRow = styled.li<{ $color: string; $compact?: boolean }>`
   display: grid;
   grid-template-columns: ${px(32)} minmax(0, 1fr);
   gap: ${space.md};
   > b { font-size: ${type.title}; line-height: 1.3; font-weight: 800; color: ${(p) => p.$color}; text-align: center; }
   > div { display: flex; flex-direction: column; gap: ${space.xs}; min-width: 0; }
   > div > small { font-size: ${type.caption}; font-weight: 800; letter-spacing: 0.06em; color: ${(p) => p.$color}; }
-  > div > p { margin: 0; font-size: ${type.title}; line-height: 1.45; font-weight: 600; word-break: keep-all; }
+  > div > p { margin: 0; font-size: ${(p) => (p.$compact ? type.lead : type.title)}; line-height: 1.45; font-weight: 600; word-break: keep-all; }
 `;
 
 const Foot = styled.p`
@@ -151,10 +152,10 @@ const End = styled.p`
   word-break: keep-all;
 `;
 
-function ClaimItem({ claim }: { claim: Claim }) {
+function ClaimItem({ claim, compact }: { claim: Claim; compact?: boolean }) {
   const tone = claimTone[claim.kind];
   return (
-    <ClaimRow $color={tone.color}>
+    <ClaimRow $color={tone.color} $compact={compact}>
       <b aria-hidden>{tone.mark}</b>
       <div>
         <small>{tone.label}</small>
@@ -164,20 +165,45 @@ function ClaimItem({ claim }: { claim: Claim }) {
   );
 }
 
-function EvaluationCard({ week, evaluation, art }: { week: Week; evaluation: Evaluation; art: ReadonlySet<string> }) {
+/** Which part of the resident's interview the reading rests on - or that it rests on none, said as plainly. */
+const Ground = styled.p`
+  margin: 0;
+  padding-top: ${space.md};
+  border-top: 1px solid ${night.line};
+  display: flex;
+  align-items: baseline;
+  gap: ${space.sm};
+  font-size: ${type.body};
+  line-height: 1.5;
+  color: ${night.mute};
+  word-break: keep-all;
+  > small { ${pill('xs')} flex: none; font-weight: 800; color: ${night.ink}; background: ${inkA(0.1)}; }
+  > b { flex: none; font-weight: 800; color: ${night.ink}; }
+`;
+
+function groundOf(e: Evaluation): { field: string | null; text: string } {
+  if (e.grounding.field && e.grounding.note) return { field: e.grounding.field, text: e.grounding.note };
+  return { field: null, text: e.grounding.interviewed ? '인터뷰에서 이 반응의 근거를 찾지 못함' : '인터뷰하지 않은 역할 · 근거 없음' };
+}
+
+/** compact: under the change of the version before (ver2 and on) the page holds both, so a card is its claims - the
+ *  units the change sorts - and the paragraph they were drawn from is left out. */
+function EvaluationCard({ week, evaluation, art, compact }: { week: Week; evaluation: Evaluation; art: ReadonlySet<string>; compact?: boolean }) {
+  const ground = groundOf(evaluation);
   return (
     <EvaluationBox>
       <Who>
         <Portrait actorId={evaluation.actor} art={art} size={48} />
         <div>
           <strong>{nameOf(week, evaluation.actor)}</strong>
-          <Chip>시뮬레이션 주민의 평가</Chip>
+          <Chip>시뮬레이션 주민의 피드백</Chip>
         </div>
       </Who>
-      <Quote>{evaluation.paragraph}</Quote>
+      {!compact && <Quote>{evaluation.paragraph}</Quote>}
       <Claims aria-label="주민이 겪은 일에 대해 한 말">
-        {evaluation.claims.map((c, i) => <ClaimItem key={i} claim={c} />)}
+        {evaluation.claims.map((c, i) => <ClaimItem key={i} claim={c} compact={compact} />)}
       </Claims>
+      <Ground aria-label="인터뷰 근거"><small>인터뷰 근거</small>{ground.field && <b>{ground.field}</b>}{ground.text}</Ground>
     </EvaluationBox>
   );
 }
@@ -189,21 +215,100 @@ function changedLine(version: Version): { head: string; rules: string[] } | null
   return { head: `ver${version.number - 1}에서 바뀐 규칙`, rules: last.rules.map((q) => `${q.label}: ${q.afterSentence}`) };
 }
 
+// ---- how the last request moved the feedback ---------------------------------
+
+const Moved = styled.section`
+  display: flex;
+  flex-direction: column;
+  gap: ${space.md};
+  padding: ${space.xl};
+  border-radius: ${radius.card};
+  background: ${night.panel};
+  border: 1px solid ${night.line};
+  > header { display: flex; align-items: baseline; justify-content: space-between; gap: ${space.lg}; }
+  > header > h2 { margin: 0; font-size: ${type.heading}; font-weight: 800; letter-spacing: -0.03em; line-height: 1.2; }
+  > header > small { font-size: ${type.caption}; color: ${night.faint}; text-align: right; }
+  > p { margin: 0; font-size: ${type.body}; line-height: 1.5; color: ${night.faint}; word-break: keep-all; }
+`;
+
+const Ways = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: ${space.xl};
+`;
+
+const Way = styled.div<{ $color: string }>`
+  display: flex;
+  flex-direction: column;
+  gap: ${space.sm};
+  min-width: 0;
+  border-top: ${px(4)} solid ${(p) => p.$color};
+  padding-top: ${space.md};
+  > small { font-size: ${type.caption}; font-weight: 800; letter-spacing: 0.06em; color: ${(p) => p.$color}; }
+  > ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: ${space.sm}; }
+  > ul > li { display: grid; grid-template-columns: ${px(24)} minmax(0, 1fr); gap: ${space.sm}; font-size: ${type.title}; line-height: 1.4; font-weight: 600; word-break: keep-all; }
+  > ul > li > b { color: ${(p) => p.$color}; text-align: center; }
+  > ul > li > span > em { font-style: normal; font-weight: 800; margin-right: ${space.sm}; color: ${night.mute}; }
+  > i { font-style: normal; font-size: ${type.body}; color: ${night.faint}; }
+`;
+
+/** One way a trouble went, as a column: who said it and what. */
+function WayColumn({ way, items }: { way: keyof typeof changeTone; items: { name: string; text: string }[] }) {
+  const tone = changeTone[way];
+  return (
+    <Way $color={tone.color}>
+      <small>{tone.label}</small>
+      {items.length
+        ? <ul>{items.map((x) => <li key={x.name + x.text}><b aria-hidden>{tone.mark}</b><span><em>{x.name}</em>{x.text}</span></li>)}</ul>
+        : <i>없음</i>}
+    </Way>
+  );
+}
+
+/** The feedback of the version before beside this one's: what the request resolved, left and brought. Who is in only
+ *  one of the two versions is said so under the columns, not sorted: their trouble was neither solved nor kept. */
+function FeedbackMoved({ change, from, to }: { change: FeedbackChange[]; from: number; to: number }) {
+  const pick = (k: 'resolved' | 'remaining' | 'new') => change.flatMap((c) => c[k].map((text) => ({ name: c.name, text })));
+  const unclear = change.filter((c) => c.presence === 'both' && c.unclear.length > 0);
+  const gone = change.filter((c) => c.presence === 'before');
+  return (
+    <Moved aria-label="피드백의 변화">
+      <header>
+        <h2>ver{from} → ver{to}, 피드백이 이렇게 달라졌습니다</h2>
+        <small>두 버전의 피드백을 모델이 읽고 나눈 해석입니다</small>
+      </header>
+      <Ways>
+        <WayColumn way="resolved" items={pick('resolved')} />
+        <WayColumn way="remaining" items={pick('remaining')} />
+        <WayColumn way="new" items={pick('new')} />
+      </Ways>
+      {(unclear.length > 0 || gone.length > 0) && (
+        <p>
+          {unclear.map((c) => `${c.name}: ${c.unclear.length}가지는 이번 피드백에 다시 나오지 않아 알 수 없음`).join(' · ')}
+          {unclear.length > 0 && gone.length > 0 && ' · '}
+          {gone.map((c) => `${c.name}: 이번 버전에는 나오지 않아 불편이 풀렸는지 알 수 없음`).join(' · ')}
+        </p>
+      )}
+    </Moved>
+  );
+}
+
 export function EvaluationsScreen({ week, event, version, art }: { week: Week; event: WeekEvent; version: Version; art: ReadonlySet<string> }) {
   const list = version.evaluations;
   const leaf = version.requests.length === 0;
   const changed = changedLine(version);
   return (
-    <Page aria-label="주민 평가" $tight>
+    <Page aria-label="주민의 피드백" $tight>
       <Head $compact>
-        <small>{event.title} · ver{version.number} · 주민 평가</small>
-        <h1>서비스를 겪은 주민의 말</h1>
+        <small>{event.title} · ver{version.number} · 주민의 피드백</small>
+        <h1>서비스를 겪은 주민의 피드백</h1>
         {changed
           ? <p><b>{changed.head}</b>{changed.rules.map((r) => <span key={r}>{r}</span>)}</p>
           : <p>이 일에 있었던 주민이 자기가 겪은 것을 어떻게 읽었는지 보입니다.</p>}
       </Head>
+      {version.change && <FeedbackMoved change={version.change} from={version.number - 1} to={version.number} />}
       <Cards $n={list.length}>
-        {list.map((e) => <EvaluationCard key={e.actor} week={week} evaluation={e} art={art} />)}
+        {list.map((e) => <EvaluationCard key={e.actor} week={week} evaluation={e} art={art} compact={version.change !== null} />)}
       </Cards>
       {leaf && (
         <End role="status">
@@ -212,7 +317,7 @@ export function EvaluationsScreen({ week, event, version, art }: { week: Week; e
             : '이 사건은 여기까지입니다. 다른 사건을 개선해 보세요.'}
         </End>
       )}
-      <Foot>합성 평가입니다. 실제 주민의 만족도나 동의가 아니며, 나중에 실제 주민이 확인·반박할 대상입니다. · {event.title}</Foot>
+      <Foot>시뮬레이션 주민의 피드백입니다. 실제 주민의 만족도나 동의가 아니며, 나중에 실제 주민이 확인·반박할 대상입니다. · {event.title}</Foot>
     </Page>
   );
 }
@@ -318,7 +423,7 @@ export function ChooseScreen({ week, event, version, art, considering }: {
       <Cards $n={requests.length} $center $rows={ROWS}>
         {requests.map((r, i) => <RequestCard key={r.id} week={week} request={r} index={i} art={art} chosen={r.id === considering} />)}
       </Cards>
-      <Foot>합성 평가입니다. 실제 주민의 만족도나 동의가 아니며, 나중에 실제 주민이 확인·반박할 대상입니다.</Foot>
+      <Foot>시뮬레이션 주민의 피드백입니다. 실제 주민의 만족도나 동의가 아니며, 나중에 실제 주민이 확인·반박할 대상입니다.</Foot>
     </Page>
   );
 }
