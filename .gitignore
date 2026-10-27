@@ -37,3 +37,6 @@ Thumbs.db
 # 빌드 캐시
 *.tsbuildinfo
 test-results/
+
+# 녹화 작업 폴더(영상 원본 · 수백 MB). 확정 영상은 docs/presentations/2026-10-07-exhibition/out/video/ 에 둔다.
+/out/

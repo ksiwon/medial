@@ -35,7 +35,7 @@ const WALKS = {
   quick: [['E5', 1], ['E5', 1]],
 };
 // 소리가 없는 화면을 읽는 시간(ms): 사람이 눈으로 따라가는 만큼. 대사는 소리 길이가 정한다.
-const PACE = { draft: 12000, line: 3800, evaluations: 6500, choose: 5500, pick: 1500, week: 2500, closing: 7000, afterVoice: 500 };
+const PACE = { draft: 12000, line: 3800, evaluations: 6500, choose: 5500, pick: 1500, week: 2500, closing: 7000, rules: 9000, afterVoice: 500 };
 
 // 모니터 페이지에 심는 장치: 소리를 틀고(play) 멈추고(pause) 크기를 바꾸는(volume) 일을 시각과 함께 적는다.
 const AUDIO_PROBE = () => {
@@ -109,7 +109,17 @@ async function main() {
   await wall.getByLabel('이번 주').waitFor({ state: 'visible', timeout: 20000 });
   await sleep(PACE.week);
 
-  for (const [id] of WALKS[WALK]) {
+  // 태블릿 "현재 규칙": 모니터에 모달이 뜨고 PACE.rules 동안 읽은 뒤 "규칙 닫기"로 닫는다.
+  const showRules = async () => {
+    await tap(/^현재 규칙$/);
+    await wall.getByLabel('현재 규칙').waitFor({ state: 'visible', timeout: 10000 });
+    await sleep(PACE.rules);
+    await tap(/^규칙 닫기$/);
+    await wall.getByLabel('현재 규칙').waitFor({ state: 'hidden', timeout: 10000 });
+    await sleep(PACE.pick);
+  };
+
+  for (const [step, [id]] of WALKS[WALK].entries()) {
     await tap(new RegExp(titleOf(id)));
     // 장면은 스스로 한 줄씩 흘러간다(줄마다 소리 길이 + 0.8초). 누르지 않고 마지막 줄이 나올 때까지 기다린 뒤,
     // 마지막 줄의 소리가 끝나기를 기다렸다가 주민의 피드백으로 간다.
@@ -121,6 +131,8 @@ async function main() {
     await finishLastLine();
     await tap(/주민의 피드백 →/);
     await sleep(PACE.evaluations);
+    // 고친 버전(ver2)을 읽을 때 한 번: 태블릿의 "현재 규칙"으로 그 버전에 걸린 규칙(바뀐 규칙 포함)을 모니터에 띄운다.
+    if (step === 2) { await showRules(); }
     if (await pad.getByRole('button', { name: /수정 요청 고르기 →/ }).isVisible().catch(() => false)) {
       await tap(/수정 요청 고르기 →/);
       await sleep(PACE.choose);
@@ -136,6 +148,7 @@ async function main() {
 
   // 5번 이상 고쳐야 마무리가 열린다(짧은 시험 걷기는 거기까지 가지 않고 끝낸다).
   if (await pad.getByRole('button', { name: /마무리 장면 보기/ }).isEnabled().catch(() => false)) {
+    await showRules();
     await tap(/마무리 장면 보기/);
     await sleep(PACE.closing);
     await tap(/마무리 말/);

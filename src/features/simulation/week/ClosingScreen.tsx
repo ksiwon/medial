@@ -1,10 +1,12 @@
-import { useEffect, useMemo } from 'react';
-import styled, { keyframes } from 'styled-components';
+import { useEffect, useMemo, useRef } from 'react';
+import styled, { css, keyframes } from 'styled-components';
 import { api } from '../api/client';
 import type { VoiceClip } from '../api/types';
 import { narrationOf, playNarration } from '../scene/voice';
+import { tallerThanParent, useFit } from '../ui/useFit';
 import { deepA, inkA, night, px, radius, space, type } from '../ui/theme';
 import { dayOf, eventOf, eventsRead, runsOf, versionOf, type Paths } from './selectors';
+import { RuleItem } from './RuleViews';
 import type { Week } from './types';
 
 // The end of a visit, in the opening film's tone: the desk painting under a dark veil. First what the visitor
@@ -49,35 +51,63 @@ const Film = styled.div<{ $src: string | null }>`
 const Inner = styled.div`
   width: 100%;
   box-sizing: border-box;
-  padding: ${space.xxl} ${px(96)};
+  padding: ${space.xl} ${px(96)};
   display: flex;
   flex-direction: column;
-  gap: ${space.xl};
+  gap: ${space.lg};
 `;
 
 const Head = styled.header`
   display: flex;
   flex-direction: column;
   gap: ${space.sm};
-  > small { font-size: ${type.caption}; font-weight: 800; letter-spacing: 0.09em; color: ${night.accent}; }
-  > h1 { margin: 0; font-size: ${type.hero}; font-weight: 800; letter-spacing: -0.04em; line-height: 1.15; }
-  > p { margin: 0; font-size: ${type.lead}; line-height: 1.6; color: ${night.mute}; word-break: keep-all; max-width: ${px(980)}; }
+  > small { display: flex; align-items: center; gap: ${space.sm}; font-size: ${type.caption}; font-weight: 800; letter-spacing: 0.09em; color: ${night.accent}; }
+  > small::before { content: ''; width: ${px(28)}; height: 2px; background: ${night.accent}; }
+  > h1 { margin: 0; font-size: ${type.hero}; font-weight: 800; letter-spacing: -0.04em; line-height: 1.2; word-break: keep-all; }
+  > p { margin: 0; font-size: ${type.lead}; line-height: 1.6; color: ${night.mute}; word-break: keep-all; max-width: ${px(1100)}; }
 `;
 
-const Rows = styled.ol`
+const Rows = styled.ol<{ $many: boolean }>`
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(${px(360)}, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(${(p) => px(p.$many ? 280 : 340)}, 1fr));
   gap: ${space.lg};
-  > li { display: flex; flex-direction: column; gap: ${space.sm}; padding: ${space.lg}; border-radius: ${radius.card};
-    background: ${deepA(0.66)}; border: 1px solid ${night.line}; animation: ${rise} 0.7s ease both; }
-  > li > small { font-size: ${type.caption}; font-weight: 800; letter-spacing: 0.06em; color: ${night.accent}; }
+  align-items: stretch;
+  > li { display: flex; flex-direction: column; gap: ${space.md}; padding: ${(p) => (p.$many ? space.lg : space.xl)}; border-radius: ${radius.card};
+    background: ${deepA(0.72)}; border: 1px solid ${night.line}; animation: ${rise} 0.7s ease both; }
+  > li > header { display: flex; align-items: center; justify-content: space-between; gap: ${space.md}; }
+  > li > header > span { font-size: ${type.body}; font-weight: 800; letter-spacing: 0.02em; color: ${night.mute}; }
+  > li > header > small { font-size: ${type.body}; font-weight: 700; color: ${night.faint}; font-variant-numeric: tabular-nums; }
   > li > strong { font-size: ${type.title}; font-weight: 800; letter-spacing: -0.02em; line-height: 1.3; word-break: keep-all; }
-  > li > p { margin: 0; font-size: ${type.body}; line-height: 1.55; color: ${inkA(0.86)}; word-break: keep-all; }
-  > li > p > b { color: ${night.ink}; }
-  > li > em { font-style: normal; font-size: ${type.body}; line-height: 1.5; color: ${night.mute}; word-break: keep-all; }
+  ${(p) => p.$many && css`> li > div > small { display: none; }`}
+`;
+
+/** The requests an event went through, as a rail: each made the version after it. */
+const Steps = styled.ol`
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: ${space.md};
+  > li { position: relative; display: flex; flex-direction: column; gap: ${space.hair}; padding-left: ${space.xl}; }
+  > li::before { content: ''; position: absolute; left: 0; top: ${space.sm}; width: ${px(8)}; height: ${px(8)}; border-radius: ${radius.round}; background: ${inkA(0.4)}; }
+  > li:not(:last-child)::after { content: ''; position: absolute; left: ${px(4)}; top: calc(${space.sm} + ${px(12)}); bottom: calc(${space.xs} - ${space.md}); border-left: 1px solid ${night.line}; }
+  > li > b { font-size: ${type.caption}; font-weight: 800; letter-spacing: 0.06em; color: ${night.faint}; }
+  > li > span { font-size: ${type.lead}; line-height: 1.45; font-weight: 600; color: ${inkA(0.92)}; word-break: keep-all; }
+`;
+
+/** What the requests changed in the rules: each rule once, as it was and as it ended. */
+const Changes = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${space.sm};
+  padding-top: ${space.md};
+  border-top: 1px solid ${night.line};
+  > small { font-size: ${type.caption}; font-weight: 800; letter-spacing: 0.06em; color: ${night.faint}; }
+  > ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: ${space.sm}; }
 `;
 
 const Close = styled.div`
@@ -96,8 +126,12 @@ export default function ClosingScreen({ week, paths, read, words, art, voices }:
   art: ReadonlySet<string>; voices: Record<string, VoiceClip> | null;
 }) {
   const at = useMemo(() => closingAt(voices), [voices]);
+  const inner = useRef<HTMLDivElement>(null);
   // The events the visitor changed, in the order the week tells them.
   const changed = week.days.flatMap((d) => d.events).filter((id) => (paths[id]?.length ?? 0) > 0);
+  // With four or more, the page would not hold them: the requests are left to the tablet and the rules they changed stay.
+  const many = changed.length > 3;
+  useFit(inner, tallerThanParent, [changed.length, words, week, paths]);
   // The narrator reads the closing words as they come up; leaving the page stops it.
   useEffect(() => {
     if (!words) return undefined;
@@ -111,7 +145,7 @@ export default function ClosingScreen({ week, paths, read, words, art, voices }:
 
   return (
     <Film $src={art.has('INTRO.desk') ? api.artUrl('INTRO.desk') : null} aria-label="마무리">
-      <Inner>
+      <Inner ref={inner}>
         {words || changed.length === 0 ? (
           <Close>
             {CLOSE_SAY.map((text, i) => (i === 0
@@ -125,19 +159,32 @@ export default function ClosingScreen({ week, paths, read, words, art, voices }:
               <h1>{eventsRead(read)}개의 사건, {read.length}개의 버전을 보고 {runsOf(paths)}번 고쳤습니다</h1>
               <p>사건마다 따로 고쳤습니다. 한 사건에서 고친 규칙은 다른 사건에 이어지지 않습니다. 결과는 미리 만들어 둔 시뮬레이션이며 실제 주민의 의견이 아닙니다.</p>
             </Head>
-            <Rows>
+            <Rows $many={many}>
               {changed.map((id, i) => {
                 const event = eventOf(week, id);
                 const made = versionOf(event, paths[id] ?? []);
                 if (!event || !made) return null;
+                // Each rule the requests touched, once: the draft's sentence, and the sentence it ended on.
+                const ended = new Map(made.chain.flatMap((request, k) => request.rules.map((rule) => [rule.type, { rule, version: k + 2 }] as const)));
                 return (
                   <li key={id} style={{ animationDelay: `${0.3 + i * 0.25}s` }}>
-                    <small>{dayOf(week, id)}요일 · ver1 → ver{made.number}</small>
+                    <header><span>{dayOf(week, id)}요일</span><small>ver1 → ver{made.number}</small></header>
                     <strong>{event.title}</strong>
-                    {made.chain.map((request, k) => (
-                      <p key={request.id}><b>ver{k + 2}</b> · {request.label}</p>
-                    ))}
-                    {[...new Map(made.chain.flatMap((request) => request.rules).map((rule) => [rule.type, rule])).values()].map((rule) => <em key={rule.type}>{rule.label}: {rule.afterSentence}</em>)}
+                    {!many && <Steps>
+                      {made.chain.map((request, k) => (
+                        <li key={request.id}><b>ver{k + 2}</b><span>{request.label}</span></li>
+                      ))}
+                    </Steps>}
+                    <Changes>
+                      <small>바뀐 규칙</small>
+                      <ol>
+                        {[...ended.values()].map(({ rule, version }) => (
+                          <RuleItem key={rule.type} dense compact terse={many} label={rule.label}
+                            was={week.draft.find((r) => r.type === rule.type)?.sentence ?? rule.beforeSentence}
+                            now={{ sentence: rule.afterSentence, version }} />
+                        ))}
+                      </ol>
+                    </Changes>
                   </li>
                 );
               })}

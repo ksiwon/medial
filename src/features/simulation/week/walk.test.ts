@@ -3,7 +3,7 @@ import narration from '../../../../fixtures/exhibition/narration.json';
 import { INTRO_SAY } from '../screens/IntroScreen';
 import { autoOf, AUTO_S, type AutoState } from './auto';
 import { CLOSE_SAY } from './ClosingScreen';
-import { JOBS } from './DraftScreen';
+import { JOBS } from './RuleViews';
 import { sharedBases } from './ReviewScreens';
 import { judgmentAt, rulesIn } from './judgment';
 import { eventOf, timetable } from './selectors';
