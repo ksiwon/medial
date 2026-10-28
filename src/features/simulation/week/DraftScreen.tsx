@@ -6,7 +6,7 @@ import { pill } from '../ui/primitives';
 import { accentA, deepA, groundA, inkA, night, px, radius, space, type } from '../ui/theme';
 import { clipsContent, useFit } from '../ui/useFit';
 import { RuleItem } from './RuleViews';
-import { viewOf } from './VillageMap';
+import { pct, viewOf } from './VillageMap';
 import type { Rule, Week } from './types';
 
 // The draft the designer brought, between the film and the week: the AI Care Orchestrator's rules before anything is
@@ -144,9 +144,6 @@ const Wires = styled.svg`
 
 interface Wire { key: string; d: string }
 
-/** A pin's place in %, kept `margin` inside the map (as VillageMap). */
-const pct = (f: number, margin: number) => Math.min(Math.max(f, margin), 1 - margin) * 100;
-
 export default function DraftScreen({ week, art, village }: { week: Week; art: ReadonlySet<string>; village: Village }) {
   const byType = new Map<string, Rule>(week.draft.map((r) => [r.type, r]));
   const inner = useRef<HTMLDivElement>(null);
@@ -181,7 +178,9 @@ export default function DraftScreen({ week, art, village }: { week: Week; art: R
     const watch = new ResizeObserver(measure);
     watch.observe(el);
     el.querySelectorAll('[data-card]').forEach((n) => watch.observe(n));
-    return () => watch.disconnect();
+    // The cards rise into place: a transform is no resize, so the lines are drawn again once they have settled.
+    el.addEventListener('animationend', measure);
+    return () => { watch.disconnect(); el.removeEventListener('animationend', measure); };
   }, [box, week]);
 
   const card = (role: (typeof ROLES)[number]) => {

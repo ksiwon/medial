@@ -158,7 +158,6 @@ const Panel = styled.section<{ $ground: string; $dense: boolean }>`
   > header > span { grid-area: c; }
   > header > p { grid-area: p; margin: 0; font-size: ${type.body}; line-height: 1.5; color: ${night.mute}; word-break: keep-all; }
   > ol { list-style: none; margin: 0; padding: ${space.md} 0 0; border-top: 1px solid ${night.line}; display: flex; flex-direction: column; gap: ${space.sm}; }
-  > footer { margin-top: auto; padding: ${space.md} ${space.lg} 0; border-top: 1px solid ${night.line}; }
 `;
 
 const Tag = styled.span<{ $hot: boolean }>`
@@ -169,9 +168,9 @@ const Tag = styled.span<{ $hot: boolean }>`
 `;
 
 /** One job and its rules: a number, the job and what it comes to, and how many rules it holds (or how many changed). */
-export function JobPanel({ index, job, ground, dense = false, count, hot = false, footer, children }: {
+export function JobPanel({ index, job, ground, dense = false, count, hot = false, children }: {
   index: number; job: { title: string; gist: string }; ground: string; dense?: boolean;
-  count: string; hot?: boolean; footer?: ReactNode; children: ReactNode;
+  count: string; hot?: boolean; children: ReactNode;
 }) {
   return (
     <Panel $ground={ground} $dense={dense}>
@@ -182,7 +181,6 @@ export function JobPanel({ index, job, ground, dense = false, count, hot = false
         <p>{job.gist}</p>
       </header>
       <ol>{children}</ol>
-      {footer && <footer>{footer}</footer>}
     </Panel>
   );
 }

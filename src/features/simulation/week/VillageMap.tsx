@@ -127,7 +127,7 @@ const Missing = styled.div`
 
 /** A pin's place in %, kept `margin` inside the map: a house at the village's south end was drawn past the map's
  *  edge, over the column's caption. */
-const pct = (f: number, margin: number) => Math.min(Math.max(f, margin), 1 - margin) * 100;
+export const pct = (f: number, margin: number) => Math.min(Math.max(f, margin), 1 - margin) * 100;
 
 /**
  * The part of the map the picture covers: the source's view box cut to the raster's own corners, so the sheet has no
