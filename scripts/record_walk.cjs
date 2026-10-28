@@ -38,7 +38,7 @@ const WALKS = {
 // 소리가 없는 화면을 읽는 시간(ms): 사람이 눈으로 따라가는 만큼. 대사는 소리 길이가 정한다.
 const PACE = { draft: 9000, line: 3000, evaluations: 5000, choose: 4000, pick: 1000, week: 1500, closing: 5000, rules: 6000, afterVoice: 300 };
 // 화면이 소리를 빠르게 트는 배율(src/features/simulation/scene/voice.ts): 나레이션(intro_ · outro_)과 대사.
-const RATE = { narration: 1.2, line: 1.1 };
+const RATE = { narration: 1.1, line: 1.1 };
 const rateOf = (file) => (/^(intro|outro)_/.test(file) ? RATE.narration : RATE.line);
 
 // 모니터 페이지에 심는 장치: 소리를 틀고(play) 멈추고(pause) 크기를 바꾸는(volume) 일을 시각과 함께 적는다.

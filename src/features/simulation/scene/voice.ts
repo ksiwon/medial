@@ -29,8 +29,9 @@ export const clipOf = (voices: Record<string, VoiceClip> | null | undefined, spe
   voices?.[`${speaker}|${text}`] ?? null;
 
 /** The 7-minute demo (researcher, 2026-10-28): the narrator and the characters are played a little faster than they were
- *  recorded (pitch kept by the browser). The clip's `seconds` are the recording's; what is on screen is `seconds / rate`. */
-export const NARRATION_RATE = 1.2;
+ *  recorded (pitch kept by the browser). The narrator was too fast at 1.2; the researcher listened to 1.0 / 1.05 / 1.1
+ *  and chose 1.1. The clip's `seconds` are the recording's; what is on screen is `seconds / rate`. */
+export const NARRATION_RATE = 1.1;
 export const LINE_RATE = 1.1;
 /** The seconds a clip is heard for, at the rate it is played. */
 export const heardSeconds = (seconds: number, rate: number) => seconds / rate;
