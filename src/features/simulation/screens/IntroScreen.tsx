@@ -3,7 +3,7 @@ import styled, { css, keyframes } from 'styled-components';
 import { api } from '../api/client';
 import type { VoiceClip } from '../api/types';
 import { EUNJEOM, KAIST, KOREA, NAMHAE, NAMHAE_TOWN, NEAR } from '../intro/koreaMap';
-import { narrationOf, playNarration } from '../scene/voice';
+import { heardSeconds, narrationOf, NARRATION_RATE, playNarration } from '../scene/voice';
 import Logo from '../ui/Logo';
 import PillText from '../ui/PillText';
 import { accentA, deepA, font, inkA, land, night, radius } from '../ui/theme';
@@ -72,13 +72,13 @@ const SAY_FIVE = [
 const BASE_MS = [9000, 15000, 17000, 5500, 12000, 6000, 12500, 8000];
 
 /** A caption is spoken from just after it appears; the next one appears when the narrator is done. */
-const LEAD_S = 0.5;
+const LEAD_S = 0.4;
 /** The camera pulling back onto the model takes this long; the second scene's first sentence waits for it. */
-const PULL_S = 0.8;
+const PULL_S = 0.6;
 /** A scene the camera dives out of keeps this long after its last word, for the dive. */
-const DIVE_S = 0.8;
-const GAP_S = 0.7;
-const TAIL_S = 1.0;
+const DIVE_S = 0.5;
+const GAP_S = 0.5;
+const TAIL_S = 0.5;
 
 interface Layout {
   /** Each scene's length, ms. */
@@ -88,8 +88,10 @@ interface Layout {
   two: { until: number; next: number };
   /** Scenes that show their narration a sentence at a time: the second each sentence's caption arrives. */
   said: { job: number[]; trouble: number[]; tool: number[]; medial: number[]; built: number[]; five: number[] };
-  /** The narration of each scene: the clip and the second it starts. */
-  cues: { file: string; at: number }[][];
+  /** The narration of each scene: the clip, the second it starts, and how long the recording is (as recorded). */
+  cues: { file: string; at: number; seconds: number }[][];
+  /** Where each sentence begins, for the tablet's "previous" and "next": the scene and the ms into it. */
+  beats: { scene: number; ms: number }[];
 }
 
 /**
@@ -98,8 +100,9 @@ interface Layout {
  */
 export function layoutOf(voices: Record<string, VoiceClip> | null | undefined): Layout {
   const clip = (i: number) => narrationOf(voices, INTRO_SAY[i]);
-  const sec = (i: number) => clip(i)?.seconds ?? 0;
-  const cue = (i: number, at: number) => { const c = clip(i); return c ? [{ file: c.file, at }] : []; };
+  /** How long the narrator is heard, at the rate the film plays them. */
+  const sec = (i: number) => heardSeconds(clip(i)?.seconds ?? 0, NARRATION_RATE);
+  const cue = (i: number, at: number) => { const c = clip(i); return c ? [{ file: c.file, at, seconds: c.seconds }] : []; };
   const end = (at: number, i: number) => at + sec(i) + TAIL_S;
 
   /** Where each sentence of a clip begins, by its share of the characters (the clip is one recording). */
@@ -124,11 +127,18 @@ export function layoutOf(voices: Record<string, VoiceClip> | null | undefined): 
     Math.max(BASE_MS[6], end(LEAD_S, 7) * 1000),
     Math.max(BASE_MS[7], end(LEAD_S, 8) * 1000),
   ];
+  const said = { job: starts(0, SAY_JOB), trouble, tool: starts(2, SAY_TOOL), medial, built, five: starts(8, SAY_FIVE) };
+  // A scene's first beat is its start; the others are where its sentences come up (a hair early, so the caption is whole).
+  const beatsOf = (scene: number, at: readonly number[]) => at.map((s, k) => ({ scene, ms: k === 0 ? 0 : Math.max(s - 0.3, 0) * 1000 }));
   return {
     ms,
     total: ms.reduce((x, y) => x + y, 0),
     two: { until, next },
-    said: { job: starts(0, SAY_JOB), trouble, tool: starts(2, SAY_TOOL), medial, built, five: starts(8, SAY_FIVE) },
+    said,
+    beats: [
+      ...beatsOf(0, said.job), ...beatsOf(1, said.trouble), ...beatsOf(2, said.tool), ...beatsOf(3, [0]),
+      ...beatsOf(4, [0, next]), ...beatsOf(5, [0]), ...beatsOf(6, said.built), ...beatsOf(7, said.five),
+    ],
     cues: [cue(0, LEAD_S), cue(1, LEAD_S + PULL_S), cue(2, LEAD_S), cue(3, LEAD_S), [...cue(4, LEAD_S), ...cue(5, next + 0.3)], cue(6, LEAD_S), cue(7, LEAD_S), cue(8, LEAD_S)],
   };
 }
@@ -260,6 +270,7 @@ const Sub = styled.p<{ $on: boolean; $delay?: number }>`
   ${(p) => p.$on && css`animation: ${rise} 0.5s ease ${p.$delay ?? 0.9}s forwards;`}
 `;
 
+/** The film's length along the bottom. The bar is a real element (not a pseudo-element) so the film's clock can seek and hold it. */
 const Progress = styled.div<{ $ms: number }>`
   position: absolute;
   left: 0;
@@ -267,8 +278,7 @@ const Progress = styled.div<{ $ms: number }>`
   bottom: 0;
   height: clamp(4px, 0.25vw, 12px);
   background: ${inkA(0.12)};
-  &::after {
-    content: '';
+  > i {
     display: block;
     height: 100%;
     width: 100%;
@@ -346,15 +356,22 @@ function fit(box: typeof WIDE_BOX, W: number, H: number, top: number, bottom: nu
   return { s, tx, ty, transform: `translate(${tx}px, ${ty}px) scale(${s})` };
 }
 
-/** How much faster the map film runs than it was first drawn (13 s). */
-const MAP_K = 0.72;
+/** The map film's own clock (s). The first leg, KAIST to the county town, is quick (researcher, 2026-10-28: it was
+ *  eating the scene, and the last leg to the village was cut off by the next scene); the leg to the village is
+ *  drawn at its own pace and is whole, with its labels, before the scene ends. */
+const MAP = {
+  kaist: 0.2, line: 0.5, lineS: 1.3, town: 1.7, wideGone: 2.3,
+  camera: 3, cameraHold: 0.63, cameraDone: 0.97,
+  coast: 2.3, provincesGone: 2.5,
+  townClose: 3.0, road: 3.2, roadS: 1.0, village: 4.3,
+} as const;
 
 const Camera = styled.g`
   transform-origin: 0 0;
   animation: ${keyframes`
-    0%, 40% { transform: var(--wide); }
-    57%, 100% { transform: var(--close); }
-  `} ${13 * MAP_K}s cubic-bezier(0.6, 0, 0.3, 1) forwards;
+    0%, ${MAP.cameraHold * 100}% { transform: var(--wide); }
+    ${MAP.cameraDone * 100}%, 100% { transform: var(--close); }
+  `} ${MAP.camera}s cubic-bezier(0.6, 0, 0.3, 1) forwards;
 `;
 
 /** Straight-line kilometres between two points of the outline. */
@@ -363,8 +380,7 @@ const km = (a: [number, number], b: [number, number]) => Math.hypot(a[0] - b[0],
 const PLATE = deepA(0.86);
 
 function PlaceFilm() {
-  /** Every time of the map film, scaled together (the narration ends well before the film did). */
-  const t = (sec: number) => at(sec * MAP_K);
+  const t = at;
   const ref = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   useLayoutEffect(() => {
@@ -398,25 +414,25 @@ function PlaceFilm() {
         <Camera style={{ '--wide': wide.transform, '--close': close.transform } as React.CSSProperties}>
           {/* The provinces are simplified for a glance; up close they would draw a
               coast that is not there, so they leave as the camera arrives. */}
-          <path className="gone" style={t(6.2)} d={KOREA} fill={land.far} stroke={inkA(0.35)} strokeWidth={0.6} vectorEffect="non-scaling-stroke" />
+          <path className="gone" style={t(MAP.provincesGone)} d={KOREA} fill={land.far} stroke={inkA(0.35)} strokeWidth={0.6} vectorEffect="non-scaling-stroke" />
           {/* The close-up's coast fades in as the camera arrives; at a glance it is
               the same land the provinces already draw. */}
-          <g className="in" style={t(5.6)}>
+          <g className="in" style={t(MAP.coast)}>
             <path d={NEAR} fill={land.far} stroke={inkA(0.3)} strokeWidth={0.8} vectorEffect="non-scaling-stroke" />
             <path d={NAMHAE} fill={land.near} stroke={inkA(0.7)} strokeWidth={1.2} vectorEffect="non-scaling-stroke" />
           </g>
 
           {/* The wide frame: where the study comes from, and the line south.
               Lines run under the points they join and end at their centres. */}
-          <g className="gone" style={t(4.8)}>
+          <g className="gone" style={t(MAP.wideGone)}>
             <path className="draw" d={`M ${kx} ${ky} C ${kx + 70} ${ky + 50} ${nx - 40} ${ny - 90} ${nx} ${ny}`}
               pathLength={1} fill="none" stroke={ACCENT} strokeWidth={w(5)} strokeLinecap="round"
-              style={{ ...t(1.1), animationDuration: `${2.2 * MAP_K}s` }} />
-            <g className="in" style={t(0.5)}>
+              style={{ ...t(MAP.line), animationDuration: `${MAP.lineS}s` }} />
+            <g className="in" style={t(MAP.kaist)}>
               <circle className="ring" cx={kx} cy={ky} r={w(9)} fill="none" stroke={PAPER} strokeWidth={w(2)} />
               <circle cx={kx} cy={ky} r={w(8)} fill={PAPER} />
             </g>
-            <g className="in" style={t(3.3)}>
+            <g className="in" style={t(MAP.town)}>
               {/* An end of the line: accent, ringed, so it reads as a point and not the line's tip. */}
               <circle cx={nx} cy={ny} r={w(9)} fill={ACCENT} stroke={PAPER} strokeWidth={w(2.5)} />
             </g>
@@ -425,11 +441,11 @@ function PlaceFilm() {
           {/* The close frame: from the county town south-east to the village. */}
           <path className="draw" d={`M ${nx} ${ny} Q ${(nx + ex) / 2 + 1} ${ny - 1} ${ex} ${ey}`}
             pathLength={1} fill="none" stroke={ACCENT} strokeWidth={c(5)} strokeLinecap="round"
-            style={{ ...t(7.8), animationDuration: `${MAP_K}s` }} />
-          <g className="in" style={t(7.5)}>
+            style={{ ...t(MAP.road), animationDuration: `${MAP.roadS}s` }} />
+          <g className="in" style={t(MAP.townClose)}>
             <circle cx={nx} cy={ny} r={c(8)} fill={PAPER} />
           </g>
-          <g className="in" style={t(8.6)}>
+          <g className="in" style={t(MAP.village)}>
             <circle className="ring" cx={ex} cy={ey} r={c(13)} fill="none" stroke={ACCENT} strokeWidth={c(3)} />
             <circle cx={ex} cy={ey} r={c(10)} fill={ACCENT} stroke={PAPER} strokeWidth={c(3)} />
           </g>
@@ -449,20 +465,20 @@ function PlaceFilm() {
         const [eX, eY] = onScreen(close, ex, ey);
         return (
           <>
-            <g className="gone" style={t(4.8)}>
-              <g className="in" style={t(0.5)}>
+            <g className="gone" style={t(MAP.wideGone)}>
+              <g className="in" style={t(MAP.kaist)}>
                 <PillText x={kX - clear(9, 24)} y={kY + 8 * u} anchor="end" size={24 * u} weight={800} fill={PAPER} plate={PLATE} text="KAIST · 대전" />
               </g>
-              <g className="in" style={t(3.3)}>
+              <g className="in" style={t(MAP.town)}>
                 <PillText x={nX + clear(11, 24)} y={nY + 8 * u} size={24 * u} weight={800} fill={PAPER} plate={PLATE} text="남해" />
                 <PillText x={(kX + nX) / 2 + 46 * u} y={(kY + nY) / 2} size={18 * u} weight={700} fill={inkA(0.85)}
                   plate={PLATE} text={`직선 약 ${Math.round(km(KAIST, EUNJEOM) / 10) * 10}km`} />
               </g>
             </g>
-            <g className="in" style={t(7.6)}>
+            <g className="in" style={t(MAP.townClose)}>
               <PillText x={tX - clear(9, 20)} y={tY + 7 * u} anchor="end" size={20 * u} weight={800} fill={PAPER} plate={PLATE} text="남해읍" />
             </g>
-            <g className="in" style={t(8.6)}>
+            <g className="in" style={t(MAP.village)}>
               {/* The name centred on the marker; the place under it, plates aligned on their left edges. */}
               <PillText x={eX + clear(14, 30)} y={eY + 10 * u} size={30 * u} weight={800} fill={night.white} plate={ACCENT} text="은점마을" />
               <PillText x={eX + clear(14, 30) - 30 * 0.82 * u + 16 * 0.82 * u} y={eY + 55 * u} size={16 * u} weight={700} fill={PAPER}
@@ -1012,12 +1028,45 @@ interface Props {
   voices?: Record<string, VoiceClip> | null;
   /** The tablet skipped: the film goes to its last scene. */
   skipped?: boolean;
+  /** The tablet's pause holds the film where it is. */
+  paused?: boolean;
+  /** The tablet's last "previous" / "next": one sentence back (or to the start of this one), or one sentence on. `n` counts presses. */
+  move?: { dir: -1 | 1; n: number };
 }
 
-export default function IntroScreen({ onFinish, voices = null, skipped = false }: Props) {
+/** Within this far of a sentence's start, "previous" goes to the sentence before instead of to this one's start. */
+const BACK_MS = 1500;
+
+/**
+ * Sets every animation a scene (and the progress bar) has to `ms` into it, and holds them or lets them run. The film is
+ * all CSS and SVG animation started with its scene, so "where the film is" is one number written to each.
+ */
+function setClock(stage: HTMLElement, scene: number, ms: number, filmMs: number, hold: boolean) {
+  const section = stage.querySelector(`[data-scene="${scene}"]`);
+  stage.getAnimations({ subtree: true }).forEach((a) => {
+    const target = (a.effect as KeyframeEffect | null)?.target;
+    if (!(target instanceof Element)) return;
+    const film = target.closest('[data-film]') !== null;
+    if (!film && !section?.contains(target)) return;
+    a.currentTime = film ? filmMs : ms;
+    // A finished animation told to play would start over: only the ones that were held are let go.
+    if (hold) a.pause(); else if (a.playState === 'paused') a.play();
+  });
+  section?.querySelectorAll('svg').forEach((svg) => {
+    svg.setCurrentTime(ms / 1000);
+    if (hold) svg.pauseAnimations(); else svg.unpauseAnimations();
+  });
+}
+
+export default function IntroScreen({ onFinish, voices = null, skipped = false, paused = false, move }: Props) {
   const layout = useMemo(() => layoutOf(voices), [voices]);
-  const [scene, setScene] = useState(0);
+  const [pos, setPos] = useState({ scene: 0, n: 0 });
+  const scene = pos.scene;
   const [pictures, setPictures] = useState<Set<string>>(new Set());
+  const stage = useRef<HTMLDivElement>(null);
+  // Where the film is: `from` ms into the scene at the moment `startedAt`; while it runs, the time since adds to it.
+  const clock = useRef({ from: 0, startedAt: 0, running: false });
+  const elapsed = () => clock.current.from + (clock.current.running ? performance.now() - clock.current.startedAt : 0);
   // Every picture and narration is already held when the film starts: "시작하기" is not taken before (assets.ts).
 
   useEffect(() => {
@@ -1026,31 +1075,68 @@ export default function IntroScreen({ onFinish, voices = null, skipped = false }
     return () => { live = false; };
   }, []);
 
-  useEffect(() => {
-    if (skipped) setScene((n) => Math.max(n, layout.ms.length - 1));
-  }, [skipped, layout]);
-
   // The parent re-renders while the film runs; the clock must not restart with it.
   const finish = useRef(onFinish);
   finish.current = onFinish;
-  useEffect(() => {
-    if (scene >= layout.ms.length) { finish.current(); return undefined; }
-    const timer = window.setTimeout(() => setScene((n) => n + 1), layout.ms[scene]);
-    return () => window.clearTimeout(timer);
-  }, [scene, layout]);
 
-  // The narrator: each caption is read as it comes up, and everything stops when the scene or the film does.
+  const seek = (to: number, ms: number) => {
+    clock.current = { from: ms, startedAt: performance.now(), running: !paused };
+    setPos((p) => ({ scene: to, n: p.n + 1 }));
+  };
+
   useEffect(() => {
+    if (skipped && scene < layout.ms.length - 1) seek(layout.ms.length - 1, 0);
+  }, [skipped, layout]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The tablet's "previous" and "next": each press once, from the sentence the film is in.
+  const handled = useRef(move?.n ?? 0);
+  useEffect(() => {
+    if (!move || move.n === handled.current) return;
+    handled.current = move.n;
+    const now = elapsed();
+    let k = 0;
+    layout.beats.forEach((b, i) => { if (b.scene < scene || (b.scene === scene && b.ms <= now + 250)) k = i; });
+    if (move.dir > 0) {
+      const next = layout.beats[k + 1];
+      if (next) seek(next.scene, next.ms); else finish.current();
+      return;
+    }
+    const here = layout.beats[k];
+    const back = here.scene === scene && now - here.ms > BACK_MS ? here : layout.beats[Math.max(k - 1, 0)];
+    seek(back.scene, back.ms);
+  }, [move?.n]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The clock, the narrator and the animations, all from one place: they are set to where the film is whenever it
+  // moves (a seek, the pause, the next scene) and run on from there. Every caption is read as it comes up, and
+  // everything stops when the scene, the pause or the film does.
+  useLayoutEffect(() => {
+    const c = clock.current;
+    const now = performance.now();
+    if (paused && c.running) { c.from += now - c.startedAt; c.running = false; }
+    if (!paused && !c.running) { c.startedAt = now; c.running = true; }
+    const before = layout.ms.slice(0, scene).reduce((x, y) => x + y, 0);
+    if (stage.current) setClock(stage.current, scene, c.from, before + c.from, paused);
+    if (paused) return undefined;
     const stops: (() => void)[] = [];
-    const timers = (layout.cues[scene] ?? []).map((cue) => window.setTimeout(() => stops.push(playNarration(cue.file)), cue.at * 1000));
+    const timers = [window.setTimeout(() => {
+      if (scene + 1 >= layout.ms.length) { finish.current(); return; }
+      clock.current = { from: 0, startedAt: performance.now(), running: true };
+      setPos((p) => ({ scene: scene + 1, n: p.n + 1 }));
+    }, Math.max(layout.ms[scene] - c.from, 0))];
+    (layout.cues[scene] ?? []).forEach((cue) => {
+      const start = cue.at * 1000;
+      const heard = heardSeconds(cue.seconds, NARRATION_RATE) * 1000;
+      if (c.from < start) timers.push(window.setTimeout(() => stops.push(playNarration(cue.file)), start - c.from));
+      else if (c.from < start + heard) stops.push(playNarration(cue.file, ((c.from - start) / 1000) * NARRATION_RATE));
+    });
     return () => { timers.forEach(window.clearTimeout); stops.forEach((stop) => stop()); };
-  }, [scene, layout]);
+  }, [pos, paused, layout]);
 
   const src = (name: string) => (pictures.has(name) ? api.artUrl(name) : null);
   const on = (i: number) => scene === i;
 
   return (
-    <Stage aria-label="소개">
+    <Stage ref={stage} aria-label="소개">
       <Atmosphere />
       <Brand><Logo height="clamp(36px, 3.2vw, 128px)" /></Brand>
       <Corner>
@@ -1059,7 +1145,7 @@ export default function IntroScreen({ onFinish, voices = null, skipped = false }
 
       {/* The job, its trouble, the tool: one camera over one desk. The journey map is dived into; the model on the desk is what
           arrives; the model turns into the village, and the village is dived into. Each shows its sentences one at a time. */}
-      <Scene $on={on(0)}>
+      <Scene data-scene={0} $on={on(0)}>
         <Dolly>
           <Picture $src={src('INTRO.studio')} $on />
           <JourneyMap on={on(0)} job={layout.said.job} />
@@ -1069,7 +1155,7 @@ export default function IntroScreen({ onFinish, voices = null, skipped = false }
         ))}
       </Scene>
 
-      <Scene $on={on(1)}>
+      <Scene data-scene={1} $on={on(1)}>
         <Dolly>
           <Picture $src={src('INTRO.model')} $on={scene >= 1} />
           <Trouble on={on(1)} t={layout.said.trouble} />
@@ -1079,7 +1165,7 @@ export default function IntroScreen({ onFinish, voices = null, skipped = false }
         ))}
       </Scene>
 
-      <Scene $on={on(2)}>
+      <Scene data-scene={2} $on={on(2)}>
         <Dolly>
           <Picture $src={src('INTRO.model')} $on={scene >= 2} />
           <Dissolve $on={scene >= 2} $at={layout.said.tool[4] - 0.2}>
@@ -1092,7 +1178,7 @@ export default function IntroScreen({ onFinish, voices = null, skipped = false }
         ))}
       </Scene>
 
-      <Scene $on={on(3)}>
+      <Scene data-scene={3} $on={on(3)}>
         <Picture $src={src('INTRO.road')} $on={scene >= 3} />
         <Route $on={on(3)} viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid slice" aria-hidden>
           {on(3) && (
@@ -1122,7 +1208,7 @@ export default function IntroScreen({ onFinish, voices = null, skipped = false }
         </Caption>
       </Scene>
 
-      <Scene $on={on(4)}>
+      <Scene data-scene={4} $on={on(4)}>
         <Picture $src={src('HOME')} $on={scene >= 4} />
         <Caption>
           <Timed $on={on(4)} $at={0.2} $until={layout.two.until}>
@@ -1147,7 +1233,7 @@ export default function IntroScreen({ onFinish, voices = null, skipped = false }
         ))}
       </Scene>
 
-      <Scene $on={on(5)}>
+      <Scene data-scene={5} $on={on(5)}>
         <Ground />
         {/* Stays mounted through the next scene's arrival so the map fades out under the village picture instead of vanishing at once. */}
         {(scene === 5 || scene === 6) && <PlaceFilm />}
@@ -1158,7 +1244,7 @@ export default function IntroScreen({ onFinish, voices = null, skipped = false }
         </Caption>
       </Scene>
 
-      <Scene $on={on(6)}>
+      <Scene data-scene={6} $on={on(6)}>
         <Dolly>
           <Picture $src={src('INTRO.model.village')} $on={scene >= 6} />
           <Built on={on(6)} t={layout.said.built} />
@@ -1181,7 +1267,7 @@ export default function IntroScreen({ onFinish, voices = null, skipped = false }
         ))}
       </Scene>
 
-      <Scene $on={on(7)}>
+      <Scene data-scene={7} $on={on(7)}>
         <Picture $src={src('INTRO.desk')} $on={scene >= 7} />
         {SAY_FIVE.map((text, k) => {
           const at = layout.said.five[k];
@@ -1205,7 +1291,7 @@ export default function IntroScreen({ onFinish, voices = null, skipped = false }
         })}
       </Scene>
 
-      <Progress $ms={layout.total} />
+      <Progress $ms={layout.total}><i data-film /></Progress>
     </Stage>
   );
 }

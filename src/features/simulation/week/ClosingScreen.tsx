@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import styled, { css, keyframes } from 'styled-components';
 import { api } from '../api/client';
 import type { VoiceClip } from '../api/types';
-import { narrationOf, playNarration } from '../scene/voice';
+import { heardSeconds, narrationOf, NARRATION_RATE, playNarration } from '../scene/voice';
 import { tallerThanParent, useFit } from '../ui/useFit';
 import { deepA, inkA, night, px, radius, space, type } from '../ui/theme';
 import { dayOf, eventOf, eventsRead, runsOf, versionOf, type Paths } from './selectors';
@@ -25,11 +25,11 @@ export const CLOSE_SAY = [
 
 /** When each closing line comes up (s): a steady pace with no voice, else when the narrator is done with the one before. */
 export function closingAt(voices: Record<string, VoiceClip> | null | undefined): number[] {
-  const base = [0.4, 3.4, 8.4, 12.4, 16.4];
+  const base = [0.3, 2.4, 5.4, 8.4, 11.4];
   const at = [base[0]];
   for (let i = 1; i < base.length; i += 1) {
     const clip = narrationOf(voices, CLOSE_SAY[i - 1]);
-    at.push(Math.max(base[i], at[i - 1] + (clip ? clip.seconds + 0.7 : 0)));
+    at.push(Math.max(base[i], at[i - 1] + (clip ? heardSeconds(clip.seconds, NARRATION_RATE) + 0.4 : 0)));
   }
   return at;
 }

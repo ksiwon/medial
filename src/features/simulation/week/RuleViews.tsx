@@ -23,14 +23,14 @@ export const JOBS: { title: string; gist: string; rules: string[] }[] = [
 
 /** A figure of a rule's sentence: minutes, times, people. ("제3자" is not one: a figure carries its unit.) */
 const FIGURE = /(\d+(?:\.\d+)?\s?(?:분|회|번|명|시간|초))/g;
-export const figuresOf = (sentence: string): string[] => sentence.match(FIGURE) ?? [];
+const figuresOf = (sentence: string): string[] => sentence.match(FIGURE) ?? [];
 
 /** A sentence with its figures in bold, so the number a request moves is the first thing the eye finds. */
 export function Sentence({ text }: { text: string }) {
   return <>{text.split(FIGURE).map((part, i) => (i % 2 === 1 ? <b key={i}>{part}</b> : part))}</>;
 }
 
-export const Chip = styled.span<{ $was?: boolean; $now?: boolean }>`
+const Chip = styled.span<{ $was?: boolean; $now?: boolean }>`
   display: inline-flex;
   align-items: center;
   padding: ${space.hair} ${space.sm};

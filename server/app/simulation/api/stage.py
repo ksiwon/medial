@@ -42,7 +42,7 @@ Role = Literal["wall", "pad"]
 
 #: What a press can be. The wall refuses to guess at anything else.
 COMMANDS = (
-    "start", "skipIntro", "openEvent", "line", "skipScene", "toEvaluations", "toTelling",
+    "start", "skipIntro", "introPrev", "introNext", "introToggle", "openEvent", "line", "skipScene", "toEvaluations", "toTelling",
     "toChoose", "consider", "choose", "week", "finish", "closingWords", "rules", "home",
 )
 

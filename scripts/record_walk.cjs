@@ -4,7 +4,8 @@
 // 옛 녹화 도구(사진 영상 시절)는 한 주 구조로 바꾸며 지웠다 — 이것이 새 것이다. 결과는 새 폴더에만 쓴다(확정본 영상은 건드리지 않는다).
 //
 // 걷기(WALKS): 사건 하나를 요청 1번으로 끝까지 읽는다. 같은 사건을 여러 번 열면 ver2 · ver3 을 이어서 읽는다.
-//   full  = E1 · E5 · E1 · E5 · E4 를 읽고 고쳐 본 버전 5개(마무리가 열리는 기준) → 마무리 장면
+//   full  = E1 · E5 · E1 · E5 · E1 을 읽고 고쳐 본 버전 5개(마무리가 열리는 기준, E1은 ver3까지) → 마무리 장면
+//          7분 안에 끝나야 해서(연구자, 2026-10-28) 가장 짧게 읽히는 사건으로 5개를 채운다
 //   quick = E5 한 사건(ver1→ver2→ver3)만, 화면 · 소리 구성 시험용
 //
 // 소리는 이렇게 다룬다 (브라우저 녹화는 소리를 담지 못한다):
@@ -31,11 +32,14 @@ const WALLSIZE = { width: 2560, height: 1440 };
 const PADSIZE = { width: 1180, height: 820 };
 
 const WALKS = {
-  full: [['E1', 1], ['E5', 1], ['E1', 1], ['E5', 1], ['E4', 1]],
+  full: [['E1', 1], ['E5', 1], ['E1', 1], ['E5', 1], ['E1', 1]],
   quick: [['E5', 1], ['E5', 1]],
 };
 // 소리가 없는 화면을 읽는 시간(ms): 사람이 눈으로 따라가는 만큼. 대사는 소리 길이가 정한다.
-const PACE = { draft: 12000, line: 3800, evaluations: 6500, choose: 5500, pick: 1500, week: 2500, closing: 7000, rules: 9000, afterVoice: 500 };
+const PACE = { draft: 9000, line: 3000, evaluations: 5000, choose: 4000, pick: 1000, week: 1500, closing: 5000, rules: 6000, afterVoice: 300 };
+// 화면이 소리를 빠르게 트는 배율(src/features/simulation/scene/voice.ts): 나레이션(intro_ · outro_)과 대사.
+const RATE = { narration: 1.2, line: 1.1 };
+const rateOf = (file) => (/^(intro|outro)_/.test(file) ? RATE.narration : RATE.line);
 
 // 모니터 페이지에 심는 장치: 소리를 틀고(play) 멈추고(pause) 크기를 바꾸는(volume) 일을 시각과 함께 적는다.
 const AUDIO_PROBE = () => {
@@ -48,7 +52,7 @@ const AUDIO_PROBE = () => {
   const pause = P.pause;
   P.play = function (...a) {
     // The page plays held copies (blob: addresses); the file it stands for is on the element (data-source).
-    log.push({ t: Date.now(), id: idOf(this), op: 'play', src: (this.dataset && this.dataset.source) || this.currentSrc || this.src, loop: this.loop, vol: this.volume, at: this.currentTime });
+    log.push({ t: Date.now(), id: idOf(this), op: 'play', src: (this.dataset && this.dataset.source) || this.currentSrc || this.src, loop: this.loop, vol: this.volume, at: this.currentTime, rate: this.playbackRate });
     return play.apply(this, a);
   };
   P.pause = function (...a) {
@@ -88,7 +92,7 @@ async function main() {
     const plays = await voicePlays();
     const last = plays[plays.length - 1];
     if (!last) { await sleep(PACE.line); return; }
-    const end = last.t + (seconds[last.file] ?? 0) * 1000 + PACE.afterVoice;
+    const end = last.t + ((seconds[last.file] ?? 0) / rateOf(last.file)) * 1000 + PACE.afterVoice;
     await sleep(Math.max(end - Date.now(), 0));
   };
 
@@ -159,7 +163,7 @@ async function main() {
       if (now.some((p) => p.file === last)) break;
       await sleep(500);
     }
-    await sleep(((seconds[last] ?? 6) * 1000) + 4000);
+    await sleep((((seconds[last] ?? 6) / RATE.narration) * 1000) + 2500);
   } else {
     await sleep(PACE.week);
   }

@@ -13,6 +13,10 @@ export type Phase = 'idle' | 'intro' | 'draft' | 'week' | 'telling' | 'evaluatio
 export type Command =
   | { name: 'start' }
   | { name: 'skipIntro' }
+  /** The film's own controls: one sentence back, pause or play, one sentence on. */
+  | { name: 'introPrev' }
+  | { name: 'introNext' }
+  | { name: 'introToggle' }
   | { name: 'openEvent'; id: string }
   | { name: 'line'; value: -1 | 1 }
   | { name: 'skipScene' }
@@ -74,11 +78,13 @@ export interface StageState {
   closingWords: boolean;
   /** The rules as they stand are open over the wall's page. */
   rulesOpen: boolean;
+  /** The opening film is held (the tablet's pause). */
+  introPaused: boolean;
 }
 
 export const IDLE_STATE: StageState = {
   phase: 'idle', ready: false, week: [], runs: 0, reads: 0, events: 0, event: null, scene: null, version: 1, leaf: false, line: 0, lines: 0, toldAll: false,
-  requests: [], considering: null, generating: false, closingWords: false, rulesOpen: false,
+  requests: [], considering: null, generating: false, closingWords: false, rulesOpen: false, introPaused: false,
 };
 
 export const STAGE_API = '/api/sim/stage';

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import narration from '../../../../fixtures/exhibition/narration.json';
-import { INTRO_SAY } from '../screens/IntroScreen';
+import { INTRO_SAY, layoutOf } from '../screens/IntroScreen';
 import { autoOf, AUTO_S, type AutoState } from './auto';
+import { ROLES } from './DraftScreen';
 import { CLOSE_SAY } from './ClosingScreen';
 import { JOBS } from './RuleViews';
 import { sharedBases } from './ReviewScreens';
@@ -189,5 +190,31 @@ describe('the words requests rest on', () => {
     }
     // The fall: all three requests rest on the brother's words.
     expect(sharedBases(eventOf(week, 'E4')!.requests)).toEqual([expect.objectContaining({ actor: 'P7', numbers: [1, 2, 3] })]);
+  });
+});
+
+describe('the draft laid on the map', () => {
+  it('gives every rule of the draft to exactly one role, and no role a rule the rule list does not know', () => {
+    const given = ROLES.flatMap((r) => r.rules);
+    expect(new Set(given).size).toBe(given.length);
+    week.draft.forEach((r) => expect(given).toContain(r.type));
+    given.forEach((t) => expect(JOBS.flatMap((j) => j.rules)).toContain(t));
+  });
+});
+
+describe("the opening film's sentences, for the tablet's previous and next", () => {
+  const beats = layoutOf(null).beats;
+
+  it('begin each scene at its start, then at each sentence, in the order of the film', () => {
+    expect(beats[0]).toEqual({ scene: 0, ms: 0 });
+    expect(beats.filter((b) => b.scene === 3)).toEqual([{ scene: 3, ms: 0 }]);
+    const order = beats.map((b) => b.scene * 1e6 + b.ms);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(new Set(beats.map((b) => b.scene))).toEqual(new Set([0, 1, 2, 3, 4, 5, 6, 7]));
+  });
+
+  it('never begin after the scene they are in has ended', () => {
+    const { ms } = layoutOf(null);
+    beats.forEach((b) => expect(b.ms).toBeLessThan(ms[b.scene]));
   });
 });

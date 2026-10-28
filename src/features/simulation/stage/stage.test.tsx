@@ -64,6 +64,22 @@ describe('the tablet starts the walk', () => {
     expect(walk()).toMatchObject({ pathStarted: true, step: 'week' });
   });
 
+  it("the film's own controls only act while the film is on, and each press of previous/next is counted once", () => {
+    apply({ name: 'introNext' });
+    apply({ name: 'introToggle' });
+    expect(walk()).toMatchObject({ introPaused: false, introMove: { n: 0 } });
+    apply({ name: 'start' });
+    apply({ name: 'introToggle' });
+    expect(walk().introPaused).toBe(true);
+    expect(describeStage({ week, introStarted: true, pathStarted: false, step: 'week', eventId: null, lineIndex: 0, introPaused: walk().introPaused }))
+      .toMatchObject({ phase: 'intro', introPaused: true });
+    apply({ name: 'introNext' });
+    apply({ name: 'introPrev' });
+    expect(walk().introMove).toEqual({ dir: -1, n: 2 });
+    apply({ name: 'introToggle' });
+    expect(walk().introPaused).toBe(false);
+  });
+
   it('home from anywhere goes back to the waiting screen and forgets what was read', () => {
     at({ introStarted: true, pathStarted: true, step: 'evaluations', eventId: 'E1', read: ['E1@1'] });
     apply({ name: 'home' });

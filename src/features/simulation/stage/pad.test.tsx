@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { Choose, Evaluations, Telling, Week } from './pad/screens';
+import { Choose, Evaluations, Telling, Watching, Week } from './pad/screens';
 import { IDLE_STATE, type Command, type StageState } from './protocol';
 
 // What the tablet offers at each point of the walk. Each screen is its state and a `press`: a test says what is on
@@ -151,5 +151,24 @@ describe('choosing', () => {
     const { container } = render(<Choose s={state({ phase: 'choose', requests, generating: true })} press={pressed().press} />);
     expect(names(container)).toEqual([]);
     expect(screen.getByText('새로운 시뮬레이션을 만들고 있어요')).toBeDefined();
+  });
+});
+
+describe('the opening film', () => {
+  it("has its own controls in the middle - previous, pause, next - and the way out below them", () => {
+    const { press, sent } = pressed();
+    const { container } = render(<Watching s={state({ phase: 'intro' })} press={press} />);
+    expect(names(container)).toEqual(['← 이전', '❚❚ 일시정지', '다음 →', '건너뛰기 →']);
+    fireEvent.click(screen.getByText('← 이전'));
+    fireEvent.click(screen.getByText('❚❚ 일시정지'));
+    fireEvent.click(screen.getByText('다음 →'));
+    fireEvent.click(screen.getByText('건너뛰기 →'));
+    expect(sent).toEqual([{ name: 'introPrev' }, { name: 'introToggle' }, { name: 'introNext' }, { name: 'skipIntro' }]);
+  });
+
+  it('offers to play again while the film is held', () => {
+    render(<Watching s={state({ phase: 'intro', introPaused: true })} press={pressed().press} />);
+    expect(screen.getByText('▶ 재생')).toBeDefined();
+    expect(screen.queryByText('❚❚ 일시정지')).toBeNull();
   });
 });

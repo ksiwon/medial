@@ -24,6 +24,9 @@ interface WeekState {
   introStarted: boolean;
   /** The tablet skipped the film: it goes to its last scene ("now you are the service designer"), not past it. */
   introSkipped: boolean;
+  /** The film is held by the tablet's pause, and the last "previous"/"next" it pressed (`n` counts the presses: the film acts on each once). */
+  introPaused: boolean;
+  introMove: { dir: -1 | 1; n: number };
   pathStarted: boolean;
   step: Step;
   eventId: string | null;
@@ -48,6 +51,8 @@ interface WeekState {
   init: () => Promise<void>;
   startIntro: () => void;
   skipIntro: () => void;
+  toggleIntro: () => void;
+  moveIntro: (dir: -1 | 1) => void;
   /** The film is over: the draft the designer brought, then the week. */
   enterDraft: () => void;
   openEvent: (eventId: string) => void;
@@ -76,6 +81,8 @@ export const useWeekStore = create<WeekState>((set, get) => ({
   error: null,
   introStarted: false,
   introSkipped: false,
+  introPaused: false,
+  introMove: { dir: 1, n: 0 },
   pathStarted: false,
   step: 'week',
   eventId: null,
@@ -97,8 +104,10 @@ export const useWeekStore = create<WeekState>((set, get) => ({
     }
   },
 
-  startIntro: () => set({ introStarted: true, introSkipped: false }),
-  skipIntro: () => set({ introSkipped: true }),
+  startIntro: () => set({ introStarted: true, introSkipped: false, introPaused: false }),
+  skipIntro: () => set({ introSkipped: true, introPaused: false }),
+  toggleIntro: () => set((s) => ({ introPaused: !s.introPaused })),
+  moveIntro: (dir) => set((s) => ({ introMove: { dir, n: s.introMove.n + 1 } })),
   enterDraft: () => set({ pathStarted: true, step: 'draft', eventId: null, lineIndex: 0 }),
 
   openEvent: (eventId) => {
@@ -157,7 +166,7 @@ export const useWeekStore = create<WeekState>((set, get) => ({
   setRulesOpen: (rulesOpen) => set({ rulesOpen }),
 
   restart: () => set({
-    introStarted: false, introSkipped: false, pathStarted: false, step: 'week', eventId: null, lineIndex: 0, read: [],
+    introStarted: false, introSkipped: false, introPaused: false, pathStarted: false, step: 'week', eventId: null, lineIndex: 0, read: [],
     paths: {}, considering: null, generating: false, closingWords: false, rulesOpen: false,
   }),
 }));

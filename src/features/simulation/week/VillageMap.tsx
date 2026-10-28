@@ -133,7 +133,7 @@ const pct = (f: number, margin: number) => Math.min(Math.max(f, margin), 1 - mar
  * The part of the map the picture covers: the source's view box cut to the raster's own corners, so the sheet has no
  * bare band along an edge the picture does not reach (the map is drawn with the same margin on both sides).
  */
-function viewOf(village: Village): [number, number, number, number] | null {
+export function viewOf(village: Village): [number, number, number, number] | null {
   const box = village.viewBox;
   if (!box) return null;
   const raster = village.raster;

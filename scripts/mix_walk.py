@@ -49,10 +49,11 @@ def make_screen(out: Path, meta: dict) -> Path:
     return screen
 
 
-def read_clip(src: str, audio_dir: Path, cache: dict) -> np.ndarray | None:
-    """한 소리를 24kHz 모노 실수 배열로. 대사는 음성 폴더의 파일 이름으로, 배경음은 저장소의 파일로 찾는다."""
-    if src in cache:
-        return cache[src]
+def read_clip(src: str, audio_dir: Path, cache: dict, rate: float = 1.0) -> np.ndarray | None:
+    """한 소리를 24kHz 모노 실수 배열로. 대사는 음성 폴더의 파일 이름으로, 배경음은 저장소의 파일로 찾는다.
+    화면이 소리를 빠르게 틀었으면(rate > 1) 같은 배율로 빠르게 한다(음높이는 그대로: ffmpeg atempo)."""
+    if (src, rate) in cache:
+        return cache[(src, rate)]
     name = Path(src.split("?")[0]).name
     from urllib.parse import unquote
     name = unquote(name)
@@ -63,10 +64,11 @@ def read_clip(src: str, audio_dir: Path, cache: dict) -> np.ndarray | None:
         path = found[0] if found else None
     data = None
     if path is not None and path.exists():
-        proc = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", str(path), "-ac", "1", "-ar", str(SR), "-f", "f32le", "-"],
+        tempo = ["-filter:a", f"atempo={rate}"] if abs(rate - 1.0) > 1e-6 else []
+        proc = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", str(path), *tempo, "-ac", "1", "-ar", str(SR), "-f", "f32le", "-"],
                               capture_output=True, check=True)
         data = np.frombuffer(proc.stdout, dtype=np.float32).copy()
-    cache[src] = data
+    cache[(src, rate)] = data
     return data
 
 
@@ -85,7 +87,8 @@ def segments(log: list[dict], t0_ms: float, t1_ms: float):
             if e["op"] == "play":
                 if open_ is not None:
                     out.append({**open_, "end": e["t"]})
-                open_ = {"src": e["src"], "start": e["t"], "at": e["at"], "loop": bool(e["loop"]), "vol0": e["vol"], "vols": vols}
+                open_ = {"src": e["src"], "start": e["t"], "at": e["at"], "loop": bool(e["loop"]), "vol0": e["vol"], "vols": vols,
+                         "rate": float(e.get("rate") or 1.0)}
             elif e["op"] == "pause" and open_ is not None:
                 out.append({**open_, "end": e["t"]})
                 open_ = None
@@ -105,7 +108,7 @@ def mix_audio(meta: dict, audio_dir: Path) -> tuple[np.ndarray, list[str]]:
     missing: list[str] = []
     used_voice = 0
     for s in sorted(segments(meta["audioLog"], t0, t1), key=lambda s: s["start_s"]):
-        clip = read_clip(s["src"], audio_dir, cache)
+        clip = read_clip(s["src"], audio_dir, cache, s["rate"])
         if clip is None or len(clip) == 0:
             if "/village/voice/" in s["src"]:
                 missing.append(Path(s["src"]).name)
@@ -115,7 +118,7 @@ def mix_audio(meta: dict, audio_dir: Path) -> tuple[np.ndarray, list[str]]:
         if b <= a:
             continue
         n = int((b - a) * SR)
-        pos0 = int((s["at"] + (a - s["start_s"])) * SR)   # 클립 안의 시작 위치
+        pos0 = int((s["at"] / s["rate"] + (a - s["start_s"])) * SR)   # 클립 안의 시작 위치(빠르게 튼 소리는 그만큼 짧다)
         idx = pos0 + np.arange(n)
         if s["loop"]:
             samples = clip[idx % len(clip)]

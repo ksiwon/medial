@@ -109,7 +109,7 @@ const Notices = styled.div`
 /** How long a line of a telling stays before the next one (the exhibition's pace). */
 const LINE_MS = 4500;
 /** How long the wall says a new simulation is being made. */
-const GENERATING_MS = 4000;
+const GENERATING_MS = 3000;
 
 export default function SimulationApp() {
   useUiScale();
@@ -207,9 +207,9 @@ export default function SimulationApp() {
 
       {!paired && !w.pathStarted && !w.introStarted && <AttractScreen art={s.art} />}
       {(paired || w.pathStarted || w.introStarted) && !w.pathStarted && !w.introStarted && <IdleScreen art={s.art} />}
-      {!w.pathStarted && w.introStarted && <IntroScreen voices={s.voices} skipped={w.introSkipped} onFinish={w.enterDraft} />}
+      {!w.pathStarted && w.introStarted && <IntroScreen voices={s.voices} skipped={w.introSkipped} paused={w.introPaused} move={w.introMove} onFinish={w.enterDraft} />}
 
-      {w.pathStarted && w.step === 'draft' && <DraftScreen week={week} art={s.art} />}
+      {w.pathStarted && w.step === 'draft' && <DraftScreen week={week} art={s.art} village={s.village} />}
       {showWeek && <WeekScreen week={week} art={s.art} now={null} paths={w.paths} read={w.read} />}
       {w.pathStarted && telling && scene && event && version && (
         <Telling>

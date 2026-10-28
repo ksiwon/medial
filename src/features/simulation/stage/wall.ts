@@ -53,6 +53,13 @@ function run(command: Command): void {
       // The first press takes the film to its last scene; a second one (or the film's end) goes on to the draft.
       if (w.introStarted && !w.pathStarted) { if (w.introSkipped) w.enterDraft(); else w.skipIntro(); }
       return;
+    case 'introPrev':
+    case 'introNext':
+      if (w.introStarted && !w.pathStarted) w.moveIntro(command.name === 'introNext' ? 1 : -1);
+      return;
+    case 'introToggle':
+      if (w.introStarted && !w.pathStarted) w.toggleIntro();
+      return;
     case 'openEvent':
       if (on('week')) w.openEvent(command.id);
       return;
@@ -123,12 +130,12 @@ const weekBrief = (week: Week, paths: Paths): DayBrief[] =>
 export function describeStage(args: {
   week: Week | null; introStarted: boolean; pathStarted: boolean; step: string; eventId: string | null;
   lineIndex: number; paths?: Paths; read?: readonly string[];
-  considering?: string | null; generating?: boolean; closingWords?: boolean; ready?: boolean; rulesOpen?: boolean;
+  considering?: string | null; generating?: boolean; closingWords?: boolean; ready?: boolean; rulesOpen?: boolean; introPaused?: boolean;
 }): StageState {
   const { week } = args;
   const ready = Boolean(week) && (args.ready ?? false);
   if (!week) return IDLE_STATE;
-  if (!args.pathStarted) return { ...IDLE_STATE, ready, phase: args.introStarted ? 'intro' : 'idle' };
+  if (!args.pathStarted) return { ...IDLE_STATE, ready, phase: args.introStarted ? 'intro' : 'idle', introPaused: args.introPaused ?? false };
   const paths = args.paths ?? {};
   const phase = args.step as Phase;
   const event = eventOf(week, args.eventId);
@@ -215,7 +222,7 @@ export function useWall(): { paired: boolean } {
     ready: assets.status === 'ready',
     week: w.week, introStarted: w.introStarted, pathStarted: w.pathStarted, step: w.step, eventId: w.eventId,
     lineIndex: w.lineIndex, paths: w.paths, read: w.read,
-    considering: w.considering, generating: w.generating, closingWords: w.closingWords, rulesOpen: w.rulesOpen,
+    considering: w.considering, generating: w.generating, closingWords: w.closingWords, rulesOpen: w.rulesOpen, introPaused: w.introPaused,
   });
 
   // After every render: the cheap comparison above decides whether anything goes out.

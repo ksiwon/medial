@@ -113,7 +113,7 @@ export default function PadApp() {
 function PadStage({ s, press }: { s: StageState; press: Press }) {
   switch (s.phase) {
     case 'idle': return <Waiting s={s} press={press} />;
-    case 'intro': return <Watching press={press} />;
+    case 'intro': return <Watching s={s} press={press} />;
     case 'draft': return <Draft press={press} />;
     case 'week': return <Week s={s} press={press} />;
     case 'telling': return <Telling s={s} press={press} />;

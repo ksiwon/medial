@@ -28,18 +28,25 @@ const audioOf = (file: string) => {
 export const clipOf = (voices: Record<string, VoiceClip> | null | undefined, speaker: string, text: string): VoiceClip | null =>
   voices?.[`${speaker}|${text}`] ?? null;
 
+/** The 7-minute demo (researcher, 2026-10-28): the narrator and the characters are played a little faster than they were
+ *  recorded (pitch kept by the browser). The clip's `seconds` are the recording's; what is on screen is `seconds / rate`. */
+export const NARRATION_RATE = 1.2;
+export const LINE_RATE = 1.1;
+/** The seconds a clip is heard for, at the rate it is played. */
+export const heardSeconds = (seconds: number, rate: number) => seconds / rate;
+
 /** The beat between one speaker finishing and the next line coming up: long enough that nobody answers on top of the
  *  last word, short enough that a scene sounds like people talking. */
-const TURN_GAP_S = 0.5;
+const TURN_GAP_S = 0.3;
 /** A line is never gone faster than it can be read, however short its recording ("네."). */
-const MIN_LINE_MS = 1600;
+const MIN_LINE_MS = 1200;
 
 /** How long a line stays on screen: its recording and a breath after it, so the lines follow each other the way a
  *  conversation does (an earlier fixed pace of 4.5 s left 2-3 s of silence after every short line). A line with no
  *  recording is held for the screen's pace, and a recording is never cut short by it. */
 export function lineMs(voices: Record<string, VoiceClip> | null | undefined, speaker: string, text: string, pace: number): number {
   const clip = clipOf(voices, speaker, text);
-  return clip ? Math.max(MIN_LINE_MS, Math.round((clip.seconds + TURN_GAP_S) * 1000)) : pace;
+  return clip ? Math.max(MIN_LINE_MS, Math.round((heardSeconds(clip.seconds, LINE_RATE) + TURN_GAP_S) * 1000)) : pace;
 }
 
 /** Plays the recording of the line on screen, and stops it when the line goes. A line with no recording is silent. */
@@ -50,6 +57,7 @@ export function useLineVoice(voices: Record<string, VoiceClip> | null | undefine
     const audio = clip ? audioOf(clip.file) : null;
     if (!audio) return undefined;
     audio.currentTime = 0;
+    audio.playbackRate = LINE_RATE;
     const result = audio.play() as Promise<void> | undefined;
     if (result && typeof result.catch === 'function') result.catch(() => {});
     return () => audio.pause();
@@ -58,12 +66,14 @@ export function useLineVoice(voices: Record<string, VoiceClip> | null | undefine
 
 /**
  * Plays one narration clip (the opening film's and the closing page's big captions) and keeps the background
- * pad low under it. Returns what stops it: the film skipped or left, the page gone.
+ * pad low under it. Returns what stops it: the film skipped or left, the page gone. `from` is where in the recording
+ * (seconds, as recorded) it starts: the film's "next" and "previous" land in the middle of a clip.
  */
-export function playNarration(file: string): () => void {
+export function playNarration(file: string, from = 0): () => void {
   const audio = audioOf(file);
   if (!audio) return () => {};
-  audio.currentTime = 0;
+  audio.currentTime = from;
+  audio.playbackRate = NARRATION_RATE;
   duckAmbient(true);
   const done = () => duckAmbient(false);
   audio.addEventListener('ended', done, { once: true });

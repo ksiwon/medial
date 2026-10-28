@@ -24,10 +24,23 @@ export function Waiting({ s, press }: { s: StageState; press: Press }) {
   );
 }
 
-export function Watching({ press }: { press: Press }) {
+/** The film's own controls, small and in the middle: a sentence back, hold or go on, a sentence on. The way out of the
+ *  film (skipping it) is the large press below them. */
+const Transport = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+`;
+
+export function Watching({ s, press }: { s: StageState; press: Press }) {
   return (
     <Stage>
       <h1>큰 화면을 봐 주세요</h1>
+      <Transport role="group" aria-label="소개 영상 조작">
+        <Button onClick={() => press({ name: 'introPrev' })}>← 이전</Button>
+        <Button $tone={s.introPaused ? 'primary' : 'plain'} onClick={() => press({ name: 'introToggle' })}>{s.introPaused ? '▶ 재생' : '❚❚ 일시정지'}</Button>
+        <Button onClick={() => press({ name: 'introNext' })}>다음 →</Button>
+      </Transport>
       <Button $tone="quiet" $big onClick={() => press({ name: 'skipIntro' })}>건너뛰기 →</Button>
     </Stage>
   );
