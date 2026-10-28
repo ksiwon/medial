@@ -7,7 +7,7 @@
 3. `docs/research/23_QUEST_TASK_CHANGE_SET.md` — Quest/Task 최소 모델과 Change Set 계약
 4. `docs/research/30_WEEK_TIMELINE_REDESIGN.md` — 지금 구조(7일 주 · 사건 풀 · 평가→요청 연결)가 왜 이런지
 5. `DEVELOPMENT.md` — 구현됨/부분 구현/미구현 상태. **"현재 상태" 절이 지금이고, "최근 기록"은 최신순이다.**
-   더 오래된 역사는 `docs/research/history/DEVELOPMENT_HISTORY.md`
+   더 오래된 역사는 `docs/research/history/DEVELOPMENT_HISTORY_v4_v5.md`(2026-10-17 ~ 20) · `DEVELOPMENT_HISTORY_v3.md` · `DEVELOPMENT_HISTORY.md`
 6. 작업과 관련된 `docs/research/` 문서와 `DECISIONS.md`
 
 `docs/research/` 에는 지금 기준 문서만 있다. 지나온 기획·명세·프롬프트(01~12, 14~18, 24, 26, 27)는
