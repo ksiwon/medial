@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import narration from '../../../../fixtures/exhibition/narration.json';
+import { NARRATION_RATE } from '../scene/voice';
 import { INTRO_SAY, layoutOf } from '../screens/IntroScreen';
 import { autoOf, AUTO_S, type AutoState } from './auto';
 import { ROLES } from './DraftScreen';
@@ -216,5 +217,28 @@ describe("the opening film's sentences, for the tablet's previous and next", () 
   it('never begin after the scene they are in has ended', () => {
     const { ms } = layoutOf(null);
     beats.forEach((b) => expect(b.ms).toBeLessThan(ms[b.scene]));
+  });
+
+  it('stop at each sentence of the narration, not at each caption: a sentence of two captions is one stop', () => {
+    const sentences = (text: string) => text.trim().split(/(?<=[.?!])\s+/).length;
+    // scenes 0-2, 6 and 7 are one clip each; scene 4 is two clips (the road and the AI's draft), one sentence each
+    const clipOfScene = [0, 1, 2, null, null, null, 7, 8] as const;
+    clipOfScene.forEach((c, scene) => {
+      if (c === null) return;
+      expect(beats.filter((b) => b.scene === scene).length).toBe(sentences(INTRO_SAY[c]));
+    });
+    expect(beats.filter((b) => b.scene === 4).length).toBe(2);
+  });
+
+  it('put a sentence where the narrator begins it when the recording says so, and put the audio a hair before it', () => {
+    const rate = NARRATION_RATE;
+    const voices = { [`NARRATOR|${INTRO_SAY[0]}`]: { file: 'intro_01_NARRATOR.wav', seconds: 13.2, marks: [2.67] } };
+    const { beats: heard, cues } = layoutOf(voices);
+    const second = heard.filter((b) => b.scene === 0)[1];
+    // the caption comes up 0.4 s into the scene + where the voice begins that sentence, a hair early
+    expect(second.ms).toBeCloseTo((0.4 + 2.67 / rate - 0.3) * 1000, 0);
+    // seeking there starts the recording 0.3 s (heard) before the sentence's first word
+    const [cue] = cues[0];
+    expect(((second.ms - cue.at * 1000) / 1000) * rate).toBeCloseTo(2.67 - 0.3 * rate, 1);
   });
 });

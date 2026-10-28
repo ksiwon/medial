@@ -80,6 +80,17 @@ const DIVE_S = 0.5;
 const GAP_S = 0.5;
 const TAIL_S = 0.5;
 
+/** The sentence each caption piece is in: a piece that ends with . ? or ! closes it. */
+const sentenceOf = (pieces: readonly string[]) => {
+  let s = 0;
+  return pieces.map((t) => { const mine = s; if (/[.?!]$/.test(t.trim())) s += 1; return mine; });
+};
+/** Whether each caption piece is the first of its sentence: the film's "previous" and "next" stop only there. */
+const headsOf = (pieces: readonly string[]) => {
+  const sentence = sentenceOf(pieces);
+  return pieces.map((_, k) => k === 0 || sentence[k] !== sentence[k - 1]);
+};
+
 interface Layout {
   /** Each scene's length, ms. */
   ms: number[];
@@ -105,12 +116,30 @@ export function layoutOf(voices: Record<string, VoiceClip> | null | undefined): 
   const cue = (i: number, at: number) => { const c = clip(i); return c ? [{ file: c.file, at, seconds: c.seconds }] : []; };
   const end = (at: number, i: number) => at + sec(i) + TAIL_S;
 
-  /** Where each sentence of a clip begins, by its share of the characters (the clip is one recording). */
-  const starts = (i: number, sentences: readonly string[]) => {
-    const all = sentences.reduce((n, t) => n + t.length, 0);
+  /**
+   * Where each caption of a clip comes up. A sentence begins where the narrator does (the server finds the breaths in the
+   * recording: `marks`); a caption that is only part of a sentence comes by its share of the characters inside it. A clip
+   * with no marks is spread over its length by the characters alone.
+   */
+  const starts = (i: number, pieces: readonly string[]) => {
     const span = sec(i) || 9;
-    let used = 0;
-    return sentences.map((t) => { const at = LEAD_S + (span * used) / all; used += t.length; return at; });
+    const sentence = sentenceOf(pieces);
+    const count = sentence[sentence.length - 1] + 1;
+    const marks = clip(i)?.marks;
+    if (!marks || marks.length !== count - 1) {
+      const all = pieces.reduce((n, t) => n + t.length, 0);
+      let used = 0;
+      return pieces.map((t) => { const at = LEAD_S + (span * used) / all; used += t.length; return at; });
+    }
+    const begin = [0, ...marks.map((m) => m / NARRATION_RATE)];
+    return pieces.map((_, k) => {
+      const s = sentence[k];
+      const mine = pieces.filter((__, j) => sentence[j] === s);
+      const all = mine.reduce((n, t) => n + t.length, 0);
+      const before = pieces.slice(0, k).filter((__, j) => sentence[j] === s).reduce((n, t) => n + t.length, 0);
+      const end = begin[s + 1] ?? span;
+      return LEAD_S + begin[s] + ((end - begin[s]) * before) / all;
+    });
   };
   const trouble = starts(1, SAY_TROUBLE).map((x) => x + PULL_S);
   const built = starts(7, SAY_BUILT);
@@ -129,15 +158,16 @@ export function layoutOf(voices: Record<string, VoiceClip> | null | undefined): 
   ];
   const said = { job: starts(0, SAY_JOB), trouble, tool: starts(2, SAY_TOOL), medial, built, five: starts(8, SAY_FIVE) };
   // A scene's first beat is its start; the others are where its sentences come up (a hair early, so the caption is whole).
-  const beatsOf = (scene: number, at: readonly number[]) => at.map((s, k) => ({ scene, ms: k === 0 ? 0 : Math.max(s - 0.3, 0) * 1000 }));
+  const beatsOf = (scene: number, at: readonly number[], head: readonly boolean[] = at.map(() => true)) =>
+    at.flatMap((s, k) => (head[k] ? [{ scene, ms: k === 0 ? 0 : Math.max(s - 0.3, 0) * 1000 }] : []));
   return {
     ms,
     total: ms.reduce((x, y) => x + y, 0),
     two: { until, next },
     said,
     beats: [
-      ...beatsOf(0, said.job), ...beatsOf(1, said.trouble), ...beatsOf(2, said.tool), ...beatsOf(3, [0]),
-      ...beatsOf(4, [0, next]), ...beatsOf(5, [0]), ...beatsOf(6, said.built), ...beatsOf(7, said.five),
+      ...beatsOf(0, said.job, headsOf(SAY_JOB)), ...beatsOf(1, said.trouble, headsOf(SAY_TROUBLE)), ...beatsOf(2, said.tool, headsOf(SAY_TOOL)),
+      ...beatsOf(3, [0]), ...beatsOf(4, [0, next]), ...beatsOf(5, [0]), ...beatsOf(6, said.built, headsOf(SAY_BUILT)), ...beatsOf(7, said.five, headsOf(SAY_FIVE)),
     ],
     cues: [cue(0, LEAD_S), cue(1, LEAD_S + PULL_S), cue(2, LEAD_S), cue(3, LEAD_S), [...cue(4, LEAD_S), ...cue(5, next + 0.3)], cue(6, LEAD_S), cue(7, LEAD_S), cue(8, LEAD_S)],
   };

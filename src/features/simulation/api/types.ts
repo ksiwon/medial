@@ -15,4 +15,6 @@ export interface Village {
 export interface VoiceClip {
   file: string;
   seconds: number;
+  /** The narrator's recordings of several sentences: where the second, third ... sentence begins (seconds into the recording), found in the audio by the server. */
+  marks?: number[];
 }
