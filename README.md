@@ -26,7 +26,7 @@
 (현재 상태 · 최근 기록), [docs/research/30_WEEK_TIMELINE_REDESIGN.md](docs/research/30_WEEK_TIMELINE_REDESIGN.md)
 (지금 구조가 왜 이런지).
 
-> **브랜치.** 이 브랜치(`v4-week-timeline`)는 한 주 · 사건 풀 구조입니다. 이전의 사흘 · 27경로 구조와 시뮬레이션
+> **브랜치.** 이 저장소의 현재 브랜치(`v6-poster`)는 한 주 · 사건 풀 구조입니다. 이전의 사흘 · 27경로 구조와 시뮬레이션
 > 엔진은 `audience-tablet-split`(v3, 두 화면)과 `single-screen`(한 화면)에 그대로 남아 있습니다.
 
 ---
@@ -47,7 +47,7 @@ npm install
 합니다. macOS·Linux·Git Bash에서는 `./run-exhibition.sh` (`--no-open` 브라우저를 열지 않음 · `--stop` 내림).
 
 서버 <http://127.0.0.1:8020> · 화면 <http://localhost:5180> (`MEDIAL_SIM_PORT` · `MEDIAL_WEB_PORT` 로 바꿉니다).
-모니터는 `/?role=wall`, 태블릿은 모니터의 QR 코드로 엽니다. 직접 띄우려면 `python server/sim_main.py` 와
+모니터는 `/?role=wall`, 태블릿은 모니터의 QR 코드로 엽니다. **전시 중에는 모니터 주소를 새 탭으로 다시 열지 마세요** — 벽이 둘이 되면 먼저 있던 벽이 멈춥니다(새로고침으로만 돌아옵니다). 직접 띄우려면 `python server/sim_main.py` 와
 `npm run dev`(프론트의 `/api/sim` 은 `MEDIAL_SIM_URL`, 기본 `127.0.0.1:8020` 으로 프록시됩니다).
 
 ### 대화록 · 평가 만들기 (모델을 부르는 유일한 곳)
