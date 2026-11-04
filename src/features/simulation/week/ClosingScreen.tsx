@@ -5,7 +5,7 @@ import type { VoiceClip } from '../api/types';
 import { heardSeconds, narrationOf, NARRATION_RATE, playNarration } from '../scene/voice';
 import { tallerThanParent, useFit } from '../ui/useFit';
 import { deepA, inkA, night, px, radius, space, type } from '../ui/theme';
-import { dayOf, eventOf, eventsRead, runsOf, versionOf, type Paths } from './selectors';
+import { closingTitle, dayOf, eventOf, eventsRead, runsOf, versionOf, type Paths } from './selectors';
 import { RuleItem } from './RuleViews';
 import type { Week } from './types';
 
@@ -146,7 +146,7 @@ export default function ClosingScreen({ week, paths, read, words, art, voices }:
   return (
     <Film $src={art.has('INTRO.desk') ? api.artUrl('INTRO.desk') : null} aria-label="마무리">
       <Inner ref={inner}>
-        {words || changed.length === 0 ? (
+        {words ? (
           <Close>
             {CLOSE_SAY.map((text, i) => (i === 0
               ? <strong key={text} style={{ animationDelay: `${at[i]}s` }}>{text}</strong>
@@ -155,11 +155,13 @@ export default function ClosingScreen({ week, paths, read, words, art, voices }:
         ) : (
           <>
             <Head>
-              <small>마무리 · 이번에 고친 것</small>
-              <h1>{eventsRead(read)}개의 사건, {read.length}개의 버전을 보고 {runsOf(paths)}번 고쳤습니다</h1>
-              <p>사건마다 따로 고쳤습니다. 한 사건에서 고친 규칙은 다른 사건에 이어지지 않습니다. 결과는 미리 만들어 둔 시뮬레이션이며 실제 주민의 의견이 아닙니다.</p>
+              <small>{changed.length > 0 ? '마무리 · 이번에 고친 것' : '마무리 · 이번에 살펴본 것'}</small>
+              <h1>{closingTitle(changed.length, runsOf(paths), eventsRead(read))}</h1>
+              {changed.length > 0
+                ? <p>서비스 디자인에서는 고친 것을 다시 확인하는 반복이 중요합니다. 이번에는 사건마다 따로 고쳤고, 고친 규칙은 다른 사건에 이어지지 않습니다. 결과는 미리 만들어 둔 시뮬레이션이며 실제 주민의 의견이 아닙니다.</p>
+                : <p>이번에는 사건을 살펴보기만 하고 고치지는 않았습니다. 무엇을 고칠지 판단하는 일은 서비스 디자이너의 몫입니다. 결과는 미리 만들어 둔 시뮬레이션이며 실제 주민의 의견이 아닙니다.</p>}
             </Head>
-            <Rows $many={many}>
+            {changed.length > 0 && <Rows $many={many}>
               {changed.map((id, i) => {
                 const event = eventOf(week, id);
                 const made = versionOf(event, paths[id] ?? []);
@@ -188,7 +190,7 @@ export default function ClosingScreen({ week, paths, read, words, art, voices }:
                   </li>
                 );
               })}
-            </Rows>
+            </Rows>}
           </>
         )}
       </Inner>

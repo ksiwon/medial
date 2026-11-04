@@ -1,7 +1,7 @@
 // 두 화면(모니터 + 태블릿)으로 한 사건의 버전 흐름을 걷고 단계마다 캡처한다.
 //   node scripts/capture_week.cjs [웹주소] [출력폴더] [사건id=E1] [요청id(쓰지 않음)] [close]
-// 사건 하나: 장면 → 주민의 피드백 → 요청 고르기 → 돌리기(생성 중) → 한 주(그 사건에 v2 칩) → 다시 열기(ver2 장면·평가).
-// `close` 를 주면 이어서 다른 사건 넷을 한 번씩 고쳐 5번을 채우고 마무리 장면까지 찍는다.
+// 사건 하나: 장면 → 주민의 피드백 → 요청 고르기 → 반영하기(생성 중) → 한 주(그 사건에 v2 칩) → 다시 열기(ver2 장면·평가).
+// `close` 를 주면 이어서 다른 사건 둘을 한 번씩 고쳐 3번 이상 보고 마무리 장면까지 찍는다.
 // 실행 중인 sim 서버(run-exhibition)가 필요하다. 기록은 읽기만 한다.
 const { chromium } = require('playwright');
 const fs = require('fs');
@@ -30,8 +30,10 @@ async function main() {
   const shot = async (page, name) => { await page.screenshot({ path: path.join(OUT, `${name}.png`) }); console.log('shot', name); };
   const settle = (ms = 900) => new Promise((r) => setTimeout(r, ms));
   const tap = async (page, text, opts = {}) => {
+    // 태블릿은 화면이 바뀐 직후 0.7초 동안 누름을 받지 않는다(stage/PadApp.tsx SETTLE_MS): 보인 뒤 조금 기다렸다가 누른다.
     const el = page.getByRole('button', { name: text }).first();
     await el.waitFor({ state: 'visible', timeout: 20000 });
+    await settle(800);
     await el.tap(opts);
   };
   const titles = (await (await fetch(`${BASE}/api/sim/week`)).json()).events;
@@ -49,7 +51,7 @@ async function main() {
   const port = new URL(BASE).port;
   await pad.goto(`http://${pairing.addresses[0]}:${port}/?role=pad&t=${encodeURIComponent(pairing.token)}`);
   await pad.getByRole('button', { name: '연결하기' }).tap();
-  await pad.getByText('시작하기').waitFor({ timeout: 180000 }); // 그림·음성을 모두 받으면 "로딩 중..."이 "시작하기"로 바뀐다
+  await pad.getByText('시작하기').waitFor({ timeout: 180000 }); // 그림·음성을 모두 받으면 "불러오는 중…"이 "시작하기"로 바뀐다
   await settle(1500);
   await shot(wall, '01-wall-idle'); await shot(pad, '01-pad-idle');
 
@@ -75,11 +77,11 @@ async function main() {
   if (!emergency) {
     await tap(pad, /수정 요청 고르기 →/); await settle(1500);
     await shot(wall, '08-wall-choose'); await shot(pad, '08-pad-choose');
-    // 손가락이 번호를 누르면 모니터에 켜지고, 태블릿이 반영할지 묻는다. "돌리기" 가 고른다.
+    // 손가락이 번호를 누르면 모니터에 켜지고, 태블릿이 반영할지 묻는다. "반영하기" 가 고른다.
     await pad.getByRole('button', { name: /^1/ }).tap();
     await settle(1200);
     await shot(wall, '08b-wall-considering'); await shot(pad, '08b-pad-asking');
-    await tap(pad, /^돌리기$/);
+    await tap(pad, /^반영하기$/);
     await settle(1200);
     await shot(wall, '08c-wall-generating'); await shot(pad, '08c-pad-generating');
     // 기다림이 끝나면 한 주로 돌아오고, 그 사건 카드에 v2 칩이 붙는다.
@@ -97,7 +99,7 @@ async function main() {
       await tap(pad, /수정 요청 고르기 →/); await settle(1500);
       await shot(wall, '13b-wall-v3-choose'); await shot(pad, '13b-pad-v3-choose');
       await pad.getByRole('button', { name: /^1/ }).tap(); await settle(800);
-      await tap(pad, /^돌리기$/); await settle(1200);
+      await tap(pad, /^반영하기$/); await settle(1200);
       await wall.getByLabel('ver3').waitFor({ state: 'visible', timeout: 20000 });
       await settle(1000);
       await shot(wall, '13c-wall-week-v3'); await shot(pad, '13c-pad-week-v3');
@@ -114,16 +116,16 @@ async function main() {
   }
 
   if (CLOSE) {
-    // 마무리는 5번 고친 뒤에 열린다: 이 사건 하나에 다른 사건 넷을 한 번씩 더한다.
-    for (const more of ['E3', 'E4', 'E2', 'E5']) {
+    // 마무리는 버전을 3번 본 뒤에 열린다: 이 사건 하나에 다른 사건 둘을 한 번씩 더한다.
+    for (const more of ['E3', 'E4']) {
       await tap(pad, new RegExp(titleOf(more))); await settle(1500);
       await skipTelling();
       await tap(pad, /주민의 피드백 →/); await tap(pad, /수정 요청 고르기 →/); await settle(800);
-      await pad.getByRole('button', { name: /^1/ }).tap(); await tap(pad, /^돌리기$/);
+      await pad.getByRole('button', { name: /^1/ }).tap(); await tap(pad, /^반영하기$/);
       await wall.getByLabel('이번 주').waitFor({ state: 'visible', timeout: 20000 });
       await settle(800);
     }
-    await shot(wall, '14-wall-week-five'); await shot(pad, '14-pad-week-five');
+    await shot(wall, '14-wall-week-three'); await shot(pad, '14-pad-week-three');
     await tap(pad, /마무리 장면 보기/); await settle(2500);
     await shot(wall, '15-wall-closing'); await shot(pad, '15-pad-closing');
     await tap(pad, /마무리 말/); await settle(20000);

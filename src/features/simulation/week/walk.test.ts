@@ -8,7 +8,7 @@ import { CLOSE_SAY } from './ClosingScreen';
 import { JOBS } from './RuleViews';
 import { sharedBases } from './ReviewScreens';
 import { judgmentAt, rulesIn } from './judgment';
-import { eventOf, timetable } from './selectors';
+import { closingTitle, eventOf, timetable } from './selectors';
 import type { Week } from './types';
 import { spotsOf } from './VillageMap';
 import { AXIS, feedbackOf } from './WeekScreen';
@@ -77,6 +77,13 @@ describe("the AI's judgment panel", () => {
   });
 });
 
+describe("the closing's one line", () => {
+  it('counts the events that were changed (the cards under it), and never says "0번 고쳤습니다"', () => {
+    expect(closingTitle(2, 3, 4)).toBe('2개의 사건을 3번 고쳤습니다');
+    expect(closingTitle(0, 0, 3)).toBe('3개의 사건을 살펴봤습니다');
+  });
+});
+
 describe('the clocks', () => {
   const base: AutoState = {
     pathStarted: true, step: 'week', eventId: null, toldAll: false, leaf: false, seen: 0, closingWords: false, lastPress: 0,
@@ -105,6 +112,11 @@ describe('the clocks', () => {
     const a = autoOf({ ...base, step: 'evaluations', lastPress: 1 })!;
     const b = autoOf({ ...base, step: 'evaluations', lastPress: 2 })!;
     expect(a.key).not.toBe(b.key);
+  });
+
+  it('a film held on the tablet does not wait for ever: it goes home like a page nobody is at', () => {
+    expect(autoOf({ ...base, pathStarted: false, introHeld: false })).toBeNull();
+    expect(autoOf({ ...base, pathStarted: false, introHeld: true })).toMatchObject({ action: 'home', seconds: AUTO_S.away });
   });
 
   it('closes: what was changed, then the words, then the start', () => {

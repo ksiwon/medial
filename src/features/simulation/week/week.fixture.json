@@ -2984,7 +2984,7 @@
        {
         "place": "HOME",
         "who": {
-         "P8": "phone"
+         "P8": "fallen"
         },
         "device": "안부 스피커",
         "label": "고성재 댁"
@@ -3187,7 +3187,7 @@
         {
          "place": "HOME",
          "who": {
-          "P8": "phone"
+          "P8": "fallen"
          },
          "device": "안부 스피커",
          "label": "고성재 댁"
@@ -3355,7 +3355,7 @@
            {
             "place": "HOME",
             "who": {
-             "P8": "phone"
+             "P8": "fallen"
             },
             "device": "안부 스피커",
             "label": "고성재 댁"
@@ -3839,7 +3839,7 @@
            {
             "place": "HOME",
             "who": {
-             "P8": "phone"
+             "P8": "fallen"
             },
             "device": "안부 스피커",
             "label": "고성재 댁"
@@ -4111,7 +4111,7 @@
         {
          "place": "HOME",
          "who": {
-          "P8": "phone"
+          "P8": "fallen"
          },
          "device": "안부 스피커",
          "label": "고성재 댁"
@@ -4299,7 +4299,7 @@
            {
             "place": "HOME",
             "who": {
-             "P8": "phone"
+             "P8": "fallen"
             },
             "device": "안부 스피커",
             "label": "고성재 댁"
@@ -4488,7 +4488,7 @@
            {
             "place": "HOME",
             "who": {
-             "P8": "phone"
+             "P8": "fallen"
             },
             "device": "안부 스피커",
             "label": "고성재 댁"

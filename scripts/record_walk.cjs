@@ -4,9 +4,14 @@
 // 옛 녹화 도구(사진 영상 시절)는 한 주 구조로 바꾸며 지웠다 — 이것이 새 것이다. 결과는 새 폴더에만 쓴다(확정본 영상은 건드리지 않는다).
 //
 // 걷기(WALKS): 사건 하나를 요청 1번으로 끝까지 읽는다. 같은 사건을 여러 번 열면 ver2 · ver3 을 이어서 읽는다.
-//   full  = E1 · E5 · E1 · E5 · E1 을 읽고 고쳐 본 버전 5개(마무리가 열리는 기준, E1은 ver3까지) → 마무리 장면
-//          7분 안에 끝나야 해서(연구자, 2026-10-28) 가장 짧게 읽히는 사건으로 5개를 채운다
+//   full  = E1 · E5 · E1 을 읽고 고쳐 본 버전 3개(마무리가 열리는 기준, 연구자 2026-11-04: 5 → 3, E1은 ver3까지) → 마무리 장면
+//          7분 안에 끝나야 해서(연구자, 2026-10-28) 가장 짧게 읽히는 사건으로 채운다
 //   quick = E5 한 사건(ver1→ver2→ver3)만, 화면 · 소리 구성 시험용
+//   pitch = 교수님 앞 7분 발표용(연구자 2026-11-04): E1(안부 확인) ver1→ver2, E3(의료 이동 지원) ver1→ver2. 본 버전 4개.
+//          E1은 요청 1번(부분적으로만 나아지는 예), E3는 요청 2번(B, 한 번에 여러 분께 묻기 - 불만이 풀리는 예)을 고른다.
+//          E1 ver2는 태블릿에서 요청을 고르지 않고는 주 목록으로 돌아올 길이 없어 1번을 고르고(ver3는 만들기만 하고 읽지 않는다),
+//          E3 ver2는 더 고를 요청이 없어 "이 사건은 여기까지입니다"에서 "이번 주로"로 돌아온다.
+//   걷기의 한 칸은 [사건, 고를 요청 번호, { rules: 그 버전을 읽고 "현재 규칙"을 띄울지 }].
 //
 // 소리는 이렇게 다룬다 (브라우저 녹화는 소리를 담지 못한다):
 //   1. 모니터 쪽 페이지에 "누가 언제 무슨 소리를 틀고 멈췄는지"를 적는 장치를 심는다(audioLog: 파일 이름과 시각만).
@@ -32,8 +37,9 @@ const WALLSIZE = { width: 2560, height: 1440 };
 const PADSIZE = { width: 1180, height: 820 };
 
 const WALKS = {
-  full: [['E1', 1], ['E5', 1], ['E1', 1], ['E5', 1], ['E1', 1]],
+  full: [['E1', 1], ['E5', 1], ['E1', 1, { rules: true }]],
   quick: [['E5', 1], ['E5', 1]],
+  pitch: [['E1', 1], ['E1', 1, { rules: true }], ['E3', 2], ['E3', 0]],
 };
 // 소리가 없는 화면을 읽는 시간(ms): 사람이 눈으로 따라가는 만큼. 대사는 소리 길이가 정한다.
 const PACE = { draft: 9000, line: 3000, evaluations: 5000, choose: 4000, pick: 1000, week: 1500, closing: 5000, rules: 6000, afterVoice: 300 };
@@ -101,7 +107,7 @@ async function main() {
   const pairing = await (await fetch(`${BASE}/api/sim/stage/pairing`)).json();
   await pad.goto(`http://${pairing.addresses[0]}:${new URL(BASE).port}/?role=pad&t=${encodeURIComponent(pairing.token)}`);
   await pad.getByRole('button', { name: '연결하기' }).tap();
-  await pad.getByText('시작하기').waitFor({ timeout: 180000 }); // 그림·음성을 모두 받으면 "로딩 중..."이 "시작하기"로 바뀐다
+  await pad.getByText('시작하기').waitFor({ timeout: 180000 }); // 그림·음성을 모두 받으면 "불러오는 중…"이 "시작하기"로 바뀐다
   // 영상은 여기서부터가 본편: 앞의 연결 장면은 합칠 때 잘라 낸다.
   const tStart = Date.now();
   await sleep(1500);
@@ -123,7 +129,7 @@ async function main() {
     await sleep(PACE.pick);
   };
 
-  for (const [step, [id]] of WALKS[WALK].entries()) {
+  for (const [id, pick, opts = {}] of WALKS[WALK]) {
     await tap(new RegExp(titleOf(id)));
     // 장면은 스스로 한 줄씩 흘러간다(줄마다 소리 길이 + 0.8초). 누르지 않고 마지막 줄이 나올 때까지 기다린 뒤,
     // 마지막 줄의 소리가 끝나기를 기다렸다가 주민의 피드백으로 간다.
@@ -136,13 +142,13 @@ async function main() {
     await tap(/주민의 피드백 →/);
     await sleep(PACE.evaluations);
     // 고친 버전(ver2)을 읽을 때 한 번: 태블릿의 "현재 규칙"으로 그 버전에 걸린 규칙(바뀐 규칙 포함)을 모니터에 띄운다.
-    if (step === 2) { await showRules(); }
-    if (await pad.getByRole('button', { name: /수정 요청 고르기 →/ }).isVisible().catch(() => false)) {
+    if (opts.rules) { await showRules(); }
+    if (pick > 0 && await pad.getByRole('button', { name: /수정 요청 고르기 →/ }).isVisible().catch(() => false)) {
       await tap(/수정 요청 고르기 →/);
       await sleep(PACE.choose);
-      await pad.getByRole('button', { name: /^1/ }).tap();
+      await pad.getByRole('button', { name: new RegExp(`^${pick}`) }).tap();
       await sleep(PACE.pick);
-      await tap(/^돌리기$/);
+      await tap(/^반영하기$/);
     } else {
       await tap(/이번 주로 →/);
     }
@@ -150,7 +156,7 @@ async function main() {
     await sleep(PACE.week);
   }
 
-  // 5번 이상 고쳐야 마무리가 열린다(짧은 시험 걷기는 거기까지 가지 않고 끝낸다).
+  // 3번 이상 보아야 마무리가 열린다(짧은 시험 걷기는 거기까지 가지 않고 끝낸다).
   if (await pad.getByRole('button', { name: /마무리 장면 보기/ }).isEnabled().catch(() => false)) {
     await showRules();
     await tap(/마무리 장면 보기/);

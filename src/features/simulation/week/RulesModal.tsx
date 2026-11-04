@@ -95,7 +95,7 @@ export default function RulesModal({ week, paths, eventId }: { week: Week; paths
             <div>
               <small>현재 규칙 · {event.title} · ver{path.length + 1}</small>
               <h2>이 사건에서 AI가 따르는 규칙</h2>
-              <p>초안에 이 사건에서 고른 요청을 반영한 것입니다. 고친 규칙은 이 사건에만 적용되고, 다른 사건은 초안대로 돕니다.</p>
+              <p>초안에 이 사건에서 고른 요청을 반영한 것입니다. 고친 규칙은 이 사건에만 적용되고, 다른 사건은 초안대로 돌아갑니다.</p>
             </div>
             <Count>바뀐 규칙 <b>{changed.size}</b> / {total}</Count>
           </Top>
@@ -127,7 +127,7 @@ export default function RulesModal({ week, paths, eventId }: { week: Week; paths
           <div>
             <small>현재 규칙 · 초안과 이번에 고친 것</small>
             <h2>AI가 따르는 규칙</h2>
-            <p>모든 사건은 초안으로 처음 돌았습니다. 고친 규칙은 그 사건에만 적용되어, 사건마다 아래처럼 다르게 돕니다.</p>
+            <p>모든 사건은 초안으로 처음 돌았습니다. 고친 규칙은 그 사건에만 적용되어, 사건마다 아래처럼 다르게 돌아갑니다.</p>
           </div>
           <Count>고친 사건 <b>{changedEvents}</b></Count>
         </Top>

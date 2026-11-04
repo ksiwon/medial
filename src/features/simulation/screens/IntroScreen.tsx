@@ -41,19 +41,19 @@ const ACCENT = night.accent;
  * visitor's part.
  */
 export const INTRO_SAY = [
-  '서비스 디자이너라는 직업을 아시나요? 서비스 디자이너는 사람들이 서비스를 만나고 쓰고 마치는 전 과정의 경험을 설계하고, 쓸 사람들의 이야기를 들어 초안을 여러 번 돌려 보고 다듬어 가는 사람입니다.',
+  '서비스 디자이너라는 직업을 아시나요? 서비스 디자이너는 사람들이 서비스를 만나고 쓰고 마치는 전 과정의 경험을 설계하고, 쓸 사람들의 이야기를 들어 서비스를 만들어 가는 사람입니다.',
   '초안만 봐서는 서비스가 좋은지 알 수 없고, 써 볼 사람들에게 물어야 알 수 있습니다. 특히 작은 공동체는 사람이 적어, 한 분 한 분의 반응이 성패를 가르기도 합니다. 그런데 그런 곳은 현장이 멀고 바빠서, 자주 찾아가 묻기가 어렵습니다. 그러면 고칠 때마다 나아졌는지 확인하기도 어렵습니다.',
   '그래서 Designer를 위한 Simulator, Desimer를 만들었습니다. 실제 사람들을 인터뷰하고, 그 이야기로 구성원 한 분 한 분을 스스로 판단하고 움직이는 AI 에이전트로 세우고, 그 안에서 서비스를 미리 돌려 보는 시뮬레이션 도구입니다. 실제 사람을 대신하는 것이 아니라, 현장에 가기 전에 초안을 미리 살펴보게 돕습니다. 이번에는 한 사례, 시골마을에 들일 의료 AI 조율자를 다뤄 봅니다.',
   '어르신들은 병원에 가야 할 일이 잦지만, 병원은 멀어서 웬만하면 참으십니다.',
   '문제는, 어르신을 살펴 줄 사람이 마을에 없다는 겁니다. 그 일은 이장님 한 분께 이미 몰려 있습니다.',
-  '그래서 서비스 디자이너가 어르신의 안부를 살피고 이웃과 병원을 이어 줄 조율자 AI의 초안을 제안합니다.',
+  '그래서 서비스 디자이너가 어르신의 안부를 살피고 이웃과 병원을 이어 줄 AI 조율자의 초안을 제안합니다.',
   '이 마을도 멀어서, 초안을 들고 자주 찾아가 물을 수는 없습니다.',
   '그래서 이 마을 열두 분의 실제 인터뷰를 바탕으로, 한 분 한 분을 AI 에이전트로 세웠습니다. 서비스 디자이너는 도입 전에 이 열두 분으로 초안을 여러 번 돌려 보고 고칠 수 있습니다.',
-  '이제 관객 여러분이, 초안을 들고 온 서비스 디자이너가 되어 봅니다. 주민 에이전트의 평가를 읽고, 초안을 고쳐 다시 돌려 보며 AI 조율자를 개선합니다.',
+  '이제 관객 여러분이, 초안을 들고 온 서비스 디자이너가 되어 봅니다. 주민 에이전트의 피드백을 읽고, 초안을 고쳐 다시 돌려 보며 AI 조율자를 개선합니다.',
 ] as const;
 
 /** A clip of several sentences is shown a sentence at a time, each from where the voice reaches it (INTRO_SAY joined). */
-const SAY_JOB = ['서비스 디자이너라는 직업을 아시나요?', '서비스 디자이너는 사람들이 서비스를 만나고 쓰고 마치는 전 과정의 경험을 설계하고,', '쓸 사람들의 이야기를 들어 초안을 여러 번 돌려 보고 다듬어 가는 사람입니다.'] as const;
+const SAY_JOB = ['서비스 디자이너라는 직업을 아시나요?', '서비스 디자이너는 사람들이 서비스를 만나고 쓰고 마치는 전 과정의 경험을 설계하고,', '쓸 사람들의 이야기를 들어 서비스를 만들어 가는 사람입니다.'] as const;
 const SAY_TROUBLE = ['초안만 봐서는 서비스가 좋은지 알 수 없고, 써 볼 사람들에게 물어야 알 수 있습니다.', '특히 작은 공동체는 사람이 적어, 한 분 한 분의 반응이 성패를 가르기도 합니다.', '그런데 그런 곳은 현장이 멀고 바빠서, 자주 찾아가 묻기가 어렵습니다.', '그러면 고칠 때마다 나아졌는지 확인하기도 어렵습니다.'] as const;
 const SAY_TOOL = ['그래서 Designer를 위한 Simulator, Desimer를 만들었습니다.', '실제 사람들을 인터뷰하고, 그 이야기로 구성원 한 분 한 분을 스스로 판단하고 움직이는 AI 에이전트로 세우고,', '그 안에서 서비스를 미리 돌려 보는 시뮬레이션 도구입니다.', '실제 사람을 대신하는 것이 아니라, 현장에 가기 전에 초안을 미리 살펴보게 돕습니다.', '이번에는 한 사례, 시골마을에 들일 의료 AI 조율자를 다뤄 봅니다.'] as const;
 /** The twelve are built from interviews: shown in three pieces (the diagram's interviews and residents follow the first). */
@@ -61,11 +61,11 @@ const SAY_BUILT = ['그래서 이 마을 열두 분의 실제 인터뷰를 바�
 /** The AI's draft is one sentence of the narration shown in two pieces. */
 const SAY_MEDIAL = [
   '그래서 서비스 디자이너가 어르신의 안부를 살피고 이웃과 병원을 이어 줄',
-  '조율자 AI의 초안을 제안합니다.',
+  'AI 조율자의 초안을 제안합니다.',
 ] as const;
 const SAY_FIVE = [
   '이제 관객 여러분이, 초안을 들고 온\n서비스 디자이너가 되어 봅니다.',
-  '주민 에이전트의 평가를 읽고, 초안을 고쳐 다시 돌려 보며 AI 조율자를 개선합니다.',
+  '주민 에이전트의 피드백을 읽고, 초안을 고쳐 다시 돌려 보며 AI 조율자를 개선합니다.',
 ] as const;
 
 /** Scene lengths in ms with no voice: they are the least a scene runs. */
@@ -1249,7 +1249,7 @@ export default function IntroScreen({ onFinish, voices = null, skipped = false, 
         {SAY_MEDIAL.map((text, k) => (
           <Caption key={k}>
             <Timed $on={on(4)} $at={(k === 0 ? layout.two.next : layout.said.medial[1]) - 0.1} $until={k === 0 ? layout.said.medial[1] - 0.2 : undefined}>
-              <Eyebrow $on={on(4)}>AI CARE ORCHESTRATOR</Eyebrow>
+              <Eyebrow $on={on(4)}>AI 조율자</Eyebrow>
               <Line $on={on(4)} $delay={k === 0 ? layout.two.next : layout.said.medial[1]}>{text}</Line>
               {k === 1 && (
                 <Chain $on={on(4)} $delay={layout.said.medial[1] + 0.6}>
@@ -1288,7 +1288,7 @@ export default function IntroScreen({ onFinish, voices = null, skipped = false, 
                 <Chain $on={on(6)} $delay={layout.said.built[k] + 0.6}>
                   <span>AI 조율자 초안</span><i>→</i>
                   <span>열두 분이 겪고</span><i>→</i>
-                  <span>평가하고</span><i>→</i>
+                  <span>피드백을 받고</span><i>→</i>
                   <span>초안을 고친다</span>
                 </Chain>
               )}
@@ -1310,7 +1310,7 @@ export default function IntroScreen({ onFinish, voices = null, skipped = false, 
                 {k === 1 && (
                   <Chain $on={on(7)} $delay={at + 0.9}>
                     <span>사건을 본다</span><i>→</i>
-                    <span>주민 에이전트가 AI를 평가한다</span><i>→</i>
+                    <span>주민 에이전트가 AI에 피드백을 준다</span><i>→</i>
                     <span>요청 하나로 고친다</span><i>→</i>
                     <span>바뀐 모습을 본다</span>
                   </Chain>

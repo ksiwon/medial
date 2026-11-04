@@ -98,6 +98,14 @@ const Clock = styled.span`
   white-space: nowrap;
 `;
 
+/** The opening film held on the tablet has a clock too (week/auto.ts): said in the film's own corner, where the foot line is not. */
+const HeldClock = styled(Clock)`
+  position: absolute;
+  right: ${space.xl};
+  bottom: ${space.lg};
+  z-index: 10;
+`;
+
 const Notices = styled.div`
   flex: none;
   display: flex;
@@ -113,10 +121,10 @@ const GENERATING_MS = 3000;
 
 export default function SimulationApp() {
   useUiScale();
-  const { paired } = useWall();
+  const { paired, replaced } = useWall();
   const s = useAssets();
   // The background sound is held with everything else; it starts once it is here.
-  useAmbient(s.status === 'ready');
+  useAmbient(s.status === 'ready' && !replaced);
   const w = useWeekStore();
 
   useEffect(() => {
@@ -154,11 +162,28 @@ export default function SimulationApp() {
   }, [generating, w.endGenerating]);
 
   // Every page that waits counts down (week/auto.ts); a press on the tablet starts it over.
-  const auto = autoOf({
-    pathStarted: w.pathStarted, step: w.step, eventId: w.eventId, toldAll: telling && at.done,
+  // While the new simulation is being made (a few seconds) there is nothing to count down to.
+  const auto = generating ? null : autoOf({
+    introHeld: w.introStarted && w.introPaused, pathStarted: w.pathStarted, step: w.step, eventId: w.eventId, toldAll: telling && at.done,
     leaf: version ? version.requests.length === 0 : false, seen: w.read.length, closingWords: w.closingWords, lastPress: w.lastPress, rulesOpen: w.rulesOpen,
   });
   const left = useCountdown(auto, runAuto);
+
+  // Another wall page took the screen: this one says so and does nothing more (the stream is closed for good, see stage/stream.ts).
+  if (replaced) {
+    return (
+      <Root>
+        <Notices>
+          <Callout $tone="error">
+            <div>
+              <strong>다른 큰 화면이 연결되어 이 화면의 연결이 끊겼습니다.</strong>
+              <div style={{ marginTop: 8 }}>이 화면을 다시 쓰려면 새로고침하세요. 그러면 다른 큰 화면의 연결이 끊깁니다.</div>
+            </div>
+          </Callout>
+        </Notices>
+      </Root>
+    );
+  }
 
   if (s.status === 'error') {
     return (
@@ -169,7 +194,7 @@ export default function SimulationApp() {
               <strong>시뮬레이션 서버에 연결하지 못했습니다.</strong>
               <div style={{ marginTop: 8 }}>{s.error}</div>
               <div style={{ marginTop: 8 }}>
-                <Mono>python server/sim_main.py --mode sim</Mono> 를 실행한 뒤 새로고침하세요. API 키는 필요 없습니다.
+                <Mono>python server/sim_main.py</Mono> 를 실행한 뒤 새로고침하세요. API 키는 필요 없습니다.
               </div>
             </div>
           </Callout>
@@ -232,6 +257,10 @@ export default function SimulationApp() {
       )}
 
       {w.pathStarted && w.rulesOpen && week && <RulesModal week={week} paths={w.paths} eventId={w.eventId} />}
+
+      {!w.pathStarted && w.introStarted && auto && left !== null && left > 0 && (
+        <HeldClock aria-live="off">조작이 없으면 {left}초 뒤 {auto.say}</HeldClock>
+      )}
 
       {w.pathStarted && (
         <Foot>

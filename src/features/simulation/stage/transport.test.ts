@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createBus, postTo, type PressResult } from './bus';
 import type { Command } from './protocol';
-import { forgetPadToken, hasJoined, padAddress, padToken, rememberJoined, type PadKeep } from './protocol';
+import { forgetJoined, forgetPadToken, hasJoined, padAddress, padToken, rememberJoined, type PadKeep } from './protocol';
 
 // What keeps two screens from tripping over each other, with no browser and no server: the order of
 // presses, what the tablet is told came of each, and how a tablet remembers which code it joined.
@@ -108,6 +108,14 @@ describe('how a tablet remembers the code it joined with', () => {
     padToken('?t=two', keep);                    // the server restarted: a new code is a new pairing
     expect(hasJoined('two', keep)).toBe(false);
     expect(hasJoined('one', keep)).toBe(false);
+  });
+
+  it('a tablet that was released keeps the code but must say "connect" again - a reload does not take the wall back', () => {
+    const keep = memory();
+    padToken('?t=one', keep); rememberJoined('one', keep);
+    forgetJoined(keep);
+    expect(hasJoined('one', keep)).toBe(false);
+    expect(padToken('', keep)).toBe('one');
   });
 
   it('forgets everything when the code is refused, and survives storage that throws', () => {

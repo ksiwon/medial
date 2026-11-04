@@ -55,7 +55,7 @@ export interface StageState {
   week: DayBrief[];
   /** How many times the visitor has had the AI changed so far (a request chosen). */
   runs: number;
-  /** How many versions the visitor has read so far (the closing opens at five), and in how many different events. */
+  /** How many versions the visitor has read so far (the closing opens at three), and in how many different events. */
   reads: number;
   events: number;
   /** The open event, and the weekday it falls on this session. */
@@ -90,7 +90,7 @@ export const IDLE_STATE: StageState = {
 export const STAGE_API = '/api/sim/stage';
 
 /** The tablet's connection to the exhibition, as the page can tell it. */
-export type Link = 'connecting' | 'live' | 'lost' | 'released' | 'refused';
+export type Link = 'connecting' | 'live' | 'lost' | 'released' | 'refused' | 'ended';
 
 // ---- who is who ------------------------------------------------------------
 
@@ -145,6 +145,11 @@ export function padToken(search: string = typeof window === 'undefined' ? '' : w
 
 export function forgetPadToken(keep: PadKeep | null = browserKeep()): void {
   try { keep?.removeItem(TOKEN_KEY); keep?.removeItem(JOINED_KEY); } catch { /* nothing kept */ }
+}
+
+/** A released tablet stays released: the code is kept (the same wall may take it back by a scan) but the "connect" is asked again. */
+export function forgetJoined(keep: PadKeep | null = browserKeep()): void {
+  try { keep?.removeItem(JOINED_KEY); } catch { /* nothing kept */ }
 }
 
 export function hasJoined(token: string | null, keep: PadKeep | null = browserKeep()): boolean {

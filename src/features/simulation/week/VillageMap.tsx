@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { api } from '../api/client';
 import type { Village } from '../api/types';
@@ -129,6 +129,23 @@ const Missing = styled.div`
  *  edge, over the column's caption. */
 export const pct = (f: number, margin: number) => Math.min(Math.max(f, margin), 1 - margin) * 100;
 
+/** A pin on the sheet at (fx, fy) as fractions of the map, moved in until the whole of it - its label too, which is as wide
+ *  as the words are - is inside the map: "임태식 댁" at the village's west edge was cut by the column. */
+function PlacedPin({ fx, fy, children }: { fx: number; fy: number; children: ReactNode }) {
+  const el = useRef<HTMLDivElement>(null);
+  const [at, setAt] = useState({ left: `${pct(fx, 0.12)}%`, top: `${pct(fy, 0.04)}%` });
+  useLayoutEffect(() => {
+    const me = el.current;
+    const sheet = me?.parentElement;
+    if (!me || !sheet || sheet.clientWidth === 0 || sheet.clientHeight === 0) return;
+    const clamp = (v: number, half: number, whole: number) => Math.min(Math.max(v, half), whole - half);
+    const left = `${clamp(fx * sheet.clientWidth, me.offsetWidth / 2, sheet.clientWidth).toFixed(1)}px`;
+    const top = `${clamp(fy * sheet.clientHeight, me.offsetHeight / 2, sheet.clientHeight).toFixed(1)}px`;
+    setAt((now) => (now.left === left && now.top === top ? now : { left, top }));
+  });
+  return <Pin ref={el} style={at}>{children}</Pin>;
+}
+
 /**
  * The part of the map the picture covers: the source's view box cut to the raster's own corners, so the sheet has no
  * bare band along an edge the picture does not reach (the map is drawn with the same margin on both sides).
@@ -191,11 +208,11 @@ export default function VillageMap({ village, frames, people, art }: {
               ))}
             </svg>
             {spots.filter((s) => s.at).map((s) => (
-              <Pin key={s.key} style={{ left: `${pct((s.at!.x - box[0]) / box[2], 0.12)}%`, top: `${pct((s.at!.y - box[1]) / box[3], 0.04)}%` }}>
+              <PlacedPin key={s.key} fx={(s.at!.x - box[0]) / box[2]} fy={(s.at!.y - box[1]) / box[3]}>
                 {s.who.length > 0 && <div>{s.who.map((id) => <Portrait key={id} actorId={id} art={art} size={32} />)}</div>}
                 <i />
                 <span>{s.label}</span>
-              </Pin>
+              </PlacedPin>
             ))}
             {spots.filter((s) => !s.at).slice(0, 1).map((s) => (
               <Away key={s.key}><b>↑</b><span>{s.label} · 마을 밖</span></Away>
@@ -203,7 +220,7 @@ export default function VillageMap({ village, frames, people, art }: {
           </Sheet>
         )}
       </Fit>
-      <footer>원본 시뮬레이터의 지도이며 측량도가 아닙니다. 사람은 장면이 일어난 곳에만 표시합니다.</footer>
+      <footer>시뮬레이션에 쓴 마을 지도이며 측량도가 아닙니다. 사람은 장면이 일어난 곳에만 표시합니다.</footer>
     </Column>
   );
 }

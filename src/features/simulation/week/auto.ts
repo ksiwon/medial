@@ -37,6 +37,8 @@ export interface Auto {
 }
 
 export interface AutoState {
+  /** The opening film is on, and the visitor has held it (the tablet's pause): a film held for ever is a visitor who left. */
+  introHeld?: boolean;
   pathStarted: boolean;
   step: string;
   eventId: string | null;
@@ -51,10 +53,12 @@ export interface AutoState {
   rulesOpen?: boolean;
 }
 
-/** The clock the page is on, or null for a page that waits for no one (the film, a telling still being told). */
+/** The clock the page is on, or null for a page that waits for no one (the film while it plays, a telling still being told). */
 export function autoOf(s: AutoState): Auto | null {
-  if (!s.pathStarted) return null;
   const key = (what: string) => `${what}:${s.eventId ?? ''}:${s.lastPress}`;
+  if (!s.pathStarted) {
+    return s.introHeld ? { key: key('intro-held'), seconds: AUTO_S.away, action: 'home', say: '처음으로 돌아갑니다' } : null;
+  }
   if (s.rulesOpen) return { key: key('rules'), seconds: AUTO_S.rules, action: 'rules', say: '규칙 창을 닫습니다' };
   switch (s.step) {
     case 'draft':

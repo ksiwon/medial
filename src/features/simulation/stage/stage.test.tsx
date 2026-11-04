@@ -108,6 +108,31 @@ describe('the week, from the tablet', () => {
   });
 });
 
+describe('the closing, from the tablet', () => {
+  beforeEach(() => at({ introStarted: true, pathStarted: true }));
+
+  it('is not opened by a press before the third version has been read, and is opened by one after', () => {
+    at({ read: ['E1@1', 'E3@1'] });
+    apply({ name: 'finish' });
+    expect(walk().step).toBe('week');
+    at({ read: ['E1@1', 'E3@1', 'E4@1'] });
+    apply({ name: 'finish' });
+    expect(walk().step).toBe('closing');
+  });
+});
+
+describe('"다시 고르기" from the tablet', () => {
+  beforeEach(() => { at({ introStarted: true, pathStarted: true }); apply({ name: 'openEvent', id: 'E1' }); at({ step: 'choose' }); });
+
+  it('puts the pick down: the wall no longer holds one', () => {
+    const id = week.events.find((e) => e.id === 'E1')!.requests[0].id;
+    apply({ name: 'consider', id });
+    expect(walk().considering).toBe(id);
+    apply({ name: 'consider', id: null });
+    expect(walk().considering).toBeNull();
+  });
+});
+
 describe('a telling, from the tablet', () => {
   beforeEach(() => { at({ introStarted: true, pathStarted: true }); apply({ name: 'openEvent', id: 'E1' }); });
   const event = () => week.events.find((e) => e.id === 'E1')!;
@@ -234,6 +259,14 @@ describe('what the wall says it shows', () => {
     expect(s.week.flatMap((d) => d.events).find((e) => e.id === 'E3')!.version).toBe(1);
     expect(s.week.flatMap((d) => d.events).find((e) => e.id === 'E6')!.noChoice).toBe(true);
     expect(s.runs).toBe(1);
+  });
+
+  it("lists a day's events in the order of the wall's timetable, by the time of the day", () => {
+    const starts = (id: string) => Math.min(...week.events.find((e) => e.id === id)!.before.scenes.map((s) => Number(s.time.slice(0, 2)) + Number(s.time.slice(3)) / 60));
+    for (const d of state().week) {
+      const at = d.events.map((e) => starts(e.id));
+      expect(at).toEqual([...at].sort((a, b) => a - b));
+    }
   });
 
   it('tells where in a telling the wall is, and says it is done only on the last line', () => {

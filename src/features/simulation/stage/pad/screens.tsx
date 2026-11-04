@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { inkA, night, radius } from '../../ui/theme';
-import { READS_TO_CLOSE } from '../../week/selectors';
+import { READS_TO_CLOSE, closingTitle } from '../../week/selectors';
 import type { Command, StageState } from '../protocol';
 import { Ask, Button, Card, Grid, Hint, Next, Page, Row, Spacer, Stage } from './kit';
 
@@ -19,7 +19,7 @@ export function Waiting({ s, press }: { s: StageState; press: Press }) {
   return (
     <Stage>
       <h1>서비스 디자이너가 되어 보세요</h1>
-      <Button $tone="primary" $big disabled={!s.ready} onClick={() => press({ name: 'start' })}>{s.ready ? '시작하기' : '로딩 중...'}</Button>
+      <Button $tone="primary" $big disabled={!s.ready} onClick={() => press({ name: 'start' })}>{s.ready ? '시작하기' : '불러오는 중…'}</Button>
     </Stage>
   );
 }
@@ -89,11 +89,12 @@ const EventButton = styled(Card)`
   gap: 12px;
   > b { flex: 1; font-size: 24px; }
   > small { flex: none; padding: 4px 12px; border-radius: ${radius.pill}; font-size: 16px; font-weight: 800; color: ${night.deep}; background: ${night.ink}; }
+  > small.ver { color: ${night.white}; background: ${night.accent}; }
 `;
 
 export function Week({ s, press }: { s: StageState; press: Press }) {
-  // Not "n of 5": the visitor may read as many versions as they like; five is only where the closing opens, and the
-  // page says so in those words ("5번 이상") for as long as it is on.
+  // Not "n of 3": the visitor may read as many versions as they like; three is only where the closing opens, and the
+  // page says so in those words ("3번 이상") for as long as it is on.
   const opens = s.reads >= READS_TO_CLOSE;
   return (
     <Page>
@@ -107,14 +108,14 @@ export function Week({ s, press }: { s: StageState; press: Press }) {
               {d.events.map((e) => (
                 <EventButton key={e.id} onClick={() => press({ name: 'openEvent', id: e.id })}>
                   <b>{e.title}</b>
-                  {e.noChoice ? <small>응급</small> : e.version > 1 ? <small>v{e.version}</small> : null}
+                  {e.noChoice ? <small>응급</small> : e.version > 1 ? <small className="ver">ver{e.version}</small> : null}
                 </EventButton>
               ))}
             </div>
           </DayRow>
         ))}
       </WeekList>
-      {/* The closing is always on the page, so the way out is known; until the fifth version it is an outline that does not answer. */}
+      {/* The closing is always on the page, so the way out is known; until the third version it is an outline that does not answer. */}
       <Row>
         <Spacer />
         <Hint>본 버전 {s.reads} · 고친 횟수 {s.runs} · {READS_TO_CLOSE}번 이상 보면 마무리 장면으로 넘어갈 수 있어요</Hint>
@@ -212,11 +213,21 @@ const RequestNumber = styled(Card)`
   > span { font-size: 24px; font-weight: 700; line-height: 1.4; color: ${night.ink}; word-break: keep-all; -webkit-line-clamp: 4; }
 `;
 
+/** How long a choice waits for the wall to say it is making the new simulation. */
+const CHOICE_WAIT_MS = 5000;
+
 export function Choose({ s, press }: { s: StageState; press: Press }) {
-  // A choice cannot be taken back, so it takes two touches: a number (lit here and on the wall), then "돌리기" in the
+  // A choice cannot be taken back, so it takes two touches: a number (lit here and on the wall), then "반영하기" in the
   // question that comes up. From that on, nothing else on this page answers.
   const [sent, setSent] = useState<string | null>(null);
   useEffect(() => { setSent(null); }, [s.event?.id]);
+  // The wall may not have heard the choice (a dropped press): if it has not begun making the new simulation within
+  // a few seconds, the page lets go, so the visitor can choose again instead of waiting on a screen that never moves.
+  useEffect(() => {
+    if (sent === null || s.generating) return undefined;
+    const timer = window.setTimeout(() => setSent(null), CHOICE_WAIT_MS);
+    return () => window.clearTimeout(timer);
+  }, [sent, s.generating]);
   const picked = s.considering;
   const number = picked ? s.requests.findIndex((r) => r.id === picked) + 1 : null;
   if (s.generating) return <Stage><h1>새로운 시뮬레이션을 만들고 있어요</h1></Stage>;
@@ -242,7 +253,7 @@ export function Choose({ s, press }: { s: StageState; press: Press }) {
             <p>반영된 규칙대로 이 사건을 새로 시뮬레이션합니다.</p>
             <div>
               <Button $tone="quiet" onClick={() => press({ name: 'consider', id: null })}>다시 고르기</Button>
-              <Button $tone="primary" onClick={() => { setSent(picked); press({ name: 'choose', id: picked }); }}>돌리기</Button>
+              <Button $tone="primary" onClick={() => { setSent(picked); press({ name: 'choose', id: picked }); }}>반영하기</Button>
             </div>
           </section>
         </Ask>
@@ -256,7 +267,7 @@ export function Choose({ s, press }: { s: StageState; press: Press }) {
 export function Closing({ s, press }: { s: StageState; press: Press }) {
   return (
     <Stage>
-      <h1>{s.events}개의 사건, {s.reads}개의 버전을 보고 {s.runs}번 고쳤습니다</h1>
+      <h1>{closingTitle(s.week.flatMap((d) => d.events).filter((e) => e.version > 1).length, s.runs, s.events)}</h1>
       {/* The closing words are always heard before the way back: the start button only comes up once they are on the wall. */}
       {s.closingWords
         ? <Button $tone="primary" $big onClick={() => press({ name: 'home' })}>처음으로</Button>

@@ -133,8 +133,8 @@ const VersionChip = styled.span`
   top: ${space.md};
   right: ${space.md};
   font-weight: 800;
-  color: ${night.ink};
-  background: ${inkA(0.14)};
+  color: ${night.white};
+  background: ${night.accent};
 `;
 
 /** How the residents received it: one entry each - who, the kinds of what they said, and the one thing to read. */
@@ -204,7 +204,7 @@ function EventCard({ week, block, art, now, path }: {
       <Ghost $src={picture.backdrop} aria-hidden>
         {picture.figures.map((src, i) => <img key={src} src={src} alt="" style={{ right: `${i * 34}%` }} />)}
       </Ghost>
-      {number > 1 && <VersionChip aria-label={`ver${number}`}>v{number}</VersionChip>}
+      {number > 1 && <VersionChip aria-label={`ver${number}`}>ver{number}</VersionChip>}
       <Title $chip={number > 1}>
         {(now || event.noChoice) && (
           <Top>{now ? <Mark $kind="now">지금 보는 중</Mark> : <Mark $kind="emergency">응급</Mark>}</Top>

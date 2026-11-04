@@ -65,33 +65,62 @@ const Column = styled.div<{ $side: 'left' | 'right' }>`
   /* The left column's last card stands at the bottom, where its people are on the map. The right column is stacked from
      the top: the recorded film lays the tablet over the lower right, and a card must end above it. */
   ${(p) => p.$side === 'left' && 'section:last-child { margin-top: auto; }'}
+  ${(p) => p.$side === 'right' && `padding-top: calc(${space.xxl} * 3);`}
 `;
 
+/** The page's head, the same as the residents' feedback page and the others (week/ReviewScreens): a small line saying
+ *  where we are, the title in one colour, and a muted line under it. */
 const Head = styled.header`
   display: flex;
   flex-direction: column;
-  gap: ${space.md};
+  gap: ${space.sm};
   margin-bottom: ${space.sm};
-  > small { display: flex; align-items: center; gap: ${space.sm}; font-size: ${type.caption}; font-weight: 800; letter-spacing: 0.09em; color: ${night.accent}; }
+  > small { display: inline-flex; align-items: center; gap: ${space.sm}; font-size: ${type.caption}; font-weight: 800; letter-spacing: 0.08em; color: ${night.accent}; }
   > small::before { content: ''; width: ${px(28)}; height: 2px; background: ${night.accent}; }
-  > h1 { margin: 0; font-size: ${type.display}; font-weight: 800; letter-spacing: -0.04em; line-height: 1.2; word-break: keep-all; }
-  > h1 > em { font-style: normal; color: ${night.accent}; }
+  > h1 { margin: 0; font-size: ${type.display}; line-height: 1.12; font-weight: 800; letter-spacing: -0.04em; word-break: keep-all; }
   > p { margin: 0; font-size: ${type.body}; line-height: 1.6; color: ${night.mute}; word-break: keep-all; }
+`;
+
+/** The draft is the first version of something that is revised. What turns one version into the next sits between them,
+ *  in a tray: the week is run (the screen), the residents answer (a speech bubble), and the designer - the one step the
+ *  machine does not do, in the accent - reads them and marks what to change. Plain line pictograms, the stroke the
+ *  other pages' chips and rules are drawn with; ver2 and ver3 are not made yet. */
+const Pass = styled.div`
+  flex: none;
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: ${space.sm};
+  margin: ${space.lg} 0 calc(${space.xxl} * 2) ${space.lg};
+  i.to { flex: none; position: relative; width: ${px(16)}; height: 2px; background: ${night.line}; }
+  i.to::after { content: ''; position: absolute; right: 0; top: -4px; width: 8px; height: 8px; border-top: 2px solid ${night.faint}; border-right: 2px solid ${night.faint}; transform: rotate(45deg); }
+  b { flex: none; padding: ${space.xs} ${space.md}; border-radius: ${radius.control}; font-size: ${type.lead}; font-weight: 800; letter-spacing: -0.02em; border: 2px solid ${night.line}; color: ${night.faint}; }
+  b.now { border-color: ${night.accent}; color: ${night.ink}; background: ${accentA(0.14)}; }
+  > div { display: flex; align-items: center; gap: ${space.sm}; padding: ${space.lg} ${space.xxl} ${space.md} ${space.md}; border-radius: ${radius.card}; background: ${deepA(0.66)}; border: 1px solid ${night.line}; }
+  figure { margin: 0; width: ${px(88)}; display: flex; flex-direction: column; align-items: center; gap: ${space.sm}; color: ${night.mute}; }
+  figure > svg { width: ${px(52)}; height: ${px(48)}; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  figure > svg .hot { fill: ${night.accent}; stroke: none; }
+  figure > svg .soft { stroke-opacity: 0.5; }
+  figure > figcaption { font-size: ${type.body}; font-weight: 700; white-space: nowrap; }
+  figure.designer { color: ${night.accent}; }
+  figure.designer > figcaption { font-weight: 800; }
+  figure.designer > svg .fill { fill: ${accentA(0.25)}; }
 `;
 
 const Card = styled.section`
   display: flex;
   flex-direction: column;
-  gap: ${space.xs};
-  padding: ${space.md} ${space.sm};
+  padding: ${space.xl};
   border-radius: ${radius.card};
   background: ${deepA(0.66)};
   border: 1px solid ${night.line};
   animation: ${rise} 0.7s ease both;
-  > header { display: flex; align-items: baseline; justify-content: space-between; gap: ${space.md}; padding: 0 ${space.lg}; }
+  /* the name, then a rule as wide as the words under it */
+  > header { display: flex; align-items: baseline; justify-content: space-between; gap: ${space.md}; padding-bottom: ${space.md}; border-bottom: 1px solid ${night.line}; }
   > header > h2 { margin: 0; font-size: ${type.title}; font-weight: 800; letter-spacing: -0.03em; }
-  > header > span { font-size: ${type.caption}; font-weight: 800; letter-spacing: 0.06em; color: ${night.faint}; }
-  > ol { list-style: none; margin: 0; padding: ${space.sm} 0 0; border-top: 1px solid ${night.line}; display: flex; flex-direction: column; gap: ${space.xs}; }
+  > ol { list-style: none; margin: 0; padding: ${space.md} 0 0; display: flex; flex-direction: column; gap: ${space.md}; }
+  /* a rule sits on the card's own inset: the same room left, right, above and below */
+  > ol > li { padding: 0; }
 `;
 
 /** The map at its own proportions, as beside a scene (week/VillageMap): the pins' % are places on the picture. */
@@ -188,7 +217,7 @@ export default function DraftScreen({ week, art, village }: { week: Week; art: R
     if (rules.length === 0) return null;
     return (
       <Card key={role.key} data-card={role.key}>
-        <header><h2>{role.title}</h2><span>규칙 {rules.length}개</span></header>
+        <header><h2>{role.title}</h2></header>
         <ol>{rules.map((r) => <RuleItem key={r.type} dense label={r.label} was={r.sentence} />)}</ol>
       </Card>
     );
@@ -200,11 +229,38 @@ export default function DraftScreen({ week, art, village }: { week: Week; art: R
         <Board ref={board}>
           <Column $side="left">
             <Head>
-              <small>ver1 · 처음 정해 둔 규칙</small>
-              <h1>서비스 디자이너가 들고 온 <em>‘의료 AI 조율자’</em> 초안</h1>
-              <p>한 주의 모든 사건이 이 규칙으로 처음 돌았습니다. 주민의 피드백을 읽고, 사건마다 규칙을 하나씩 고쳐 봅니다.</p>
+              <small>서비스 디자이너의 설계 · ver1</small>
+              <h1>의료 AI 조율자 초안</h1>
+              <p>AI 조율자가 따를 규칙을 서비스 디자이너가 처음 정했습니다.<br />주민의 피드백을 읽고 어떤 규칙을 고칠지 판단하는 일이 이어집니다.</p>
             </Head>
-            {ROLES.filter((r) => r.side === 'left').map(card)}
+            {(() => {
+              const left = ROLES.filter((r) => r.side === 'left').map(card);
+              return [
+                <Pass key="loop" aria-label="초안은 같은 과정을 거쳐 다음 버전이 됩니다">
+                  <b className="now">ver1</b>
+                  <i className="to" />
+                  <div>
+                    <figure>
+                      <svg viewBox="0 0 96 84" aria-hidden><rect x="8" y="6" width="80" height="54" rx="6" /><path d="M36 74h24M48 60v14" /><path className="soft" d="M20 44l14-12 12 8 16-14 12 10" /><circle className="hot" cx="34" cy="32" r="5" /><circle cx="62" cy="26" r="3.5" fill="currentColor" stroke="none" /></svg>
+                      <figcaption>시뮬레이션</figcaption>
+                    </figure>
+                    <i className="to" />
+                    <figure>
+                      <svg viewBox="0 0 96 84" aria-hidden><path d="M10 10h42a6 6 0 0 1 6 6v20a6 6 0 0 1-6 6H28L16 54V42h-6z" /><path className="soft" d="M44 52h28l10 10V52h4a6 6 0 0 0 6-6V32M20 22h26M20 32h16" /></svg>
+                      <figcaption>주민의 피드백</figcaption>
+                    </figure>
+                    <i className="to" />
+                    <figure className="designer">
+                      <svg viewBox="0 0 96 84" aria-hidden><circle cx="38" cy="22" r="11" /><path d="M14 74c0-18 12-28 24-28s24 10 24 28" /><path className="fill" d="M62 50l22-22 6 6-22 22-9 3z" /><path d="M78 34l6 6" /></svg>
+                      <figcaption>디자이너의 판단</figcaption>
+                    </figure>
+                  </div>
+                  <i className="to" />
+                  <b>ver2</b>
+                </Pass>,
+                ...left,
+              ];
+            })()}
           </Column>
 
           {box ? (

@@ -32,7 +32,7 @@ WEEK = [
     ("08", "수정 요청 고르기", "choose"), ("08b", "요청을 눌러 보는 중 · 반영할지 묻는 창", "ask"), ("08c", "새로운 시뮬레이션을 만드는 중", "generating"),
     ("11", "다시 한 주 — 그 사건에 v2 칩", "week-again"), ("12", "ver2 장면", "v2-scene"), ("13", "ver2 주민의 피드백 — 피드백의 변화", "v2-evaluations"),
     ("13b", "ver3 요청 고르기", "v3-choose"), ("13c", "한 주 — v3 칩", "week-v3"), ("13d", "ver3 장면", "v3-scene"),
-    ("13e", "ver3 주민의 피드백 — 피드백의 변화", "v3-evaluations"), ("14", "본 버전 5개 — 마무리가 열린다", "week-five"),
+    ("13e", "ver3 주민의 피드백 — 피드백의 변화", "v3-evaluations"), ("14", "본 버전 3개 — 마무리가 열린다", "week-three"),
     ("15", "마무리 — 사건 · 버전 · 수정", "closing"), ("16", "마무리 해설", "closing-words"),
 ]
 
@@ -80,7 +80,7 @@ def main() -> None:
             body += f'<img class="pad" loading="lazy" src="{small(pad, OUT / "pad" / f"{key}.webp", 1180)}" alt="태블릿 · {html.escape(title)}">'
         if body:
             rows.append(card(f"{key} · {title}", f'<div class="pair">{body}</div>'))
-    sections.append(("한 주의 걸음 — 모니터(왼쪽)와 태블릿(오른쪽)", "사건 E1을 ver3까지 읽고, 다른 사건을 고쳐 본 버전 5개를 채워 마무리까지.", "stack", rows))
+    sections.append(("한 주의 걸음 — 모니터(왼쪽)와 태블릿(오른쪽)", "사건 E1을 ver3까지 읽고(본 버전 3개), 다른 사건 둘을 더 고쳐 마무리까지.", "stack", rows))
 
     rows = []
     for i in range(1, 8):

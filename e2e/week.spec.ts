@@ -24,13 +24,17 @@ async function open(browser: Browser, baseURL: string): Promise<Screens> {
   const pairing = await (await wall.request.get(`${baseURL}/api/sim/stage/pairing`)).json() as { token: string };
   await pad.goto(`${baseURL}/?role=pad&t=${encodeURIComponent(pairing.token)}`);
   await pad.getByRole('button', { name: '연결하기' }).tap();
-  // 그림·음성을 모두 받을 때까지 버튼은 "로딩 중..."이다.
+  // 그림·음성을 모두 받을 때까지 버튼은 "불러오는 중…"이다.
   await expect(pad.getByRole('button', { name: '시작하기' })).toBeVisible({ timeout: 180_000 });
   // The server pairs one wall and one tablet: a test closes its screens so the next one is not "replaced" by them.
   return { wall, pad, problems, close: async () => { await wallContext.close(); await padContext.close(); } };
 }
 
-const tap = (page: Page, name: string | RegExp) => page.getByRole('button', { name }).first().tap();
+// The tablet does not take a press in the moment after its page changes (a visitor pressing "다음 →" over and over must
+// not press what comes up under the finger), so a test that goes on at once waits that moment out first.
+const SETTLE = 800;
+const tap = async (page: Page, name: string | RegExp) => { await page.waitForTimeout(SETTLE); await page.getByRole('button', { name }).first().tap(); };
+const tapFirstRequest = async (pad: Page) => { await pad.waitForTimeout(SETTLE); await pad.getByRole('button', { name: /^1/ }).tap(); };
 const noHorizontalScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 
 /** Changes one event once (its first request): reads it through, chooses, and waits until the wall is at the week again. */
@@ -38,13 +42,14 @@ async function change({ wall, pad }: Screens, title: RegExp) {
   await tap(pad, title);
   await expect(pad.getByRole('button', { name: /넘기기/ })).toBeVisible();
   for (let i = 0; i < 12 && !(await pad.getByRole('button', { name: /주민의 피드백 →/ }).isVisible().catch(() => false)); i += 1) {
+    await pad.waitForTimeout(SETTLE);
     await pad.getByRole('button', { name: /넘기기/ }).tap({ timeout: 3000 }).catch(() => {});
     await wall.waitForTimeout(400);
   }
   await tap(pad, /주민의 피드백 →/);
   await tap(pad, /수정 요청 고르기 →/);
-  await pad.getByRole('button', { name: /^1/ }).tap();
-  await tap(pad, /^돌리기$/);
+  await tapFirstRequest(pad);
+  await tap(pad, /^반영하기$/);
   await expect(wall.getByLabel('이번 주')).toBeVisible({ timeout: 20_000 });
 }
 
@@ -53,7 +58,7 @@ async function intoTheWeek({ wall, pad }: Screens) {
   await expect(pad.getByRole('button', { name: /건너뛰기/ })).toBeVisible();
   await tap(pad, /건너뛰기/);
   // The film's last scene ("now you are the service designer") plays out, then the draft the designer brought.
-  await expect(wall.getByLabel('AI 조율자 초안')).toBeVisible({ timeout: 40_000 });
+  await expect(wall.getByLabel('AI 조율자 초안')).toBeVisible({ timeout: 60_000 });
   await tap(pad, /이번 주로 →/);
   await expect(wall.getByLabel('이번 주')).toBeVisible({ timeout: 20_000 });
   await expect(pad.getByLabel('조용한 날').first()).toBeVisible();
@@ -65,13 +70,13 @@ async function intoTheWeek({ wall, pad }: Screens) {
   await expect(wall.getByLabel('이번 주')).toBeVisible();
 }
 
-test('한 주를 걷는다: 사건 → 장면 → 평가 → 요청 → 새 버전, 다시 이번 주 · 버전을 5번 이상 보면 마무리', async ({ browser, baseURL }) => {
+test('한 주를 걷는다: 사건 → 장면 → 평가 → 요청 → 새 버전, 다시 이번 주 · 버전을 3번 이상 보면 마무리', async ({ browser, baseURL }) => {
   const s = await open(browser, baseURL!);
   const { wall, pad } = s;
   await intoTheWeek(s);
   expect(await noHorizontalScroll(wall)).toBe(true);
   // the tablet says in words where the closing opens, and shows no "read" mark
-  await expect(pad.getByText(/5번 이상 보면 마무리 장면으로 넘어갈 수 있어요/)).toBeVisible();
+  await expect(pad.getByText(/3번 이상 보면 마무리 장면으로 넘어갈 수 있어요/)).toBeVisible();
   await expect(pad.getByText(/읽음|✓/)).toHaveCount(0);
 
   // an event with a choice: Monday's
@@ -103,14 +108,14 @@ test('한 주를 걷는다: 사건 → 장면 → 평가 → 요청 → 새 버�
   await expect(wall.getByText('바라는 것').first()).toBeVisible();
   expect(await noHorizontalScroll(wall)).toBe(true);
 
-  // a touch picks and asks, "돌리기" chooses; the wall makes the new simulation for a few seconds, then the week
-  await pad.getByRole('button', { name: /^1/ }).tap();
-  await tap(pad, /^돌리기$/);
+  // a touch picks and asks, "반영하기" chooses; the wall makes the new simulation for a few seconds, then the week
+  await tapFirstRequest(pad);
+  await tap(pad, /^반영하기$/);
   await expect(wall.getByText('새로운 시뮬레이션을 만들고 있습니다')).toBeVisible();
   await expect(wall.getByLabel('이번 주')).toBeVisible({ timeout: 20_000 });
   // the event is one version on: a small chip on its card and on the tablet's button, nothing shown straight away
   await expect(wall.getByLabel('ver2')).toBeVisible();
-  await expect(pad.getByText('v2')).toBeVisible();
+  await expect(pad.getByText('ver2')).toBeVisible();
   await expect(pad.getByText(/고친 횟수 1/)).toBeVisible();
   await expect(pad.getByRole('button', { name: /마무리 장면 보기/ })).toBeDisabled();
 
@@ -122,11 +127,13 @@ test('한 주를 걷는다: 사건 → 장면 → 평가 → 요청 → 새 버�
   await tap(pad, /주민의 피드백 →/);
   await expect(wall.getByText(/ver1에서 바뀐 규칙/)).toBeVisible();
   await tap(pad, /수정 요청 고르기 →/);
-  await pad.getByRole('button', { name: /^1/ }).tap();
-  await tap(pad, /^돌리기$/);
+  await tapFirstRequest(pad);
+  await tap(pad, /^반영하기$/);
   await expect(wall.getByLabel('이번 주')).toBeVisible({ timeout: 20_000 });
   await expect(wall.getByLabel('ver3')).toBeVisible();
   await expect(pad.getByText(/고친 횟수 2/)).toBeVisible();
+  // two versions read so far: not yet
+  await expect(pad.getByRole('button', { name: /마무리 장면 보기/ })).toBeDisabled();
   await tap(pad, /연락이 안 되어 찾아보기/);
   await expect(pad.getByText(/^ver3 ·/)).toBeVisible();
   await tap(pad, /넘기기/);
@@ -137,18 +144,16 @@ test('한 주를 걷는다: 사건 → 장면 → 평가 → 요청 → 새 버�
   await tap(pad, /이번 주로 →/);
   await expect(wall.getByLabel('이번 주')).toBeVisible();
 
-  // three more changes (each event once): the closing opens with the fifth version read, not the fifth change
+  // the third version is read: the closing is on, from the week, and the count is of versions read
+  await expect(pad.getByText(/본 버전 3/)).toBeVisible();
+  await expect(pad.getByRole('button', { name: /마무리 장면 보기/ })).toBeEnabled();
+  // one more change in another event, then the closing
   await change(s, /병원 태워다 주고 데려오기/);
   await expect(pad.getByText(/본 버전 4/)).toBeVisible();
-  await expect(pad.getByRole('button', { name: /마무리 장면 보기/ })).toBeDisabled();
-  await change(s, /낙상 후 못 일어남/);
-  await expect(pad.getByText(/본 버전 5/)).toBeVisible();
-  await expect(pad.getByRole('button', { name: /마무리 장면 보기/ })).toBeEnabled();
-  await change(s, /보건소장의 안내 전달/);
-  await expect(pad.getByText(/고친 횟수 5/)).toBeVisible();
+  await expect(pad.getByText(/고친 횟수 3/)).toBeVisible();
   await tap(pad, /마무리 장면 보기/);
   await expect(wall.getByLabel('마무리')).toBeVisible();
-  await expect(wall.getByText(/4개의 사건, 6개의 버전을 보고 5번 고쳤습니다/)).toBeVisible();
+  await expect(wall.getByText(/2개의 사건을 3번 고쳤습니다/)).toBeVisible();
   // the way back is not offered until the closing words have been heard
   await expect(pad.getByRole('button', { name: '처음으로', exact: true })).toHaveCount(0);
   await tap(pad, /마무리 말/);

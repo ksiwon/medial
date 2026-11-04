@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { positionIn, eventOf, dayOf, eventsRead, runsOf, versionOf, type Paths } from '../week/selectors';
+import { positionIn, eventOf, dayOf, eventsRead, runsOf, startOf, versionOf, READS_TO_CLOSE, type Paths } from '../week/selectors';
 import { assetsReady, useAssets } from '../assets';
 import { useWeekStore } from '../week/store';
 import type { Evaluation, Week, WeekEvent, WeekScene } from '../week/types';
@@ -29,6 +29,9 @@ export function evaluationsOf(event: WeekEvent | null, path: readonly string[]):
 export function apply(command: Command): void {
   const w = useWeekStore.getState();
   w.touch();
+  // The closing opens with the third version read. The tablet's button says so, but a press is not trusted to have come
+  // from a button that was on: this is the wall's own check (the run-out clock is not a press, and goes on to the closing by itself).
+  if (command.name === 'finish' && w.read.length < READS_TO_CLOSE) return;
   // The rules are a look aside: any other press closes them before it does what it does.
   if (command.name !== 'rules' && w.rulesOpen) w.setRulesOpen(false);
   run(command);
@@ -89,7 +92,7 @@ function run(command: Command): void {
       if (on('evaluations')) w.goChoose();
       return;
     case 'consider':
-      w.consider(command.id);
+      w.consider(command.id ?? null);
       return;
     case 'choose':
       w.chooseRequest(command.id);
@@ -120,10 +123,10 @@ const requestBrief = (event: WeekEvent, path: readonly string[]): RequestBrief[]
 const weekBrief = (week: Week, paths: Paths): DayBrief[] =>
   week.days.map((d) => ({
     day: d.day,
-    events: d.events.map((id) => {
-      const e = eventOf(week, id)!;
-      return { id, title: e.title, noChoice: e.noChoice, version: (paths[id]?.length ?? 0) + 1 };
-    }),
+    // In the order of the wall's timetable: the time of the day, not the order the schedule lists them.
+    events: d.events.map((id) => eventOf(week, id)!).sort((a, b) => startOf(a) - startOf(b)).map((e) => (
+      { id: e.id, title: e.title, noChoice: e.noChoice, version: (paths[e.id]?.length ?? 0) + 1 }
+    )),
   }));
 
 /** What the wall shows right now, for the tablet. Pure: the same store always says the same thing. */
@@ -170,8 +173,10 @@ function coarse(state: StageState): string {
   return JSON.stringify(state);
 }
 
-export function useWall(): { paired: boolean } {
+export function useWall(): { paired: boolean; replaced: boolean } {
   const [paired, setPaired] = useState(false);
+  const [replaced, setReplaced] = useState(false);
+  const gone = useRef(false);
   const chain = useRef<Promise<void>>(Promise.resolve());
   const sending = useRef(false);
   const waiting = useRef<StageState | null>(null);
@@ -191,6 +196,7 @@ export function useWall(): { paired: boolean } {
     }
   }, []);
   const publish = useCallback((force: boolean) => {
+    if (gone.current) return;
     const key = coarse(latest.current);
     if (!force && key === sent.current) return;
     sent.current = key;
@@ -210,10 +216,12 @@ export function useWall(): { paired: boolean } {
         setPaired(((data as { pad?: number } | null)?.pad ?? 0) > 0);
         publish(true);
       },
-      // Another wall page took over (this one was a stale tab): it must not go on acting as the wall.
-      replaced: () => { setPaired(false); },
+      // Another wall page took over (this one was a stale tab): it must not go on acting as the wall. It says so and
+      // stays quiet for good: opening the stream again would take the wall back, and two tabs would fight over it.
+      replaced: () => { gone.current = true; waiting.current = null; setPaired(false); setReplaced(true); },
       ping: () => {},
     },
+    endOn: ['replaced'],
   });
 
   const w = useWeekStore();
@@ -227,5 +235,5 @@ export function useWall(): { paired: boolean } {
 
   // After every render: the cheap comparison above decides whether anything goes out.
   useEffect(() => { publish(false); });
-  return { paired };
+  return { paired, replaced };
 }

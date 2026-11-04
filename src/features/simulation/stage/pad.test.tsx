@@ -1,5 +1,5 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Choose, Evaluations, Telling, Watching, Week } from './pad/screens';
 import { IDLE_STATE, type Command, type StageState } from './protocol';
 
@@ -29,21 +29,21 @@ describe('the week', () => {
     expect(screen.getByText(/본 버전 3 · 고친 횟수 1/)).toBeDefined();
   });
 
-  it('says in words that five or more versions read open the closing scene - and never "n of 5", as if five were all', () => {
+  it('says in words that three or more versions read open the closing scene - and never "n of 3", as if three were all', () => {
     render(<Week s={state({ phase: 'week', week, reads: 2 })} press={pressed().press} />);
-    expect(screen.getByText(/5번 이상 보면 마무리 장면으로 넘어갈 수 있어요/)).toBeDefined();
-    expect(screen.queryByText(/\/ ?5/)).toBeNull();
+    expect(screen.getByText(/3번 이상 보면 마무리 장면으로 넘어갈 수 있어요/)).toBeDefined();
+    expect(screen.queryByText(/\/ ?3/)).toBeNull();
   });
 
-  it('opens the closing with the fifth version read, and not before', () => {
+  it('opens the closing with the third version read, and not before', () => {
     const a = pressed();
-    render(<Week s={state({ phase: 'week', week, reads: 5 })} press={a.press} />);
+    render(<Week s={state({ phase: 'week', week, reads: 3 })} press={a.press} />);
     fireEvent.click(screen.getByText('마무리 장면 보기 →'));
     expect(a.sent).toEqual([{ name: 'finish' }]);
     cleanup();
     const b = pressed();
-    render(<Week s={state({ phase: 'week', week, reads: 4 })} press={b.press} />);
-    // Always on the page, but an outline that does not answer until the fifth version.
+    render(<Week s={state({ phase: 'week', week, reads: 2 })} press={b.press} />);
+    // Always on the page, but an outline that does not answer until the third version.
     const closing = screen.getByText('마무리 장면 보기 →') as HTMLButtonElement;
     expect(closing.disabled).toBe(true);
     fireEvent.click(closing);
@@ -53,7 +53,7 @@ describe('the week', () => {
   it('shows no "read" mark: an event that has been changed says which version it is, an emergency says so', () => {
     const { press } = pressed();
     render(<Week s={state({ phase: 'week', week })} press={press} />);
-    expect(screen.getByText('v2')).toBeDefined();
+    expect(screen.getByText('ver2')).toBeDefined();
     expect(screen.getByText('응급')).toBeDefined();
     expect(screen.queryByText(/읽음|✓/)).toBeNull();
   });
@@ -126,18 +126,18 @@ describe('choosing', () => {
     expect(names(container)).toEqual(['1본인에게 먼저 기회를 주세요', '2간격을 두세요', '← 주민의 피드백']);
   });
 
-  it('a touch only picks and asks; the choice is made by "돌리기", and from then on nothing else answers', () => {
+  it('a touch only picks and asks; the choice is made by "반영하기", and from then on nothing else answers', () => {
     const a = pressed();
     render(<Choose s={state({ phase: 'choose', requests })} press={a.press} />);
-    expect(screen.queryByText('돌리기')).toBeNull();
+    expect(screen.queryByText('반영하기')).toBeNull();
     fireEvent.click(screen.getByText('1'));
     expect(a.sent).toEqual([{ name: 'consider', id: 'A' }]);
     cleanup();
-    // The wall says which card is picked; the question comes up, and "돌리기" sends the choice, once.
+    // The wall says which card is picked; the question comes up, and "반영하기" sends the choice, once.
     const b = pressed();
     render(<Choose s={state({ phase: 'choose', requests, considering: 'A' })} press={b.press} />);
-    fireEvent.click(screen.getByText('돌리기'));
-    expect(screen.queryByText('돌리기')).toBeNull();
+    fireEvent.click(screen.getByText('반영하기'));
+    expect(screen.queryByText('반영하기')).toBeNull();
     expect(b.sent).toEqual([{ name: 'choose', id: 'A' }]);
     cleanup();
     // "다시 고르기" puts the pick down.
@@ -145,6 +145,18 @@ describe('choosing', () => {
     render(<Choose s={state({ phase: 'choose', requests, considering: 'A' })} press={c.press} />);
     fireEvent.click(screen.getByText('다시 고르기'));
     expect(c.sent).toEqual([{ name: 'consider', id: null }]);
+  });
+
+  it('lets go if the wall never says it is making the new simulation, so a lost press does not lock the page', () => {
+    vi.useFakeTimers();
+    try {
+      const a = pressed();
+      render(<Choose s={state({ phase: 'choose', requests, considering: 'A' })} press={a.press} />);
+      fireEvent.click(screen.getByText('반영하기'));
+      expect(screen.queryByText('반영하기')).toBeNull();
+      act(() => { vi.advanceTimersByTime(5100); });
+      expect(screen.getByText('반영하기')).toBeDefined();   // the question is back: the choice can be sent again
+    } finally { vi.useRealTimers(); }
   });
 
   it('while the wall makes the new simulation there is nothing to press', () => {

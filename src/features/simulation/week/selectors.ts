@@ -43,8 +43,8 @@ export function versionOf(event: WeekEvent | null, path: readonly string[]): Ver
   return { number: path.length + 1, path: [...path], chain, scenes, evaluations, change, requests: offered };
 }
 
-/** How many versions the visitor has read (ver1 of an event, or a later version a request made) before the closing opens. */
-export const READS_TO_CLOSE = 5;
+/** How many versions the visitor has read (ver1 of an event, or a later version a request made) before the closing opens: three, so a visitor who looked at one event through to the end has seen what a revision does. */
+export const READS_TO_CLOSE = 3;
 
 /** The requests chosen so far in each event, in order: the event's version is the path's length + 1. */
 export type Paths = Record<string, string[]>;
@@ -53,6 +53,11 @@ export type Paths = Record<string, string[]>;
 export const readKey = (eventId: string, version: number): string => `${eventId}@${version}`;
 /** How many different events those versions belong to. */
 export const eventsRead = (read: readonly string[]): number => new Set(read.map((k) => k.split('@')[0])).size;
+
+/** The closing's one line: how many events were changed, and how many times. A visit that changed nothing says what it
+ *  looked at instead (never "0번 고쳤습니다"); and it counts the events the cards below it show, which are the changed ones. */
+export const closingTitle = (changedEvents: number, runs: number, eventsSeen: number): string =>
+  runs > 0 ? `${changedEvents}개의 사건을 ${runs}번 고쳤습니다` : `${eventsSeen}개의 사건을 살펴봤습니다`;
 
 export const runsOf = (paths: Paths): number => Object.values(paths).reduce((n, p) => n + p.length, 0);
 
@@ -106,6 +111,9 @@ export const hoursOf = (time: string): number => {
   return h + (m || 0) / 60;
 };
 
+/** When an event starts: its first scene (hours). The wall's timetable and the tablet's list both order a day by it. */
+export const startOf = (event: WeekEvent): number => Math.min(...event.before.scenes.map((s) => hoursOf(s.time)));
+
 export interface Block {
   event: WeekEvent;
   /** When it starts by its first scene (hours). */
@@ -130,7 +138,7 @@ export function timetable(week: Week, axis: { from: number; to: number; minHours
   return week.days.map(({ day, events: ids }) => {
     const blocks: Block[] = ids.map((id) => eventOf(week, id)).filter((e): e is WeekEvent => e !== null).map((event) => {
       const times = event.before.scenes.map((s) => hoursOf(s.time));
-      const from = Math.min(...times);
+      const from = startOf(event);
       const height = Math.max(Math.max(...times) - from, axis.minHours) / span;
       return { event, from, top: Math.max((from - axis.from) / span, 0), height };
     }).sort((a, b) => a.top - b.top);

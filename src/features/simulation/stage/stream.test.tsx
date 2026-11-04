@@ -102,6 +102,18 @@ describe('the stream', () => {
     expect(live()).toHaveLength(0);
   });
 
+  it('stops for good on an event that ends it (the page was replaced), however long it is quiet after, or when it comes to the front', () => {
+    const { status } = mount({ endOn: ['replaced'], on: { state: () => {}, replaced: () => {}, ping: () => {} } });
+    act(() => last().open());
+    act(() => last().emit('replaced'));
+    expect(status()).toBe('ended');
+    expect(live()).toHaveLength(0);
+    const opened = FakeSource.all.length;
+    act(() => { vi.advanceTimersByTime(STALE_MS * 3); document.dispatchEvent(new Event('visibilitychange')); });
+    expect(FakeSource.all.length).toBe(opened);
+    expect(status()).toBe('ended');
+  });
+
   it('does not take a dropped connection for a refusal', async () => {
     const { status } = mount({ refusal: async () => false });
     act(() => last().fail());

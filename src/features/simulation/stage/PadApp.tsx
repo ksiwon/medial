@@ -3,7 +3,7 @@ import { createBus, postTo, type PressResult } from './bus';
 import { Ask, Button, Notice, Screen, TopBar } from './pad/kit';
 import { Choose, Closing, Draft, Evaluations, Join, Scan, Telling, Waiting, Watching, Week, type Press } from './pad/screens';
 import {
-  IDLE_STATE, STAGE_API, forgetPadToken, hasJoined, padToken, rememberJoined, type Command, type Link, type Phase, type StageState,
+  IDLE_STATE, STAGE_API, forgetJoined, forgetPadToken, hasJoined, padToken, rememberJoined, type Command, type Link, type Phase, type StageState,
 } from './protocol';
 import { useStream } from './stream';
 
@@ -12,6 +12,10 @@ import { useStream } from './stream';
 // the wall's next report is what changes the screen. Everything it can say about its own connection it says.
 
 const HOME_ASK_MS = 20000; // the window closes by itself if nobody answers
+/** After the page changes under the finger (a new phase, the telling's end, another event), presses are not taken for this long:
+ *  a visitor pressing "다음 →" over and over must not also press the button that takes its place on the next page, and the
+ *  next, and so skip the residents' words unread. Only the way home and the rules (a look aside) are always taken. */
+const SETTLE_MS = 700;
 /** How long a "the wall did not hear that" stays on screen. */
 const NOTICE_MS = 4000;
 
@@ -32,7 +36,8 @@ export default function PadApp() {
     on: {
       state: (data) => setState(data as StageState),
       presence: (data) => setWall(((data as { wall?: number } | null)?.wall ?? 0) > 0),
-      released: () => setReleased(true),
+      // Released for another tablet: the code stays, the "connect" does not - a reload must not take the wall back.
+      released: () => { forgetJoined(); setReleased(true); },
       ping: () => {},
     },
     // A stream that fails is either a bad connection or a refused code; this says which.
@@ -51,7 +56,16 @@ export default function PadApp() {
     noticeTimer.current = window.setTimeout(() => setNotice(null), NOTICE_MS);
   }, []);
   const bus = useMemo(() => createBus(postTo(token), onResult), [token, onResult]);
-  const press: Press = useCallback((command) => bus.send(command), [bus]);
+  // What the page is, for the purpose of "it has just changed": the phase and what in it a button answers to.
+  const shape = `${state.phase}|${state.event?.id ?? ''}|${state.version}|${state.toldAll}|${state.generating}`;
+  const changedAt = useRef(0);
+  const lastShape = useRef(shape);
+  if (lastShape.current !== shape) { lastShape.current = shape; changedAt.current = Date.now(); }
+  const press: Press = useCallback((command) => {
+    const aside = command.name === 'home' || command.name === 'rules';
+    if (!aside && Date.now() - changedAt.current < SETTLE_MS) return;
+    bus.send(command);
+  }, [bus]);
   useEffect(() => () => window.clearTimeout(noticeTimer.current), []);
 
   // The page itself must not move under a finger: no pinch, no double-tap zoom.

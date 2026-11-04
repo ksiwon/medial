@@ -13,7 +13,7 @@ import { STAGE_API } from './protocol';
 export const STALE_MS = 24_000;
 const WATCH_MS = 4_000;
 
-export type StreamStatus = 'connecting' | 'live' | 'lost' | 'refused';
+export type StreamStatus = 'connecting' | 'live' | 'lost' | 'refused' | 'ended';
 
 type Handler = (data: unknown) => void;
 
@@ -26,16 +26,21 @@ export interface StreamOptions {
   enabled?: boolean;
   /** A stream the server turned away: stop for good (the code is wrong, or old). */
   refusal?: () => Promise<boolean>;
+  /** Events that end the stream for good: it closes and does not open again (another page took this one's place; opening
+   *  again would take it back, and two pages would go on taking it from each other for ever). */
+  endOn?: readonly string[];
 }
 
 /** Opens `${STAGE_API}/events?query` while enabled; returns how the connection is doing. */
-export function useStream({ query, on, enabled = true, refusal }: StreamOptions): StreamStatus {
+export function useStream({ query, on, enabled = true, refusal, endOn }: StreamOptions): StreamStatus {
   const [status, setStatus] = useState<StreamStatus>('connecting');
   // The handlers are read when an event arrives, so a re-render never reopens the stream.
   const handlers = useRef(on);
   handlers.current = on;
   const asked = useRef(refusal);
   asked.current = refusal;
+  const endings = useRef(endOn);
+  endings.current = endOn;
 
   useEffect(() => {
     if (!enabled) return undefined;
@@ -43,10 +48,11 @@ export function useStream({ query, on, enabled = true, refusal }: StreamOptions)
     let seen = Date.now();
     let closed = false;
     let refused = false;
+    let ended = false;
 
     const names = () => Object.keys(handlers.current);
     const open = () => {
-      if (closed || refused) return;
+      if (closed || refused || ended) return;
       source?.close();
       seen = Date.now();
       // Trying again does not mean the line is back: what the visitor was told stays until a new one opens.
@@ -55,6 +61,7 @@ export function useStream({ query, on, enabled = true, refusal }: StreamOptions)
       source = next;
       next.onopen = () => { seen = Date.now(); setStatus('live'); };
       next.onerror = () => {
+        if (ended) return;
         setStatus('lost');
         // A refused code and a dropped connection look the same to a browser; ask which it is.
         void asked.current?.().then((no) => {
@@ -67,13 +74,14 @@ export function useStream({ query, on, enabled = true, refusal }: StreamOptions)
           let data: unknown = null;
           try { data = JSON.parse((event as MessageEvent<string>).data); } catch { /* an event with no body */ }
           handlers.current[name]?.(data);
+          if (endings.current?.includes(name)) { ended = true; next.close(); setStatus('ended'); }
         });
       }
     };
 
     open();
     const watch = window.setInterval(() => {
-      if (!closed && !refused && Date.now() - seen > STALE_MS) { setStatus('lost'); open(); }
+      if (!closed && !refused && !ended && Date.now() - seen > STALE_MS) { setStatus('lost'); open(); }
     }, WATCH_MS);
     const wake = () => { if (document.visibilityState !== 'hidden') open(); };
     document.addEventListener('visibilitychange', wake);
