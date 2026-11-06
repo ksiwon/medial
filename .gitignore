@@ -22,6 +22,9 @@ local-archive/
 docs/presentations/screenshots/
 # 발표자료 PDF에도 그 캡처가 통째로 들어 있다.
 docs/presentations/**/*.pdf
+# 2026-11 전시 시안(합성 그림): 배경(7MB x 3) · 화면 캡처 · 완성 그림이 43MB다. 만드는 스크립트(*.py)만 저장소에 둔다.
+docs/presentations/2026-11-exhibition-mockup/*
+!docs/presentations/2026-11-exhibition-mockup/*.py
 # 영어 화면 유인물 HTML: 캡처가 base64로 들어 있어 8MB다. 사전 · 캡처 · 생성 스크립트로 다시 만든다(handout/README.md).
 docs/presentations/2026-11-final-talk/handout/screens_in_english.html
 # 2026-10-07 전시 발표: 캡처(shot-*)에 같은 화면이 들어 있고, 폰트(PretendardVariable)는 npm 패키지에서 복사한 것이다.
